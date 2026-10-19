@@ -3,3 +3,6 @@ out/
 .wine/
 src/**/[Bb]uilt/
 progress/__pycache__/
+*.sbr
+*.idb
+*.pch
