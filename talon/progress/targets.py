@@ -59,6 +59,8 @@ TARGETS = [
          # build, so inside the range) and from 0x0045680f static MFC
          # (progress/Processor-avp2-map.md)
          built="src/LT2/built/Release/tools/Processor/Processor.exe", optional=True,
+         # until it links, its compiled objects are scored on their own
+         partial_objs=["src/LT2/built/Release/tools/Processor/*.obj"],
          app=[(0x00401000, 0x0045680f)]),
     dict(label="Processor.exe (NOLF)", what="world processor, NOLF (Tools 001)", kind="image",
          shipped=NOLF + "/Processor.exe", stem="Processor-nolf", built=None, optional=True,

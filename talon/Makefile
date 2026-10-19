@@ -48,7 +48,7 @@ progress:
 	$(DOCKER_RUN) bash -c "python3 tools/progress.py && python3 tools/ratchet.py check"
 
 progress-update:
-	$(DOCKER_RUN) bash -c "python3 tools/progress.py && python3 tools/ratchet.py update"
+	$(DOCKER_RUN) bash -c "python3 tools/progress.py && python3 tools/ratchet.py update $(if $(ACCEPT_LOSSES),--accept-losses)"
 
 shell:
 	docker run --rm --init -it -u $(shell id -u):$(shell id -g) \
