@@ -67,14 +67,11 @@ BOOL	SetupWorldNode(const char *pClassName, CWorldNode *pNode, CEditRegion *pReg
 
 BOOL	LoadObjectList(CAbstractIO &file, CMoArray<CBaseEditObj*> &theList);
 BOOL	LoadNodeProperties(CAbstractIO &file, CWorldNode *pNode, CEditProjectMgr* pProject = NULL);
-BOOL	LoadNodePropertiesLTA(CLTANode* pParseNode, CWorldNode *pNode, CPropListContainer& container, CEditProjectMgr* pProject = NULL );
 
 void	SaveObjectList(CAbstractIO &file, CMoArray<CBaseEditObj*> &theList);
 uint32	GetObjectListSize(CMoArray<CBaseEditObj*> &theList);
-void	SaveObjectListLTA(CLTANodeBuilder &lb, CMoArray<CBaseEditObj*> &theList);
 void	SaveNodeProperties(CAbstractIO &file, CWorldNode *pNode);
 uint32	GetNodePropertiesSize(CWorldNode* pNode);
-void	SaveNodePropertiesLTA(CLTAFile* pFile, CWorldNode *pNode, uint32 level);
 
 void	CopyObjectList( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out );
 // Duplicates the node heirarchy between two lists of objects.  

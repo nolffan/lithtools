@@ -21,8 +21,6 @@
 #include "editpoly.h"
 #include "editregion.h"
 #include "editbrush.h"
-#include "ltamgr.h"
-#include "ltasaveutils.h"
 
 
 
@@ -41,7 +39,7 @@ CBasePoly::CBasePoly( CEditBrush *pBrush )
 }
 
 
-CBasePoly::CBasePoly( CEditBrush *pBrush, CMoDWordArray &indices )
+CBasePoly::CBasePoly( CEditBrush *pBrush, CMoWordArray &indices )
 {
 	m_pBrush = pBrush;
 	m_Indices.CopyArray( indices );
@@ -61,9 +59,12 @@ CBasePoly::CBasePoly( CEditBrush *pBrush, uint32 i0, uint32 i1, uint32 i2, bool 
 }
 
 
-bool CBasePoly::LoadBasePolyTBW( CAbstractIO& InFile )
+// talon: the polygon in a binary .ed file (Build 69 has these as the .tbw
+// ones): its index count, its indices as WORDs, its plane. 0x4012c0 reads
+// each index straight into the array and rejects one past the brush's
+// points; 0x401380 writes them back.
+BOOL CBasePoly::LoadBasePolyTBW( CAbstractIO& InFile )
 {
-	//load up all the vertices
 	uint32 nNumVerts;
 	InFile >> nNumVerts;
 
@@ -71,43 +72,35 @@ bool CBasePoly::LoadBasePolyTBW( CAbstractIO& InFile )
 
 	for(uint32 nCurrVert = 0; nCurrVert < nNumVerts; nCurrVert++)
 	{
-		uint32 nIndex;
-		InFile >> nIndex;
+		InFile >> m_Indices[nCurrVert];
 
-		Index(nCurrVert) = nIndex;
+		if( m_Indices[nCurrVert] >= m_pBrush->m_Points.GetSize() )
+		{
+			m_Indices[nCurrVert] = 0;
+			return FALSE;
+		}
 	}
 
-	//now read in the plane data
 	InFile >> Normal().x;
 	InFile >> Normal().y;
 	InFile >> Normal().z;
 
 	InFile >> Dist();
 
-	return true;
+	return TRUE;
 }
 
 void CBasePoly::SaveBasePolyTBW( CAbstractIO& OutFile )
 {
-	//number of vertices
-	uint32 nNumVerts = m_Indices.GetSize();
-	OutFile << nNumVerts;
+	uint32 i;
 
-	//all the vertex indices
-	for(uint32 nCurrVert = 0; nCurrVert < nNumVerts; nCurrVert++)
-	{
-		uint32 nIndex = Index(nCurrVert);
-		OutFile << nIndex;
-	}
+	OutFile << m_Indices.GetSize();
+	for( i=0; i < m_Indices.GetSize(); i++ )
+		OutFile << m_Indices[i];
 
-	//now write out the normal
-	OutFile << Normal().x;
-	OutFile << Normal().y;
-	OutFile << Normal().z;
-
-	OutFile << Dist();
+	OutFile << m_Plane.m_Normal.x << m_Plane.m_Normal.y << m_Plane.m_Normal.z;
+	OutFile << m_Plane.m_Dist;
 }
-
 
 /*
 ( basepoly  
@@ -116,63 +109,6 @@ void CBasePoly::SaveBasePolyTBW( CAbstractIO& OutFile )
 	( dist 292.000000 )
 )
 */
-
-bool CBasePoly::LoadBasePolyLTA( CLTANode* pNode )
-{
-	// CLTANode* pIndicesNode = pNode->getElem(0); // shallow_find_list(pNode, "indices");
-	CLTANode* pIndex = pNode->GetElement(1); //PairCdrNode(pIndicesNode);
-	uint32 listSize = pIndex->GetNumElements();
-
-	assert(listSize > 0);
-	m_Indices.SetSize( listSize - 1 );
-	
-	for( uint32 i = 1; i < listSize; i++ )
-	{
-		Index(i-1) = GetUint32(pIndex->GetElement(i));
-		if( Index(i-1) >= m_pBrush->m_Points )
-		{
-			Index(i-1) = 0;
-			return false;
-		}
-	}	
-	
-
-	CLTANode* pNormalNode = pNode->GetElement(2); //shallow_find_list(pNode, "normal");
-	if( pNormalNode )
-	{
-		Normal().x = GetFloat(pNormalNode->GetElement(1));
-		Normal().y = GetFloat(pNormalNode->GetElement(2));
-		Normal().z = GetFloat(pNormalNode->GetElement(3));
-	}
-	
-	CLTANode* pDistNode = pNode->GetElement(3); //shallow_find_list(pNode, "dist");
-	if( pDistNode )
-	{
-		Dist() = GetFloat(PairCdrNode(pDistNode));
-	}
-	
-	return true;
-}
-
-
-void CBasePoly::SaveBasePolyLTA( CLTAFile* pFile, uint32 level )
-{
-	uint32		i;
-
-	//write out the list of face indices
-	PrependTabs(pFile, level);
-	pFile->WriteStr("( f ");
-	for( i=0; i < m_Indices; i++ ){
-		pFile->WriteStrF("%i ", m_Indices[i] );
-	}
-	pFile->WriteStr(")");
-	
-	//write out the surface normal
-	PrependTabs(pFile, level);
-	pFile->WriteStrF("( n %f %f %f )", Normal().x, Normal().y, Normal().z );
-	PrependTabs(pFile, level);
-	pFile->WriteStrF("( dist %f )", Dist() );
-}
 
 bool CBasePoly::IsValid()
 {
@@ -228,7 +164,7 @@ void CBasePoly::RemoveCollinearVertices()
 		v1.Norm();
 		v2.Norm();
 		
-		if( v1.NearlyEquals(v2, 0.00001f) )
+		if( v1.Equals(v2, 0.00001f) )
 		{
 			m_Indices.Remove(i);
 			i = -1;
@@ -351,6 +287,16 @@ bool CBasePoly::GetTriangles( CMoArray<CBasePoly*> &polies )
 /*
 	Returns True if ab and cd intersect.
 */
+
+CEditVert& CBasePoly::Pt( uint32 i )
+{
+	return m_pBrush->m_Points[m_Indices[i]];
+}
+
+CEditVert& CBasePoly::NextPt( uint32 i )
+{
+	return m_pBrush->m_Points[m_Indices.Next(i)];
+}
 
 bool CBasePoly::Intersect( const LTVector &a, const LTVector &b, const LTVector &c, const LTVector &d )
 {

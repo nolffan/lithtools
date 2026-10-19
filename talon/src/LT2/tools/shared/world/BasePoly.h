@@ -39,7 +39,7 @@
 
 								CBasePoly();
 								CBasePoly( CEditBrush *pBrush );
-								CBasePoly( CEditBrush *pBrush, CMoDWordArray &indices );
+								CBasePoly( CEditBrush *pBrush, CMoWordArray &indices );
 								CBasePoly( CEditBrush *pBrush, uint32 i0, uint32 i1, uint32 i2, bool bUpdatePlane=FALSE );
 			virtual				~CBasePoly()		{}
 
@@ -49,10 +49,8 @@
 		// Saving.
 		public:
 
-			bool				LoadBasePolyLTA( CLTANode* pNode );
-			void				SaveBasePolyLTA( CLTAFile* pFile, uint32 level );
 
-			bool				LoadBasePolyTBW( CAbstractIO& InFile );
+			BOOL				LoadBasePolyTBW( CAbstractIO& InFile );
 			void				SaveBasePolyTBW( CAbstractIO& OutFile );
 
 		// Functionality.
@@ -100,14 +98,16 @@
 			CVector&			Normal()				{ return m_Plane.m_Normal; }
 			CReal&				Dist()					{ return m_Plane.m_Dist; }
 
-			uint32&				Index( uint32 i )		{ return m_Indices[i]; }
-			uint32&				NextIndex( uint32 i )	{ return m_Indices.Next(i); }
-			uint32&				LastIndex()				{ return m_Indices.Last(); }
+			WORD&				Index( uint32 i )		{ return m_Indices[i]; }
+			WORD&				NextIndex( uint32 i )	{ return m_Indices.Next(i); }
+			WORD&				LastIndex()				{ return m_Indices.Last(); }
 			uint32				NumVerts() const		{ return m_Indices.GetSize(); }
 			
-			CEditVert&			Pt( uint32 i )			{ return m_pBrush->m_Points[m_Indices[i]]; }
+			// talon: not inline in 2001: BasePoly.obj has them as functions
+			// (0x401ad0, 0x401af0), which RaySelect calls
+			CEditVert&			Pt( uint32 i );
 
-			CEditVert&			NextPt( uint32 i )		{ return m_pBrush->m_Points[m_Indices.Next(i)]; }
+			CEditVert&			NextPt( uint32 i );
 			CEditVert&			PrevPt( uint32 i )		{ return m_pBrush->m_Points[m_Indices.Prev(i)]; }
 			CEditVert&			LastPt()				{ return m_pBrush->m_Points[m_Indices.Last()]; }
 			
@@ -116,7 +116,9 @@
 			
 			CEditPlane			m_Plane;
 
-			CMoDWordArray		m_Indices;
+			// talon: WORDs in 2001: CBasePoly( pBrush, indices ) (0x401080)
+			// copies them two bytes at a time
+			CMoWordArray		m_Indices;
 			CEditBrush			*m_pBrush;
 
 	};

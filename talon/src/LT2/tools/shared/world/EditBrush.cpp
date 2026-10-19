@@ -19,8 +19,6 @@
 #include "editbrush.h"
 #include "editpoly.h"
 #include "node_ops.h"
-#include "ltamgr.h"
-#include "ltasaveutils.h"
 
 #ifdef DIRECTEDITOR_BUILD
 //#ifdef _DEBUG
@@ -32,6 +30,7 @@ CEditBrush::CEditBrush()
 {
 	m_Type			= Node_Brush;
 
+	m_Unknown_ac	= 1;		// talon: 0x40d7cf
 	m_pRegion		= NULL;
 
 	m_Polies.SetCacheSize( 15 );
@@ -39,7 +38,6 @@ CEditBrush::CEditBrush()
 
 	r = g = b = 255;
 
-	SetFlag(BRUSHFLAG_VISIBLE, true);
 }
 
 
@@ -102,105 +100,6 @@ void CEditBrush::DoCopy(CWorldNode *pOther, CStringHolder *pStringHolder)
 */
 
 
-BOOL CEditBrush::LoadLTA( CLTANode* pNode, CStringHolder *pStringHolder )
-{
-	Term();
-	// ( color ( r g b ) )
-	CLTANode * pData = pNode; //pNode->getElem(2);
-
-	CLTANode* pColorNode = pData->GetElement(0);// PairCdrNode( shallow_find_list(pNode, "color") );
-	r = GetUint8(pColorNode->GetElement(1));
-	g = GetUint8(pColorNode->GetElement(2));
-	b = GetUint8(pColorNode->GetElement(3));
-
-	CLTANode* pPoints = pData->GetElement(1); //PairCdrNode(shallow_find_list(pNode, "pointlist" ));
-	CLTANode* pCurPoint = NULL;
-
-	uint32 listSize = pPoints->GetNumElements();
-
-	assert(listSize > 0);
-	m_Points.SetSize( listSize - 1 );
-
-	for( uint32 i=1; i < listSize; i++ )
-	{
-		pCurPoint = pPoints->GetElement(i);
-		uint32 nNumChildren = pCurPoint->GetNumElements();
-
-		m_Points[i-1].x = GetFloat(pCurPoint->GetElement(0));
-		m_Points[i-1].y = GetFloat(pCurPoint->GetElement(1));
-		m_Points[i-1].z = GetFloat(pCurPoint->GetElement(2));
-
-		//see if they also have colors to be loaded in
-		if(nNumChildren >= 7)
-		{
-			//they have the vertex colors, read them in
-			m_Points[i-1].m_nR = GetUint8(pCurPoint->GetElement(3));
-			m_Points[i-1].m_nG = GetUint8(pCurPoint->GetElement(4));
-			m_Points[i-1].m_nB = GetUint8(pCurPoint->GetElement(5));
-			m_Points[i-1].m_nA = GetUint8(pCurPoint->GetElement(6));
-		}
-		else
-		{
-			//default these values to something standard...
-			m_Points[i-1].m_nR = 255;
-			m_Points[i-1].m_nG = 255;
-			m_Points[i-1].m_nB = 255;
-			m_Points[i-1].m_nA = 255;
-		}
-	}
-
-	CLTANode* pPolyList = PairCdrNode(pData->GetElement(2)); // PairCdrNode(shallow_find_list(pNode, "polylist" ));
-	listSize = pPolyList->GetNumElements();
-	m_Polies.SetSize( listSize );
-	for( i=0; i < listSize; i++ )
-	{
-		m_Polies[i] = new CEditPoly( this );
-		if( !m_Polies[i]->LoadEditPolyLTA(pPolyList->GetElement(i), pStringHolder ) )
-			return FALSE;
-	}
-
-	UpdatePlanes();
-	UpdateBoundingInfo();
-
-	return TRUE;
-}
-
-
-void CEditBrush::SaveLTA( CLTAFile* pFile, uint32 level )
-{
-	//sanity check
-	ASSERT(pFile);
-
-	uint32	   i;
-	CEditPoly *pEditPoly = NULL;
-
-	//print out the entire node list
-	PrependTabs(pFile, level); 
-	pFile->WriteStrF("( polyhedron (", m_RegionBrushIndex );
-		PrependTabs(pFile, level+1); 
-		pFile->WriteStrF("( color %d %d %d )", r, g, b );
-		PrependTabs(pFile, level+1); 
-		pFile->WriteStr("( pointlist ");
-			for( i=0; i < m_Points; i++ ) {
-				PrependTabs(pFile, level+2);
-				pFile->WriteStrF("( %f %f %f %d %d %d %d )", m_Points[i].x,  m_Points[i].y, m_Points[i].z, m_Points[i].m_nR, m_Points[i].m_nG, m_Points[i].m_nB, m_Points[i].m_nA );
-			}
-		PrependTabs(pFile, level+1);
-		pFile->WriteStr(")");
-
-		PrependTabs(pFile, level+1);
-		pFile->WriteStr("( polylist (");
-			for( i=0; i < m_Polies; i++ )
-			{
-				pEditPoly = m_Polies[i];
-				pEditPoly->SaveEditPolyLTA( pFile, level+2 );
-			}
-		PrependTabs(pFile, level+1);
-		pFile->WriteStr(") )");
-	PrependTabs(pFile, level);
-	pFile->WriteStr(") )");
-}
-
 void CEditBrush::SaveTBW( CAbstractIO& OutFile )
 {
 	//write out the brush color
@@ -214,8 +113,6 @@ void CEditBrush::SaveTBW( CAbstractIO& OutFile )
 	{
 		//position
 		OutFile << m_Points[nCurrPoint].x << m_Points[nCurrPoint].y << m_Points[nCurrPoint].z;
-		//color
-		OutFile << m_Points[nCurrPoint].m_nR << m_Points[nCurrPoint].m_nG << m_Points[nCurrPoint].m_nB << m_Points[nCurrPoint].m_nA;
 	}
 
 	//write out the list of polygons used by this brush
@@ -251,9 +148,6 @@ bool CEditBrush::LoadTBW( CAbstractIO& InFile, CStringHolder *pStringHolder )
 
 		//position
 		InFile >> pCurrPoint->x >> pCurrPoint->y >> pCurrPoint->z;
-
-		//color
-		InFile >> pCurrPoint->m_nR >> pCurrPoint->m_nG >> pCurrPoint->m_nB >> pCurrPoint->m_nA;
 	}
 
 	//now read in the polygons
@@ -382,7 +276,7 @@ void CEditBrush::CopyEditBrush( CEditBrush *pOther, CStringHolder *pStringHolder
 	}
 
 	m_Points.CopyArray( pOther->m_Points );
-	m_BoundingSphere = pOther->m_BoundingSphere;
+	m_BoundingBox = pOther->m_BoundingBox;
 	
 	r = pOther->r;
 	g = pOther->g;
@@ -593,7 +487,7 @@ BOOL CEditBrush::FindPoliesWithEdge( uint32 v1, uint32 v2, CEditPoly*&pPoly1, CE
 	pPoly1 = pPoly2 = NULL;
 	for( i=0; i < m_Polies; i++ )
 	{
-		CMoDWordArray	&indices = m_Polies[i]->m_Indices;
+		CMoWordArray	&indices = m_Polies[i]->m_Indices;
 		
 		if( (index = indices.FindElement(v1)) != BAD_INDEX )
 		{
@@ -740,8 +634,8 @@ CEditPoly* CEditBrush::JoinPolygons( CEditPoly *pPoly1, CEditPoly *pPoly2, uint3
 	uint32			i, temp, i1, i2;
 	uint32			iPoly1, iPoly2;
 	uint32			nPtsAdded;
-	CMoDWordArray	&indices1 = pPoly1->m_Indices;
-	CMoDWordArray	&indices2 = pPoly2->m_Indices;
+	CMoWordArray	&indices1 = pPoly1->m_Indices;
+	CMoWordArray	&indices2 = pPoly2->m_Indices;
 
 
 	iPoly1 = m_Polies.FindElement( pPoly1 );
@@ -806,29 +700,16 @@ CBoundingBox CEditBrush::CalcBoundingBox()
 }
 
 
+// talon: in 2001 the brush keeps a bounding box, not a sphere (0x40e030);
+// Build 69's name is kept for its callers
 void CEditBrush::UpdateBSphere()
 {
-	if(m_Points.GetSize() == 0)
-		return;
-
-	//find the center of the sphere
-	LTVector vCenter = CalcBoundingBox().Center();
-
-	//now find the radius
-	float fMaxRadSqr = 0.0f;
-	float fRadSqr;
-
-	for( uint32 nCurrPt = 0; nCurrPt < m_Points; nCurrPt++ )
+	if(m_Points)
 	{
-		fRadSqr = (m_Points[nCurrPt] - vCenter).MagSqr();
-
-		if(fRadSqr > fMaxRadSqr)
-		{
-			fMaxRadSqr = fRadSqr;
-		}
+		m_BoundingBox.Init( m_Points[0] );
+		for( uint32 i=1; i < m_Points; i++ )
+			m_BoundingBox.Extend( m_Points[i] );
 	}
-
-	m_BoundingSphere.Init(vCenter, (float)sqrt(fMaxRadSqr));
 }
 
 uint32 CEditBrush::AddVertOrGetClosest(const LTVector& vPos, CReal fThreshold)

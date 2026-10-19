@@ -55,8 +55,6 @@
 		// Loading/saving.
 		public:
 
-			BOOL					LoadLTA( CLTANode* pNode, CStringHolder *pStringHolder );
-			void					SaveLTA( CLTAFile* pFile, uint32 level );
 
 			bool					LoadTBW( CAbstractIO& InFile, CStringHolder *pStringHolder );
 			void					SaveTBW( CAbstractIO& OutFile );
@@ -120,11 +118,15 @@
 		// Brush data.
 		public:
 
-			//the region that holds this brush
-			CEditRegion*			m_pRegion;
-			
+			// talon: the 2001 layout, from CEditBrush() (0x40d6f0; sizeof 0xb0 by
+			// the operator new of 0x40d826 and 0x4107b2): the polies at +0x60,
+			// the points at +0x74, a bounding box at +0x88 (its constructor zeroes
+			// six floats), the region index, the colour at +0xa4, the region at
+			// +0xa8 (set NULL), and a dword at +0xac that the constructor sets to 1
 			CMoArray<CEditPoly*>	m_Polies;
 			CEditVertArray			m_Points;
+
+			CBoundingBox			m_BoundingBox;
 
 			// The brush's index into the world..
 			// Only valid during saving.
@@ -133,7 +135,10 @@
 			// The brush display color.
 			uint8					r, g, b;
 
-			CBoundingSphere			m_BoundingSphere;
+			//the region that holds this brush
+			CEditRegion*			m_pRegion;
+
+			uint32					m_Unknown_ac;
 		
 		protected:
 			//don't allow the copy constructor

@@ -196,6 +196,9 @@ class CWorldNode : public CGLLNode
 
 		// All the properties and the type name for this node.
 		CPropList				m_PropList;
+		// talon: here in 2001, after the properties (CWorldNode() zeroes its first
+		// byte at +0x20 and builds m_Children at +0x40, 0x44e3b0)
+		char					m_TypeName[TYPENAME_LEN + 1];
 
 
 		CGLinkedList<CWorldNode*>	m_Children;
@@ -215,7 +218,6 @@ class CWorldNode : public CGLLNode
 		char					*m_lpszLabel;
 
 	private:
-		char					m_TypeName[TYPENAME_LEN + 1];
 
 		uint32					m_UniqueID;
 
