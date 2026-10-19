@@ -131,7 +131,7 @@
 	// ----------------------------------------------------------------------- //
 
 	template<class T>
-	inline T g_TriArea2( const TVector3<T> N, const TVector3<T> A, const TVector3<T> B, const TVector3<T> C )
+	inline T g_TriArea2( const _CVector<T> N, const _CVector<T> A, const _CVector<T> B, const _CVector<T> C )
 	{
 		return N.Dot( (B - A).Cross(C - A) );
 	}
@@ -179,7 +179,7 @@
 
 
 	template<class T, class F>
-	inline LTBOOL g_IsInsideTheTree( T *pRoot, TVector3<F> &pt )
+	inline LTBOOL g_IsInsideTheTree( T *pRoot, _CVector<F> &pt )
 	{
 		F		dot;
 
@@ -205,7 +205,7 @@
 
 /*
 	template<class T, class F>
-	LTBOOL g_InsideConvex( T *pRoot, TVector3<F> &pt )
+	LTBOOL g_InsideConvex( T *pRoot, _CVector<F> &pt )
 	{
 		uint32			i, nextI;
 		_CPlane<F>		edgePlane;
@@ -235,7 +235,7 @@
 
 
 	template<class T, class F>
-	T* g_IntersectRay( T *pRoot, TVector3<F> &pt, TVector3<F> &dir, F &t, TVector3<F> &intersection, uint32 flags )
+	T* g_IntersectRay( T *pRoot, _CVector<F> &pt, _CVector<F> &dir, F &t, _CVector<F> &intersection, uint32 flags )
 	{
 		F dot, dirDot, dot2;
 		T *pRet;
@@ -305,7 +305,7 @@
 	// ----------------------------------------------------------------------- //
 
 	template<class M, class F>
-	int g_LocatePointInTree( M *pWorld, TVector3<F> &point, int iRoot )
+	int g_LocatePointInTree( M *pWorld, _CVector<F> &point, int iRoot )
 	{
 		F			dot;
 		CNode		*pRoot;
@@ -335,10 +335,10 @@
 	// ----------------------------------------------------------------------- //
 
 	template<class M, class P, class F>
-	inline F g_DistToClosestEdge( M *pModel, P *pRoot, TVector3<F> &pos )
+	inline F g_DistToClosestEdge( M *pModel, P *pRoot, _CVector<F> &pos )
 	{
 		F				dot, minDist = (F)MAX_CREAL;
-		TVector3<F>		normal;
+		_CVector<F>		normal;
 		uint32			i;
 
 

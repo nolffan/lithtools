@@ -19,12 +19,12 @@
 		typedef double				PReal;
 	#endif
 
-	typedef TVector3<PReal>		PVector;
+	typedef _CVector<PReal>		PVector;
 
-	class PVertex : public TVector3<PReal>
+	class PVertex : public _CVector<PReal>
 	{
 		public:
-			void operator=(const PVertex &other) {TVector3<PReal>::operator=(other);}
+			void operator=(const PVertex &other) {_CVector<PReal>::operator=(other);}
 	};
 
 	typedef CMoArray<PVertex>	PVertexArray;

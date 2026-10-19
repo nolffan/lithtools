@@ -129,9 +129,9 @@
 
 
 			// This actually transforms the vector like a matrix would.
-			void		Apply( TVector3<T> &s, TVector3<T> &d )
+			void		Apply( _CVector<T> &s, _CVector<T> &d )
 			{
-				TVector3<T>		temp;
+				_CVector<T>		temp;
 
 
 				d = s + m_Position;
@@ -146,14 +146,14 @@
 
 
 			// Accessors
-			TVector3<T>	&Pos()	{ return m_Position; }
+			_CVector<T>	&Pos()	{ return m_Position; }
 
 
 		public:
 
 			// Member variables
 
-			TVector3<T>	m_Position;
+			_CVector<T>	m_Position;
 
 	};
 

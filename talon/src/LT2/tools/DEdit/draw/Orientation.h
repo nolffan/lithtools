@@ -101,14 +101,14 @@
 			
 			// Accessors
 
-			TVector3<T>			&Up()		{ return m_Up; }
-			TVector3<T>			&Forward()	{ return m_Forward; }
-			TVector3<T>			&Right()	{ return m_Right; }
+			_CVector<T>			&Up()		{ return m_Up; }
+			_CVector<T>			&Forward()	{ return m_Forward; }
+			_CVector<T>			&Right()	{ return m_Right; }
 
 		public:
 
 			// Member variables
-			TVector3<T>			m_Up, m_Forward, m_Right;
+			_CVector<T>			m_Up, m_Forward, m_Right;
 
 	};
 
