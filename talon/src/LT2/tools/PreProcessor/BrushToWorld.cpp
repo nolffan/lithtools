@@ -9,306 +9,34 @@
 #include "preworld.h"
 #include "brushtoworld.h"
 #include "processing.h"
-#include "SetupPolyAlpha.h"
-
-//utility class that will manage a list of references from vertex to polygon and aid in calculating
-//vertex normals
-class CVertNormalGenerator
-{
-public:
-
-	CVertNormalGenerator() :
-		m_pIndices(NULL),
-		m_ppPolyRefs(NULL)
-	{
-	}
-
-	~CVertNormalGenerator()
-	{
-		Term();
-	}
-
-	void Term()
-	{
-		delete [] m_pIndices;
-		m_pIndices = NULL;
-
-		delete [] m_ppPolyRefs;
-		m_ppPolyRefs = NULL;
-	}
+#include "splitpoly.h"
+#include "proputils.h"
 
 
-	LTVector CalculateVertNormal(const LTVector& vPolyNormal, float fCosCrease, uint32 nVert) const
-	{
-		//alright, so find our starting and ending indices
-		uint32 nStart	= m_pIndices[nVert];
-		uint32 nEnd		= m_pIndices[nVert + 1];
+static uint32					g_nSplits;
+static CPreWorld				*g_pWorld;
+static CMoArray<TempBrush*>		g_Intersecters;
+static void						(*g_ProgressCB)(float fPercent);
+static CMoArray<TempBrush*>		g_TempBrushes;
+static uint32					g_nNonIntersecting;
 
-		//reset the normal
-		LTVector vRV(0.0f, 0.0f, 0.0f);
-
-		for(uint32 nCurrRef = nStart; nCurrRef < nEnd; nCurrRef++)
-		{
-			CEditPoly* pPoly = m_ppPolyRefs[nCurrRef];
-
-			//see if this polygon is at a crease angle
-			if(vPolyNormal.Dot(pPoly->Normal()) < fCosCrease)
-				continue;
-
-			//it should be factored into the normal
-			vRV += pPoly->Normal();
-		}
-
-		vRV.Normalize();
-		return vRV;
-	}
-
-	bool BuildLists(CEditBrush* pEditBrush);
-
-private:
-	
-	uint32*			m_pIndices;
-	CEditPoly**		m_ppPolyRefs;
-};
+// Set while a brush is clipped against one that comes before it.
+static BOOL						g_bEarlierBrush;
 
 
-bool CVertNormalGenerator::BuildLists(CEditBrush* pEditBrush)
-{
-	//this is how the algorithm works:
-	// Generate the number of references to each point
-	// Convert that into a list of indices into a big list of references
-	// Fill in the list of references to each brush
-	//
-	// Then all you need to do to find touching vertices is to use the index list to
-	// index into the list of references and you can find all polygons that refer to
-	// that point
-	//
-	// One nuance is that the index list needs to have an extra element indicating the end
-	// so that it can always use the next value as the end of the span for the vertex refs
-
-	//cache some data about our brush
-	uint32 nNumPoints = pEditBrush->m_Points.GetSize();
-	uint32 nNumPolys  = pEditBrush->m_Polies.GetSize();
-
-	//build up a count for each reference to each vertex
-	m_pIndices = new uint32 [nNumPoints + 1];
-
-	if(!m_pIndices)
-	{
-		Term();
-		return false;
-	}
-
-	//clear it all out
-	memset(m_pIndices, 0, sizeof(uint32) * (nNumPoints + 1));
-
-	//and now add our references
-	uint32 nTotalRefs = 0;
-	uint32 nCurrPoly;
-
-	for(nCurrPoly = 0; nCurrPoly < nNumPolys; nCurrPoly++)
-	{
-		CEditPoly* pPoly = pEditBrush->m_Polies[nCurrPoly];
-		for(uint32 nCurrIndex = 0; nCurrIndex < pPoly->m_Indices.GetSize(); nCurrIndex++)
-		{
-			m_pIndices[pPoly->m_Indices[nCurrIndex]]++;
-		}
-		nTotalRefs += pPoly->m_Indices.GetSize();
-	}
-
-	//and now convert our reference list into an index list
-	uint32 nPrevRefIndex = 0;
-	for(uint32 nCurrRef = 0; nCurrRef <= nNumPoints; nCurrRef++)
-	{
-		uint32 nVertRefs = m_pIndices[nCurrRef];
-		m_pIndices[nCurrRef] = nPrevRefIndex;
-		nPrevRefIndex += nVertRefs;
-	}
-
-	//alright, now allocate our reference list
-	m_ppPolyRefs = new CEditPoly* [nTotalRefs];
-
-	//verify the allocation
-	if(!m_ppPolyRefs)
-	{
-		Term();
-		return false;
-	}
-
-	//now null it out
-	memset(m_ppPolyRefs, 0, sizeof(CEditPoly*) * nTotalRefs);
-
-	//and fill it in with references
-	for(nCurrPoly = 0; nCurrPoly < nNumPolys; nCurrPoly++)
-	{
-		CEditPoly* pPoly = pEditBrush->m_Polies[nCurrPoly];
-		for(uint32 nCurrIndex = 0; nCurrIndex < pPoly->m_Indices.GetSize(); nCurrIndex++)
-		{
-			//use the index list to find out where we need to put ourselves
-			uint32 nPlaceAt = m_pIndices[pPoly->m_Indices[nCurrIndex]];
-
-			//move past any other references that have already been placed
-			while(m_ppPolyRefs[nPlaceAt])
-				nPlaceAt++;
-
-			//and place ourselves into the list
-			m_ppPolyRefs[nPlaceAt] = pPoly;
-		}
-	}
-
-	//we now have our two lists and can quickly and easily find any polygons that share the same
-	//vertex
-
-	//success
-	return true;
-}
-
-
-//given a brush name it will generate a hashed name
-uint32 GenerateBrushPolygonName(const char *pName)
-{
-	if (!pName)
-		return 0;
-
-	uint32 nResult = 0;
-	for (; *pName; ++pName)
-	{
-		nResult *= 29;
-		nResult += toupper(*pName) - 'A';
-	}
-
-	return nResult;
-}
-
-// Given an edit polygon and a starting point that should be initialized to zero
-//and continually passed into this funciton it will generate a list of pre polys
-//that can be used in the main world
-static CPrePoly* EditPolySectionToPrePoly(CEditPoly* pEditPoly, uint32& nStartVert, uint32 nBrushName, CEditBrush* pBrush, 
-										  const CVertNormalGenerator& VertNormGen, float fCosCreaseAngle)
-{
-	//maximum number of vertices to allow per fragment
-	const uint32 k_nMaxNumVerts = 30;
-
-	//see if we are done
-	if(nStartVert >= pEditPoly->NumVerts())
-	{
-		//we have completed fragmenting this polygon, no more fragments to generate
-		return NULL;
-	}
-
-	//determine the maximum number of vertices we can add only K - 2 vertices since
-	//we have to replicate two previous vertices
-	uint32 nMaxVertsToAdd = (nStartVert > 0) ? k_nMaxNumVerts - 2 : k_nMaxNumVerts;
-
-	//determine what our maximum ending vertex is
-	uint32 nEndVert = LTMIN(nStartVert + nMaxVertsToAdd, pEditPoly->NumVerts());
-	
-	//determine how many vertices that translates to (again considering that if this is not
-	//the first fragment that we need to add two extra verts)
-	uint32 nVertCount = nEndVert - nStartVert;
-	if (nStartVert > 0)
-		nVertCount += 2;
-
-	//create our polygon
-	CPrePoly *pPrePoly = CreatePoly(CPrePoly, nVertCount, false);
-
-	//setup surface properties, this must be done here otherwise the polygon doesn't have a surface
-	//and therefore doesn't have a plane
-	pPrePoly->m_nName = nBrushName;
-	pPrePoly->m_pSurface = (CPreSurface*)pEditPoly->m_pUser1;
-
-	// If this is an overflow poly, we need the base point and the last point from the previous poly
-	if (nStartVert > 0)
-	{
-		pPrePoly->AddVert( pEditPoly->Pt(0), VertNormGen.CalculateVertNormal(pEditPoly->Normal(), fCosCreaseAngle, pEditPoly->m_Indices[0]) );
-		pPrePoly->AddVert( pEditPoly->Pt(nStartVert - 1), VertNormGen.CalculateVertNormal(pEditPoly->Normal(), fCosCreaseAngle, pEditPoly->m_Indices[nStartVert - 1]) );
-	}
-
-	//now copy over all the vertices to the pre poly
-	for(uint32 nCurrVert = nStartVert; nCurrVert < nEndVert; nCurrVert++)
-	{
-		pPrePoly->AddVert( pEditPoly->Pt(nCurrVert), VertNormGen.CalculateVertNormal(pEditPoly->Normal(), fCosCreaseAngle, pEditPoly->m_Indices[nCurrVert]) );
-	}
-
-	//and setup the colors of the polygon
-	CopyPolyColors(pEditPoly, pPrePoly, nStartVert, nEndVert);
-	SetupPolyAlpha(pBrush, pPrePoly, nVertCount);
-
-	// Move to the end of this fragment so that next time we will generate the following fragment
-	nStartVert = nEndVert;
-
-	return pPrePoly;
-}
-
-//given a brush, it will determine the crease angle and return the cosine of that angle
-static float GetCosCreaseAngle(CEditBrush* pEditBrush)
-{
-	//determine the crease angle for this brush
-	float fCosCreaseAngle = 0.707f;	//cos(45)
-
-	//find the crease angle property
-	CRealProp *pCreaseProp = (CRealProp *)pEditBrush->m_PropList.GetMatchingProp("CreaseAngle", PT_REAL);
-	if (pCreaseProp)
-	{
-		//found a match, convert it to a value
-		fCosCreaseAngle = LTMAX(0.0f, cosf(MATH_DEGREES_TO_RADIANS(pCreaseProp->m_Value)));
-	}
-
-	return fCosCreaseAngle;
-}
-
-static void TransferBrushPolys(CEditBrush *pEditBrush, CPreWorld *pWorld)
-{
-	//sanity check
-	assert(pEditBrush && pWorld);
-
-	//build up our vertex normal generate;
-	CVertNormalGenerator	VertNormGen;
-	if(!VertNormGen.BuildLists(pEditBrush))
-	{
-		DrawStatusText(eST_Error, "Unable to initialize normal generator for brush %s", pEditBrush->GetName());
-		return;
-	}
-
-	//determine the crease angle for this brush
-	float fCosCreaseAngle = GetCosCreaseAngle(pEditBrush);
-
-	//determine the brush name and cache this to avoid having to calculate it for every polygon
-	uint32 nBrushName = GenerateBrushPolygonName(pEditBrush->GetName());
-
-	//the number of polygons in the brush
-	uint32 nNumBrushPolys = pEditBrush->m_Polies.GetSize();
-
-	//we need to run through every polygon in the brush and generate prepoly fragments
-	for(uint32 nCurrPoly = 0; nCurrPoly < nNumBrushPolys; nCurrPoly++)
-	{
-		//now we need to generate the fragments
-		uint32 nStartVert = 0;
-
-		CPrePoly* pOrigPoly;
-		while((pOrigPoly = EditPolySectionToPrePoly(pEditBrush->m_Polies[nCurrPoly], nStartVert, nBrushName, pEditBrush, VertNormGen, fCosCreaseAngle)) != NULL)
-		{
-			//we have a valid fragment so we need to add this to our list of original polygons
-			pWorld->m_OriginalBrushPolies.Append(pOrigPoly);
-			
-			//alright, now that we have done that, we of course to be efficient (ugh) need to make
-			//a clone and add that to the world polys.
-			CPrePoly* pWorldPoly = pOrigPoly->Clone();
-
-			//setup the clone polygon to point to its original polygon so it can be restored after
-			//BSP generation
-			pWorldPoly->m_pOriginalBrushPoly = pOrigPoly;
-
-			//add this new polygon into our list of polygons
-			pWorld->m_Polies.Append(pWorldPoly);
-		}		
-	}
-}
+static TempBrush* SetupTempBrush(CPreWorld *pWorld, CEditBrush *pBrush);
+static CPrePoly* TempPolyToPrePoly(TempPoly *pPoly);
+static void TransferInsideFragments(CMoArray<TempBrush*> &brushes, CPreWorld *pWorld);
+static void SortIntersecters(CMoArray<TempBrush*> &brushes);
+static void FindIntersecters(CMoArray<TempBrush*> &brushes, CMoArray<TempBrush*> &intersecters);
+static void ClearIntersecters(CMoArray<TempBrush*> &brushes);
+static void MergeIntersecters(CMoArray<TempBrush*> &brushes);
+static void SetBrushIndices(CMoArray<TempBrush*> &brushes);
 
 
 CPrePoly* EditPolyToPrePoly(CEditPoly *pEditPoly)
 {
-	CPrePoly *pPrePoly = CreatePoly(CPrePoly, pEditPoly->NumVerts(), false);
+	CPrePoly *pPrePoly = CreatePoly(CPrePoly, pEditPoly->NumVerts(), FALSE);
 	if(!pPrePoly)
 		return NULL;
 
@@ -316,52 +44,536 @@ CPrePoly* EditPolyToPrePoly(CEditPoly *pEditPoly)
 
 	for(uint32 i=0; i < pEditPoly->NumVerts(); i++)
 	{
-		pPrePoly->AddVert( pEditPoly->Pt(i) );
+		CEditVert &pt = pEditPoly->Pt(i);
+		pPrePoly->AddVert( PVector(pt.x, pt.y, pt.z) );
 	}
-
-	CopyPolyColors(pEditPoly, pPrePoly, 0, pPrePoly->NumVerts());
-	SetupPolyAlpha(pEditPoly->m_pBrush, pPrePoly, pPrePoly->NumVerts());
 
 	return pPrePoly;
 }
 
 
-bool BrushToWorld(
-	GenList<CEditBrush*> &brushes, 
-	CPreWorld *pWorld)
+BOOL BrushToWorld(
+	GenList<CEditBrush*> &brushes,
+	CPreWorld *pWorld,
+	void (*ProgressCB)(float fPercent))
 {
-	// Create the TempBrushes.
-	if (!brushes.GenGetSize())
-	{
-		DrawStatusText(eST_Error, "Empty world model BSP found (%s). Make sure some brushes are not render only.", pWorld->m_WorldName);
+	GenListPos pos;
+	CEditBrush *pBrush;
+	CPreSurface *pSurface;
+	CPrePoly *pPoly;
 
+
+	g_pWorld = pWorld;
+	g_ProgressCB = ProgressCB;
+	g_nSplits = 0;
+	g_TempBrushes.SetCacheSize(1024);
+
+	CMoArray<TempBrush*> noCSGBrushes;
+	noCSGBrushes.SetCacheSize(1024);
+
+	// Create the TempBrushes.
+	DrawStatusTextIfMainWorld("Creating temp brushes");
+	for(pos=brushes.GenBegin(); brushes.GenIsValid(pos); )
+	{
+		pBrush = brushes.GenGetNext(pos);
+
+		if(pBrush->m_Polies.GetSize() <= 0)
+			continue;
+
+		pSurface = (CPreSurface*)pBrush->m_Polies[0]->m_pUser1;
+		if(g_pGlobs->m_bNoSnapNoCSG)
+		{
+			if(!(pSurface->m_Flags & SURF_HULLMAKER) && !GetBoolProp(&pBrush->m_PropList, "NoSnap"))
+				g_TempBrushes.Append(SetupTempBrush(pWorld, pBrush));
+			else
+				noCSGBrushes.Append(SetupTempBrush(pWorld, pBrush));
+		}
+		else
+		{
+			if(pSurface->m_Flags & SURF_HULLMAKER)
+			{
+				pPoly = EditPolyToPrePoly(pBrush->m_Polies[0]);
+				if(pPoly)
+					pWorld->m_Polies.Append(pPoly);
+			}
+			else
+			{
+				g_TempBrushes.Append(SetupTempBrush(pWorld, pBrush));
+			}
+		}
+	}
+
+	if(g_TempBrushes.GetSize() == 0 && noCSGBrushes.GetSize() == 0)
+	{
+		DrawStatusText("!! Empty world model BSP found (%s)", pWorld->m_WorldName);
 		return pWorld->m_Polies.GetSize() > 0;
 	}
 
-	// Move the brushes into the world
-	DrawStatusTextIfMainWorld(eST_Normal, "Transferring brush polygons to world");
+	g_nNonIntersecting = 0;
+	DrawStatusTextIfMainWorld("Finding intersecters");
+	FindIntersecters(g_TempBrushes, g_Intersecters);
+	ClearIntersecters(noCSGBrushes);
 
-	clock_t TransferStart = clock();
+	DrawStatusTextIfMainWorld("Sorting intersecters");
+	SortIntersecters(g_TempBrushes);
+	SetBrushIndices(g_TempBrushes);
+	SetBrushIndices(noCSGBrushes);
 
-	uint32		nProcessCount = 0, nProcessTotal;
-	nProcessTotal = brushes.GenGetSize();
-	for(GenListPos iBrush = brushes.GenBegin(); brushes.GenIsValid(iBrush); )
-	{
-		TransferBrushPolys(brushes.GenGetNext(iBrush), pWorld);
-		SetProgressBar((float)nProcessCount / nProcessTotal);
-		++nProcessCount;
-	}
+	DrawStatusTextIfMainWorld("Merging intersecters");
+	MergeIntersecters(g_TempBrushes);
+	MergeIntersecters(noCSGBrushes);
+	g_Intersecters.Term();
 
-	DrawStatusTextIfMainWorld(eST_Normal, "Converting brushes took %.2f seconds", (clock() - TransferStart) / (float)CLOCKS_PER_SEC);
-
-	// Setup all the vertex indices
+	DrawStatusTextIfMainWorld("Transferring inside fragments");
+	TransferInsideFragments(g_TempBrushes, pWorld);
+	TransferInsideFragments(noCSGBrushes, pWorld);
 	pWorld->InitPolyVertexIndices();
 
-	// Set up the LM surface vectors
-	pWorld->SetupSurfaceLMVectors();
+	DrawStatusTextIfMainWorld("%d BTW poly splits.", g_nSplits);
 
+	uint32 nPolies = pWorld->m_Polies.GetSize();
+	DrawStatusTextIfMainWorld("Num Polies: %d.  Joining polies...", nPolies);
+	pWorld->JoinPolies(0.0001f);
+	DrawStatusTextIfMainWorld("%d polies removed.", nPolies - pWorld->m_Polies.GetSize());
+	DrawStatusTextIfMainWorld("%d polies left.", pWorld->m_Polies.GetSize());
+
+	pWorld->SetupSurfaceLMVectors();
 	return true;
 }
 
 
+static TempBrush* SetupTempBrush(CPreWorld *pWorld, CEditBrush *pBrush)
+{
+	TempBrush *pRet;
+	GPOS pos;
+	TempPoly *pPoly;
+	PVector *pMin, *pMax;
 
+	pRet = MakeTempBrush(pBrush);
+
+	for(pos=pRet->m_Polies; pos; )
+	{
+		pPoly = pRet->m_Polies.GetNext(pos);
+		pPoly->m_pOriginalPoly = TempPolyToPrePoly(pPoly);
+		pWorld->m_OriginalBrushPolies.Append(pPoly->m_pOriginalPoly);
+	}
+
+	// Get the bounding box.
+	pMin = &pRet->m_Min;
+	pMax = &pRet->m_Max;
+	pMin->Init((PReal)MAX_CREAL, (PReal)MAX_CREAL, (PReal)MAX_CREAL);
+	pMax->Init((PReal)-MAX_CREAL, (PReal)-MAX_CREAL, (PReal)-MAX_CREAL);
+	for(pos=pRet->m_Polies; pos; )
+	{
+		pPoly = pRet->m_Polies.GetNext(pos);
+		pPoly->ExtendBounds(*pMin, *pMax);
+	}
+
+	*pMin -= 1.0f;
+	*pMax += 1.0f;
+	return pRet;
+}
+
+
+static CPrePoly* TempPolyToPrePoly(TempPoly *pPoly)
+{
+	CPrePoly *pRet;
+
+	pRet = CreatePoly(CPrePoly, pPoly->NumVerts(), TRUE);
+	memcpy(pRet->VertList(), pPoly->VertList(), sizeof(CPolyVert) * pPoly->NumVerts());
+	pRet->m_pSurface = pPoly->m_pSurface;
+	return pRet;
+}
+
+
+// Moves what's left of each brush into the world, giving each original
+// poly's vertices the average normal of the brush's planes that touch them.
+static void TransferInsideFragments(CMoArray<TempBrush*> &brushes, CPreWorld *pWorld)
+{
+	CMoArray<PVector> unused;
+	uint32 i, iVert, k;
+	TempBrush *pBrush;
+	GPOS pos, testPos;
+	TempPoly *pPoly, *pTest;
+	CPrePoly *pPrePoly, *pOrig;
+	PVector vNormal, vPt;
+
+	unused.SetCacheSize(1000);
+
+	for(i=0; i < brushes; i++)
+	{
+		pBrush = brushes[i];
+		unused.SetSize(0);
+
+		for(pos=pBrush->m_Polies; pos; )
+		{
+			pPoly = pBrush->m_Polies.GetNext(pos);
+
+			pPrePoly = TempPolyToPrePoly(pPoly);
+			pPrePoly->m_pOriginalBrushPoly = pPoly->m_pOriginalPoly;
+
+			pOrig = pPoly->m_pOriginalPoly;
+			for(iVert=0; iVert < pOrig->NumVerts(); iVert++)
+			{
+				vNormal.Init(0.0f, 0.0f, 0.0f);
+				vPt = pOrig->Pt(iVert);
+
+				for(testPos=pBrush->m_Polies; testPos; )
+				{
+					pTest = pBrush->m_Polies.GetNext(testPos);
+					for(k=0; k < pTest->NumVerts(); k++)
+					{
+						if((vPt - pTest->Pt(k)).MagSqr() < 0.1f)
+						{
+							vNormal += pTest->Normal();
+							break;
+						}
+					}
+				}
+
+				vNormal.Norm();
+				pOrig->PtNormal(iVert) = vNormal;
+			}
+
+			pWorld->m_Polies.Append(pPrePoly);
+		}
+
+		// Free the brush.
+		for(pos=pBrush->m_Polies; pos; )
+		{
+			pPoly = pBrush->m_Polies.GetNext(pos);
+			DeletePoly(pPoly);
+		}
+		pBrush->m_Polies.RemoveAll();
+		free(pBrush);
+	}
+
+	brushes.Term();
+}
+
+
+// Brushes with the most intersecters go first.
+static void SortIntersecters(CMoArray<TempBrush*> &brushes)
+{
+	uint32 i;
+	BOOL bSorted;
+	TempBrush *pTemp;
+
+	if(brushes.GetSize() == 0)
+		return;
+
+	do
+	{
+		bSorted = TRUE;
+		for(i=0; i < brushes.GetSize()-1; i++)
+		{
+			if(brushes[i]->m_nIntersecters < brushes[i+1]->m_nIntersecters)
+			{
+				pTemp = brushes[i];
+				brushes[i] = brushes[i+1];
+				bSorted = FALSE;
+				brushes[i+1] = pTemp;
+			}
+		}
+	} while(!bSorted);
+}
+
+
+static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2);
+
+static void FindIntersecters(CMoArray<TempBrush*> &brushes, CMoArray<TempBrush*> &intersecters)
+{
+	uint32 i, j, iCur;
+	TempBrush *pBrush, *pOther;
+
+	intersecters.Term();
+	intersecters.SetCacheSize(50000);
+
+	for(i=0; i < brushes; i++)
+	{
+		pBrush = brushes[i];
+		pBrush->m_nIntersecters = 0;
+
+		if(pBrush->m_Polies.GetSize() < 4)
+			continue;
+
+		for(j=0; j < brushes; j++)
+		{
+			if(i == j)
+				continue;
+
+			pOther = brushes[j];
+			if(pOther->m_Polies.GetSize() < 4)
+				continue;
+
+			if(pBrush->m_Min <= pOther->m_Max && pBrush->m_Max >= pOther->m_Min)
+			{
+				if(DoBrushesIntersect(pBrush, pOther))
+				{
+					intersecters.Append(pOther);
+					pBrush->m_nIntersecters++;
+				}
+				else
+				{
+					g_nNonIntersecting++;
+				}
+			}
+		}
+	}
+
+	// Point each brush at its part of the array.
+	iCur = 0;
+	for(i=0; i < brushes; i++)
+	{
+		if(brushes[i]->m_nIntersecters > 0)
+		{
+			brushes[i]->m_Intersecters = &intersecters[iCur];
+			iCur += brushes[i]->m_nIntersecters;
+		}
+	}
+}
+
+
+static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
+{
+	GPOS pos1, pos2;
+	TempPoly *pPoly1, *pPoly2;
+	CPrePlane *pPlane1, *pPlane2;
+	BOOL bOutside;
+	uint32 i, k;
+	PVector vEdge, vEdgeNormal;
+	PReal dist;
+
+	// The brushes intersect unless one of pBrush1's planes has all of pBrush2 in front of it.
+	for(pos1=pBrush1->m_Polies; pos1; )
+	{
+		pPoly1 = pBrush1->m_Polies.GetNext(pos1);
+		pPlane1 = pPoly1->GetPlane();
+
+		bOutside = TRUE;
+		for(pos2=pBrush2->m_Polies; pos2 && bOutside; )
+		{
+			pPoly2 = pBrush2->m_Polies.GetNext(pos2);
+			pPlane2 = pPoly2->GetPlane();
+
+			// Faces touching, one detail and one not?
+			if(pPlane1->m_Normal.Dot(pPlane2->m_Normal) < -0.9 && pPlane2->m_Dist + pPlane1->m_Dist < 0.1)
+			{
+				if(pPoly2->GetSurface()->IsDetail() != pPoly1->GetSurface()->IsDetail())
+				{
+					// If pPoly1 is inside pPoly2's edges, they only touch.
+					for(i=0; i < pPoly2->NumVerts(); i++)
+					{
+						vEdge = pPoly2->NextPt(i) - pPoly2->Pt(i);
+						vEdgeNormal = vEdge.Cross(pPoly2->Normal());
+						vEdgeNormal.Norm();
+						dist = vEdgeNormal.Dot(pPoly2->Pt(i));
+
+						for(k=0; k < pPoly1->NumVerts(); k++)
+						{
+							if(vEdgeNormal.Dot(pPoly1->Pt(k)) - dist > 0.1)
+								goto NotInside;
+						}
+					}
+
+					return FALSE;
+				}
+			}
+
+NotInside:;
+
+			for(i=0; i < pPoly2->NumVerts(); i++)
+			{
+				if(pPlane1->DistTo(pPoly2->Pt(i)) <= 0.1)
+				{
+					bOutside = FALSE;
+					break;
+				}
+			}
+		}
+
+		if(bOutside)
+			return FALSE;
+	}
+
+	return TRUE;
+}
+
+
+static void ClearIntersecters(CMoArray<TempBrush*> &brushes)
+{
+	uint32 i;
+
+	for(i=0; i < brushes; i++)
+		brushes[i]->m_nIntersecters = 0;
+}
+
+
+static TempNode* BuildBrushTree(TempBrush *pBrush);
+static void ClipBrush(TempBrush *pBrush, TempNode *pTree);
+
+static void MergeIntersecters(CMoArray<TempBrush*> &brushes)
+{
+	uint16 i, j, iOther;
+	TempBrush *pBrush;
+
+	for(i=0; i < (uint16)brushes.GetSize(); i++)
+	{
+		pBrush = brushes[i];
+		pBrush->m_pTree = BuildBrushTree(pBrush);
+	}
+
+	for(i=0; i < (uint16)brushes.GetSize(); i++)
+	{
+		pBrush = brushes[i];
+		for(j=0; j < pBrush->m_nIntersecters; j++)
+		{
+			iOther = pBrush->m_Intersecters[j]->m_Index;
+			g_bEarlierBrush = iOther < i;
+			ClipBrush(brushes[iOther], pBrush->m_pTree);
+		}
+
+		if(g_ProgressCB)
+			g_ProgressCB((float)i / brushes.GetSize());
+	}
+}
+
+
+static TempNode* BuildBrushTree(TempBrush *pBrush)
+{
+	uint32 i, j;
+	GPOS pos, testPos;
+	TempPoly *pPoly;
+	TempNode *pNode, **ppPrev;
+
+	ppPrev = NULL;
+	pos = pBrush->m_Polies;
+	for(i=0; i < pBrush->m_Polies.GetSize(); i++)
+	{
+		pPoly = pBrush->m_Polies.GetNext(pos);
+		pNode = &pBrush->m_Nodes[i];
+
+		// Only one node per plane.
+		testPos = pBrush->m_Polies;
+		for(j=0; j < i; j++)
+		{
+			if(pPoly->GetPlane() == pBrush->m_Polies.GetNext(testPos)->GetPlane())
+				goto NextPoly;
+		}
+
+		if(ppPrev)
+			*ppPrev = pNode;
+
+		ppPrev = &pNode->m_Sides[BackSide];
+		pNode->m_Sides[FrontSide] = TEMPNODE_IN;
+		pNode->m_pPlane = pPoly->GetPlane();
+
+NextPoly:;
+	}
+
+	if(ppPrev)
+		*ppPrev = TEMPNODE_OUT;
+
+	return pBrush->m_Nodes;
+}
+
+
+static void ClipPoly(TempBrush *pBrush, TempPoly *pPoly, TempNode *pNode);
+
+static void ClipBrush(TempBrush *pBrush, TempNode *pTree)
+{
+	uint32 i, nPolies;
+	GPOS pos;
+	TempPoly *pPoly;
+
+	pos = pBrush->m_Polies;
+	nPolies = pBrush->m_Polies.GetSize();
+	for(i=0; i < nPolies; i++)
+	{
+		pPoly = pBrush->m_Polies.GetNext(pos);
+		ClipPoly(pBrush, pPoly, pTree);
+	}
+
+	pos = pBrush->m_Polies;
+	nPolies = pBrush->m_Polies.GetSize();
+	for(i=0; i < nPolies; i++)
+	{
+		pPoly = pBrush->m_Polies.GetNext(pos);
+		pPoly->m_pOriginalPoly->SetPPFlags(pPoly->m_pOriginalPoly->GetPPFlags() & ~PP_COPLANAR);
+	}
+}
+
+
+static void ClipPoly(TempBrush *pBrush, TempPoly *pPoly, TempNode *pNode)
+{
+	TempPoly *sides[2];
+	SplitStruct splitStruct;
+	PolySide side;
+
+	for(;;)
+	{
+		sides[0] = sides[1] = NULL;
+
+		side = GetPolySide(pNode->m_pPlane, pPoly, &splitStruct);
+		if(side == Intersect)
+		{
+			++g_nSplits;
+			SplitPoly(pNode->m_pPlane, pPoly, sides, &splitStruct);
+			sides[0]->m_Unknown_0c = sides[1]->m_Unknown_0c = pPoly->m_Unknown_0c;
+
+			pBrush->m_Polies.AddTail(sides[0]);
+			pBrush->m_Polies.AddTail(sides[1]);
+			pBrush->m_Polies.RemoveAt(pPoly);
+			DeletePoly(pPoly);
+		}
+		else
+		{
+			// A face coplanar with a face of an earlier brush goes.
+			if(g_bEarlierBrush && splitStruct.m_nIntersect == pPoly->NumVerts() && side == FrontSide)
+			{
+				side = BackSide;
+				pPoly->m_pOriginalPoly->SetPPFlags(pPoly->m_pOriginalPoly->GetPPFlags() | PP_COPLANAR);
+			}
+
+			sides[side] = pPoly;
+		}
+
+		if(sides[BackSide])
+		{
+			if(pNode->m_Sides[BackSide] == TEMPNODE_IN || pNode->m_Sides[BackSide] == TEMPNODE_OUT)
+			{
+				// It's inside the brush.
+				if(sides[BackSide]->m_pOriginalPoly->GetPPFlags() & PP_COPLANAR)
+					sides[BackSide]->m_pOriginalPoly->SetPPFlags(sides[BackSide]->m_pOriginalPoly->GetPPFlags() | PP_REMOVED);
+
+				pBrush->m_Polies.RemoveAt(sides[BackSide]);
+				DeletePoly(sides[BackSide]);
+			}
+			else if(sides[FrontSide])
+			{
+				ClipPoly(pBrush, sides[BackSide], pNode->m_Sides[BackSide]);
+			}
+			else
+			{
+				pPoly = sides[BackSide];
+				pNode = pNode->m_Sides[BackSide];
+				continue;
+			}
+		}
+
+		if(!sides[FrontSide] || pNode->m_Sides[FrontSide] == TEMPNODE_IN || pNode->m_Sides[FrontSide] == TEMPNODE_OUT)
+			return;
+
+		pPoly = sides[FrontSide];
+		pNode = pNode->m_Sides[FrontSide];
+	}
+}
+
+
+static void SetBrushIndices(CMoArray<TempBrush*> &brushes)
+{
+	uint32 i;
+
+	for(i=0; i < brushes; i++)
+		brushes[i]->m_Index = (uint16)i;
+}

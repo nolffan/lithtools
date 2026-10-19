@@ -11,7 +11,6 @@
 			{
 				m_Vec		= other.m_Vec;
 				m_Color		= other.m_Color;
-				m_Alpha		= other.m_Alpha;
 				m_Index		= other.m_Index;
 				m_Normal	= other.m_Normal;
 			}
@@ -19,7 +18,6 @@
 			uint32		m_Index;		//the index into the worlds vertex list
 			PVector		m_Vec;			//position of this vertex
 			LTVector	m_Color;		//Color of this vertex RGB [0..255]
-			PReal		m_Alpha;		//alpha of this vertex [0..255]
 			PVector		m_Normal;		//the normal of this vertex
 	};
 
@@ -29,7 +27,8 @@
 	{
 		public:
 
-			static T* CreatePoly(uint32 nVerts, bool bSetNumVerts)
+			// talon: the 2001 one takes a BOOL and does not test pRet again.
+			static T* CreatePoly(uint32 nVerts, BOOL bSetNumVerts)
 			{
 				ASSERT(nVerts >= 3);
 
@@ -37,20 +36,16 @@
 				T *pRet = (T*)malloc(size);
 
 				::new((DummyThingForConstructor*)NULL, pRet) T;
-				
-				if(pRet)
-				{
 
-				#ifdef _DEBUG
-					pRet->m_BasePoly.m_nMaxVerts = nVerts;
-				#endif
+			#ifdef _DEBUG
+				pRet->m_BasePoly.m_nMaxVerts = nVerts;
+			#endif
 
-					if(bSetNumVerts)
-						pRet->m_BasePoly.SetNumVerts((uint16)nVerts);
-					else
-						pRet->m_BasePoly.SetNumVerts(0);
-				}
-				
+				if(bSetNumVerts)
+					pRet->m_BasePoly.SetNumVerts((uint16)nVerts);
+				else
+					pRet->m_BasePoly.SetNumVerts(0);
+
 				return pRet;
 			}
 
@@ -80,8 +75,6 @@
 			const LTVector&			Color(uint32 i)	const	{ASSERT(i < m_nVerts); return m_Verts[i].m_Color;}
 			PVector&				Pt(uint32 i)			{ASSERT(i < m_nVerts); return m_Verts[i].m_Vec;}
 			const PVector&			Pt(uint32 i) const		{ASSERT(i < m_nVerts); return m_Verts[i].m_Vec;}
-			PReal&					Alpha(uint32 i)			{ASSERT(i < m_nVerts); return m_Verts[i].m_Alpha;}
-			const PReal&			Alpha(uint32 i)	const	{ASSERT(i < m_nVerts); return m_Verts[i].m_Alpha;}
 
 			PVector&				NextPt(uint32 i)			{return Pt((i+1) % m_nVerts);}
 			const PVector&			NextPt(uint32 i) const		{return Pt((i+1) % m_nVerts);}
@@ -233,7 +226,7 @@
 			}
 
 			enum ECenterFlags {KNOW_NOTHING = 0, KNOW_CENTER = 1, KNOW_RADIUS = 2};
-			mutable uint16		m_CenterFlags;
+			mutable uint32		m_CenterFlags;
 
 			mutable PVector		m_Center;
 			mutable PReal		m_Radius;
@@ -268,8 +261,6 @@
 		const PVector&		PrevPt(uint32 i) const {return m_BasePoly.PrevPt(i);}\
 		LTVector&			Color(uint32 i) {return m_BasePoly.Color(i);}\
 		const LTVector&		Color(uint32 i) const {return m_BasePoly.Color(i);}\
-		PReal&				Alpha(uint32 i) {return m_BasePoly.Alpha(i);}\
-		const PReal&		Alpha(uint32 i) const {return m_BasePoly.Alpha(i);}\
 		PVector&			PtNormal(uint32 i) {return m_BasePoly.PtNormal(i);}\
 		const PVector&		PtNormal(uint32 i) const {return m_BasePoly.PtNormal(i);}\
 		void				AddVert(const PVector &vec) {m_BasePoly.AddVert(vec, Normal());}\

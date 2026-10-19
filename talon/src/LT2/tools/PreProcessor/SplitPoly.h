@@ -163,8 +163,8 @@
 		nFront = pStruct->m_nFront + pStruct->m_nIntersect + 2;
 		nBack = pStruct->m_nBack + pStruct->m_nIntersect + 2;
 
-		sides[FrontSide] = CreatePoly(T, nFront, false);
-		sides[BackSide]  = CreatePoly(T, nBack, false);
+		sides[FrontSide] = CreatePoly(T, nFront, FALSE);
+		sides[BackSide]  = CreatePoly(T, nBack, FALSE);
 
 		nextSide = pStruct->m_PointSides[0];
 		for(iCur=0; iCur < pToSplit->NumVerts(); iCur++)
@@ -196,7 +196,7 @@
 			++nEdgeSplits;
 			if(nEdgeSplits > 2)
 			{
-				DrawStatusText(eST_Error, "Bad poly found! > 2 edge splits! (%0.1f %0.1f %0.1f)", VEC_EXPAND(pToSplit->Pt(iCur)));
+				DrawStatusText("*** Bad poly found! > 2 edge splits! (%0.1f %0.1f %0.1f)", VEC_EXPAND(pToSplit->Pt(iCur)));
 				break;
 			}
 
@@ -294,9 +294,6 @@
 			vNormal.Norm();
 
 			pPoly->AddVert(newPt, vNormal);
-
-			//calculate the alpha and set that to the newly added vertex
-			pPoly->Alpha(pPoly->NumVerts() - 1) = pToSplit->Alpha(iCur) * (1.0f - t) + pToSplit->Alpha(iNext) * t;
 		}
 
 		pPoly->CopySplitAttributes(pToSplit);

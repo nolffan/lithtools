@@ -13,7 +13,9 @@ class CTexturedPlane
 
 		CTexturedPlane();
 		CTexturedPlane(const CTexturedPlane& rhs);
-		virtual ~CTexturedPlane();
+		// talon: not virtual. The 2001 CEditPoly has m_pUser1 at 0x7c, so each
+		// of its two planes is 40 bytes: the name and O, P, Q, no vtable.
+		~CTexturedPlane();
 
 		void				CopyTextureAttributes(const CTexturedPlane *pOther, CStringHolder *pStringHolder );
 					

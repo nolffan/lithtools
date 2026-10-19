@@ -30,6 +30,10 @@
 	class LMMWorld;
 	
 	#define PP_POSTREMOVE						(1<<0)	// Used in various places..
+	// BrushToWorld (the names are ours): a face coplanar with a face of an
+	// earlier brush, and one of those whose piece inside was thrown away.
+	#define PP_REMOVED							(1<<1)
+	#define PP_COPLANAR							(1<<2)
 
 	class CPrePoly : public CGLLNode
 	{
@@ -65,10 +69,7 @@
 			// Make a copy of the poly.
 			CPrePoly*			Clone() const;
 
-			const char*			TextureName(uint32 nTex) const	{ ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_pTextureName; }
 
-			uint16				TextureWidth(uint32 nTex) const  { ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_TextureWidth; }
-			uint16				TextureHeight(uint32 nTex) const { ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_TextureHeight; }
  
 			const PVector&		P() const				{ ASSERT(GetSurface()); return GetSurface()->P; }
 			const PVector&		Q()	const				{ ASSERT(GetSurface()); return GetSurface()->Q; }
@@ -76,12 +77,7 @@
 			const PVector&		InverseP() const		{ ASSERT(GetSurface()); return GetSurface()->InverseP; }
 			const PVector&		InverseQ() const		{ ASSERT(GetSurface()); return GetSurface()->InverseQ; }
 
-			const PVector&		TextureO(uint32 nTex) const	{ ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_TextureO; }
-			const PVector&		TextureP(uint32 nTex) const	{ ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_TextureP; }
-			const PVector&		TextureQ(uint32 nTex) const	{ ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_TextureQ; }
 
-			const PVector&		InverseTextureP(uint32 nTex) const	{ ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_InverseTextureP; }
-			const PVector&		InverseTextureQ(uint32 nTex) const	{ ASSERT(GetSurface()); return GetSurface()->m_Texture[nTex].m_InverseTextureQ; }
 
 			const PVector&		Normal() const			{ ASSERT(GetPlane()); return GetPlane()->m_Normal; }
 			const PReal&		Dist() const			{ ASSERT(GetPlane()); return GetPlane()->m_Dist; }
@@ -148,6 +144,13 @@
 			}
 
 		public:
+
+			// The 2001 class (its constructor, 0x42dc00) has a vertex array
+			// and two more members ahead of m_pWorld; what they are used
+			// for is not known yet.
+			CMoArray<CPolyVert>	m_Unknown_0c;
+			uint32				m_Unknown_20;
+			uint32				m_Unknown_24;
 
 			LMMWorld			*m_pWorld;		// Used by LightMapMaker.
 

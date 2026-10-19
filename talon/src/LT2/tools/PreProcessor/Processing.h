@@ -16,78 +16,59 @@
 
 	#define MAX_THREADS					40
 
+	// The 2001 layout: where the option parser (0x43e7e0) and the code
+	// that reads them put each field. m_Unknown_* are fields whose use is
+	// not known yet; the Processing module will name them.
 	class CProcessorGlobs
 	{
 	public:
 
-		// Maximum lightmap size.  Comes from the world info string or DEFAULT_LIGHTMAP_PIXELS.
-		PReal	m_MaxLMSize; 
+		uint32	m_Unknown_00[3];
 
 		// Set to TRUE if it's making a world model (so the debug output can
 		// be toned down a little).
-		bool	m_bMakingWorldModel;
+		BOOL	m_bMakingWorldModel;
+
+		// -MaxBounds (default 400000).
+		PReal	m_MaxBounds;
 
 		// These should be set by the caller.
 		char	**m_Argv;
 		uint32	m_Argc;
-		char	m_InputFile[MAX_PATH]; // Input filename (like worlds\test1.lta).
-		char	m_OutputFile[MAX_PATH]; // Full output filename (like worlds\test1.dat).
+		char	m_InputFile[MAX_PATH]; // Input filename (like worlds\test1.ed).
+		uint8	m_Unknown_120[0x1ac - 0x120];
+		char	m_ProjectDir[0x274 - 0x1ac];
 
-		char	m_ProjectDir[MAX_PATH];
+		BOOL	m_bTextureFlags;
+		BOOL	m_bSelectProblemBrushes;
+		BOOL	m_bSelectOutOfBoundsBrushes;
+		BOOL	m_bRaySelect;
+		BOOL	m_bSelectHullProblemBrushes;
+		BOOL	m_bRemoveProblemObjects;
+		char	m_LeakFile[256];
+		char	m_PortalFile[256];
+		uint32	m_Unknown_48c[3];
 
-		//determines if the supersampling algorithm should be used
-		bool	m_bLMSuperSample;
-
-		//determine if the lightmaps should be expanded by a pixel on the right and 
-		//bottom sides in order to have a little bit higher resolution (this
-		//tends to fix continuity issues across corners)
-		bool	m_bLMOverSample;
-
-		//if the super sampling algorithm is used, this specifies the number
-		//of samples to be taken along a side
-		uint32	m_nLMNumSamplesOnSide;
-
-		//center world around origin?
-		bool	m_bCenterWorldAroundOrigin;
-
-		// Use portals?
-		bool	m_bPortals; 
-		bool	m_bObjectsOnly;
-		
-		bool	m_bIgnoreHidden;
-		bool	m_bIgnoreFrozen;
-
+		BOOL	m_bPortals;				// cleared by -NoPortals
+		BOOL	m_bReplaceTextures;
+		BOOL	m_bBsp;
+		BOOL	m_bIgnoreHidden;
 		PReal	m_SplitWeight, m_BalanceWeight;
-		
-		bool	m_bLight, m_bShadows, m_bLightAnimations;
-
-		//only light vertices (no lightmaps)
-		bool	m_bVerticesOnly;
-
-		// Enable shadow meshing
-		bool	m_bShadowMesh;
-
-		// Volumetric ambient grid calculation
-		bool	m_bVolumetricAmbient;
-
-		//when taking lighting samples, this determines how much to extrude the points
-		//along the polygon normal to prevent self intersection with its base polygon
-		PReal	m_fLMSampleExtrude;
-
-		//see if we are logging to a file
-		bool	m_bLogFile;
-
-		//see if we are logging to an error file
-		bool	m_bErrorLog;
-
-		//number of threads to use
+		BOOL	m_bAIVolumes;
+		BOOL	m_bLight;
+		BOOL	m_bClipLight;			// cleared by -nocliplight
+		BOOL	m_bLightAnimations;
+		BOOL	m_bVerticesOnly;		// -onlylightverts
+		BOOL	m_bLambertian;
+		BOOL	m_bOptimize;
+		BOOL	m_bFast;
+		uint32	m_MaxDetail;
+		BOOL	m_bLogFile;
 		uint32	m_nThreads;
-
-		//see if we want to skip the starting dialog
-		bool	m_bSkipDialog;
-
-		//where the output will be directed
-		IPackerOutput*	m_pIOutput;
+		uint32	m_Unknown_4dc;
+		BOOL	m_bFixTJunc;
+		BOOL	m_bNoSnapNoCSG;			// NoSnap and hull maker brushes take no part in CSG
+		BOOL	m_bBalanceBSPs;			// cleared by -NoBalanceBSPs
 
 		// The processor will fill these in.
 		uint32	m_nInputPolies, m_nInputVertices, m_nInputObjects;
@@ -116,9 +97,9 @@
 	// Do all the processing.
 	void DoProcessing(CProcessorGlobs *pGlobs);
 
-	void DrawStatusText(EStatusTextType eType, const char *pMsg, ...);
+	void DrawStatusText(const char *pMsg, ...);
 	// Draws text if not working on a world model.
-	void DrawStatusTextIfMainWorld(EStatusTextType eType, const char *pMsg, ...); 
+	void DrawStatusTextIfMainWorld(const char *pMsg, ...);
 
 	// Makes a surface in pWorld for each brush poly.
 	void GenerateSurfaces(GenList<CEditBrush*> &brushes, CPreWorld *pWorld);

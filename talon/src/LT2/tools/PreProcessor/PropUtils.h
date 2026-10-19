@@ -1,6 +1,11 @@
 #ifndef __PROPUTILS_H__
 #define __PROPUTILS_H__
 
+class CPropList;
+
+// The 2001 one: a bool property of a property list, false if there is none.
+bool GetBoolProp(CPropList *pList, const char *pName);
+
 //given a property name and a node, it will try and find a string property matching that
 //name, and return the default string if it fails
 inline const char* GetStringProp(CWorldNode* pNode, const char* pszPropName, const char* pszDefault = NULL)

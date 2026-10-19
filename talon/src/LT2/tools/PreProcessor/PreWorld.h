@@ -239,6 +239,7 @@ public:
 public:
 
 	void				JoinPolyList(CGLinkedList<CPrePoly*> &polies, PReal convexThreshold=DEFAULT_CONVEX_THRESHOLD);
+	void				JoinPolies(PReal convexThreshold);
 	
 	CPrePoly*			JoinPolygons(	CPrePoly *pPoly1, CPrePoly *pPoly2, 
 										uint16 poly1v1, uint16 poly2v1, 
@@ -266,11 +267,21 @@ public:
 	// Parent world...
 	CPreMainWorld				*m_pMainWorld;
 
+	// The 2001 class (its constructor, 0x433bb0) has a list, two arrays
+	// and a 48-byte structure that Build 69's does not; their types and
+	// use are not known yet.
+	CGLinkedList<void*>			m_Unknown_04;
+
 	// Description of the world.
 	CGLinkedList<CPrePoly*>		m_Polies;
 
+	CMoArray<void*>				m_Unknown_1c;
+	CMoArray<void*>				m_Unknown_30;
+
 	// This list is setup in BrushToWorld then emptied after BSP generation.
 	CGLinkedList<CPrePoly*>		m_OriginalBrushPolies;
+
+	uint32						m_Unknown_50[12];
 
 	CGLinkedList<CPrePlane*>	m_Planes;
 	CGLinkedList<CPreSurface*>	m_Surfaces;
@@ -286,6 +297,8 @@ public:
 	NODEREF						m_RootNode;
 
 	CMoArray<const char*>		m_TextureNames;
+
+	uint32						m_Unknown_e8;
 	
 	// This holds all the names for stuff in the world -- mainly texture names.
 	CStringHolder				m_StringHolder;
