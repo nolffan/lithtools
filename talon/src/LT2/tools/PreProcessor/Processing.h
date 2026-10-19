@@ -23,7 +23,10 @@
 	{
 	public:
 
-		uint32	m_Unknown_00[3];
+		uint32	m_Unknown_00[2];
+
+		// Maximum lightmap size.
+		PReal	m_MaxLMSize;
 
 		// Set to TRUE if it's making a world model (so the debug output can
 		// be toned down a little).

@@ -24,28 +24,22 @@
 
 #define POLYTYPE_SKY				0
 #define POLYTYPE_NORMAL				1
-#define NUM_POLYTYPES				2
-#define POLYTYPE_OCCLUDER			2 // Note : These don't ever go in the BSP
-#define POLYTYPE_NONEXISTENT		3
-#define POLYTYPE_BLOCKER			4
-#define POLYTYPE_PARTICLEBLOCKER	5
+#define POLYTYPE_HULLMAKER			2
+#define POLYTYPE_DETAIL				3
+#define NUM_POLYTYPES				4
 
-// Mask to determine if a poly shouldn't be removed, ever..)
-#define MASK_NOREMOVE (SURF_VISBLOCKER | SURF_NONEXISTENT | SURF_PHYSICSBLOCKER)
+// Polies that are never removed: hull makers.
+#define MASK_NOREMOVE (SURF_HULLMAKER)
 
 //determines the type of the polygon
 inline uint32 GetPolyType(CPrePoly *pPoly)
 {
-	if (pPoly->GetSurfaceFlags() & SURF_VISBLOCKER)
-		return POLYTYPE_OCCLUDER;
-	else if (pPoly->GetSurfaceFlags() & SURF_NONEXISTENT)
-		return POLYTYPE_NONEXISTENT;
-	else if (pPoly->GetSurfaceFlags() & SURF_PHYSICSBLOCKER)
-		return POLYTYPE_BLOCKER;
-	else if (pPoly->GetSurfaceFlags() & SURF_PARTICLEBLOCKER)
-		return POLYTYPE_PARTICLEBLOCKER;
-	else if(pPoly->GetSurfaceFlags() & SURF_SKY)
+	if(pPoly->GetSurfaceFlags() & SURF_SKY)
 		return POLYTYPE_SKY;
+	else if(pPoly->GetSurface()->IsDetail())
+		return POLYTYPE_DETAIL;
+	else if(pPoly->GetSurfaceFlags() & SURF_HULLMAKER)
+		return POLYTYPE_HULLMAKER;
 	else
 		return POLYTYPE_NORMAL;
 }
@@ -99,7 +93,7 @@ public:
 
 public:
 
-	bool		m_bDone;
+	BOOL		m_bDone;
 
 	CBspGen		*m_pBspGen;
 	CPolyList	*m_pPolies;	
@@ -116,6 +110,14 @@ public:
 #define BSP_BALANCE_SKIP  13
 // Other magic number for restricting the search length
 #define BSP_BALANCE_MAXSEARCH (BSP_BALANCE_SKIP * BSP_BALANCE_SKIP)
+
+// Defined below, in the order the shipped Processor has them.
+static void AddHullMakerBacksides_R(CPreWorld *pWorld, GenList<CNode*> &added, CNode *pRoot);
+static void UpdatePolyReplacements(CNode *pRoot);
+static void ReplaceWithOriginalPolies(CPreWorld *pWorld, CNode *pRoot);
+static void AddOriginalPoliesToWorld(CPreWorld *pWorld);
+
+
 
 // ----------------------------------------------------------------------- //
 //      Routine:        SplitThreadFn
@@ -134,6 +136,39 @@ static void SplitThreadFn( void *in )
 	thd_EndThread();
 }
 
+
+
+
+
+// ----------------------------------------------------------------------- //
+//      Routine:        Constructor
+//      Purpose:        
+// ----------------------------------------------------------------------- //
+
+CBspGen::CBspGen()
+{
+	m_pWorld = NULL;
+	m_ProgressFn = NULL;
+	m_bRemoveIntersectingPolies = FALSE;
+}
+
+
+
+
+
+
+// ----------------------------------------------------------------------- //
+//      Routine:        Destructor
+//      Purpose:        
+// ----------------------------------------------------------------------- //
+
+CBspGen::~CBspGen()
+{
+}
+
+
+
+
  
 static PReal CountNodes(CNode *pRoot)
 {
@@ -142,6 +177,9 @@ static PReal CountNodes(CNode *pRoot)
 
 	return (PReal)(1.0) + CountNodes(pRoot->m_Sides[0]) + CountNodes(pRoot->m_Sides[1]);
 }
+
+
+
 
 static PReal CalcBalance(CNode *pRoot)
 {
@@ -168,131 +206,10 @@ static PReal CalcBalance(CNode *pRoot)
 }
 
 
-CNode* AddNode(CNodeList &nodeList, const CPrePlane *pPlane, CPrePoly *pPoly)
-{
-	CNode	*pNode = new CNode;
-
-	memset( pNode, 0, sizeof(CNode) );
-	pNode->m_pPlane = pPlane;
-	pNode->m_pPoly = pPoly;
-	pNode->m_bPostRemove = FALSE;
-
-	nodeList.AddTail(pNode);
-
-	return pNode;
-}
-
-
-inline void ParentizeNode(CPreWorld *pWorld, CNode *pParent, NODEREF child, int childSide)
-{
-	pParent->m_Sides[childSide] = child;
-	if(IsValidNode(child))
-		pWorld->GetNode(child)->m_pParentNode = pParent;
-}
-
-
-static void GetNodesWithPoly(CMoArray<CNode*> &nodeList, CPrePoly *pPoly, CNode *pRoot)
-{
-	while (IsValidNode(pRoot))
-	{
-		if(pRoot->m_pPoly == pPoly)
-			nodeList.Append(pRoot);
-
-		GetNodesWithPoly(nodeList, pPoly, pRoot->m_Sides[0]);
-
-		pRoot = pRoot->m_Sides[1];
-	}
-}
-
-
-// Filters the poly into the tree.  Returns TRUE if it hits pNode.
-static bool IsPolyInNodeSpace(CNode *pRoot, CNode *pNode, CPrePoly *pPoly)
-{
-	static SplitStruct splitStruct;
-	PolySide side;
-
-	if(!IsValidNode(pRoot))
-		return false;
-	
-	if(pRoot == pNode)
-		return true;
-
-	side = GetPolySide(pRoot->m_pPoly->GetPlane(), pPoly, &splitStruct);
-	if(side == Intersect)
-	{
-		if(IsPolyInNodeSpace(pRoot->m_Sides[0], pNode, pPoly))
-			return true;
-
-		return IsPolyInNodeSpace(pRoot->m_Sides[1], pNode, pPoly);
-	}
-	else
-	{
-		return IsPolyInNodeSpace(pRoot->m_Sides[side], pNode, pPoly);
-	}
-}
-
-
-// ----------------------------------------------------------------------- //
-// Returns what side pNode is on of it's parent.  If pNode is the root node,
-// bRoot is set to TRUE and Intersect is returned.
-// ----------------------------------------------------------------------- //
-static PolySide GetParentSide(CPreWorld *pWorld, CNode *pNode, bool &bRoot)
-{
-	CNode *pParent;
-
-	bRoot = false;
-
-	if(pNode == pWorld->m_RootNode)
-	{
-		bRoot = true;
-		return Intersect;
-	}
-	else
-	{
-		pParent = pNode->m_pParentNode;
-		ASSERT(pParent);
-		if(pParent->m_Sides[0] == pNode)
-		{
-			return (PolySide)0;
-		}
-		else if(pParent->m_Sides[1] == pNode)
-		{
-			return (PolySide)1;
-		}
-		else
-		{
-			ASSERT(false);
-			return (PolySide)0;
-		}
-	}
-}
-
-
-// ----------------------------------------------------------------------- //
-//      Routine:        Constructor
-//      Purpose:        
-// ----------------------------------------------------------------------- //
-
-CBspGen::CBspGen()
-{
-	m_pWorld = NULL;
-
-	m_bRemoveIntersectingPolies = FALSE;
-}
 
 
 
-// ----------------------------------------------------------------------- //
-//      Routine:        Destructor
-//      Purpose:        
-// ----------------------------------------------------------------------- //
-
-CBspGen::~CBspGen()
-{
-}
-
-
-bool CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
+BOOL CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
 {
 	CPolyList				polyList;
 	CGLinkedList<CPrePoly*> *pPolies;
@@ -316,7 +233,7 @@ bool CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
 
 	
 	if( pPolies->GetSize() == 0 )
-		return false;
+		return FALSE;
 
 
 	// Set all the stats to defaults.
@@ -334,15 +251,18 @@ bool CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
 	{
 		pPoly = pPolies->GetNext(pos);
 
+		if(pPoly->GetSurfaceFlags() & SURF_PHYSICSBLOCKER)
+			continue;
+
 		type = GetPolyType(pPoly);
-		if (type >= NUM_POLYTYPES)
+		if(type == POLYTYPE_HULLMAKER && !pOptions->m_bHullMakers)
 			continue;
 
 		polyList.m_PolyLists[type].AddTail(pPoly);
 	}
 
 	if(polyList.GetSize() == 0)
-		return false;
+		return FALSE;
 
 	// Loop thru and make the tree.
 	RecurseOnList(polyList, &m_pWorld->m_RootNode, 1);
@@ -362,11 +282,129 @@ bool CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
 	}
 
 	// Calculate the balancing
-	DrawStatusTextIfMainWorld(eST_Normal, "BSP tree %0.2f%% balanced.",
+	DrawStatusTextIfMainWorld("BSP tree %0.2f%% balanced.",
 		CalcBalance(m_pWorld->m_RootNode) * 100.0f);
 
-	return true;
+	return TRUE;
 }
+
+
+
+
+
+CNode* AddNode(CNodeList &nodeList, const CPrePlane *pPlane, CPrePoly *pPoly)
+{
+	CNode	*pNode = new CNode;
+
+	memset( pNode, 0, sizeof(CNode) );
+	pNode->m_pPlane = pPlane;
+	pNode->m_pPoly = pPoly;
+	pNode->m_bPostRemove = FALSE;
+
+	nodeList.AddTail(pNode);
+
+	return pNode;
+}
+
+
+
+
+
+inline void ParentizeNode(CPreWorld *pWorld, CNode *pParent, NODEREF child, int childSide)
+{
+	pParent->m_Sides[childSide] = child;
+	if(IsValidNode(child))
+		pWorld->GetNode(child)->m_pParentNode = pParent;
+}
+
+
+
+
+
+static void GetNodesWithPoly(CMoArray<CNode*> &nodeList, CPrePoly *pPoly, CNode *pRoot)
+{
+	while (IsValidNode(pRoot))
+	{
+		if(pRoot->m_pPoly == pPoly)
+			nodeList.Append(pRoot);
+
+		GetNodesWithPoly(nodeList, pPoly, pRoot->m_Sides[0]);
+
+		pRoot = pRoot->m_Sides[1];
+	}
+}
+
+
+
+
+
+// Filters the poly into the tree.  Returns TRUE if it hits pNode.
+static BOOL IsPolyInNodeSpace(CNode *pRoot, CNode *pNode, CPrePoly *pPoly)
+{
+	static SplitStruct splitStruct;
+	PolySide side;
+
+	if(!IsValidNode(pRoot))
+		return FALSE;
+	
+	if(pRoot == pNode)
+		return TRUE;
+
+	side = GetPolySide(pRoot->m_pPoly->GetPlane(), pPoly, &splitStruct);
+	if(side == Intersect)
+	{
+		if(IsPolyInNodeSpace(pRoot->m_Sides[0], pNode, pPoly))
+			return TRUE;
+
+		return IsPolyInNodeSpace(pRoot->m_Sides[1], pNode, pPoly);
+	}
+	else
+	{
+		return IsPolyInNodeSpace(pRoot->m_Sides[side], pNode, pPoly);
+	}
+}
+
+
+
+
+
+// ----------------------------------------------------------------------- //
+// Returns what side pNode is on of it's parent.  If pNode is the root node,
+// bRoot is set to TRUE and Intersect is returned.
+// ----------------------------------------------------------------------- //
+static PolySide GetParentSide(CPreWorld *pWorld, CNode *pNode, BOOL &bRoot)
+{
+	CNode *pParent;
+
+	bRoot = FALSE;
+
+	if(pNode == pWorld->m_RootNode)
+	{
+		bRoot = TRUE;
+		return Intersect;
+	}
+	else
+	{
+		pParent = pNode->m_pParentNode;
+		ASSERT(pParent);
+		if(pParent->m_Sides[0] == pNode)
+		{
+			return (PolySide)0;
+		}
+		else if(pParent->m_Sides[1] == pNode)
+		{
+			return (PolySide)1;
+		}
+		else
+		{
+			ASSERT(false);
+			return (PolySide)0;
+		}
+	}
+}
+
+
+
 
 
 
@@ -375,23 +413,27 @@ bool CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
 //      Purpose:        Splits the polygon into pieces of the given size if necessary.
 // ----------------------------------------------------------------------- //
 
-bool CBspGen::MinimizeNodePolySize(NODEREF inNode, CReal maxX, CReal maxY)
+static uint32 g_nMinimizeCalls;
+
+BOOL CBspGen::MinimizeNodePolySize(NODEREF inNode, CReal maxX, CReal maxY)
 {
 	CNode				*pNewNode;
-	bool				bRoot;
+	BOOL				bRoot;
 	CPrePlane			splitPlane;
 	PolySide			side, parentSide;
 	PReal				dot;
-	bool				bSplit;
+	BOOL				bSplit;
 	uint32				i;
 	int32				outType;
 	CPrePoly			*sides[2];
 	CNode				*pNodes[2];
 	SplitStruct			splitStruct;
 	CMoArray<CNode*>	nodeList;
-	bool				bIsIn[2];
+	BOOL				bIsIn[2];
 	CPrePoly			*pInsidePoly;
 
+
+	++g_nMinimizeCalls;
 
 	CNode*			pNode = m_pWorld->GetNode(inNode);
 	CPrePoly*		pPoly = pNode->m_pPoly;
@@ -430,7 +472,7 @@ bool CBspGen::MinimizeNodePolySize(NODEREF inNode, CReal maxX, CReal maxY)
 	
 	if(!bSplit)
 	{
-		return false;
+		return FALSE;
 	}
 	
 
@@ -441,18 +483,21 @@ bool CBspGen::MinimizeNodePolySize(NODEREF inNode, CReal maxX, CReal maxY)
 	ASSERT( side == Intersect );
 	if(side != Intersect)
 	{
-		return false;
+		return FALSE;
 	}		
 
 	if(!::SplitPoly(&splitPlane, pPoly, sides, &splitStruct))
 	{
 		DeletePoly(sides[0]);
 		DeletePoly(sides[1]);
-		return false;
+
+		// Leave the surface untextured so the bad poly shows.
+		pPoly->m_pSurface->m_pTextureName = "";
+		return FALSE;
 	}
 
-	sides[0]->FindTextureOrigin(NULL, TRUE, (float)m_pWorld->GetLMGridSize(pPoly));
-	sides[1]->FindTextureOrigin(NULL, TRUE, (float)m_pWorld->GetLMGridSize(pPoly));
+	sides[0]->FindTextureOrigin(NULL, TRUE, m_pWorld->m_pMainWorld->m_LMGridSize);
+	sides[1]->FindTextureOrigin(NULL, TRUE, m_pWorld->m_pMainWorld->m_LMGridSize);
 
 
 	// Update all the nodes with this poly.
@@ -516,8 +561,11 @@ bool CBspGen::MinimizeNodePolySize(NODEREF inNode, CReal maxX, CReal maxY)
 	m_pWorld->m_Polies.Append( sides[0] );
 	m_pWorld->m_Polies.Append( sides[1] );
 
-	return true;
+	return TRUE;
 }
+
+
+
 
 
 
@@ -549,6 +597,10 @@ void CBspGen::RecurseOnList(CPolyList &polies, NODEREF *pRootNode, uint32 nLevel
 	// Split all the polygons.
 	SplitPolyArray(polies, pSplitPoly, sideArrays);
 
+	// Hull makers behind a normal poly with nothing normal behind it are dropped.
+	if(!(pSplitPoly->GetSurfaceFlags() & SURF_HULLMAKER) && backList->m_PolyLists[POLYTYPE_NORMAL].GetSize() == 0)
+		backList->m_PolyLists[POLYTYPE_HULLMAKER].RemoveAll();
+
 	// Go into the back side.
 	if(backList->GetSize() == 0)
 		pSplitNode->m_Sides[BackSide] = NODE_OUT;
@@ -571,6 +623,9 @@ void CBspGen::RecurseOnList(CPolyList &polies, NODEREF *pRootNode, uint32 nLevel
 	ParentizeNode(m_pWorld, pSplitNode, pSplitNode->m_Sides[FrontSide], FrontSide);
 	ParentizeNode(m_pWorld, pSplitNode, pSplitNode->m_Sides[BackSide], BackSide);
 }
+
+
+
 
 
 
@@ -601,6 +656,9 @@ void CBspGen::ThreadedRecurseOnList(CPolyList &polies, NODEREF *pRootNode, uint3
 		RecurseOnList( polies, pRootNode, nLevel );
 	}
 }
+
+
+
 
 
 
@@ -702,11 +760,9 @@ LTBOOL CalcSplitSelector(CPolyList &polies, CPrePoly *pPoly, SplitSelector &resu
 	int nFrontSide = 0;
 	int nBackSide = 0;
 
-	// Don't search throught the whole list...
-	uint32 nSearchCount = (pList->GetSize() > (BSP_BALANCE_SKIP * BSP_BALANCE_SKIP)) ? (pList->GetSize()  / BSP_BALANCE_SKIP) : pList->GetSize();
-	nSearchCount = LTMIN(nSearchCount, BSP_BALANCE_MAXSEARCH);
+	uint32 i;
 
-	for(LPOS listPos = pList->GetHeadPosition(); nSearchCount && listPos; --nSearchCount)
+	for(LPOS listPos = pList->GetHeadPosition(); listPos; )
 	{
 		CPrePoly *pComparePoly = pList->GetNext(listPos);
 
@@ -725,6 +781,18 @@ LTBOOL CalcSplitSelector(CPolyList &polies, CPrePoly *pPoly, SplitSelector &resu
 			else if( side == BackSide )
 				++nBackSide;
 		}
+
+		// Don't search through the whole list...
+		if(pList->GetSize() > BSP_BALANCE_MAXSEARCH)
+		{
+			for(i=0; i < BSP_BALANCE_SKIP; i++)
+			{
+				if(!listPos)
+					break;
+
+				pList->GetNext(listPos);
+			}
+		}
 	}
 
 	// Figure out how bad the balancing was
@@ -736,6 +804,9 @@ LTBOOL CalcSplitSelector(CPolyList &polies, CPrePoly *pPoly, SplitSelector &resu
 
 	return LTTRUE;
 }
+
+
+
 
 											  
 CPrePoly* CBspGen::GetBestSplit(CPolyList &polies, uint32 nLevel)
@@ -753,6 +824,10 @@ CPrePoly* CBspGen::GetBestSplit(CPolyList &polies, uint32 nLevel)
 		// Choose the first poly
 		CalcSplitSelector(polies, pList->GetNext(listPos), bestSplit, NULL, nLevel);
 		bestSplit.m_Index = 0;
+
+		// -NoBalanceBSPs: the first one will do.
+		if(!g_pGlobs->m_bBalanceBSPs)
+			return bestSplit.m_pPoly;
 	}
 
 	// Loop through the rest of the list looking for a better splitter
@@ -786,6 +861,9 @@ CPrePoly* CBspGen::GetBestSplit(CPolyList &polies, uint32 nLevel)
 
 
 
+
+
+
 // ----------------------------------------------------------------------- //
 //      Routine:        CBspGen::SplitPolyArray
 //      Purpose:        Splits all the polygons in polies against iSplitOn.
@@ -800,7 +878,8 @@ void CBspGen::SplitPolyArray(CPolyList &polies, CPrePoly *pSplitOn, CPolyList *s
 
 
 	++m_nSplitPolyArrayCalls;
-	SetProgressBar( (CReal)(m_nSplitPolyArrayCalls+1) / m_pWorld->m_Polies.GetSize() );
+	if(m_ProgressFn)
+		m_ProgressFn(this, (CReal)(m_nSplitPolyArrayCalls+1) / m_pWorld->m_Polies.GetSize());
 	
 	for(i=0; i < NUM_POLYTYPES; i++)
 	{
@@ -815,6 +894,9 @@ void CBspGen::SplitPolyArray(CPolyList &polies, CPrePoly *pSplitOn, CPolyList *s
 		}
 	}
 }
+
+
+
 
 
 
@@ -888,6 +970,9 @@ void CBspGen::SplitPoly(CPrePoly *pSplitOn, CPrePoly *pToSplit, CPolyList *sideA
 }
 
 
+
+
+
 // ----------------------------------------------------------------------- //
 //      Routine:        CBspGen::DoPreProcessing
 //      Purpose:        Does any preprocessing on all the geomety.
@@ -896,6 +981,9 @@ void CBspGen::SplitPoly(CPrePoly *pSplitOn, CPrePoly *pToSplit, CPolyList *sideA
 void CBspGen::DoPreProcessing()
 {
 }
+
+
+
 
 
 
@@ -929,6 +1017,9 @@ void RemoveUnusedPolygons( CPreWorld *pWorld )
 }
 
 
+
+
+
 void RemoveUnusedNodes( CPreWorld *pWorld )
 {
 	GPOS pos;
@@ -959,6 +1050,9 @@ void RemoveUnusedNodes( CPreWorld *pWorld )
 }
 
 
+
+
+
 CNode* NodeWithPoly(CPreWorld *pWorld, CPrePoly *pPoly)
 {
 	GPOS pos;
@@ -974,6 +1068,9 @@ CNode* NodeWithPoly(CPreWorld *pWorld, CPrePoly *pPoly)
 
 	return NULL;
 }
+
+
+
 
 
 void FilterPolyIntoBSP(
@@ -1074,6 +1171,9 @@ void FilterPolyIntoBSP(
 }
 
 
+
+
+
 CPrePoly* AddReversedPoly(
 	CPreWorld *pWorld,
 	const CPrePoly *pPoly)
@@ -1091,18 +1191,20 @@ CPrePoly* AddReversedPoly(
 
 	pWorld->m_Surfaces.AddTail(pNewSurface);
 
-	pNewPoly = CreatePoly(CPrePoly, pPoly->NumVerts(), false);
+	pNewPoly = CreatePoly(CPrePoly, pPoly->NumVerts(), FALSE);
 
 	pNewPoly->m_pSurface = pNewSurface;
 	for(i=0; i < pPoly->NumVerts(); i++)
 	{
 		pNewPoly->AddVert(pPoly->Pt(pPoly->NumVerts()-i-1));
-		pNewPoly->Alpha(i) = pPoly->Alpha(pPoly->NumVerts()-i-1);
 	}
 
 	pWorld->m_Polies.Append(pNewPoly);
 	return pNewPoly;
 }
+
+
+
 
 
 CNode* AddBacksideNode(CPreWorld *pWorld, CNode *pNode)
@@ -1126,6 +1228,114 @@ CNode* AddBacksideNode(CPreWorld *pWorld, CNode *pNode)
 	return pNewNode;
 }
 
+
+
+
+
+static void AddHullMakerBacksides(CPreWorld *pWorld)
+{
+	CLinkedList<CNode*> added;
+
+	AddHullMakerBacksides_R(pWorld, added, pWorld->m_RootNode);
+}
+
+
+
+// Gives every hull maker node a backside node, once.
+static void AddHullMakerBacksides_R(CPreWorld *pWorld, GenList<CNode*> &added, CNode *pRoot)
+{
+	GenListPos pos;
+	CNode *pNewNode;
+
+	if(!IsValidNode(pRoot))
+		return;
+
+	if((pRoot->m_pPoly->GetSurfaceFlags() & SURF_HULLMAKER) && !added.GenFindElement(pRoot, pos))
+	{
+		pNewNode = AddBacksideNode(pWorld, pRoot);
+		if(pNewNode)
+			added.GenAppend(pNewNode);
+	}
+
+	AddHullMakerBacksides_R(pWorld, added, pRoot->m_Sides[0]);
+	AddHullMakerBacksides_R(pWorld, added, pRoot->m_Sides[1]);
+}
+
+
+
+
+
+BOOL CBspGen::DoPostProcessing()
+{
+	CNode		*pNode;
+	GPOS		pos;
+	uint32		nStartingPolies, nStartingNodes;
+	PReal		fClamp;
+
+
+	// Update the replacement polies (ie: replace fragments with the original unsplit polies).
+	UpdatePolyReplacements(m_pWorld->m_RootNode);
+
+	// Use the original brush polies (removes the splits from BrushToWorld).
+	if(m_Options.m_bUseOriginalPolies)
+	{
+		ReplaceWithOriginalPolies(m_pWorld, m_pWorld->m_RootNode);
+		AddOriginalPoliesToWorld(m_pWorld);
+	}
+
+	// Remove polygons marked to be removed.	
+	RemoveUnusedPolygons( m_pWorld );
+
+	m_pWorld->FindTextureOrigins();
+
+	nStartingPolies = m_pWorld->m_Polies.GetSize();
+	nStartingNodes = m_pWorld->m_Nodes.GetSize();
+
+	// Minimize polygon sizes.
+	if(m_Options.m_bMinimizePolies)
+	{
+		for(pos=m_pWorld->m_Nodes; pos; )
+		{
+			// It does GetAt/GetNext here so it'll work if new nodes get added to the
+			// list in between GetAt and GetNext.
+			pNode = m_pWorld->m_Nodes.GetAt(pos);
+
+			if(pNode->m_pPoly->GetSurface()->ShouldLightmap())
+			{
+				// We use LIGHTMAP_MAX_PIXELS-1 because all lightmaps need one extra pixel
+				// for the last interpolation values.
+				fClamp = (g_pGlobs->m_MaxLMSize - 1.0f) * m_pWorld->m_pMainWorld->m_LMGridSize - 0.2f;
+				MinimizeNodePolySize(pNode, fClamp, fClamp);
+			}
+
+			m_pWorld->m_Nodes.GetNext(pos);
+		}
+	}
+
+	// Remove all the nodes that got removed during minimization.
+	RemoveUnusedNodes(m_pWorld);
+	RemoveUnusedPolygons(m_pWorld);
+
+	// Display output (after removing unused nodes).
+	if(m_Options.m_bMinimizePolies)
+	{
+		DrawStatusTextIfMainWorld("%d polies (%d nodes) added for lightmapping.", 
+			m_pWorld->m_Polies.GetSize() - nStartingPolies, m_pWorld->m_Nodes.GetSize() - nStartingNodes);
+	}
+
+	AddHullMakerBacksides(m_pWorld);
+	m_pWorld->CalcNodeBoundingBoxes();
+
+	if(m_Options.m_bInitVertexIndices)
+		m_pWorld->InitPolyVertexIndices();
+	
+	m_pWorld->FindTextureOrigins();
+	return TRUE;
+}
+
+
+
+
 static void UpdatePolyReplacements(CNode *pRoot)
 {
 	if(!IsValidNode(pRoot))
@@ -1139,13 +1349,16 @@ static void UpdatePolyReplacements(CNode *pRoot)
 }
 
 
+
+
+
 // Replaces polies with their m_pOriginalBrushPoly in the BSP tree.
 static void ReplaceWithOriginalPolies(CPreWorld *pWorld, CNode *pRoot)
 {
 	if(!IsValidNode(pRoot))
 		return;
 
-	if(pRoot->m_pPoly->m_pOriginalBrushPoly)
+	if(pRoot->m_pPoly->m_pOriginalBrushPoly && !(pRoot->m_pPoly->m_pOriginalBrushPoly->GetPPFlags() & PP_REMOVED))
 	{
 		ASSERT(pWorld->m_OriginalBrushPolies.FindElement(pRoot->m_pPoly->m_pOriginalBrushPoly) != BAD_INDEX);
 		pRoot->m_pPoly = pRoot->m_pPoly->m_pOriginalBrushPoly;
@@ -1154,6 +1367,9 @@ static void ReplaceWithOriginalPolies(CPreWorld *pWorld, CNode *pRoot)
 	ReplaceWithOriginalPolies(pWorld, pRoot->m_Sides[0]);
 	ReplaceWithOriginalPolies(pWorld, pRoot->m_Sides[1]);
 }
+
+
+
 
 
 // Moves the m_OriginalBrushPolies list into the m_Polies list.
@@ -1166,79 +1382,8 @@ static void AddOriginalPoliesToWorld(CPreWorld *pWorld)
 	{
 		pPoly = pWorld->m_OriginalBrushPolies.GetNext(pos);
 
-		if ((pPoly->m_pSurface->m_Flags & SURF_NONEXISTENT) == 0)
-			pWorld->m_Polies.AddTail(pPoly);
+		pWorld->m_Polies.AddTail(pPoly);
 	}
 
 	pWorld->m_OriginalBrushPolies.RemoveAll();
 }
-
-
-bool CBspGen::DoPostProcessing()
-{
-	uint32		iCurNode;
-	CPreSurface *pSurface;
-	CNode		*pNode;
-	GPOS		pos;
-	uint32		nStartingPolies, nStartingNodes;
-	PReal		fClampU, fClampV;
-
-
-	// Update the replacement polies (ie: replace fragments with the original unsplit polies).
-	UpdatePolyReplacements(m_pWorld->m_RootNode);
-
-	// Use the original brush polies (removes the splits from BrushToWorld).
-	ReplaceWithOriginalPolies(m_pWorld, m_pWorld->m_RootNode);
-	AddOriginalPoliesToWorld(m_pWorld);
-
-	// Remove polygons marked to be removed.	
-	RemoveUnusedPolygons( m_pWorld );
-
-	m_pWorld->FindTextureOrigins();
-
-	nStartingPolies = m_pWorld->m_Polies.GetSize();
-	nStartingNodes = m_pWorld->m_Nodes.GetSize();
-
-
-	// Minimize polygon sizes.
-	iCurNode = 0;
-	for(pos=m_pWorld->m_Nodes; pos; )
-	{
-		// It does GetAt/GetNext here so it'll work if new nodes get added to the
-		// list in between GetAt and GetNext.
-		pNode = m_pWorld->m_Nodes.GetAt(pos);
-		pSurface = pNode->m_pPoly->GetSurface();
-
-		if(pSurface->ShouldLightmap())
-		{
-			// We use LIGHTMAP_MAX_PIXELS-1 because all lightmaps need one extra pixel
-			// for the last interpolation values.
-			fClampU = (m_pWorld->GetLMGridSize(pSurface) * (g_pGlobs->m_MaxLMSize - 1.0f)) - 0.2f;
-			fClampV = (m_pWorld->GetLMGridSize(pSurface) * (g_pGlobs->m_MaxLMSize - 1.0f)) - 0.2f;
-			MinimizeNodePolySize(pNode, fClampU, fClampV);
-		}
-
-		// It does GetAt/GetNext here so it'll work if new nodes get added to the
-		// list in between GetAt and GetNext.
-		m_pWorld->m_Nodes.GetNext(pos);
-		++iCurNode;
-	}
-
-
-	// Remove all the nodes that got removed during minimization.
-	RemoveUnusedNodes(m_pWorld);
-	RemoveUnusedPolygons(m_pWorld);
-
-
-	// Display output (after removing unused nodes).
-	DrawStatusTextIfMainWorld(eST_Normal, "%d polies (%d nodes) added for lightmapping.", 
-		m_pWorld->m_Polies.GetSize() - nStartingPolies, m_pWorld->m_Nodes.GetSize() - nStartingNodes);
-
-	m_pWorld->InitPolyVertexIndices();
-	
-	m_pWorld->FindTextureOrigins();
-	return true;
-}
-
-
-

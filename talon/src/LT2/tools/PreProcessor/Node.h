@@ -10,16 +10,20 @@
 	#define NODE_IN		((CNode*)-1)
 	#define NODE_OUT	((CNode*)-2)
 
+	// The 2001 class (0x3c bytes; AddNode at 0x4050b0 constructs it). The
+	// m_Unknown_* members are not used by BspGen; their modules will name them.
 	class CNode : public CGLLNode
 	{
 		public:
-
 						CNode()
 						{
 							m_pPlane				= NULL;
 							m_pPoly					= NULL;
+							m_Unknown_24			= 0;
+							m_Unknown_28			= 0;
 							m_pParentNode			= NULL;
 							m_Sides[0] = m_Sides[1] = NULL;
+							m_Unknown_1a			= 0;
 						}
 
 			const CPrePlane*	GetPlane() const	{ return m_pPlane; }
@@ -29,17 +33,19 @@
 			void			ClearPolyPostRemove();
 			void			ClearNodePostRemove();
 
-			// Used while saving.
 			uint32			m_Index;
-
-			uint8			m_bPostRemove;
+			uint32			m_Unknown_0c[3];
+			uint16			m_Unknown_18;
+			uint16			m_Unknown_1a;
 
 			const CPrePlane	*m_pPlane;
 			CPrePoly		*m_pPoly;
-
+			uint32			m_Unknown_24;
+			uint32			m_Unknown_28;
 			CNode			*m_pParentNode;
 			CNode			*m_Sides[2];
 
+			uint8			m_bPostRemove;
 	};
 
 	typedef CGLinkedList<CNode*>	CNodeList;

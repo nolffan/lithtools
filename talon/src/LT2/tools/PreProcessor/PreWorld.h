@@ -230,6 +230,9 @@ public:
 
 	void				GetBoundingBox(PVector *pMin, PVector *pMax);
 	void				UpdateBoundingBox();
+	// talon: 0x43a290, the bounding boxes of the BSP nodes from the root
+	// down (name provisional).
+	void				CalcNodeBoundingBoxes();
 	
 	int					GetTreeDepth();
 
@@ -406,6 +409,13 @@ public:
 	// No objects are stored in here, but this is created and maintained 
 	// so at runtime it knows how to create the WorldTree.
 	WorldTree						m_WorldTree;
+
+	// talon, provisional: the 2001 class (constructed at 0x415930, with two
+	// vtables) is not laid out yet. BspGen and the lighting read a float
+	// lightmap grid size at 0xf4, so it is placed there; the members around
+	// it are still Build 69's.
+	uint32							m_Unknown_f0;
+	PReal							m_LMGridSize;
 
 	CMoArray<CBaseEditObj*>			m_Objects;
 	

@@ -41,6 +41,13 @@
 	class CPolyList;
 
 
+	// The default for CBspGenOptions::m_PlaneDistFn (0x430950, defined with
+	// the surface code): the plane's distance. Name provisional.
+	PReal GetPlaneDist(const CPrePlane *pPlane);
+
+	// The 2001 options (40 bytes; CBspGen's constructor at 0x404c40 has them
+	// inline). Names follow what DoPostProcessing and GenerateBspTree use
+	// them for; m_Unknown_* are not read by BspGen.
 	class CBspGenOptions
 	{
 	public:
@@ -49,20 +56,37 @@
 						{
 							m_pWorld				= NULL;
 							m_pCustomPolyList		= NULL;
-							m_bPostProcess			= true;
+							m_bMinimizePolies		= FALSE;
+							m_bHullMakers			= FALSE;
+							m_bPostProcess			= TRUE;
 							m_nThreadsToUse			= 0;
+							m_bUseOriginalPolies	= FALSE;
+							m_bInitVertexIndices	= TRUE;
+							m_PlaneDistFn			= GetPlaneDist;
+							m_Unknown_24			= 0;
 						}
 
 		CPreWorld		*m_pWorld;
-		
-		// If you set this, it won't generate the tree from the world's poly list,
-		// it'll just use the polies in this list.
+
+		// If this is set, it uses this list instead of m_pWorld->m_Polies.
 		CGLinkedList<CPrePoly*>	*m_pCustomPolyList;
 
-		bool			m_bPostProcess;
-		uint32			m_nThreadsToUse;
-	};
+		// Split polies to the lightmap size (DoPostProcessing).
+		BOOL			m_bMinimizePolies;
 
+		// Put hull maker polies in the tree.
+		BOOL			m_bHullMakers;
+
+		BOOL			m_bPostProcess;
+		uint32			m_nThreadsToUse;
+		BOOL			m_bInitVertexIndices;
+
+		// Replace the BrushToWorld fragments with the original brush polies.
+		BOOL			m_bUseOriginalPolies;
+
+		PReal			(*m_PlaneDistFn)(const CPrePlane *pPlane);
+		uint32			m_Unknown_24;
+	};
 
 
 	class CBspGen
@@ -71,76 +95,43 @@
 
 							CBspGen();
 							~CBspGen();
-						
-			
-		// Member functions
-		public:
-			
-			// Makes the BSP tree for you.
-			bool			GenerateBspTree(CBspGenOptions *pOptions);
-	
-		// Private member functions
+
 		public:
 
-			// Initial data structuring routines.
-			bool				MinimizeNodePolySize(NODEREF iNode, CReal maxX, CReal maxY);
+			BOOL			GenerateBspTree(CBspGenOptions *pOptions);
 
-
-		// Actual BSP generation routines.
 		public:
 
-			// NEVER call this directly .. the threads call it...
+			BOOL				MinimizeNodePolySize(NODEREF iNode, CReal maxX, CReal maxY);
+
+		public:
+
 			void				RecurseOnList(CPolyList &polies, NODEREF *pRootNode, uint32 nLevel);
-
 			void				ThreadedRecurseOnList(CPolyList &polies, NODEREF *pRootNode, uint32 nLevel);
 			CPrePoly*			GetBestSplit(CPolyList &polies, uint32 nLevel);
-
 			void				SplitPolyArray(CPolyList &polies, CPrePoly *pSplitOn, CPolyList *sideArrays[2]);
 			void				SplitPoly(CPrePoly *pSplitOn, CPrePoly *pToSplit, CPolyList *sideArrays[2]);
-
 			void				DoPreProcessing();
-			bool				DoPostProcessing();
+			BOOL				DoPostProcessing();
 
-		
-		// Public member variables
 		public:
-	
-			CBspGenOptions		m_Options;
-			
-			// The model that all the data is stuffed into.
-			CPreWorld			*m_pWorld;
 
-			// Stats from the generation.
+			CBspGenOptions		m_Options;
+			CPreWorld			*m_pWorld;
 			uint32				m_nPolySplits;
 			uint32				m_nSplitPolyArrayCalls;
 
-
 		public:
 
-			// Controls thread creation.
 			uint32				m_nThreadsBeingUsed;
-			
-			// Toggles....
-			bool				m_bRemoveIntersectingPolies;
-			
-			// This controls access to critical stuff between threads.
+			BOOL				m_bRemoveIntersectingPolies;
 			void				*m_AppendCS;
-			
-			
-			// This is where points are collected for 'portal' polies as stuff is chopped up.
+			// Called with the progress as polies are split (SplitPolyArray).
+			void				(*m_ProgressFn)(CBspGen *pBspGen, CReal fPercent);
 			CMoDWordArray		m_PortalPolyPts;
-	
 	};
 
 
-	// Helper functions.
-
-	// Filters the inside portions of the poly into the BSP (or all portions if you
-	// specify FILTER_ALWAYSADD).
-	// If pInsideFragments is non-null, it won't actually add the poly to the BSP, it will
-	// just fill pInsideFragments with the fragments that are in valid space.
-
-	// Pass in a combination of the FILTER_ flags.
 	void FilterPolyIntoBSP(
 		CPreWorld			*pWorld, 
 		NODEREF				pRoot, 

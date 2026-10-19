@@ -96,7 +96,8 @@
 				return m_Center;
 			}
 
-			const PVector &			GetCenter() const
+			// talon: the 2001 one returns the center by value.
+			PVector					GetCenter() const
 			{
 				if ((m_CenterFlags & KNOW_CENTER) == 0)
 					CalcCenter();
@@ -268,7 +269,7 @@
 		void				RemoveVert(uint32 i) {m_BasePoly.RemoveVert(i);}\
 		void				SetVert(uint32 i, const PVector &val) {m_BasePoly.SetVert(i, val, Normal());}\
 		void				SetVert(uint32 i, const PVector &val, const PVector &vNormal) {m_BasePoly.SetVert(i, val, vNormal);}\
-		const PVector&		GetCenter() const {return m_BasePoly.GetCenter();}\
+		PVector				GetCenter() const {return m_BasePoly.GetCenter();}\
 		PReal				GetRadius() const {return m_BasePoly.GetRadius();}\
 		void				FlushCenter() const { m_BasePoly.FlushCenter();}\
 		void				ExtendBounds(PVector &min, PVector &max) const {m_BasePoly.ExtendBounds(min, max);}\

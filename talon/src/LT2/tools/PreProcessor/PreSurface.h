@@ -29,7 +29,7 @@
 
 							CPreSurface();
 
-			bool			ShouldLightmap() const;
+			BOOL			ShouldLightmap() const;
 			void			SetupLMVectors();
 
 			// Brushes with a detail level: BspGen puts them below the
