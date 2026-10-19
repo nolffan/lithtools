@@ -2,10 +2,8 @@
 #define __MEMORY_H__
 
     #ifndef __NEW_H__
-    #ifndef _LINUX
     #include <new.h>
     #define __NEW_H__
-    #endif
     #endif
 
     #ifndef __MALLOC_H__

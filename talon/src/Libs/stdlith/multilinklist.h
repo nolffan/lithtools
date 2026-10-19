@@ -221,13 +221,11 @@ void CMultiLinkList<T>::RemoveAt(MPOS pos)
 {
     ASSERT(m_nElements > 0);
     
-    if (pos == m_pHead)
-        m_pHead = m_pHead->m_pGNext;
-    
     pos->m_pGPrev->m_pGNext = pos->m_pGNext;
     pos->m_pGNext->m_pGPrev = pos->m_pGPrev;
-
-	pos->m_pGNext = pos->m_pGPrev = pos;
+    
+    if (pos == m_pHead)
+        m_pHead = m_pHead->m_pGNext;
     
     --m_nElements;
     if (m_nElements == 0)

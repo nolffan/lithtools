@@ -35,9 +35,9 @@
 // should compile with out the engine, they are duplicated here
 // BEGIN LTBASETYPES.H
 
-typedef char				int8;
-typedef short int			int16;
-typedef int					int32;
+typedef char                int8;
+typedef short               int16;
+typedef long                int32;
 
 #ifdef __LINUX
 typedef long long           int64;
@@ -45,9 +45,9 @@ typedef long long           int64;
 typedef __int64             int64;
 #endif
 
-typedef unsigned char		uint8;
-typedef unsigned short int	uint16;
-typedef unsigned int		uint32;
+typedef unsigned char       uint8;
+typedef unsigned short      uint16;
+typedef unsigned int        uint32;
 
 #ifdef __LINUX
 typedef unsigned long long  uint64;
@@ -57,6 +57,7 @@ typedef unsigned __int64    uint64;
 
 typedef unsigned int LTBOOL;
 typedef float LTFLOAT;
+typedef double LTDFLOAT;
 typedef uint32 LTRESULT;
 // END LTBASETYPES.H
 
