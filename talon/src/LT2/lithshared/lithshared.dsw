@@ -1,0 +1,57 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+# talon: the LT2 shared libraries the Talon tools link, written for this
+# project. LT2_ names keep them apart from src/Libs' (build 51) projects
+# of the same names in the one build.
+
+###############################################################################
+
+Project: "LT2_StdLith"=.\stdlith\Lib_StdLith.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_ZLib"=.\zlib\Lib_ZLib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_RegMgr"=.\regmgr\regmgr60.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

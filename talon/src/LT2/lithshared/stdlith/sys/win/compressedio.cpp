@@ -58,7 +58,10 @@ void* CustomZAlloc( voidpf opqaud, uInt items, uInt size )
 			throw CLithMemException();
 		}
 	}
-	LithCatch( ... )
+	// talon: the AvP2 release's StdLith.lib (2001) catches a named
+	// CLithException: its frame has the extra slot, nolfsrc's catch( ... )
+	// does not
+	LithCatch( CLithException &exc )
 	{
 		return NULL;
 	}

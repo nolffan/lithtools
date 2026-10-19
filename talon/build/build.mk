@@ -59,8 +59,12 @@ TALON_RCFLAGS ?=
 # tree yet is skipped: the tools are reconstructed one binary at a time
 # (docs/PLAN.md), and each binary's target in progress/targets.py is
 # optional until its workspace is here.
+#   src/LT2/lithshared/lithshared.dsw      the LT2 shared libraries (2001)
+#   src/Libs/Libs.dsw                      Monolith's shared static libraries
 #   src/Engine/tools/Plugins/Plugins.dsw   the modelling-package plug-ins
 WORKSPACES := \
+    src/LT2/lithshared/lithshared.dsw:LT2_StdLith,LT2_ZLib,LT2_RegMgr \
+    src/Libs/Libs.dsw:ButeMgr,CryptMgr,DibMgr,GenRegMgr,Lib_Lith,MFCStub,RegMgr,regmgr32,Lib_StdLith,Lib_ZLib \
     src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader
 
 # ---------------------------------------------------------------------------
