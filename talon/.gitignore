@@ -2,3 +2,4 @@ out/
 .build/
 .wine/
 src/**/[Bb]uilt/
+progress/__pycache__/

@@ -76,3 +76,18 @@ done
 rm -rf "$TMP"
 (cd "$OUT" && find . -type f -print0 | LC_ALL=C sort -z | xargs -0 sha256sum) >"$OUT/SHA256SUMS"
 echo "out/reference: $(wc -l <"$OUT/SHA256SUMS") files"
+
+# Each target's function table (tools/enumfuncs.py), as progress/targets.py
+# names them: out/reference/<stem>-functions.csv
+python3 -I - <<'PY'
+import os, subprocess, sys
+sys.path.insert(0, 'progress')
+import targets
+for t in targets.TARGETS:
+    if t.get('kind') != 'image':
+        continue
+    csv = os.path.join(targets.REFERENCE, t['stem'] + '-functions.csv')
+    subprocess.run([sys.executable, '-I', 'tools/enumfuncs.py', t['shipped'], '--csv', csv],
+                   check=True, stdout=subprocess.DEVNULL)
+    print('wrote', csv)
+PY
