@@ -1,0 +1,563 @@
+item	path	size	sha256_16	kind	machine	pe_timestamp_utc	linker	compiler	runtime_dlls	plugin	file_version	pdb
+nolf-tools-001	_isres.dll	91136	39696bc8a642b095	dll	0x14c	1996-10-07 22:01:37	3.00	no Rich header			3.00.090.0	
+nolf-tools-001	Tools/DEdit.exe	1347584	c64fdc65ebba2d9f	exe	0x14c	2001-01-04 04:31:13	6.00	VC6 C++ 8447 x329			12.29.97.001	
+nolf-tools-001	Tools/MRCEX42.DLL	74752	3b34b65f3fcd3c6b	dll	0x14c	1996-08-12 13:37:23	4.20	no Rich header	mfc42.dll msvcrt.dll		COMPONENT_VER_LAB	
+nolf-tools-001	Tools/MSVCRT.DLL	296064	5887971b4ffd7199	dll	0x14c	1997-10-14 11:05:30	5.10	no @comp.id (Intel/pre-VC6)			5.00.7287	
+nolf-tools-001	Tools/ModelEdit.exe	606208	432752201932f811	exe	0x14c	2000-09-18 15:30:06	6.00	VC6 C++ 8168 x158			1, 0, 0, 1	
+nolf-tools-001	Tools/Processor.exe	618496	598ed605e106735d	exe	0x14c	2001-01-03 02:50:32	6.00	VC6 C++ 8447 x67			1, 0, 0, 1	
+nolf-tools-001	Tools/TProcessor.exe	384512	f67cd04d72681154	exe	0x14c	1998-05-31 01:03:15	5.10	no @comp.id (Intel/pre-VC6)				F:\Proj\DE\DEdit\TProcessor\Release\TProcessor.pdb
+nolf-tools-001	Tools/lithrez.exe	81408	4131fc6c0327edce	exe	0x14c	1998-11-07 09:48:37	5.10	no @comp.id (Intel/pre-VC6)				
+nolf-tools-001	Tools/Exporters/LandExport.dll	184320	2c0d625a7ae208b7	dll	0x14c	2000-09-11 19:44:19	6.00	VC6 C++ 8168 x41				
+nolf-tools-001	Tools/Exporters/LithExport.dll	856141	32d21fa78e71649a	dll	0x14c	2000-09-11 19:42:44	6.00	VC6 C++ 8168 x41				D:\Proj\Nolf\lt2\tools\model\SoftExport\Debug\LithExport.pdb
+avp2-tools	AVP2_Tools/Tools/DEdit.exe	1388544	37b2c80315d41229	exe	0x14c	2001-10-03 15:40:18	6.00	VC6 C++ 8966 x218			12.29.97.001	
+avp2-tools	AVP2_Tools/Tools/MFC42.DLL	995383	0bd4d2b2fab316e2	dll	0x14c	1998-09-26 17:45:26	6.00	VC6 C++ 8168 x234	msvcrt.dll		6.00.8267.0	E:\8268\vc98\mfc\mfc.bbt\src\mfc42.pdb
+avp2-tools	AVP2_Tools/Tools/MSVCRT.DLL	296064	5887971b4ffd7199	dll	0x14c	1997-10-14 11:05:30	5.10	no @comp.id (Intel/pre-VC6)			5.00.7287	
+avp2-tools	AVP2_Tools/Tools/ModelEdit.exe	651264	2cf15bf3e6d96252	exe	0x14c	2001-10-03 16:25:52	6.00	VC6 C++ 8569 x85			1, 0, 0, 1	
+avp2-tools	AVP2_Tools/Tools/Processor.exe	548864	fc2539e0a61c9860	exe	0x14c	2001-10-03 16:37:45	6.00	VC6 C++ 8966 x78			1, 0, 0, 1	
+avp2-tools	AVP2_Tools/Tools/lithrez.exe	81408	4131fc6c0327edce	exe	0x14c	1998-11-07 09:48:37	5.10	no @comp.id (Intel/pre-VC6)				
+avp2-tools	AVP2_Tools/Tools/Exporters/LandExport.dll	184320	b46e6518cf5f9568	dll	0x14c	2000-08-19 20:35:49	6.00	VC6 C++ 8447 x29				
+avp2-tools	AVP2_Tools/Tools/Exporters/LithExport.dll	258048	5391cdef4f020eac	dll	0x14c	2000-08-19 20:34:52	6.00	VC6 C++ 8447 x29				
+avp2-tools	AVP2_Tools/Tools/Exporters/LithMayaExport.mll	126976	ccc0943538bdc930	dll	0x14c	1999-02-21 04:11:09	6.00	VC6 C++ 8168 x33		Maya		
+avp2-tools	AVP2_Tools/Tools/Exporters/MaxWorldExport30.dle	81920	11ce9b8ee3b1be84	dll	0x14c	2001-10-11 21:46:10	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+avp2-tools	AVP2_Tools/Tools/Exporters/MaxWorldExport40.dle	86016	3cff80fefb719016	dll	0x14c	2001-10-11 21:46:51	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+avp2-tools	AVP2_Tools/Tools/Exporters/MaxWorldImport30.dli	77824	3c17e1a3104e481b	dll	0x14c	2001-10-11 21:45:35	6.00	VC6 C++ 8966 x16	msvcrt.dll	3ds Max	3.1.0.0	
+avp2-tools	AVP2_Tools/Tools/Exporters/MaxWorldImport40.dli	77824	a8363c350e2608e1	dll	0x14c	2001-10-11 21:45:51	6.00	VC6 C++ 8966 x16	msvcrt.dll	3ds Max	3.1.0.0	
+avp2-tools	AVP2_Tools/Tools/Exporters/MayaWorldExport30.mll	155648	3cd5b7ceeb9b9f1b	dll	0x14c	2001-10-11 21:48:27	6.00	VC6 C++ 8966 x22	msvcrt.dll	Maya		
+avp2-tools	AVP2_Tools/Tools/Exporters/MayaWorldExport40.mll	155648	a39eb57a7f499855	dll	0x14c	2001-10-11 21:48:49	6.00	VC6 C++ 8966 x22	msvcrt.dll	Maya		
+avp2-tools-update1	Update_Files/Tools/DEdit.exe	1388544	051bd8a82f8f59e5	exe	0x14c	2001-12-06 01:23:51	6.00	VC6PP C++ 9044 x230			12.29.97.001	
+avp2-tools-update1	Update_Files/Tools/ModelEdit.exe	811008	db94d303c5303da6	exe	0x14c	2001-12-19 23:15:52	6.00	VC6 C++ 8569 x86			1, 0, 0, 1	
+avp2-tools-update2	Update_Files/Tools/DEdit.exe	1388544	051bd8a82f8f59e5	exe	0x14c	2001-12-06 01:23:51	6.00	VC6PP C++ 9044 x230			12.29.97.001	
+avp2-tools-update2	Update_Files/Tools/ModelEdit.exe	811008	db94d303c5303da6	exe	0x14c	2001-12-19 23:15:52	6.00	VC6 C++ 8569 x86			1, 0, 0, 1	
+avp2-tools-update2	Update_Files/Tools/Exporters/IMFLithDTX.dll	40960	936a7b2f316273ff	dll	0x14c	2002-03-28 01:16:54	6.00	VC6 C++ 8966 x7	mfc42.dll msvcrt.dll			
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxDTXLoader30.bmi	45056	2f090143140a88f3	dll	0x14c	2002-03-28 01:17:08	6.00	VC6 C++ 8966 x8	msvcrt.dll			
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxDTXLoader40.bmi	45056	37dbd85aeb6ffc5d	dll	0x14c	2002-03-28 01:10:35	6.00	VC6 C++ 8966 x8	msvcrt.dll	3ds Max		
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxModelExport30.dle	73728	eb409a6aceea16ff	dll	0x14c	2002-03-28 01:16:05	6.00	VC6 C++ 8966 x13	msvcrt.dll	3ds Max	3.1.0.0	
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxModelExport40.dle	77824	c23a3b6941dc9ccc	dll	0x14c	2002-03-28 01:11:00	6.00	VC6 C++ 8966 x13	msvcrt.dll	3ds Max	3.1.0.0	
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxWorldExport30.dle	118784	42a163a76d5f8295	dll	0x14c	2002-03-28 01:16:14	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxWorldExport40.dle	118784	d65bb7fa8ef416b5	dll	0x14c	2002-03-28 01:11:27	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxWorldImport30.dli	90112	7dd7155beac54f59	dll	0x14c	2002-03-28 01:16:22	6.00	VC6 C++ 8966 x17	msvcrt.dll	3ds Max	3.2	
+avp2-tools-update2	Update_Files/Tools/Exporters/MaxWorldImport40.dli	90112	75cc4683ec0a7123	dll	0x14c	2002-03-28 01:11:43	6.00	VC6 C++ 8966 x17	msvcrt.dll	3ds Max	3.2	
+avp2-tools-update2	Update_Files/Tools/Exporters/MayaModelExport30.mll	98304	1af41486326a4674	dll	0x14c	2002-03-28 01:16:28	6.00	VC6 C++ 8966 x14	msvcrt.dll	Maya		
+avp2-tools-update2	Update_Files/Tools/Exporters/MayaModelExport40.mll	98304	4bfa0bc238c882fd	dll	0x14c	2002-03-28 01:12:10	6.00	VC6 C++ 8966 x14	msvcrt.dll	Maya		
+avp2-tools-update2	Update_Files/Tools/Exporters/MayaWorldExport30.mll	196608	1e6a7d95ae35af48	dll	0x14c	2002-03-28 01:16:43	6.00	VC6 C++ 8966 x22	msvcrt.dll	Maya		
+avp2-tools-update2	Update_Files/Tools/Exporters/MayaWorldExport40.mll	196608	b24d9ba4091a7ddb	dll	0x14c	2002-03-28 01:12:41	6.00	VC6 C++ 8966 x22	msvcrt.dll	Maya		
+jupiter-b51	Docs/Docs/LithCheck.exe	49152	2d5867f332c8b28f	exe	0x14c	2001-09-27 01:10:00	6.00	VC6 C++ 8799 x1				
+jupiter-b51	Game_Code/TO2/Lithtech.exe	1605632	2c8327e55335ede6	exe	0x14c	2002-03-15 18:30:39	6.00	VC6 C++ 8966 x287	msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Game_Code/TO2/MFC42D.DLL	929844	3a3fa253ce80cf55	dll	0x14c	1998-06-18 01:44:01	6.00	VC6 C++ 8168 x139	msvcrtd.dll		6.00.8168.0	E:\8168\VC98\MFC\MFC\src\MFC42D.pdb
+jupiter-b51	Game_Code/TO2/MSVCIRTD.DLL	94285	318142d1c350a73e	dll	0x14c	1998-06-17 16:28:32	6.00	VC6 C++ 8168 x48	msvcrtd.dll		6.00.8168.0	E:\8168\VC98\crtbld\crt\src\build\intel\dll_pdb\msvcirtd.pdb
+jupiter-b51	Game_Code/TO2/MSVCRTD.DLL	385100	db39f55c12069c36	dll	0x14c	1998-06-17 16:24:59	6.00	VC6 C++ 8168 x19			6.00.8168.0	E:\8168\VC98\crtbld\crt\src\build\intel\dll_pdb\msvcrtd.pdb
+jupiter-b51	Game_Code/TO2/TO2.exe	8822863	5ce7267e8f54d9df	exe	0x14c	2002-01-18 21:40:35	6.00	VC6 C++ 8966 x21	mfc42d.dll msvcrtd.dll		1, 0, 0, 1	C:\Jupiter_TO2_SDK\TO2_Build\Game\Built\Debug\Launcher\TO2.pdb
+jupiter-b51	Game_Code/TO2/TO2Server.exe	1142784	111342627c6fa95a	exe	0x14c	2002-03-15 19:55:48	6.00	VC6 C++ 8966 x12	mfc42.dll msvcrt.dll		1, 0, 0, 2	
+jupiter-b51	Game_Code/TO2/dx8.snd	40960	375ab606ec7966b5	dll	0x14c	2002-03-15 18:30:50	6.00	VC6 C++ 8966 x6	msvcrt.dll			
+jupiter-b51	Game_Code/TO2/ltmsg.dll	24576	7cab4c4e8ecd0f0a	dll	0x14c	2002-03-15 18:25:31	6.00	VC6 C++ 8966 x1	msvcrt.dll			
+jupiter-b51	Game_Code/TO2/server.dll	364544	09ff9488c67c5b7c	dll	0x14c	2002-03-15 18:26:52	6.00	VC6 C++ 8966 x116	msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Game_Code/TO2/Game/CRes.dll	311296	ace7f6c4ecc0a85f	dll	0x14c	2002-03-15 19:46:37	6.00	VC6 C++ 8966 x1				
+jupiter-b51	Game_Code/TO2/Game/CShell.dll	1736704	ff9664d31cf90b72	dll	0x14c	2002-03-15 19:52:27	6.00	VC6 C++ 8966 x243	msvcrt.dll			
+jupiter-b51	Game_Code/TO2/Game/ClientFx.fxd	176128	92983b27526781e6	dll	0x14c	2002-03-15 19:51:38	6.00	VC6 C++ 8966 x24				
+jupiter-b51	Game_Code/TO2/Game/Object.lto	2568192	5519826c9fbd2160	dll	0x14c	2002-03-15 19:55:40	6.00	VC6 C++ 8966 x301	msvcrt.dll			
+jupiter-b51	Game_Code/TO2/Game/SRes.dll	45056	a645c369266ff2fb	dll	0x14c	2002-03-15 19:56:00	6.00	VC6 C++ 8966 x1				
+jupiter-b51	Game_Code/TO2/Game/Tex/India/SurfReyes.dlm	1011712	2eb2337df3f60f90	dll	0x14c	2001-02-02 15:10:34	6.00	VC6 C++ 8168 x6	msvcrt.dll	3ds Max		
+jupiter-b51	Source_Code/Engine/sdk/win/lib/bink/binkw32.dll	262656	6b33d3f6a522f08b	dll	0x14c	2000-03-17 06:19:23	6.00	VC6 C++ 8447 x2			1.0h	
+jupiter-b51	Source_Code/Engine/sdk/win/lib/smacker/Smackw32.dll	83456	ab21e93c78f8ffdd	dll	0x14c	1997-05-15 20:36:45	2.18	no Rich header				
+jupiter-b51	Source_Code/Game/bison.exe	196096	8cd4982404530364	exe	0x14c	1996-01-10 01:11:12	3.00	no Rich header				D:\BISON\bison-1.24\bison\bison___\bison.pdb
+jupiter-b51	Source_Code/Game/flex.exe	181248	4e3c9b0160985631	exe	0x14c	1996-01-14 16:52:01	3.00	no Rich header				
+jupiter-b51	Source_Code/Game/ClientShellDLL/TO2/CShell.dll	1716224	82d6323482fcdddc	dll	0x14c	2002-03-05 22:17:15	6.00	VC6 C++ 8966 x237	msvcrt.dll			
+jupiter-b51	Source_Code/Game/Launcher/TO2/TO2.exe	8732672	d3c447ec9bd7f969	exe	0x14c	2002-03-05 22:21:04	6.00	VC6 C++ 8966 x21	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Source_Code/Game/ObjectDLL/TO2/Object.lto	2502656	2f4ce0e02dba4db9	dll	0x14c	2002-03-05 22:20:39	6.00	VC6 C++ 8966 x296	msvcrt.dll			
+jupiter-b51	Tools/Tools/ButeCheck.exe	73728	2b26cc86cff6f90f	exe	0x14c	1999-04-29 20:31:53	6.00	VC6 C++ 8168 x31	mfc42.dll msvcp60.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/ButeEdit.exe	159744	2644db35faff4adb	exe	0x14c	2002-03-15 19:05:18	6.00	VC6 C++ 8966 x24	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Tools/Tools/FxED.exe	901120	af4a597e6225ec95	exe	0x14c	2002-03-15 19:12:47	6.00	VC6 C++ 8966 x67	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Tools/Tools/HeightMaptoNormalMap.exe	282624	669ff48c03d0c25b	exe	0x14c	2002-03-15 19:19:17	6.00	VC7.0 C++ 9178 x67	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/LTAsk.exe	40960	58a8905e471f4536	exe	0x14c	2002-03-15 19:12:49	6.00	VC6 C++ 8966 x2				
+jupiter-b51	Tools/Tools/LTC.exe	28672	44bef2ab50cce703	exe	0x14c	2002-03-15 19:13:04	6.00	VC6 C++ 8966 x11	msvcrt.dll			
+jupiter-b51	Tools/Tools/LithRez.exe	36864	67a0d0c1f6779baa	exe	0x14c	2002-03-15 19:12:49	6.00	VC6 C++ 8966 x8	msvcrt.dll			
+jupiter-b51	Tools/Tools/ModelEdit.exe	512000	255b85fb39486a5c	exe	0x14c	2002-03-15 19:16:05	6.00	VC6 C++ 8966 x102	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Tools/Tools/Model_Packer.exe	417792	bbb901fa0d4dfd42	exe	0x14c	2002-03-15 19:14:05	6.00	VC6 C++ 8966 x39	msvcrt.dll			
+jupiter-b51	Tools/Tools/Processor.exe	483328	d0482b0ca328f0c0	exe	0x14c	2002-03-15 19:17:56	6.00	VC6 C++ 8966 x115	mfc42.dll msvcrt.dll		2.27.01.001	
+jupiter-b51	Tools/Tools/PropHelpGen.exe	98304	76176462729c4638	exe	0x14c	2002-03-15 19:18:08	6.00	VC6 C++ 8966 x9	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/RenderStyle_Packer.exe	212992	8ef115e3d742cac5	exe	0x14c	2002-03-15 19:18:26	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/RenderStylesEditor.exe	974848	94083861243a484d	exe	0x14c	2002-03-15 19:18:47	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/RenderStylesViewer.exe	962560	d40c4e02aa9c2e24	exe	0x14c	2002-03-15 19:04:20	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/WMFADist.exe	2041744	67f6b75bc32c49ab	exe	0x14c	2000-06-06 20:43:56	5.12	no @comp.id (Intel/pre-VC6)			7.01.00.3055	
+jupiter-b51	Tools/Tools/WaveEdit.exe	36864	25cdff28fcba1efb	exe	0x14c	2002-03-15 19:18:58	6.00	VC6 C++ 8966 x10	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Tools/Tools/WinLTC.exe	36864	7bf93995f93b4c21	exe	0x14c	2002-03-15 19:19:01	6.00	VC6 C++ 8966 x12	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Tools/Tools/dedit.exe	1904640	476b74bfee8e3d9e	exe	0x14c	2002-03-15 19:11:24	6.00	VC6 C++ 8966 x301	mfc42.dll msvcrt.dll		2.27.01.001	
+jupiter-b51	Tools/Tools/dtxutil.exe	77824	6a654e1236ef8e96	exe	0x14c	2002-03-15 19:11:51	6.00	VC6 C++ 8966 x10	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/ltaview.exe	86016	30aad64e26b2e258	exe	0x14c	2002-03-15 19:13:03	6.00	VC6 C++ 8966 x20	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+jupiter-b51	Tools/Tools/ltbhead.exe	32768	654f9e606bd75ea0	exe	0x14c	2001-10-19 22:28:13	6.00	VC6 C++ 8168 x4				
+jupiter-b51	Tools/Tools/pma.exe	16384	1129d7d195306627	exe	0x14c	2002-03-15 19:16:09	6.00	VC6 C++ 8966 x2	msvcrt.dll			
+jupiter-b51	Tools/Tools/recurse_run.exe	16384	36bda264dee4a507	exe	0x14c	2002-03-15 19:18:09	6.00	VC6 C++ 8966 x1	msvcrt.dll			
+jupiter-b51	Tools/Tools/Plugins/IMFLithDTX.dll	40960	043de122c8d84a85	dll	0x14c	2002-03-15 18:59:50	6.00	VC6 C++ 8966 x7	mfc42.dll msvcrt.dll			
+jupiter-b51	Tools/Tools/Plugins/MaxDTXLoader30.bmi	45056	3f007e66c9b73125	dll	0x14c	2002-03-15 19:00:04	6.00	VC6 C++ 8966 x8	msvcrt.dll			
+jupiter-b51	Tools/Tools/Plugins/MaxDTXLoader40.bmi	45056	af6df6ecb62d85dd	dll	0x14c	2002-03-15 18:53:59	6.00	VC6 C++ 8966 x8	msvcrt.dll	3ds Max		
+jupiter-b51	Tools/Tools/Plugins/MaxModelExport30.dle	73728	f03f6687a042f20b	dll	0x14c	2002-03-15 18:59:04	6.00	VC6 C++ 8966 x13	msvcrt.dll	3ds Max	3.1.0.0	
+jupiter-b51	Tools/Tools/Plugins/MaxModelExport40.dle	77824	dab6701c2474ca54	dll	0x14c	2002-03-15 18:54:20	6.00	VC6 C++ 8966 x13	msvcrt.dll	3ds Max	3.1.0.0	
+jupiter-b51	Tools/Tools/Plugins/MaxWorldExport30.dle	118784	57cfc6eee3d10552	dll	0x14c	2002-03-15 18:59:12	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+jupiter-b51	Tools/Tools/Plugins/MaxWorldExport40.dle	118784	0098cbbbac119dbe	dll	0x14c	2002-03-15 18:54:44	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+jupiter-b51	Tools/Tools/Plugins/MaxWorldImport30.dli	90112	6a2ae2b7c54a27ff	dll	0x14c	2002-03-15 18:59:20	6.00	VC6 C++ 8966 x17	msvcrt.dll	3ds Max	3.2	
+jupiter-b51	Tools/Tools/Plugins/MaxWorldImport40.dli	90112	de288125198a9631	dll	0x14c	2002-03-15 18:54:57	6.00	VC6 C++ 8966 x17	msvcrt.dll	3ds Max	3.2	
+jupiter-b51	Tools/Tools/Plugins/MayaModelExport30.mll	98304	5cca5130d50eeca1	dll	0x14c	2002-03-15 18:59:25	6.00	VC6 C++ 8966 x14	msvcrt.dll	Maya		
+jupiter-b51	Tools/Tools/Plugins/MayaModelExport40.mll	98304	173dd7843e93c653	dll	0x14c	2002-03-15 18:55:21	6.00	VC6 C++ 8966 x14	msvcrt.dll	Maya		
+jupiter-b51	Tools/Tools/Plugins/MayaWorldExport30.mll	196608	b93c5bb91cbe367a	dll	0x14c	2002-03-15 18:59:39	6.00	VC6 C++ 8966 x22	msvcrt.dll	Maya		
+jupiter-b51	Tools/Tools/Plugins/MayaWorldExport40.mll	196608	4e6793b28c539020	dll	0x14c	2002-03-15 18:55:49	6.00	VC6 C++ 8966 x22	msvcrt.dll	Maya		
+tron2-tools-official	TRON_Tools/Tools/FxED.exe	905216	17c650d4a125654b	exe	0x14c	2003-03-28 22:08:01	6.00	VC6 C++ 8799 x67	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-official	TRON_Tools/Tools/LTC.exe	28672	de3c65a2652ea9d3	exe	0x14c	2003-03-28 22:08:40	6.00	VC6 C++ 8799 x11	msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/LithRez.exe	36864	e8a6ba5e4d85cff6	exe	0x14c	2003-03-28 22:06:02	6.00	VC6 C++ 8799 x8	msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/ModelEdit.exe	434176	9f5078d9179d4a67	exe	0x14c	2003-03-28 22:09:52	6.00	VC6 C++ 8799 x92	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-official	TRON_Tools/Tools/Model_Packer.exe	421888	469d9e6785e4f045	exe	0x14c	2003-03-28 22:09:22	6.00	VC6 C++ 8799 x37	msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/Processor.exe	462848	a8372e8bac4ee08c	exe	0x14c	2002-10-11 19:27:25	6.00	VC6 C++ 8799 x112	mfc42.dll msvcrt.dll		2.27.01.001	
+tron2-tools-official	TRON_Tools/Tools/RenderStyle_Packer.exe	212992	a85ab0f30baa80d2	exe	0x14c	2003-03-28 22:09:59	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/RenderStylesEditor.exe	974848	c854781a23310566	exe	0x14c	2003-03-28 22:10:13	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/RenderStylesViewer.exe	958464	289afdde4ee7609d	exe	0x14c	2003-03-28 22:06:27	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/WaveEdit.exe	36864	0be5fab7974a7574	exe	0x14c	2003-03-28 22:10:15	6.00	VC6 C++ 8799 x10	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-official	TRON_Tools/Tools/WinLTC.exe	36864	9d935dfcf0e054a8	exe	0x14c	2003-03-28 22:10:15	6.00	VC6 C++ 8799 x12	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-official	TRON_Tools/Tools/dedit.exe	2539520	73425dbef8716999	exe	0x14c	2003-03-28 22:09:11	6.00	VC6 C++ 8799 x281	mfc42.dll msvcrt.dll		2.27.01.001	
+tron2-tools-official	TRON_Tools/Tools/lipcompiler.exe	65536	6b62fc5ea4e18869	exe	0x14c	2002-06-11 03:53:36	6.00	VC6 C++ 8168 x17				
+tron2-tools-official	TRON_Tools/Tools/winpacker.exe	81920	d927a4a6c5489595	exe	0x14c	2003-03-28 22:11:52	6.00	VC6 C++ 8799 x19	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-official	TRON_Tools/Tools/Packers/WorldPacker.dll	557056	069d079c32906215	dll	0x14c	2003-03-28 22:11:18	6.00	VC6 C++ 8799 x97	mfc42.dll msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/Plugins/DTXFormat.8bi	4345955	318f548118cd9d1f	dll	0x14c	2000-09-25 23:27:21	6.00	VC6 C++ 8168 x43	msvcrtd.dll			E:\Dev\adobe\photoshop5_SDK\SampleCode\Format\DTXFormat_static\Debug\DTXFormat.pdb
+tron2-tools-official	TRON_Tools/Tools/Plugins/IMFLithDTX.dll	40960	2b511aa1a629191c	dll	0x14c	2003-03-28 22:10:34	6.00	VC6 C++ 8799 x7	mfc42.dll msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxDTXLoader30.bmi	45056	7618e344eb083b10	dll	0x14c	2003-03-28 22:10:35	6.00	VC6 C++ 8799 x8	msvcrt.dll			
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxDTXLoader40.bmi	45056	548bba244486e942	dll	0x14c	2003-03-28 22:11:40	6.00	VC6 C++ 8799 x8	msvcrt.dll	3ds Max		
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxModelExport30.dle	73728	f22f7922fb28f79e	dll	0x14c	2003-03-28 22:10:25	6.00	VC6 C++ 8799 x13	msvcrt.dll	3ds Max	3.1.0.0	
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxModelExport40.dle	77824	38ecd8d009e03186	dll	0x14c	2003-03-28 22:11:28	6.00	VC6 C++ 8799 x13	msvcrt.dll	3ds Max	3.1.0.0	
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxWorldExport30.dle	122880	b1379a4c95a25959	dll	0x14c	2003-03-28 22:10:26	6.00	VC6 C++ 8799 x15	msvcrt.dll	3ds Max	3.1	
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxWorldExport40.dle	122880	dbc72891975cd501	dll	0x14c	2003-03-28 22:11:32	6.00	VC6 C++ 8799 x15	msvcrt.dll	3ds Max	3.1	
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxWorldImport30.dli	90112	3138ede840cb61a3	dll	0x14c	2003-03-28 22:10:28	6.00	VC6 C++ 8799 x17	msvcrt.dll	3ds Max	3.2	
+tron2-tools-official	TRON_Tools/Tools/Plugins/MaxWorldImport40.dli	90112	25936cc7f3b3800a	dll	0x14c	2003-03-28 22:11:37	6.00	VC6 C++ 8799 x17	msvcrt.dll	3ds Max	3.2	
+tron2-tools-official	TRON_Tools/Tools/Plugins/MayaModelExport30.mll	98304	f1c116f37686691e	dll	0x14c	2003-03-28 22:10:29	6.00	VC6 C++ 8799 x14	msvcrt.dll	Maya		
+tron2-tools-official	TRON_Tools/Tools/Plugins/MayaModelExport40.mll	98304	64b9f6643e872f04	dll	0x14c	2003-03-28 22:11:45	6.00	VC6 C++ 8799 x14	msvcrt.dll	Maya		
+tron2-tools-official	TRON_Tools/Tools/Plugins/MayaWorldExport30.mll	208896	ed091f862beb224e	dll	0x14c	2003-03-28 22:11:21	6.00	VC6 C++ 8799 x24	msvcrt.dll	Maya		
+tron2-tools-official	TRON_Tools/Tools/Plugins/MayaWorldExport40.mll	208896	ecf23651c5726d90	dll	0x14c	2003-03-28 22:11:49	6.00	VC6 C++ 8799 x24	msvcrt.dll	Maya		
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/FxED.exe	905216	17c650d4a125654b	exe	0x14c	2003-03-28 22:08:01	6.00	VC6 C++ 8799 x67	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/LTC.exe	28672	de3c65a2652ea9d3	exe	0x14c	2003-03-28 22:08:40	6.00	VC6 C++ 8799 x11	msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/LTDMTest.exe	372736	708359267717c637	exe	0x14c	2002-08-22 19:46:07	6.00	VC6 C++ 8569 x91			1, 0, 0, 1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/LithRez.exe	36864	e8a6ba5e4d85cff6	exe	0x14c	2003-03-28 22:06:02	6.00	VC6 C++ 8799 x8	msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/ModelEdit.exe	434176	9f5078d9179d4a67	exe	0x14c	2003-03-28 22:09:52	6.00	VC6 C++ 8799 x92	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Model_Packer.exe	421888	469d9e6785e4f045	exe	0x14c	2003-03-28 22:09:22	6.00	VC6 C++ 8799 x37	msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Processor.exe	462848	a8372e8bac4ee08c	exe	0x14c	2002-10-11 19:27:25	6.00	VC6 C++ 8799 x112	mfc42.dll msvcrt.dll		2.27.01.001	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/RenderStyle_Packer.exe	212992	a85ab0f30baa80d2	exe	0x14c	2003-03-28 22:09:59	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/RenderStylesEditor.exe	974848	c854781a23310566	exe	0x14c	2003-03-28 22:10:13	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/RenderStylesViewer.exe	958464	289afdde4ee7609d	exe	0x14c	2003-03-28 22:06:27	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/WaveEdit.exe	36864	0be5fab7974a7574	exe	0x14c	2003-03-28 22:10:15	6.00	VC6 C++ 8799 x10	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/WinLTC.exe	36864	9d935dfcf0e054a8	exe	0x14c	2003-03-28 22:10:15	6.00	VC6 C++ 8799 x12	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/dedit.exe	2539520	73425dbef8716999	exe	0x14c	2003-03-28 22:09:11	6.00	VC6 C++ 8799 x281	mfc42.dll msvcrt.dll		2.27.01.001	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/lipcompiler.exe	65536	6b62fc5ea4e18869	exe	0x14c	2002-06-11 03:53:36	6.00	VC6 C++ 8168 x17				
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/winpacker.exe	81920	d927a4a6c5489595	exe	0x14c	2003-03-28 22:11:52	6.00	VC6 C++ 8799 x19	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Extra Docs/FEAR/videos/ArchiveEdit.exe	12030001	5258dfeceb5ffe8a	exe	0x14c	2001-01-05 22:24:19	3.00	no Rich header			1, 3, 1, 4	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Extra Docs/FEAR/videos/BoxRoomTutorial.exe	33474496	975c46e85c2b0355	exe	0x14c	2001-01-05 22:24:19	3.00	no Rich header			1, 3, 1, 4	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Extra Docs/FEAR/videos/SettingUpWorldEditTutorial.exe	10661678	6ce2bbb14b9d5862	exe	0x14c	2001-01-05 22:24:19	3.00	no Rich header			1, 3, 1, 4	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Packers/WorldPacker.dll	557056	069d079c32906215	dll	0x14c	2003-03-28 22:11:18	6.00	VC6 C++ 8799 x97	mfc42.dll msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/DTXFormat.8bi	4345955	318f548118cd9d1f	dll	0x14c	2000-09-25 23:27:21	6.00	VC6 C++ 8168 x43	msvcrtd.dll			E:\Dev\adobe\photoshop5_SDK\SampleCode\Format\DTXFormat_static\Debug\DTXFormat.pdb
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/IMFLithDTX.dll	40960	2b511aa1a629191c	dll	0x14c	2003-03-28 22:10:34	6.00	VC6 C++ 8799 x7	mfc42.dll msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MSVCIRTD.DLL	94285	318142d1c350a73e	dll	0x14c	1998-06-17 16:28:32	6.00	VC6 C++ 8168 x48	msvcrtd.dll		6.00.8168.0	E:\8168\VC98\crtbld\crt\src\build\intel\dll_pdb\msvcirtd.pdb
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxDTXLoader30.bmi	45056	7618e344eb083b10	dll	0x14c	2003-03-28 22:10:35	6.00	VC6 C++ 8799 x8	msvcrt.dll			
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxDTXLoader40.bmi	45056	548bba244486e942	dll	0x14c	2003-03-28 22:11:40	6.00	VC6 C++ 8799 x8	msvcrt.dll	3ds Max		
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxModelExport30.dle	73728	f22f7922fb28f79e	dll	0x14c	2003-03-28 22:10:25	6.00	VC6 C++ 8799 x13	msvcrt.dll	3ds Max	3.1.0.0	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxModelExport40.dle	77824	38ecd8d009e03186	dll	0x14c	2003-03-28 22:11:28	6.00	VC6 C++ 8799 x13	msvcrt.dll	3ds Max	3.1.0.0	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxWorldExport30.dle	122880	b1379a4c95a25959	dll	0x14c	2003-03-28 22:10:26	6.00	VC6 C++ 8799 x15	msvcrt.dll	3ds Max	3.1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxWorldExport40.dle	122880	dbc72891975cd501	dll	0x14c	2003-03-28 22:11:32	6.00	VC6 C++ 8799 x15	msvcrt.dll	3ds Max	3.1	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxWorldImport30.dli	90112	3138ede840cb61a3	dll	0x14c	2003-03-28 22:10:28	6.00	VC6 C++ 8799 x17	msvcrt.dll	3ds Max	3.2	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MaxWorldImport40.dli	90112	25936cc7f3b3800a	dll	0x14c	2003-03-28 22:11:37	6.00	VC6 C++ 8799 x17	msvcrt.dll	3ds Max	3.2	
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MayaModelExport30.mll	98304	f1c116f37686691e	dll	0x14c	2003-03-28 22:10:29	6.00	VC6 C++ 8799 x14	msvcrt.dll	Maya		
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MayaModelExport40.mll	98304	64b9f6643e872f04	dll	0x14c	2003-03-28 22:11:45	6.00	VC6 C++ 8799 x14	msvcrt.dll	Maya		
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MayaWorldExport30.mll	208896	ed091f862beb224e	dll	0x14c	2003-03-28 22:11:21	6.00	VC6 C++ 8799 x24	msvcrt.dll	Maya		
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/MayaWorldExport40.mll	208896	ecf23651c5726d90	dll	0x14c	2003-03-28 22:11:49	6.00	VC6 C++ 8799 x24	msvcrt.dll	Maya		
+tron2-tools-1.2a	TRON_2.0_Tools/Tools/Plugins/msvcrtd.dll	401484	d252708606d71c4b	dll	0x14c	1998-12-03 23:34:50	6.00	VC6 C++ 8168 x19			6.00.8337.0	E:\8337\vc98\crtbld\crt\src\build\intel\dll_pdb\msvcrtd.pdb
+tron2-tools-1.2a	_header/LithRez.exe	30208	b3766ebc5a50f329	exe	0x14c	2006-03-14 23:58:54	7.10	VC7.1 C++ 3077 x11	msvcr71.dll			
+tron2-tools-1.2a	_header/WinRezLTStudio.exe	4568528	e43c2a1f63031356	exe	0x14c	2003-01-06 09:02:45	6.00	VC6 C++ 8966 x35			1.00.0000****************************************************	
+tron2-tools-1.2a	_header/irsetup.exe	737280	a93dc5e28d74ef40	exe	0x14c	2004-02-11 22:09:13	6.00	VC6PP C++ 9044 x71			6.0.1.4	
+tron2-tools-1.2a	_header/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+tron2-tools-1.2a	_header/xn_resourceeditor_setup.exe	1172137	2b65018d9c91180f	exe	0x14c	1992-06-19 22:22:17	2.25	no Rich header				
+nolf2-toolkit	PatchEN/lithtechdev.exe	2641363	5bdbf2f14b18ad1c	exe	0x14c	2003-02-26 21:39:07	6.00	VC6 C++ 8966 x291	msvcp60.dll msvcrt.dll		1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/DEdit.exe	3010560	5b7089a2952a915f	exe	0x14c	2003-03-19 19:52:58	6.00	VC6 C++ 8966 x281	mfc42.dll msvcrt.dll		2.27.01.001	
+nolf2-toolkit	PatchEN/Tools/Bin/FxED.exe	905216	c3cb8148ed477aa8	exe	0x14c	2003-02-27 02:28:15	6.00	VC6 C++ 8966 x67	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/LTC.exe	28672	645c06637579e22b	exe	0x14c	2003-02-27 02:28:16	6.00	VC6 C++ 8966 x11	msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/LTDMTest.exe	372736	708359267717c637	exe	0x14c	2002-08-22 19:46:07	6.00	VC6 C++ 8569 x91			1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/LithRez.exe	40960	a3be2c9eec00ae64	exe	0x14c	2003-02-27 02:28:15	6.00	VC6 C++ 8966 x8	msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/ModelEdit.exe	434176	8ea2b3587d3f2c4d	exe	0x14c	2003-02-27 02:28:18	6.00	VC6 C++ 8966 x92	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/Model_Packer.exe	421888	76de2fa8aa9f0307	exe	0x14c	2003-02-27 02:28:17	6.00	VC6 C++ 8966 x37	msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/RenderStyle_Packer.exe	212992	23dce483844d5217	exe	0x14c	2003-02-27 02:28:20	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/RenderStylesEditor.exe	970752	0897ec9aa38733ff	exe	0x14c	2003-02-27 02:28:20	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/RenderStylesViewer.exe	958464	da73daa592f796d8	exe	0x14c	2003-02-27 02:29:13	6.00	VC7.0 C++ 9178 x80	mfc42.dll msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/ServerDir.dll	503808	ce99ac1bd0224897	dll	0x14c	2003-02-25 23:51:48	6.00	VC6 C++ 8966 x13	msvcp60.dll msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/TSCompiler.exe	73728	fcf2dba2117aa3e5	exe	0x14c	2003-02-27 02:28:24	6.00	VC6 C++ 8168 x16				
+nolf2-toolkit	PatchEN/Tools/Bin/WaveEdit.exe	36864	b25597c67cad3da6	exe	0x14c	2003-02-27 02:28:21	6.00	VC6 C++ 8966 x10	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/WinLTC.exe	36864	faaf6a79bd96d9ad	exe	0x14c	2003-02-27 02:28:20	6.00	VC6 C++ 8966 x12	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/lipcompiler.exe	65536	6b62fc5ea4e18869	exe	0x14c	2002-06-11 03:53:36	6.00	VC6 C++ 8168 x17				
+nolf2-toolkit	PatchEN/Tools/Bin/winpacker.exe	77824	569a5801f7ef7493	exe	0x14c	2003-02-27 02:29:08	6.00	VC6 C++ 8966 x19	mfc42.dll msvcrt.dll		1, 0, 0, 1	
+nolf2-toolkit	PatchEN/Tools/Bin/Packers/WorldPacker.dll	548864	fb728dcdb2db9a80	dll	0x14c	2003-02-27 02:28:59	6.00	VC6 C++ 8966 x96	mfc42.dll msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/DTXFormat.8bi	4345955	318f548118cd9d1f	dll	0x14c	2000-09-25 23:27:21	6.00	VC6 C++ 8168 x43	msvcrtd.dll			E:\Dev\adobe\photoshop5_SDK\SampleCode\Format\DTXFormat_static\Debug\DTXFormat.pdb
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/IMFLithDTX.dll	40960	5999ef4902249cb6	dll	0x14c	2003-02-27 02:28:24	6.00	VC6 C++ 8966 x7	mfc42.dll msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxDTXLoader30.bmi	45056	6bc6cb128c60d4a7	dll	0x14c	2003-02-27 02:28:24	6.00	VC6 C++ 8966 x8	msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxDTXLoader40.bmi	45056	6aa177fd3ad72f1f	dll	0x14c	2003-02-27 02:29:00	6.00	VC6 C++ 8966 x8	msvcrt.dll	3ds Max		
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxModelExport30.dle	73728	ed43c89aca3c11a0	dll	0x14c	2003-02-27 02:28:21	6.00	VC6 C++ 8966 x13	msvcrt.dll	3ds Max	3.1.0.0	
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxModelExport40.dle	77824	278df8ec21f1b14b	dll	0x14c	2003-02-27 02:29:01	6.00	VC6 C++ 8966 x13	msvcrt.dll	3ds Max	3.1.0.0	
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxWorldExport30.dle	122880	79fdd954e3fefd98	dll	0x14c	2003-02-27 02:28:22	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxWorldExport40.dle	122880	6aadc0729121c8ea	dll	0x14c	2003-02-27 02:29:02	6.00	VC6 C++ 8966 x15	msvcrt.dll	3ds Max	3.1	
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxWorldImport30.dli	90112	19609a29dbf376d8	dll	0x14c	2003-02-27 02:28:22	6.00	VC6 C++ 8966 x17	msvcrt.dll	3ds Max	3.2	
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MaxWorldImport40.dli	90112	5f710562a8d763ff	dll	0x14c	2003-02-27 02:29:02	6.00	VC6 C++ 8966 x17	msvcrt.dll	3ds Max	3.2	
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MayaModelExport30.mll	98304	92f752687c1ede6f	dll	0x14c	2003-02-27 02:28:23	6.00	VC6 C++ 8966 x14	msvcrt.dll	Maya		
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MayaModelExport40.mll	98304	c3f45923a3bb7264	dll	0x14c	2003-02-27 02:29:03	6.00	VC6 C++ 8966 x14	msvcrt.dll	Maya		
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MayaWorldExport30.mll	208896	a8aea2662eb5db4d	dll	0x14c	2003-02-27 02:28:23	6.00	VC6 C++ 8966 x23	msvcrt.dll	Maya		
+nolf2-toolkit	PatchEN/Tools/Bin/Plugins/MayaWorldExport40.mll	208896	1d1d25e9744ecc7b	dll	0x14c	2003-02-27 02:29:03	6.00	VC6 C++ 8966 x23	msvcrt.dll	Maya		
+nolf2-toolkit	PatchEN/Tools/Docs/Demolition_Final/CRes.dll	696320	3d53d3dace001cda	dll	0x14c	2003-02-27 21:33:44	6.00	VC6 C++ 8966 x1				
+nolf2-toolkit	PatchEN/Tools/Docs/Demolition_Final/CShell.dll	1785856	00270587fb13ab51	dll	0x14c	2003-02-28 22:30:57	6.00	VC6 C++ 8966 x290	msvcrt.dll			
+nolf2-toolkit	PatchEN/Tools/Docs/Demolition_Final/Object.lto	2985984	b97722247344d146	dll	0x14c	2003-03-01 00:04:31	6.00	VC6 C++ 8966 x331	msvcrt.dll			
+cjack-tools	Tools/lithtechdev.exe	2714377	07ab3ca3ba5c77d8	exe	0x14c	2003-10-08 12:00:33	7.10	VC7.1 C++ 3077 x296	msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/DEdit.exe	2207744	6652985d64005a50	exe	0x14c	2003-10-08 12:01:22	7.10	VC7.1 C++ 3077 x282	mfc71.dll msvcp71.dll msvcr71.dll		2.27.01.001	
+cjack-tools	Tools/Tools/Bin/FxED.exe	880640	5ed694ff64e35452	exe	0x14c	2003-10-08 11:41:36	7.10	VC7.1 C++ 3077 x77	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/GameSpy.dll	118784	c165f5ff645b3823	dll	0x14c	2003-10-08 10:03:46	7.10	VC7.1 C++ 3077 x18	msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/LTC.exe	24576	a9a9ea380de333ea	exe	0x14c	2003-09-25 00:11:14	7.10	VC7.1 C++ 3077 x15	msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/LTDMTest.exe	372736	708359267717c637	exe	0x14c	2002-08-22 19:46:07	6.00	VC6 C++ 8569 x91			1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/LithRez.exe	30208	34767b65fa286e3f	exe	0x14c	2003-10-08 11:41:36	7.10	VC7.1 C++ 3077 x9	msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/ModelEdit.exe	507904	90294985962b32fd	exe	0x14c	2003-10-08 11:40:46	7.10	VC7.1 C++ 3077 x100	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/Model_Packer.exe	348160	0a621a5aa07daa71	exe	0x14c	2003-10-08 11:40:58	7.10	VC7.1 C++ 3077 x44	msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/RenderStyle_Packer.exe	192512	592dbbd34f74d2d2	exe	0x14c	2003-10-10 08:25:05	7.10	VC7.0 C++ 9178 x80	mfc71.dll msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/RenderStylesEditor.exe	921600	7f2f6ea221d6fd55	exe	0x14c	2003-10-10 08:25:09	7.10	VC7.0 C++ 9178 x80	mfc71.dll msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/RenderStylesViewer.exe	921600	da8a6d8183559bbb	exe	0x14c	2003-10-10 08:25:08	7.10	VC7.0 C++ 9178 x80	mfc71.dll msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/TSCompiler.exe	114688	3978df3ab344f300	exe	0x14c	2003-09-25 00:07:04	7.10	VC7.1 C++ 3077 x25				
+cjack-tools	Tools/Tools/Bin/WaveEdit.exe	36864	de13c9e09ccc37d9	exe	0x14c	2003-10-08 11:41:11	7.10	VC7.1 C++ 3077 x18	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/WinLTC.exe	40960	ea2ed4d0649f7554	exe	0x14c	2003-09-25 00:11:05	7.10	VC7.1 C++ 3077 x19	mfc71.dll msvcr71.dll		1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/mrcex42.dll	110592	7ec54912e7209140	dll	0x14c	2003-09-25 00:10:38	7.10	VC7.1 C++ 3077 x19	mfc71.dll msvcr71.dll		COMPONENT_VER_LAB	
+cjack-tools	Tools/Tools/Bin/winpacker.exe	77824	a174d4e041728078	exe	0x14c	2003-09-25 00:10:52	7.10	VC7.1 C++ 3077 x26	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+cjack-tools	Tools/Tools/Bin/Packers/WorldPacker.dll	466944	48f9781234ee7c0b	dll	0x14c	2003-10-08 11:41:20	7.10	VC7.1 C++ 3077 x104	mfc71.dll msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/Plugins/DTXFormat.8bi	4345955	318f548118cd9d1f	dll	0x14c	2000-09-25 23:27:21	6.00	VC6 C++ 8168 x43	msvcrtd.dll			E:\Dev\adobe\photoshop5_SDK\SampleCode\Format\DTXFormat_static\Debug\DTXFormat.pdb
+cjack-tools	Tools/Tools/Bin/Plugins/IMFLithDTX.dll	36352	95acdf51d57a5b82	dll	0x14c	2003-10-08 11:42:16	7.10	VC7.1 C++ 3077 x12	mfc71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/Plugins/MaxDTXLoader30.bmi	36864	89ac275dc38f3fc1	dll	0x14c	2003-10-08 11:41:09	7.10	VC7.1 C++ 3077 x11	msvcp71.dll msvcr71.dll			
+cjack-tools	Tools/Tools/Bin/Plugins/MaxDTXLoader40.bmi	37888	64e52099591fafcd	dll	0x14c	2003-10-08 11:42:17	7.10	VC7.1 C++ 3077 x11	msvcp71.dll msvcr71.dll	3ds Max		
+cjack-tools	Tools/Tools/Bin/Plugins/MaxModelExport30.dle	65536	821645764dfd01f6	dll	0x14c	2003-09-25 00:10:09	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+cjack-tools	Tools/Tools/Bin/Plugins/MaxModelExport40.dle	69632	eac41f047f2b2c43	dll	0x14c	2003-09-25 00:11:25	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+cjack-tools	Tools/Tools/Bin/Plugins/MaxWorldExport30.dle	98304	f51f12c2f2f045f0	dll	0x14c	2003-09-25 00:09:48	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+cjack-tools	Tools/Tools/Bin/Plugins/MaxWorldExport40.dle	98304	9fa7ff97dd88f41c	dll	0x14c	2003-09-25 00:11:26	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+cjack-tools	Tools/Tools/Bin/Plugins/MaxWorldImport30.dli	69632	96cb980c575a8c41	dll	0x14c	2003-09-25 00:07:46	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+cjack-tools	Tools/Tools/Bin/Plugins/MaxWorldImport40.dli	73728	bd83451656510eda	dll	0x14c	2003-09-25 00:11:24	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+cjack-tools	Tools/Tools/Bin/Plugins/MayaModelExport30.mll	90112	38d033d1c1c00a73	dll	0x14c	2003-09-25 00:08:59	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+cjack-tools	Tools/Tools/Bin/Plugins/MayaModelExport40.mll	90112	10bec2a3af5c2cef	dll	0x14c	2003-09-25 00:11:22	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+cjack-tools	Tools/Tools/Bin/Plugins/MayaWorldExport30.mll	163840	4c4407b872177641	dll	0x14c	2003-09-25 00:08:33	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+cjack-tools	Tools/Tools/Bin/Plugins/MayaWorldExport40.mll	163840	9fe4d6d2fe6f1ff4	dll	0x14c	2003-09-25 00:11:23	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+cjack-tools	Tools/Tools/Source/Engine/sdk/win/lib/bink/binkw32.dll	262656	6b33d3f6a522f08b	dll	0x14c	2000-03-17 06:19:23	6.00	VC6 C++ 8447 x2			1.0h	
+cjack-tools	Tools/Tools/Source/Game/bison.exe	196096	8cd4982404530364	exe	0x14c	1996-01-10 01:11:12	3.00	no Rich header				D:\BISON\bison-1.24\bison\bison___\bison.pdb
+cjack-tools	Tools/Tools/Source/Game/flex.exe	181248	4e3c9b0160985631	exe	0x14c	1996-01-14 16:52:01	3.00	no Rich header				
+jupiter-b69	Development/Development/TO2/AutoRun.exe	23552	aac26f72972a0f01	exe	0x14c	2006-03-15 00:52:43	7.10	VC7.1 C++ 3077 x8	mfc71.dll msvcr71.dll			
+jupiter-b69	Development/Development/TO2/AutoRun2.exe	36352	b3d5e23222c86520	exe	0x14c	2006-03-15 00:52:39	7.10	VC7.1 C++ 3077 x4				
+jupiter-b69	Development/Development/TO2/Lithtech.exe	2580480	9324e62482f7cb07	exe	0x14c	2006-03-14 23:41:13	7.10	VC7.1 C++ 3077 x321	msvcp71.dll msvcr71.dll		1, 0, 0, 1	c:\proj\Jupiter_PC\Engine\runtime\winbuild\lithtech\Lithtech.pdb
+jupiter-b69	Development/Development/TO2/MFC42D.DLL	929844	3a3fa253ce80cf55	dll	0x14c	1998-06-18 01:44:01	6.00	VC6 C++ 8168 x139	msvcrtd.dll		6.00.8168.0	E:\8168\VC98\MFC\MFC\src\MFC42D.pdb
+jupiter-b69	Development/Development/TO2/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Development/Development/TO2/MSVCIRTD.DLL	94285	318142d1c350a73e	dll	0x14c	1998-06-17 16:28:32	6.00	VC6 C++ 8168 x48	msvcrtd.dll		6.00.8168.0	E:\8168\VC98\crtbld\crt\src\build\intel\dll_pdb\msvcirtd.pdb
+jupiter-b69	Development/Development/TO2/MSVCRTD.DLL	385100	db39f55c12069c36	dll	0x14c	1998-06-17 16:24:59	6.00	VC6 C++ 8168 x19			6.00.8168.0	E:\8168\VC98\crtbld\crt\src\build\intel\dll_pdb\msvcrtd.pdb
+jupiter-b69	Development/Development/TO2/NOLF2.exe	5050368	1fc107e80c2f740d	exe	0x14c	2006-03-15 00:52:36	7.10	VC7.1 C++ 3077 x26	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 0	
+jupiter-b69	Development/Development/TO2/NOLF2Srv.exe	1093632	e4bcbcb06109e241	exe	0x14c	2006-03-15 00:49:25	7.10	VC7.1 C++ 3077 x30	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 0	
+jupiter-b69	Development/Development/TO2/ServerDir.dll	393216	b9ec444c5224d71d	dll	0x14c	2006-03-15 00:39:40	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll			
+jupiter-b69	Development/Development/TO2/SierraPt.dll	606208	7906f305052e4f0d	dll	0x14c	2001-05-07 17:08:26	6.00	VC6 C++ 8447 x85			1, 3, 0, 1	
+jupiter-b69	Development/Development/TO2/SierraUp.exe	1658880	a210467041900cf1	exe	0x14c	2002-08-28 01:39:33	6.00	VC6 C++ 8966 x45			2.1.0.1	
+jupiter-b69	Development/Development/TO2/SndDrv.dll	53248	e5945c9960ba9a7a	dll	0x14c	2006-03-14 23:41:30	7.10	VC7.1 C++ 3077 x11	msvcp71.dll msvcr71.dll			
+jupiter-b69	Development/Development/TO2/l3codeca.acm	290816	2e7e5892184ff880	dll	0x14c	1999-03-05 13:20:21	6.00	VC6 C++ 8168 x27			1, 9, 0, 0305	
+jupiter-b69	Development/Development/TO2/ltmsg.dll	45056	97a85def65da492d	dll	0x14c	2006-03-14 23:43:47	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Development/Development/TO2/mfc70.dll	974848	a133f981269d5508	dll	0x14c	2002-01-05 12:48:11	7.00	VC7.0 C++ 9466 x229	msvcr70.dll		7.00.9466.0	mfc70.pdb
+jupiter-b69	Development/Development/TO2/mfc70d.dll	1933312	e69a8b5244dd94e8	dll	0x14c	2002-01-05 11:54:02	7.00	VC7.0 C++ 9466 x242	msvcr70d.dll		7.00.9466.0	MFC70D.pdb
+jupiter-b69	Development/Development/TO2/mfc71d.dll	2179072	caf9cfd3d98dc0f1	dll	0x14c	2003-03-19 04:28:36	7.10	VC7.1 C++ 3077 x245	msvcr71d.dll		7.10.3077.0	MFC71D.pdb
+jupiter-b69	Development/Development/TO2/msvci70.dll	54784	b757f653eed51b7c	dll	0x14c	2002-01-05 11:38:36	7.00	VC7.0 C++ 9466 x49	msvcr70.dll		7.00.9466.0	msvci70.pdb
+jupiter-b69	Development/Development/TO2/msvci70d.dll	94208	7586794fe2b92060	dll	0x14c	2002-01-05 10:16:59	7.00	VC7.0 C++ 9466 x49	msvcr70d.dll		7.00.9466.0	msvci70d.pdb
+jupiter-b69	Development/Development/TO2/msvcp70.dll	487424	9255c60b194cf849	dll	0x14c	2002-01-05 11:40:17	7.00	VC7.0 C++ 9466 x38	msvcr70.dll		7.00.9466.0	msvcp70.pdb
+jupiter-b69	Development/Development/TO2/msvcp70d.dll	737280	c12d40d679181a6a	dll	0x14c	2002-01-05 10:16:38	7.00	VC7.0 C++ 9466 x38	msvcr70d.dll		7.00.9466.0	msvcp70d.pdb
+jupiter-b69	Development/Development/TO2/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Development/Development/TO2/msvcp71d.dll	765952	c19c69ead56b16a8	dll	0x14c	2003-03-19 03:04:23	7.10	VC7.1 C++ 3077 x37	msvcr71d.dll		7.10.3077.0	msvcp71d.pdb
+jupiter-b69	Development/Development/TO2/msvcr70.dll	344064	f68e4cdbc879423e	dll	0x14c	2002-01-05 11:37:24	7.00	VC7.0 C++ 9466 x21			7.00.9466.0	msvcr70.pdb
+jupiter-b69	Development/Development/TO2/msvcr70d.dll	536576	07e17a908af1d802	dll	0x14c	2002-01-05 10:16:07	7.00	VC7.0 C++ 9466 x22			7.00.9466.0	msvcr70d.pdb
+jupiter-b69	Development/Development/TO2/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Development/Development/TO2/msvcr71d.dll	544768	cd20e6ccf6ce1d7f	dll	0x14c	2003-03-19 03:03:50	7.10	VC7.1 C++ 3077 x24			7.10.3077.0	msvcr71d.pdb
+jupiter-b69	Development/Development/TO2/server.dll	446464	b62a4d6dd5a7b5a7	dll	0x14c	2006-03-14 23:43:42	7.10	VC7.1 C++ 3077 x124	msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Development/Development/TO2/Game/CRes.dll	696320	0f7ec07b0d5ba947	dll	0x14c	2006-03-15 00:39:21	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Development/Development/TO2/Game/CShell.dll	1527808	3328dde68de61da2	dll	0x14c	2006-03-15 00:51:44	7.10	VC7.1 C++ 3077 x296	msvcp71.dll msvcr71.dll			
+jupiter-b69	Development/Development/TO2/Game/ClientFx.fxd	212992	5d5db250595c5297	dll	0x14c	2006-03-15 00:52:05	7.10	VC7.1 C++ 3077 x41				
+jupiter-b69	Development/Development/TO2/Game/Object.lto	2805760	0e9a069a0a85e002	dll	0x14c	2006-03-15 00:52:16	7.10	VC7.1 C++ 3077 x338	msvcp71.dll msvcr71.dll			
+jupiter-b69	Development/Development/TO2/Game/SRes.dll	33792	637d927b928ea8b6	dll	0x14c	2006-03-15 00:51:50	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Development/Development/TO2/Game/ServerDir.dll	491520	3056a9aa8c039fae	dll	0x14c	2003-07-15 02:12:31	6.00	VC6PP C++ 9044 x13	msvcp60.dll msvcrt.dll			
+jupiter-b69	Development/Development/TO2/Game/Tex/India/SurfReyes.dlm	1011712	2eb2337df3f60f90	dll	0x14c	2001-02-02 15:10:34	6.00	VC6 C++ 8168 x6	msvcrt.dll	3ds Max		
+jupiter-b69	Development/Development/TO2/Game/TextureScripts/TSCompiler.exe	73728	95b301d263ef4b54	exe	0x14c	2002-10-04 21:24:34	6.00	VC6 C++ 8168 x16				
+jupiter-b69	Docs/Docs/LithCheck.exe	49152	575ac802e8fa1f82	exe	0x14c	2002-07-09 17:33:19	6.00	VC6 C++ 8966 x1				
+jupiter-b69	Engine/Engine/built/Release/Runtime/DLL_LTMsg/LTMsg.dll	45056	97a85def65da492d	dll	0x14c	2006-03-14 23:43:47	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Engine/Engine/built/Release/Runtime/DLL_Server/server.dll	446464	b62a4d6dd5a7b5a7	dll	0x14c	2006-03-14 23:43:42	7.10	VC7.1 C++ 3077 x124	msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Engine/Engine/built/Release/Runtime/DLL_dx8/SndDrv.dll	53248	e5945c9960ba9a7a	dll	0x14c	2006-03-14 23:41:30	7.10	VC7.1 C++ 3077 x11	msvcp71.dll msvcr71.dll			
+jupiter-b69	Engine/Engine/built/Release/Runtime/Exe_LithTech/Lithtech.exe	2580480	9324e62482f7cb07	exe	0x14c	2006-03-14 23:41:13	7.10	VC7.1 C++ 3077 x321	msvcp71.dll msvcr71.dll		1, 0, 0, 1	c:\proj\Jupiter_PC\Engine\runtime\winbuild\lithtech\Lithtech.pdb
+jupiter-b69	Engine/Engine/built/Release/clientfx/ClientFx.fxd	212992	70ab1c162994a7f1	dll	0x14c	2006-03-14 23:37:10	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Engine/Engine/libs/externalesd/realconsole/bin/gpinstaller.dll	84480	3af0aeb2d48501a2	dll	0x14c	2001-03-06 07:42:15	6.00	VC6 C++ 8168 x23			1.1.3	
+jupiter-b69	Engine/Engine/libs/externalesd/realconsole/bin/realarcadegp.exe	1814528	1b90fb8144645ecf	exe	0x14c	2001-03-14 20:59:26	6.00	VC6 C++ 8168 x124			1.0.3	
+jupiter-b69	Engine/Engine/libs/externalesd/realconsole/bin/setu3260.dll	221184	51bad0a9cba2cf52	dll	0x14c	2001-02-23 05:07:00	6.00	VC6 C++ 8799 x59			6.0.10.71	
+jupiter-b69	Engine/Engine/libs/externalesd/realconsole/bin/xzip.dll	108032	ff189d44dcebb9fd	dll	0x14c	2001-03-02 20:16:40	6.00	VC6 C++ 8168 x25			2.0.04.383	
+jupiter-b69	Engine/Engine/libs/externalesd/realconsole/bin/xzipsfx.dll	31744	617e90b5a1164337	dll	0x14c	2001-03-02 20:17:39	6.00	VC6 C++ 8168 x25			2.0.04.383	
+jupiter-b69	Engine/Engine/libs/externalesd/realconsole/src/SimpleSample/Package/simplesample.exe	69632	deda2d0ca13d9638	exe	0x14c	2001-03-07 01:27:17	6.00	VC6 C++ 8797 x10	msvcrt.dll		1, 0, 0, 0	
+jupiter-b69	Engine/Engine/runtime/esd/RealFileSystemInstaller/src/res/LITH3210.DLL	40960	f2e1086b08a9dbde	dll	0x14c	2001-01-24 22:49:05	6.00	VC6 C++ 8168 x8				
+jupiter-b69	Engine/Engine/runtime/sound/src/sys/s_dx8/dx8.snd	163924	2768bee71fb02681	dll	0x14c	2002-05-22 19:23:26	6.00	VC6 C++ 8966 x4	msvcrtd.dll			C:\SDK\Jupiter\TO2_Build\Engine\built\Debug\Runtime\DLL_dx8\dx8.pdb
+jupiter-b69	Engine/Engine/tools/MiscPack/MSVCP60.DLL	401462	2b6b93c2d66969eb	dll	0x14c	1998-06-17 18:52:10	6.00	VC6 C++ 8168 x18	msvcrt.dll		6.00.8168.0	E:\8168\vc98\self\bin\x86\msvcp60.pdb
+jupiter-b69	Engine/Engine/tools/MiscPack/msvcrt.dll	295000	d7cea69a98579d92	dll	0x14c	1999-09-30 01:51:35	6.00	VC6 C++ 8168 x19			6.10.8637.0	e:\8637\vc61\boot\bin\x86\msvcrt.pdb
+jupiter-b69	Engine/Engine/tools/Plugins/MayaModelExport/Release_Maya70/MayaModelExport70.mll	90112	b62e698825a4d42b	dll	0x14c	2006-03-15 00:17:28	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Engine/Engine/tools/Plugins/MayaWorldExport/Release_Maya70/MayaWorldExport70.mll	163840	843991b33284ac62	dll	0x14c	2006-03-15 00:17:52	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Engine/Engine/tools/Plugins/SDKFiles/PhotoshopSDK/samplecode/Output/win/debug/Getter.8li	499712	443a73309df41c16	dll	0x14c	2003-10-20 22:57:58	7.10	VC7.1 C++ 3077 x38				e:\sdk\public\samplecode\Output\Objs\Getter\Debug\Getter.pdb
+jupiter-b69	Engine/Engine/tools/Plugins/SDKFiles/PhotoshopSDK/samplecode/Output/win/debug/Listener.8li	454656	d3492c4239427920	dll	0x14c	2003-10-20 22:56:56	7.10	VC7.1 C++ 3077 x34				e:\sdk\public\samplecode\Output\Objs\Listener\Debug\Listener.pdb
+jupiter-b69	Engine/Engine/tools/Plugins/SDKFiles/PhotoshopSDK/samplecode/automation/visualbasic/VBAutoPhoto.exe	446464	7d1e5b4abcc67998	exe	0x14c	2003-05-20 16:56:58	6.00	?			8.00	
+jupiter-b69	Engine/Engine/tools/Plugins/SDKFiles/PhotoshopSDK/samplecode/resources/MacToDos.exe	23040	98967aec2bc34e73	exe	0x14c	1995-02-10 03:34:36	2.50	no Rich header				
+jupiter-b69	Engine/Engine/tools/Plugins/SDKFiles/PhotoshopSDK/samplecode/resources/cnvtpipl.exe	131072	d8ba9d43f1ea4fd0	exe	0x14c	2003-07-29 17:23:54	7.10	VC7.1 C++ 3077 x11				
+jupiter-b69	Game/Game/bison.exe	196096	8cd4982404530364	exe	0x14c	1996-01-10 01:11:12	3.00	no Rich header				D:\BISON\bison-1.24\bison\bison___\bison.pdb
+jupiter-b69	Game/Game/flex.exe	181248	4e3c9b0160985631	exe	0x14c	1996-01-14 16:52:01	3.00	no Rich header				
+jupiter-b69	Game/Game/Autorun/AutoRun.exe	73728	36e81c453959ac61	exe	0x14c	2000-04-04 23:19:48	6.00	VC6 C++ 8447 x41				
+jupiter-b69	Samples/Samples/audio/music/rez/ClientFx.fxd	212992	6608e91c8e06b9a3	dll	0x14c	2006-02-01 18:47:15	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/audio/music/rez/Object.lto	143360	b00078f398230a27	dll	0x14c	2006-03-15 00:24:21	7.10	VC7.1 C++ 3077 x27				
+jupiter-b69	Samples/Samples/audio/music/rez/cres.dll	33792	5ca620f448eba4bd	dll	0x14c	2006-03-15 00:24:44	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/audio/music/rez/cshell.dll	126976	492983a9e84d4f50	dll	0x14c	2006-03-15 00:24:42	7.10	VC7.1 C++ 3077 x32				
+jupiter-b69	Samples/Samples/audio/music/rez/sres.dll	33792	ced61d6a7d1a9edd	dll	0x14c	2006-03-15 00:24:46	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/audio/sounds/rez/Object.lto	118784	c9eea2bca06ab5c2	dll	0x14c	2006-03-15 00:24:58	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/audio/sounds/rez/cres.dll	33792	f185b1bf79dae8ca	dll	0x14c	2006-03-15 00:25:11	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/audio/sounds/rez/cshell.dll	106496	9a198d388f651720	dll	0x14c	2006-03-15 00:25:09	7.10	VC7.1 C++ 3077 x25				
+jupiter-b69	Samples/Samples/audio/sounds/rez/sres.dll	33792	000adc7f320ec0e3	dll	0x14c	2006-03-15 00:25:13	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/base/mpflycam/rez/Object.lto	118784	180260fceae50f96	dll	0x14c	2006-03-15 00:25:25	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/base/mpflycam/rez/cres.dll	33792	32c19e7fb5efebb6	dll	0x14c	2006-03-15 00:25:36	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/base/mpflycam/rez/cshell.dll	90112	689aa7fd2975f442	dll	0x14c	2006-03-15 00:25:34	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/base/mpflycam/rez/sres.dll	33792	f4157c5be3679fd9	dll	0x14c	2006-03-15 00:25:38	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/base/samplebase/rez/Object.lto	118784	63c0a0763bcafcbf	dll	0x14c	2006-03-15 00:25:49	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/base/samplebase/rez/cres.dll	33792	e0f17f909e409537	dll	0x14c	2006-03-15 00:26:00	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/base/samplebase/rez/cshell.dll	90112	cb120a1595d748d2	dll	0x14c	2006-03-15 00:25:58	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/base/samplebase/rez/sres.dll	33792	e55d0fe9adf51110	dll	0x14c	2006-03-15 00:26:02	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/base/simplephys/rez/Object.lto	122880	7f27c5a3e08de549	dll	0x14c	2006-03-15 00:26:14	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/base/simplephys/rez/cres.dll	33792	f273ebc38b90275d	dll	0x14c	2006-03-15 00:26:25	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/base/simplephys/rez/cshell.dll	90112	25afd6fd132183c0	dll	0x14c	2006-03-15 00:26:23	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/base/simplephys/rez/sres.dll	33792	99e694c3bfc46c51	dll	0x14c	2006-03-15 00:26:28	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/bin/release/LTMsg.dll	45056	97a85def65da492d	dll	0x14c	2006-03-14 23:43:47	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/bin/release/Lithtech.exe	2580480	9324e62482f7cb07	exe	0x14c	2006-03-14 23:41:13	7.10	VC7.1 C++ 3077 x321	msvcp71.dll msvcr71.dll		1, 0, 0, 1	c:\proj\Jupiter_PC\Engine\runtime\winbuild\lithtech\Lithtech.pdb
+jupiter-b69	Samples/Samples/bin/release/SndDrv.dll	53248	e5945c9960ba9a7a	dll	0x14c	2006-03-14 23:41:30	7.10	VC7.1 C++ 3077 x11	msvcp71.dll msvcr71.dll			
+jupiter-b69	Samples/Samples/bin/release/server.dll	446464	b62a4d6dd5a7b5a7	dll	0x14c	2006-03-14 23:43:42	7.10	VC7.1 C++ 3077 x124	msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Samples/Samples/debugging/stacktrace/bin/dbghelp.dll	813568	5799aff4e0e6e6df	dll	0x14c	2003-07-11 19:14:13	8.00	?	msvcrt.dll		6.2.0013.1 (DbgBuild.030619-2209)	dbghelp.pdb
+jupiter-b69	Samples/Samples/debugging/stacktrace/rez/Object.lto	118784	fc99cde66fbac030	dll	0x14c	2006-03-15 00:26:39	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/debugging/stacktrace/rez/cres.dll	33792	53c25f1d7372ad97	dll	0x14c	2006-03-15 00:26:54	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/debugging/stacktrace/rez/cshell.dll	110592	39dcd3106f02cc62	dll	0x14c	2006-03-15 00:26:50	7.10	VC7.1 C++ 3077 x24				
+jupiter-b69	Samples/Samples/debugging/stacktrace/rez/sres.dll	33792	f837d93832aff81f	dll	0x14c	2006-03-15 00:26:56	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/GuiMgr/rez/Object.lto	118784	570e57cd2c7f35ed	dll	0x14c	2006-03-15 00:30:19	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/GuiMgr/rez/cres.dll	45056	24190bec826460ca	dll	0x14c	2006-03-15 00:31:01	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/GuiMgr/rez/cresCH.dll	45056	d5d5df0951514012	dll	0x14c	2006-03-15 00:31:03	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/GuiMgr/rez/cresEN.dll	45056	24190bec826460ca	dll	0x14c	2006-03-15 00:31:01	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/GuiMgr/rez/cshell.dll	114688	646cd5b8cbcb38ee	dll	0x14c	2006-03-15 00:30:58	7.10	VC7.1 C++ 3077 x35	msvcp71.dll msvcr71.dll			
+jupiter-b69	Samples/Samples/graphics/GuiMgr/rez/sres.dll	33792	fada80c6beb04243	dll	0x14c	2006-03-15 00:30:10	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/bump/rez/Object.lto	118784	733243417a7ad76a	dll	0x14c	2006-03-15 00:27:08	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/bump/rez/cres.dll	33792	3c4a3d94843d86ea	dll	0x14c	2006-03-15 00:27:19	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/bump/rez/cshell.dll	90112	114e34094eb7e7ba	dll	0x14c	2006-03-15 00:27:16	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/graphics/bump/rez/sres.dll	33792	7b92deea6f688b4d	dll	0x14c	2006-03-15 00:27:22	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/clientfx/rez/ClientFx.fxd	212992	6608e91c8e06b9a3	dll	0x14c	2006-02-01 18:47:15	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/graphics/clientfx/rez/Object.lto	143360	1ae67f7b707b347b	dll	0x14c	2006-03-15 00:27:37	7.10	VC7.1 C++ 3077 x26				
+jupiter-b69	Samples/Samples/graphics/clientfx/rez/cres.dll	33792	c82d92de354e6219	dll	0x14c	2006-03-15 00:28:00	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/clientfx/rez/cshell.dll	126976	b7c08a522654a82d	dll	0x14c	2006-03-15 00:27:58	7.10	VC7.1 C++ 3077 x32				
+jupiter-b69	Samples/Samples/graphics/clientfx/rez/sres.dll	33792	b8f3a854793a229f	dll	0x14c	2006-03-15 00:28:02	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/drawprim/rez/Object.lto	118784	a12591522eeeda2d	dll	0x14c	2006-03-15 00:28:14	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/drawprim/rez/cres.dll	33792	1970c0044be0b7dd	dll	0x14c	2006-03-15 00:28:29	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/drawprim/rez/cshell.dll	94208	025918b02b62b314	dll	0x14c	2006-03-15 00:28:27	7.10	VC7.1 C++ 3077 x26				
+jupiter-b69	Samples/Samples/graphics/drawprim/rez/sres.dll	33792	7a1603e0a5b11ffa	dll	0x14c	2006-03-15 00:28:31	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/effects/rez/ClientFx.fxd	212992	dbf90d88d981c99b	dll	0x14c	2006-02-07 17:08:28	7.10	VC7.1 C++ 3077 x41				c:\proj\ResidentEvil\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/graphics/effects/rez/Object.lto	180224	f435e33cb1eae4e4	dll	0x14c	2006-03-15 00:28:59	7.10	VC7.1 C++ 3077 x39				
+jupiter-b69	Samples/Samples/graphics/effects/rez/cres.dll	33792	14614258c05e0bf2	dll	0x14c	2006-03-15 00:29:28	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/effects/rez/cshell.dll	176128	1e907da29695c132	dll	0x14c	2006-03-15 00:29:26	7.10	VC7.1 C++ 3077 x37				
+jupiter-b69	Samples/Samples/graphics/effects/rez/sres.dll	33792	d82900cda85d5151	dll	0x14c	2006-03-15 00:29:31	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/fonts/rez/Object.lto	118784	c3eb2c846e169b12	dll	0x14c	2006-03-15 00:29:43	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/fonts/rez/cres.dll	33792	3fa8bc63d7c8ceab	dll	0x14c	2006-03-15 00:29:57	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/fonts/rez/cshell.dll	106496	b47350be4f383a69	dll	0x14c	2006-03-15 00:29:55	7.10	VC7.1 C++ 3077 x27				
+jupiter-b69	Samples/Samples/graphics/fonts/rez/sres.dll	33792	9a64de906587ef15	dll	0x14c	2006-03-15 00:29:59	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/renderdemo/rez/Object.lto	118784	11289244323884cc	dll	0x14c	2006-03-15 00:31:14	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/renderdemo/rez/cres.dll	33792	870354d74080f7b1	dll	0x14c	2006-03-15 00:31:31	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/renderdemo/rez/cshell.dll	98304	6328a86316fa4cfb	dll	0x14c	2006-03-15 00:31:29	7.10	VC7.1 C++ 3077 x27				
+jupiter-b69	Samples/Samples/graphics/renderdemo/rez/sres.dll	33792	cb5d7e345136c6da	dll	0x14c	2006-03-15 00:31:33	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/shaders/rez/Object.lto	118784	d709253bf21c42cd	dll	0x14c	2006-03-15 00:31:45	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/shaders/rez/cres.dll	33792	bd2fb0a5bb758973	dll	0x14c	2006-03-15 00:32:03	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/shaders/rez/cshell.dll	106496	12638b2a86885eb5	dll	0x14c	2006-03-15 00:32:00	7.10	VC7.1 C++ 3077 x28				
+jupiter-b69	Samples/Samples/graphics/shaders/rez/sres.dll	33792	3cb0dcc8449190e9	dll	0x14c	2006-03-15 00:32:05	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/specialeffects1/rez/ClientFx.fxd	212992	6608e91c8e06b9a3	dll	0x14c	2006-02-01 18:47:15	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/graphics/specialeffects1/rez/Object.lto	126976	15d787f179a88f7e	dll	0x14c	2006-03-15 00:32:20	7.10	VC7.1 C++ 3077 x27				
+jupiter-b69	Samples/Samples/graphics/specialeffects1/rez/cres.dll	33792	c3afaff4b0b6c0ad	dll	0x14c	2006-03-15 00:32:42	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/specialeffects1/rez/cshell.dll	126976	11fdd11e14e21a5f	dll	0x14c	2006-03-15 00:32:40	7.10	VC7.1 C++ 3077 x31				
+jupiter-b69	Samples/Samples/graphics/specialeffects1/rez/sres.dll	33792	cee597fea4dd3e8c	dll	0x14c	2006-03-15 00:32:44	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/video/rez/Object.lto	118784	fb25677f3697c8c9	dll	0x14c	2006-03-15 00:32:56	7.10	VC7.1 C++ 3077 x23				
+jupiter-b69	Samples/Samples/graphics/video/rez/cres.dll	33792	c351a564448dde64	dll	0x14c	2006-03-15 00:33:07	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/graphics/video/rez/cshell.dll	90112	da3ce2412482af77	dll	0x14c	2006-03-15 00:33:05	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/graphics/video/rez/sres.dll	33792	b4009d74f8222c54	dll	0x14c	2006-03-15 00:33:09	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/animations/rez/Object.lto	126976	23232416f33cd924	dll	0x14c	2006-03-15 00:33:23	7.10	VC7.1 C++ 3077 x25				
+jupiter-b69	Samples/Samples/models/animations/rez/cres.dll	33792	72b0dd0a397ea76f	dll	0x14c	2006-03-15 00:33:34	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/animations/rez/cshell.dll	90112	63e937ab4541eb64	dll	0x14c	2006-03-15 00:33:31	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/models/animations/rez/sres.dll	33792	6869163bc967e119	dll	0x14c	2006-03-15 00:33:36	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/animations2/rez/Object.lto	126976	136ccfc92c8908c7	dll	0x14c	2006-03-15 00:33:50	7.10	VC7.1 C++ 3077 x25				
+jupiter-b69	Samples/Samples/models/animations2/rez/cres.dll	33792	9b259063c2b13515	dll	0x14c	2006-03-15 00:34:01	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/animations2/rez/cshell.dll	94208	065c22453a247493	dll	0x14c	2006-03-15 00:33:58	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/models/animations2/rez/sres.dll	33792	c0afa397492f45b9	dll	0x14c	2006-03-15 00:34:03	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/attachments/rez/Object.lto	126976	c84eb7da81192c01	dll	0x14c	2006-03-15 00:34:16	7.10	VC7.1 C++ 3077 x24				
+jupiter-b69	Samples/Samples/models/attachments/rez/cres.dll	33792	51d3aed6947d5536	dll	0x14c	2006-03-15 00:34:27	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/attachments/rez/cshell.dll	90112	dfaed6c0b219061f	dll	0x14c	2006-03-15 00:34:25	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/models/attachments/rez/sres.dll	33792	10050b3d296818ab	dll	0x14c	2006-03-15 00:34:29	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/obb/rez/Object.lto	114688	0a928bb76cae420f	dll	0x14c	2006-03-15 00:34:39	7.10	VC7.1 C++ 3077 x21				
+jupiter-b69	Samples/Samples/models/obb/rez/cres.dll	33792	4a2f9f7ef55cd695	dll	0x14c	2006-03-15 00:34:52	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/models/obb/rez/cshell.dll	106496	469c8f0b31fce384	dll	0x14c	2006-03-15 00:34:50	7.10	VC7.1 C++ 3077 x28				
+jupiter-b69	Samples/Samples/models/obb/rez/sres.dll	33792	02ea75b7f9f35148	dll	0x14c	2006-03-15 00:34:54	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/networking/nettest/rez/ClientFx.fxd	212992	6608e91c8e06b9a3	dll	0x14c	2006-02-01 18:47:15	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/networking/nettest/rez/Object.lto	126976	b032cf75ac27d642	dll	0x14c	2006-03-15 00:35:10	7.10	VC7.1 C++ 3077 x27				
+jupiter-b69	Samples/Samples/networking/nettest/rez/cres.dll	33792	38febcbda360971d	dll	0x14c	2006-03-15 00:35:33	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/networking/nettest/rez/cshell.dll	131072	cd6636e3c304d4b5	dll	0x14c	2006-03-15 00:35:31	7.10	VC7.1 C++ 3077 x32				
+jupiter-b69	Samples/Samples/networking/nettest/rez/sres.dll	33792	d6e45488d3176d3b	dll	0x14c	2006-03-15 00:35:36	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/networking/sealhunter/rez/ClientFx.fxd	212992	6608e91c8e06b9a3	dll	0x14c	2006-02-01 18:47:15	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/networking/sealhunter/rez/cres.dll	33792	48472ca3c1850b77	dll	0x14c	2006-03-15 00:36:33	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/networking/sealhunter/rez/cshell.dll	143360	59dbf1cc69d0b99e	dll	0x14c	2006-03-15 00:36:30	7.10	VC7.1 C++ 3077 x34				
+jupiter-b69	Samples/Samples/networking/sealhunter/rez/object.lto	163840	8d2c4e79e76662f8	dll	0x14c	2006-03-15 00:36:03	7.10	VC7.1 C++ 3077 x35				
+jupiter-b69	Samples/Samples/networking/sealhunter/rez/sres.dll	33792	01155c87d23928de	dll	0x14c	2006-03-15 00:35:41	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/objects/doors/rez/ClientFx.fxd	212992	6608e91c8e06b9a3	dll	0x14c	2006-02-01 18:47:15	7.10	VC7.1 C++ 3077 x41				c:\proj\Jupiter_PC\Engine\clientfx\ClientFx.pdb
+jupiter-b69	Samples/Samples/objects/doors/rez/Object.lto	131072	06109daabc917100	dll	0x14c	2006-03-15 00:36:51	7.10	VC7.1 C++ 3077 x29				
+jupiter-b69	Samples/Samples/objects/doors/rez/cres.dll	33792	104cc79b6729d5ff	dll	0x14c	2006-03-15 00:37:13	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/objects/doors/rez/cshell.dll	126976	6ffadf0a494cdb73	dll	0x14c	2006-03-15 00:37:10	7.10	VC7.1 C++ 3077 x31				
+jupiter-b69	Samples/Samples/objects/doors/rez/sres.dll	33792	dc11c4b0dc5b3e78	dll	0x14c	2006-03-15 00:37:15	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/objects/pickups/rez/Object.lto	126976	ac398aa77adba35a	dll	0x14c	2006-03-15 00:37:27	7.10	VC7.1 C++ 3077 x24				
+jupiter-b69	Samples/Samples/objects/pickups/rez/cres.dll	33792	4eff8ebaab0a8278	dll	0x14c	2006-03-15 00:37:38	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/objects/pickups/rez/cshell.dll	90112	a01b3446a1566a0c	dll	0x14c	2006-03-15 00:37:36	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/objects/pickups/rez/sres.dll	33792	a75efa712599eff2	dll	0x14c	2006-03-15 00:37:40	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/objects/projectiles/rez/Object.lto	126976	8254b5c40520888d	dll	0x14c	2006-03-15 00:37:54	7.10	VC7.1 C++ 3077 x25				
+jupiter-b69	Samples/Samples/objects/projectiles/rez/cres.dll	33792	d7056cc9805ae2cf	dll	0x14c	2006-03-15 00:38:05	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Samples/Samples/objects/projectiles/rez/cshell.dll	90112	869fd5a31e3e4ce9	dll	0x14c	2006-03-15 00:38:03	7.10	VC7.1 C++ 3077 x22				
+jupiter-b69	Samples/Samples/objects/projectiles/rez/sres.dll	33792	e264a0168cfb7037	dll	0x14c	2006-03-15 00:38:07	7.10	VC7.1 C++ 3077 x3				
+jupiter-b69	Tools/Tools/ButeCheck.exe	73728	2b26cc86cff6f90f	exe	0x14c	1999-04-29 20:31:53	6.00	VC6 C++ 8168 x31	mfc42.dll msvcp60.dll msvcrt.dll			
+jupiter-b69	Tools/Tools/ButeEdit.exe	147456	532e364793367fdd	exe	0x14c	2006-03-15 00:23:52	7.10	VC7.1 C++ 3077 x31	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/CRUD.exe	600576	0c439fa7d295e94f	exe	0x14c	2002-08-16 01:05:38	5.00	no Rich header				
+jupiter-b69	Tools/Tools/DtxOptimizer.exe	73728	a913bc056665d180	exe	0x14c	2006-03-15 00:23:33	7.10	VC7.1 C++ 3077 x13	msvcp71.dll msvcr71.dll			c:\proj\Jupiter_PC\Engine\built\Release\tools\DTXOptimizer\DtxOptimizer.pdb
+jupiter-b69	Tools/Tools/DtxShellEx.dll	110592	2b9deef05a07d77b	dll	0x14c	2006-03-15 00:14:11	7.10	VC7.1 C++ 3077 x24	mfc71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/DtxView.exe	114688	a57b2d8550592c41	exe	0x14c	2006-03-15 00:14:45	7.10	VC7.1 C++ 3077 x24	mfc71.dll msvcr71.dll		1.0.0.1	c:\proj\Jupiter_PC\Engine\built\Release\tools\DtxView\DtxView.pdb
+jupiter-b69	Tools/Tools/FxED.exe	872448	abfdf43b2cec0436	exe	0x14c	2006-03-15 00:01:07	7.10	VC7.1 C++ 3077 x77	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/HeightMaptoNormalMap.exe	442368	97c99a8d123eeca1	exe	0x14c	2006-03-14 23:59:08	7.10	VC7.1 C++ 4035 x116	mfc71.dll msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/LTAsk.exe	40960	b39f7a061a6e8ffe	exe	0x14c	2006-03-14 23:58:30	7.10	VC7.1 C++ 3077 x4				
+jupiter-b69	Tools/Tools/LTC.exe	16384	2b1995e1d3b283e9	exe	0x14c	2006-03-14 23:58:27	7.10	VC7.1 C++ 3077 x15	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/LTDMTest.exe	90112	3ec68f2e4a81f79b	exe	0x14c	2006-03-14 23:58:24	7.10	VC7.1 C++ 3077 x22	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/LithRez.exe	30208	b3766ebc5a50f329	exe	0x14c	2006-03-14 23:58:54	7.10	VC7.1 C++ 3077 x11	msvcr71.dll			
+jupiter-b69	Tools/Tools/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/ModelEdit.exe	409600	d3e849a64b790a22	exe	0x14c	2006-03-14 23:56:44	7.10	VC7.1 C++ 3077 x100	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/Model_Packer.exe	401408	c6b617f3ff17773a	exe	0x14c	2006-03-14 23:58:09	7.10	VC7.1 C++ 3077 x46	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/PropHelpGen.exe	90112	f80a1703c4f42181	exe	0x14c	2006-03-14 23:52:41	7.10	VC7.1 C++ 3077 x15	mfc71.dll msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/RenderStyle_Packer.exe	65536	1d6e32d0bf1781fd	exe	0x14c	2006-03-14 23:52:21	7.10	VC7.1 C++ 3077 x29	mfc71.dll msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/RenderStylesEditor.exe	1683456	b3540fe6c45aff18	exe	0x14c	2006-03-14 23:51:55	7.10	VC7.1 C++ 4035 x120	mfc71.dll msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/ServerDir.dll	393216	b9ec444c5224d71d	dll	0x14c	2006-03-15 00:39:40	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/TSCompiler.exe	17408	4f431101cd758d59	exe	0x14c	2006-03-14 23:51:16	7.10	VC7.1 C++ 3077 x6	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/WMFADist.exe	2041744	67f6b75bc32c49ab	exe	0x14c	2000-06-06 20:43:56	5.12	no @comp.id (Intel/pre-VC6)			7.01.00.3055	
+jupiter-b69	Tools/Tools/WaveEdit.exe	36864	9aa2d41532a3b9a7	exe	0x14c	2006-03-14 23:51:12	7.10	VC7.1 C++ 3077 x18	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/WinLTC.exe	40960	7e08b8f93f2ed29a	exe	0x14c	2006-03-14 23:50:51	7.10	VC7.1 C++ 3077 x19	mfc71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/dedit.exe	2256896	6579ed49a11fea8e	exe	0x14c	2006-03-15 00:13:25	7.10	VC7.1 C++ 3077 x289	mfc71.dll msvcp71.dll msvcr71.dll		2.27.01.001	
+jupiter-b69	Tools/Tools/dtxutil.exe	65536	ee3fec199be134f2	exe	0x14c	2006-03-15 00:01:41	7.10	VC7.1 C++ 3077 x17	mfc71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/lipcompiler.exe	114688	613d379777d0251c	exe	0x14c	2006-03-14 23:58:58	7.10	VC7.1 C++ 3077 x24				
+jupiter-b69	Tools/Tools/ltaview.exe	86016	6c86067ffc32045d	exe	0x14c	2006-03-14 23:58:52	7.10	VC7.1 C++ 3077 x28	mfc71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/ltbhead.exe	40960	f6c8d20813acd5c7	exe	0x14c	2006-03-14 23:58:29	7.10	VC7.1 C++ 3077 x5				
+jupiter-b69	Tools/Tools/mfc70.dll	974848	a133f981269d5508	dll	0x14c	2002-01-05 12:48:11	7.00	VC7.0 C++ 9466 x229	msvcr70.dll		7.00.9466.0	mfc70.pdb
+jupiter-b69	Tools/Tools/msvci70.dll	54784	b757f653eed51b7c	dll	0x14c	2002-01-05 11:38:36	7.00	VC7.0 C++ 9466 x49	msvcr70.dll		7.00.9466.0	msvci70.pdb
+jupiter-b69	Tools/Tools/msvcp70.dll	487424	9255c60b194cf849	dll	0x14c	2002-01-05 11:40:17	7.00	VC7.0 C++ 9466 x38	msvcr70.dll		7.00.9466.0	msvcp70.pdb
+jupiter-b69	Tools/Tools/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/msvcr70.dll	344064	f68e4cdbc879423e	dll	0x14c	2002-01-05 11:37:24	7.00	VC7.0 C++ 9466 x21			7.00.9466.0	msvcr70.pdb
+jupiter-b69	Tools/Tools/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/pma.exe	5120	b9ecdc01c86fea45	exe	0x14c	2006-03-14 23:54:20	7.10	VC7.1 C++ 3077 x3	msvcr71.dll			
+jupiter-b69	Tools/Tools/recurse_run.exe	4608	c7165cf59893d51f	exe	0x14c	2006-03-14 23:52:22	7.10	VC7.1 C++ 3077 x2	msvcr71.dll			
+jupiter-b69	Tools/Tools/vcvars.exe	40960	ae10a5b85de4990a	exe	0x14c	2006-03-15 00:13:35	7.10	VC7.1 C++ 3077 x3				c:\proj\Jupiter_PC\Engine\built\Release\tools\vcvars\vcvars.pdb
+jupiter-b69	Tools/Tools/winpacker.exe	77824	17ffb9ef3bc26dc1	exe	0x14c	2006-03-14 23:50:45	7.10	VC7.1 C++ 3077 x26	mfc71.dll msvcp71.dll msvcr71.dll		1, 0, 0, 1	
+jupiter-b69	Tools/Tools/xls2rc.exe	20480	4a908a79a759a1fe	exe	0x14c	2002-08-01 23:04:16	6.00	VC6 C++ 8966 x2	mfc42.dll msvcp60.dll msvcrt.dll			
+jupiter-b69	Tools/Tools/Codecs/WMFADist.exe	2041744	67f6b75bc32c49ab	exe	0x14c	2000-06-06 20:43:56	5.12	no @comp.id (Intel/pre-VC6)			7.01.00.3055	
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/MaxDTXLoader30.bmi	53248	45dfe813512f648a	dll	0x14c	2006-03-14 23:50:12	7.10	VC7.1 C++ 3077 x13	mfc71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/MaxModelExport30.dle	73728	b9cda0ebabc948a7	dll	0x14c	2006-03-14 23:49:47	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/MaxWorldExport30.dle	98304	ca73de4e1f76ace4	dll	0x14c	2006-03-14 23:49:31	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/MaxWorldImport30.dli	69632	3dd3dd355522be8c	dll	0x14c	2006-03-14 23:50:30	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax3/plugins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/MaxDTXLoader40.bmi	57344	32b03c675d4c8f7f	dll	0x14c	2006-03-14 23:48:45	7.10	VC7.1 C++ 3077 x13	mfc71.dll msvcr71.dll	3ds Max		
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/MaxModelExport40.dle	73728	05c39f049fb7bf86	dll	0x14c	2006-03-14 23:48:18	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/MaxWorldExport40.dle	98304	70b6878b21997cb1	dll	0x14c	2006-03-14 23:48:00	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/MaxWorldImport40.dli	73728	5a4d97119ca0f431	dll	0x14c	2006-03-14 23:49:04	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax4/plugins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/MaxDTXLoader50.bmi	53248	884d38e699848cda	dll	0x14c	2006-03-15 00:02:54	7.10	VC7.1 C++ 3077 x13	mfc71.dll msvcr71.dll	3ds Max		
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/MaxModelExport50.dle	73728	ac2ae44d6af62c0e	dll	0x14c	2006-03-15 00:02:28	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/MaxWorldExport50.dle	98304	2cd08f40c9dbf552	dll	0x14c	2006-03-15 00:02:11	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/MaxWorldImport50.dli	73728	c87fda7b1fd5d44c	dll	0x14c	2006-03-15 00:03:14	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax5/plugins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/MaxDTXLoader60.bmi	57344	9eb4674aaf6411c9	dll	0x14c	2006-03-14 23:53:56	7.10	VC7.1 C++ 3077 x13	mfc71.dll msvcr71.dll	3ds Max		
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/MaxModelExport60.dle	73728	4ea79048cc049e65	dll	0x14c	2006-03-14 23:53:29	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/MaxWorldExport60.dle	98304	f82aee7a0d4b396c	dll	0x14c	2006-03-14 23:53:11	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/MaxWorldImport60.dli	73728	ae9934b933ef7bb5	dll	0x14c	2006-03-14 23:54:17	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax6/plugins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/MaxDTXLoader70.bmi	57344	1842c740b1fa1af1	dll	0x14c	2006-03-15 00:16:48	7.10	VC7.1 C++ 3077 x13	mfc71.dll msvcr71.dll	3ds Max		
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/MaxModelExport70.dle	73728	9723e7cb5c9d2ff8	dll	0x14c	2006-03-15 00:16:21	7.10	VC7.1 C++ 3077 x19	msvcp71.dll msvcr71.dll	3ds Max	3.1.0.0	
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/MaxWorldExport70.dle	98304	a9d7e689d05fa5a1	dll	0x14c	2006-03-15 00:16:03	7.10	VC7.1 C++ 3077 x21	msvcp71.dll msvcr71.dll	3ds Max	3.1	
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/MaxWorldImport70.dli	73728	f857ae5c2d1769fa	dll	0x14c	2006-03-15 00:17:09	7.10	VC7.1 C++ 3077 x23	msvcp71.dll msvcr71.dll	3ds Max	3.2	
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/3dsmax7/plugins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/PhotoShop/DTXFormat.8bi	69632	03c207bfdc7863eb	dll	0x14c	2001-08-03 14:54:43	6.00	VC6 C 8799 x11	msvcrt.dll			
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/MayaModelExport60.mll	90112	b3d0a385cf0f7f59	dll	0x14c	2006-03-14 23:45:48	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/MayaWorldExport60.mll	163840	dadf8dff22a3beda	dll	0x14c	2006-03-14 23:46:11	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/image/IMFLithDTX.dll	45056	b59d6a5f75c5eedb	dll	0x14c	2006-03-14 23:45:09	7.10	VC7.1 C++ 3077 x9	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/image/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/image/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.0/bin/plug-ins/image/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/MayaModelExport65.mll	90112	53f45735807ed6d0	dll	0x14c	2006-03-15 00:15:07	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/MayaWorldExport65.mll	163840	72bcf72022b42093	dll	0x14c	2006-03-15 00:15:30	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/image/IMFLithDTX.dll	45056	b59d6a5f75c5eedb	dll	0x14c	2006-03-14 23:45:09	7.10	VC7.1 C++ 3077 x9	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/image/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/image/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya6.5/bin/plug-ins/image/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/MayaModelExport70.mll	90112	b62e698825a4d42b	dll	0x14c	2006-03-15 00:17:28	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/MayaWorldExport70.mll	163840	843991b33284ac62	dll	0x14c	2006-03-15 00:17:52	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/image/IMFLithDTX.dll	45056	b59d6a5f75c5eedb	dll	0x14c	2006-03-14 23:45:09	7.10	VC7.1 C++ 3077 x9	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/image/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/image/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/alias/maya7.0/bin/plug-ins/image/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/MayaModelExport40.mll	90112	566596707063527e	dll	0x14c	2006-03-14 23:47:09	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/MayaWorldExport40.mll	159744	a137524995a9abe9	dll	0x14c	2006-03-14 23:47:30	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/image/IMFLithDTX.dll	45056	b59d6a5f75c5eedb	dll	0x14c	2006-03-14 23:45:09	7.10	VC7.1 C++ 3077 x9	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/image/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/image/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.0/bin/plug-ins/image/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/MayaModelExport45.mll	90112	afcc0a42a5f3fa6b	dll	0x14c	2006-03-14 23:44:57	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/MayaWorldExport45.mll	159744	6546ff7ed1e1c369	dll	0x14c	2006-03-14 23:45:30	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/image/IMFLithDTX.dll	45056	b59d6a5f75c5eedb	dll	0x14c	2006-03-14 23:45:09	7.10	VC7.1 C++ 3077 x9	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/image/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/image/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya4.5/bin/plug-ins/image/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/MayaModelExport50.mll	90112	304b70e1f437fa38	dll	0x14c	2006-03-14 23:46:29	7.10	VC7.1 C++ 3077 x20	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/MayaWorldExport50.mll	163840	e06ea237e4ad14d5	dll	0x14c	2006-03-14 23:46:53	7.10	VC7.1 C++ 3077 x29	msvcp71.dll msvcr71.dll	Maya		
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/image/IMFLithDTX.dll	45056	b59d6a5f75c5eedb	dll	0x14c	2006-03-14 23:45:09	7.10	VC7.1 C++ 3077 x9	msvcp71.dll msvcr71.dll			
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/image/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/image/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/Plugins/aliaswavefront/maya5.0/bin/plug-ins/image/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/VC71Runtime/MFC71.dll	1060864	4da5efdc46d126b4	dll	0x14c	2003-03-19 05:19:57	7.10	VC7.1 C++ 3077 x232	msvcr71.dll		7.10.3077.0	mfc71.pdb
+jupiter-b69	Tools/Tools/VC71Runtime/mfc71d.dll	2179072	caf9cfd3d98dc0f1	dll	0x14c	2003-03-19 04:28:36	7.10	VC7.1 C++ 3077 x245	msvcr71d.dll		7.10.3077.0	MFC71D.pdb
+jupiter-b69	Tools/Tools/VC71Runtime/msvcp71.dll	499712	df96156f6a548fd6	dll	0x14c	2003-03-19 04:14:51	7.10	VC7.1 C++ 3077 x37	msvcr71.dll		7.10.3077.0	msvcp71.pdb
+jupiter-b69	Tools/Tools/VC71Runtime/msvcp71d.dll	765952	c19c69ead56b16a8	dll	0x14c	2003-03-19 03:04:23	7.10	VC7.1 C++ 3077 x37	msvcr71d.dll		7.10.3077.0	msvcp71d.pdb
+jupiter-b69	Tools/Tools/VC71Runtime/msvcr71.dll	348160	8094af5ee310714c	dll	0x14c	2003-02-21 12:42:20	7.10	VC7.1 C++ 3052 x23			7.10.3052.4	msvcr71.pdb
+jupiter-b69	Tools/Tools/VC71Runtime/msvcr71d.dll	544768	cd20e6ccf6ce1d7f	dll	0x14c	2003-03-19 03:03:50	7.10	VC7.1 C++ 3077 x24			7.10.3077.0	msvcr71d.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/mfc70.dll	974848	a133f981269d5508	dll	0x14c	2002-01-05 12:48:11	7.00	VC7.0 C++ 9466 x229	msvcr70.dll		7.00.9466.0	mfc70.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/mfc70d.dll	1933312	e69a8b5244dd94e8	dll	0x14c	2002-01-05 11:54:02	7.00	VC7.0 C++ 9466 x242	msvcr70d.dll		7.00.9466.0	MFC70D.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/msvci70.dll	54784	b757f653eed51b7c	dll	0x14c	2002-01-05 11:38:36	7.00	VC7.0 C++ 9466 x49	msvcr70.dll		7.00.9466.0	msvci70.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/msvci70d.dll	94208	7586794fe2b92060	dll	0x14c	2002-01-05 10:16:59	7.00	VC7.0 C++ 9466 x49	msvcr70d.dll		7.00.9466.0	msvci70d.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/msvcp70.dll	487424	9255c60b194cf849	dll	0x14c	2002-01-05 11:40:17	7.00	VC7.0 C++ 9466 x38	msvcr70.dll		7.00.9466.0	msvcp70.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/msvcp70d.dll	737280	c12d40d679181a6a	dll	0x14c	2002-01-05 10:16:38	7.00	VC7.0 C++ 9466 x38	msvcr70d.dll		7.00.9466.0	msvcp70d.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/msvcr70.dll	344064	f68e4cdbc879423e	dll	0x14c	2002-01-05 11:37:24	7.00	VC7.0 C++ 9466 x21			7.00.9466.0	msvcr70.pdb
+jupiter-b69	Tools/Tools/VC7Runtime/msvcr70d.dll	536576	07e17a908af1d802	dll	0x14c	2002-01-05 10:16:07	7.00	VC7.0 C++ 9466 x22			7.00.9466.0	msvcr70d.pdb
+jupiter-b69	Tools/Tools/packers/WorldPacker.dll	446464	0e7e2a96927a5fbb	dll	0x14c	2006-03-15 00:23:12	7.10	VC7.1 C++ 3077 x104	mfc71.dll msvcp71.dll msvcr71.dll			
