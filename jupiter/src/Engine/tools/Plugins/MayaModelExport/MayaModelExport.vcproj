@@ -1,0 +1,1069 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="MayaModelExport"
+	ProjectGUID="{F75293CF-C30E-4D60-BD96-269F8CAF7DE1}"
+	SccProjectName=""
+	SccLocalPath="">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Release Maya65|Win32"
+			OutputDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\Alias\Maya6.5\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\Alias\Maya6.5\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya65SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN;USES_MAYA65_SDK"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.5\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.5\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.5\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.5\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\Alias\Maya6.5\bin\plug-ins\MayaModelExport65.mll;..\..\..\..\tools\Plugins\Alias\Maya6.5\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport65.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya65SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport65.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport65.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release Maya60|Win32"
+			OutputDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\Alias\Maya6.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\Alias\Maya6.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya60SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN;USES_MAYA6_SDK"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\Alias\Maya6.0\bin\plug-ins\MayaModelExport60.mll;..\..\..\..\tools\Plugins\Alias\Maya6.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport60.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya60SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport60.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport60.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release Maya50|Win32"
+			OutputDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya5.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya5.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya50SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN;USES_MAYA5_SDK"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya5.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\bin\plug-ins\MayaModelExport50.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport50.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya50SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport50.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport50.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release Maya40|Win32"
+			OutputDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya40SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;NT_PLUGIN;USES_MAYA4_SDK"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya4.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\bin\plug-ins\MayaModelExport40.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport40.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya40SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport40.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport40.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release Maya30|Win32"
+			OutputDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya3.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya3.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya30SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;NT_PLUGIN;USES_MAYA3_SDK"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya3.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\bin\plug-ins\MayaModelExport30.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport30.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya30SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport30.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport30.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya65|Win32"
+			OutputDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\Alias\Maya6.5\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\Alias\Maya6.5\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya65SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN;USES_MAYA65_SDK"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.5\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.5\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.5\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.5\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\Alias\Maya6.5\bin\plug-ins\MayaModelExport65.mll;..\..\..\..\tools\Plugins\Alias\Maya6.5\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport65.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya65SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport65.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport65.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya60|Win32"
+			OutputDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\Alias\Maya6.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\Alias\Maya6.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya60SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN;USES_MAYA6_SDK"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya6.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya6.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\Alias\Maya6.0\bin\plug-ins\MayaModelExport60.mll;..\..\..\..\tools\Plugins\Alias\Maya6.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport60.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya60SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport60.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport60.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya50|Win32"
+			OutputDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya5.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya5.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya50SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN;USES_MAYA5_SDK"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya5.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\bin\plug-ins\MayaModelExport50.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya5.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport50.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya50SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport50.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport50.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release Maya45|Win32"
+			OutputDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.5\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Release\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.5\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya45SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;NDEBUG;_WINDOWS;NT_PLUGIN;USES_MAYA45_SDK"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya4.5\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\bin\plug-ins\MayaModelExport45.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport45.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya45SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport45.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport45.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya40|Win32"
+			OutputDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya40SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;NT_PLUGIN;USES_MAYA4_SDK"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/MayaModelExport40/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya4.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\bin\plug-ins\MayaModelExport40.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya4.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport40.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya40SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport40.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport40.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya30|Win32"
+			OutputDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya3.0\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya3.0\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya30SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;NT_PLUGIN;USES_MAYA3_SDK"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya3.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\bin\plug-ins\MayaModelExport30.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya3.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport30.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya30SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport30.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport30.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya45|Win32"
+			OutputDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.5\bin\plug-ins"
+			IntermediateDirectory="..\..\..\Built\Debug\tools\Plugins\MayaModelExport\AliasWavefront\Maya4.5\bin\plug-ins"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya45SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="WIN32;_DEBUG;_WINDOWS;NT_PLUGIN;USES_MAYA45_SDK"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\AliasWaveFront\Maya4.5\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\bin\plug-ins\MayaModelExport45.mll;..\..\..\..\tools\Plugins\AliasWavefront\Maya4.5\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport45.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya45SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport45.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport45.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Release Maya70|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				InlineFunctionExpansion="1"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya70SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="USES_MAYA70_SDK;WIN32;NDEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN"
+				StringPooling="TRUE"
+				RuntimeLibrary="2"
+				EnableFunctionLevelLinking="TRUE"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya7.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya7.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya7.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya7.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\Alias\Maya7.0\bin\plug-ins\MayaModelExport70.mll;..\..\..\..\tools\Plugins\Alias\Maya7.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport70.mll"
+				LinkIncremental="1"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya70SDK\lib"
+				IgnoreDefaultLibraryNames="libcmt.lib,libc.lib"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport70.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport70.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="NDEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="NDEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+		<Configuration
+			Name="Debug Maya70|Win32"
+			OutputDirectory="$(ConfigurationName)"
+			IntermediateDirectory="$(ConfigurationName)"
+			ConfigurationType="2"
+			UseOfMFC="0"
+			ATLMinimizesCRunTimeLibraryUsage="FALSE">
+			<Tool
+				Name="VCCLCompilerTool"
+				Optimization="0"
+				AdditionalIncludeDirectories="..\SDKFiles\Maya70SDK\include,..\..\..\libs\ltamgr,..\..\..\sdk\inc"
+				PreprocessorDefinitions="USES_MAYA70_SDK;WIN32;_DEBUG;_WINDOWS;REQUIRE_IOSTREAM;NT_PLUGIN"
+				BasicRuntimeChecks="3"
+				RuntimeLibrary="3"
+				UsePrecompiledHeader="0"
+				PrecompiledHeaderFile="$(OutDir)/MayaModelExport.pch"
+				AssemblerListingLocation="$(OutDir)/"
+				ObjectFile="$(OutDir)/"
+				ProgramDataBaseFileName="$(OutDir)/"
+				BrowseInformation="1"
+				WarningLevel="3"
+				SuppressStartupBanner="TRUE"
+				DebugInformationFormat="4"
+				CompileAs="0"/>
+			<Tool
+				Name="VCCustomBuildTool"
+				CommandLine="echo copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya7.0\bin\plug-ins
+copy &quot;$(TargetPath)&quot; ..\..\..\..\tools\Plugins\Alias\Maya7.0\bin\plug-ins
+echo copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya7.0\scripts
+copy LithTechModelExportOptions.mel ..\..\..\..\tools\Plugins\Alias\Maya7.0\scripts
+"
+				Outputs="..\..\..\..\tools\Plugins\Alias\Maya7.0\bin\plug-ins\MayaModelExport70.mll;..\..\..\..\tools\Plugins\Alias\Maya7.0\scripts\LithTechModelExportOptions.mel"/>
+			<Tool
+				Name="VCLinkerTool"
+				AdditionalOptions="/MACHINE:I386"
+				AdditionalDependencies="odbc32.lib odbccp32.lib Foundation.lib OpenMaya.lib OpenMayaAnim.lib"
+				OutputFile="$(OutDir)/MayaModelExport70.mll"
+				LinkIncremental="2"
+				SuppressStartupBanner="TRUE"
+				AdditionalLibraryDirectories="..\SDKFiles\Maya70SDK\lib"
+				IgnoreDefaultLibraryNames="libcmtd.lib,libc.lib"
+				GenerateDebugInformation="TRUE"
+				ProgramDatabaseFile="$(OutDir)/MayaModelExport70.pdb"
+				SubSystem="2"
+				ImportLibrary="$(OutDir)/MayaModelExport70.lib"/>
+			<Tool
+				Name="VCMIDLTool"
+				PreprocessorDefinitions="_DEBUG"
+				MkTypLibCompatible="TRUE"
+				SuppressStartupBanner="TRUE"
+				TargetEnvironment="1"
+				TypeLibraryName="$(OutDir)/MayaModelExport.tlb"/>
+			<Tool
+				Name="VCPostBuildEventTool"/>
+			<Tool
+				Name="VCPreBuildEventTool"/>
+			<Tool
+				Name="VCPreLinkEventTool"/>
+			<Tool
+				Name="VCResourceCompilerTool"
+				PreprocessorDefinitions="_DEBUG"
+				Culture="1033"/>
+			<Tool
+				Name="VCWebServiceProxyGeneratorTool"/>
+			<Tool
+				Name="VCXMLDataGeneratorTool"/>
+			<Tool
+				Name="VCWebDeploymentTool"/>
+			<Tool
+				Name="VCManagedWrapperGeneratorTool"/>
+			<Tool
+				Name="VCAuxiliaryManagedWrapperGeneratorTool"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+		<Filter
+			Name="Source Files"
+			Filter="cpp;c;cxx;rc;def;r;odl;idl;hpj;bat">
+			<File
+				RelativePath=".\DllMain.cpp">
+			</File>
+			<File
+				RelativePath=".\ModelExportCommand.cpp">
+			</File>
+			<File
+				RelativePath=".\ModelFileTranslator.cpp">
+			</File>
+		</Filter>
+		<Filter
+			Name="Header Files"
+			Filter="h;hpp;hxx;hm;inl">
+			<File
+				RelativePath=".\ModelExportCommand.h">
+			</File>
+			<File
+				RelativePath=".\ModelFileTranslator.h">
+			</File>
+		</Filter>
+		<Filter
+			Name="Common Files"
+			Filter="">
+			<File
+				RelativePath="..\..\..\sdk\inc\ltquatbase.cpp">
+			</File>
+		</Filter>
+		<Filter
+			Name="Lib Files"
+			Filter="">
+			<File
+				RelativePath="..\..\..\sdk\lib\TdGuard.lib">
+			</File>
+		</Filter>
+		<File
+			RelativePath=".\LithTechModelExportOptions.mel">
+		</File>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

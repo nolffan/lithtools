@@ -1,0 +1,104 @@
+Microsoft Visual Studio Solution File, Format Version 8.00
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Max30", "Plugins_Max30.vcproj", "{F2968CD9-2E3D-4E72-839A-F5B62839E4FD}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Max40", "Plugins_Max40.vcproj", "{F0F5A0A4-DA6B-4EC6-826D-802B1230D6FA}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Maya40", "Plugins_Maya40.vcproj", "{8C18C2F2-E5AE-45DE-BC7D-EFD61721175C}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Maya50", "Plugins_Maya50.vcproj", "{D3AEB67F-0440-4840-969B-840E0AD96DED}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Maya60", "Plugins_Maya60.vcproj", "{44A050DC-DD0D-4F41-BFFC-D2427138232B}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Maya45", "Plugins_Maya45.vcproj", "{0CC88AA6-8111-4784-B910-EBB93BBD1953}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Max50", "Plugins_Max50.vcproj", "{0EC450E8-1A01-4A4A-928F-5CD0BC6630F9}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Max60", "Plugins_Max60.vcproj", "{7F765A07-016E-4C8E-BF3D-76F26D93A913}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Maya65", "Plugins_Maya65.vcproj", "{85DA6C50-F652-42B3-9833-2AE501ECD330}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Max70", "Plugins_Max70.vcproj", "{A4EE306B-28AB-4056-A88D-2597F0E82FF3}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Plugins_Maya70", "Plugins_Maya70.vcproj", "{F58E27EA-DC85-4631-A1EE-1E157A88E5EF}"
+	ProjectSection(ProjectDependencies) = postProject
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfiguration) = preSolution
+		Debug = Debug
+		Release = Release
+	EndGlobalSection
+	GlobalSection(ProjectConfiguration) = postSolution
+		{F2968CD9-2E3D-4E72-839A-F5B62839E4FD}.Debug.ActiveCfg = Debug|Win32
+		{F2968CD9-2E3D-4E72-839A-F5B62839E4FD}.Debug.Build.0 = Debug|Win32
+		{F2968CD9-2E3D-4E72-839A-F5B62839E4FD}.Release.ActiveCfg = Release|Win32
+		{F2968CD9-2E3D-4E72-839A-F5B62839E4FD}.Release.Build.0 = Release|Win32
+		{F0F5A0A4-DA6B-4EC6-826D-802B1230D6FA}.Debug.ActiveCfg = Debug|Win32
+		{F0F5A0A4-DA6B-4EC6-826D-802B1230D6FA}.Debug.Build.0 = Debug|Win32
+		{F0F5A0A4-DA6B-4EC6-826D-802B1230D6FA}.Release.ActiveCfg = Release|Win32
+		{F0F5A0A4-DA6B-4EC6-826D-802B1230D6FA}.Release.Build.0 = Release|Win32
+		{8C18C2F2-E5AE-45DE-BC7D-EFD61721175C}.Debug.ActiveCfg = Debug|Win32
+		{8C18C2F2-E5AE-45DE-BC7D-EFD61721175C}.Debug.Build.0 = Debug|Win32
+		{8C18C2F2-E5AE-45DE-BC7D-EFD61721175C}.Release.ActiveCfg = Release|Win32
+		{8C18C2F2-E5AE-45DE-BC7D-EFD61721175C}.Release.Build.0 = Release|Win32
+		{D3AEB67F-0440-4840-969B-840E0AD96DED}.Debug.ActiveCfg = Debug|Win32
+		{D3AEB67F-0440-4840-969B-840E0AD96DED}.Debug.Build.0 = Debug|Win32
+		{D3AEB67F-0440-4840-969B-840E0AD96DED}.Release.ActiveCfg = Release|Win32
+		{D3AEB67F-0440-4840-969B-840E0AD96DED}.Release.Build.0 = Release|Win32
+		{44A050DC-DD0D-4F41-BFFC-D2427138232B}.Debug.ActiveCfg = Debug|Win32
+		{44A050DC-DD0D-4F41-BFFC-D2427138232B}.Debug.Build.0 = Debug|Win32
+		{44A050DC-DD0D-4F41-BFFC-D2427138232B}.Release.ActiveCfg = Release|Win32
+		{44A050DC-DD0D-4F41-BFFC-D2427138232B}.Release.Build.0 = Release|Win32
+		{0CC88AA6-8111-4784-B910-EBB93BBD1953}.Debug.ActiveCfg = Debug|Win32
+		{0CC88AA6-8111-4784-B910-EBB93BBD1953}.Debug.Build.0 = Debug|Win32
+		{0CC88AA6-8111-4784-B910-EBB93BBD1953}.Release.ActiveCfg = Release|Win32
+		{0CC88AA6-8111-4784-B910-EBB93BBD1953}.Release.Build.0 = Release|Win32
+		{0EC450E8-1A01-4A4A-928F-5CD0BC6630F9}.Debug.ActiveCfg = Debug|Win32
+		{0EC450E8-1A01-4A4A-928F-5CD0BC6630F9}.Debug.Build.0 = Debug|Win32
+		{0EC450E8-1A01-4A4A-928F-5CD0BC6630F9}.Release.ActiveCfg = Release|Win32
+		{0EC450E8-1A01-4A4A-928F-5CD0BC6630F9}.Release.Build.0 = Release|Win32
+		{7F765A07-016E-4C8E-BF3D-76F26D93A913}.Debug.ActiveCfg = Debug|Win32
+		{7F765A07-016E-4C8E-BF3D-76F26D93A913}.Debug.Build.0 = Debug|Win32
+		{7F765A07-016E-4C8E-BF3D-76F26D93A913}.Release.ActiveCfg = Release|Win32
+		{7F765A07-016E-4C8E-BF3D-76F26D93A913}.Release.Build.0 = Release|Win32
+		{85DA6C50-F652-42B3-9833-2AE501ECD330}.Debug.ActiveCfg = Debug|Win32
+		{85DA6C50-F652-42B3-9833-2AE501ECD330}.Debug.Build.0 = Debug|Win32
+		{85DA6C50-F652-42B3-9833-2AE501ECD330}.Release.ActiveCfg = Release|Win32
+		{85DA6C50-F652-42B3-9833-2AE501ECD330}.Release.Build.0 = Release|Win32
+		{A4EE306B-28AB-4056-A88D-2597F0E82FF3}.Debug.ActiveCfg = Debug|Win32
+		{A4EE306B-28AB-4056-A88D-2597F0E82FF3}.Debug.Build.0 = Debug|Win32
+		{A4EE306B-28AB-4056-A88D-2597F0E82FF3}.Release.ActiveCfg = Release|Win32
+		{A4EE306B-28AB-4056-A88D-2597F0E82FF3}.Release.Build.0 = Release|Win32
+		{F58E27EA-DC85-4631-A1EE-1E157A88E5EF}.Debug.ActiveCfg = Debug|Win32
+		{F58E27EA-DC85-4631-A1EE-1E157A88E5EF}.Debug.Build.0 = Debug|Win32
+		{F58E27EA-DC85-4631-A1EE-1E157A88E5EF}.Release.ActiveCfg = Release|Win32
+		{F58E27EA-DC85-4631-A1EE-1E157A88E5EF}.Release.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+	EndGlobalSection
+	GlobalSection(ExtensibilityAddIns) = postSolution
+	EndGlobalSection
+	GlobalSection(DPCodeReviewSolutionGUID) = preSolution
+		DPCodeReviewSolutionGUID = {00000000-0000-0000-0000-000000000000}
+	EndGlobalSection
+EndGlobal

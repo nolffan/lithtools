@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="Plugins_Max70"
+	ProjectGUID="{A4EE306B-28AB-4056-A88D-2597F0E82FF3}"
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="devenv MaxPlugins.sln /build &quot;Debug MAX70&quot;"
+				ReBuildCommandLine="devenv MaxPlugins.sln /rebuild &quot;Debug MAX70&quot;"
+				CleanCommandLine="devenv MaxPlugins.sln /clean &quot;Debug MAX70&quot;"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="0">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="devenv MaxPlugins.sln /build &quot;Release MAX70&quot;"
+				ReBuildCommandLine="devenv MaxPlugins.sln /rebuild &quot;Release MAX70&quot;"
+				CleanCommandLine="devenv MaxPlugins.sln /clean &quot;Release MAX70&quot;"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

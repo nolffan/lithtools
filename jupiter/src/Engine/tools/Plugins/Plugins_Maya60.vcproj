@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="Plugins_Maya60"
+	ProjectGUID="{44A050DC-DD0D-4f41-BFFC-D2427138232B}"
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="devenv MayaPlugins.sln /build &quot;Debug Maya60&quot;"
+				ReBuildCommandLine="devenv MayaPlugins.sln /rebuild &quot;Debug Maya60&quot;"
+				CleanCommandLine="devenv MayaPlugins.sln /clean &quot;Debug Maya60&quot;"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="0">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="devenv MayaPlugins.sln /build &quot;Release Maya60&quot;"
+				ReBuildCommandLine="devenv MayaPlugins.sln /rebuild &quot;Release Maya60&quot;"
+				CleanCommandLine="devenv MayaPlugins.sln /clean &quot;Release Maya60&quot;"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>

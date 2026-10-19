@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="Windows-1252"?>
+<VisualStudioProject
+	ProjectType="Visual C++"
+	Version="7.10"
+	Name="Plugins_Maya45"
+	ProjectGUID="{0CC88AA6-8111-4784-B910-EBB93BBD1953}"
+	Keyword="MakeFileProj">
+	<Platforms>
+		<Platform
+			Name="Win32"/>
+	</Platforms>
+	<Configurations>
+		<Configuration
+			Name="Debug|Win32"
+			OutputDirectory="Debug"
+			IntermediateDirectory="Debug"
+			ConfigurationType="0">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="devenv MayaPlugins.sln /build &quot;Debug Maya45&quot;"
+				ReBuildCommandLine="devenv MayaPlugins.sln /rebuild &quot;Debug Maya45&quot;"
+				CleanCommandLine="devenv MayaPlugins.sln /clean &quot;Debug Maya45&quot;"/>
+		</Configuration>
+		<Configuration
+			Name="Release|Win32"
+			OutputDirectory="Release"
+			IntermediateDirectory="Release"
+			ConfigurationType="0">
+			<Tool
+				Name="VCNMakeTool"
+				BuildCommandLine="devenv MayaPlugins.sln /build &quot;Release Maya45&quot;"
+				ReBuildCommandLine="devenv MayaPlugins.sln /rebuild &quot;Release Maya45&quot;"
+				CleanCommandLine="devenv MayaPlugins.sln /clean &quot;Release Maya45&quot;"/>
+		</Configuration>
+	</Configurations>
+	<References>
+	</References>
+	<Files>
+	</Files>
+	<Globals>
+	</Globals>
+</VisualStudioProject>
