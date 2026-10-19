@@ -49,8 +49,11 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     - [~] BrushToWorld (0x402a70..0x404bf0): the 2001 CSG version, written
       from the image. 62 of its 69 compiled functions identical; five near
       (inline budget, guide 09).
-    - [ ] BspGen (0x404bf0..0x407a00), then BSP generation's other
-      modules (0x407a00..), problem brushes and leak files (0x40b540..), DTX output,
+    - [~] BspGen (0x404c10..0x407e80): Build 69's brought back to 2001.
+      120 of its 125 compiled functions identical; four near
+      (GenerateBspTree, AddReversedPoly, SplitPoly,
+      MinimizeNodePolySize).
+    - [ ] The next modules (0x407e80..), problem brushes and leak files (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
     physics and terrain (0x425d20..), the MFC application and its dialogs,
     the main processing driver and DAT output (0x42f900.., 0x43e7e0..).
