@@ -16,7 +16,6 @@
 //#include <time.h>
 #include <assert.h>
 #include "image.h"
-#include "tdguard.h"
 
 
 // =====================================================================
@@ -132,12 +131,6 @@ int imageWriteOpen( IMF_OBJECT* imf )
 // check to see if the file is a valid .dtx
 BOOLEAN imageIsFile( char* fn, FILE* fp )
 {
-	if (!TdGuard::Aegis::GetSingleton().Init() ||
-		!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return FALSE;
-	}
-
 	uint32 zero;
 	int32 version;	// -5
 

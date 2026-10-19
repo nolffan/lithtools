@@ -58,7 +58,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LINK32=link.exe
 # ADD BASE LINK32 /nologo /subsystem:windows /dll /machine:I386 /out:"..\..\..\built\Release\tools\Plugins\MayaDTXLoader\IMFLithDTX.dll"
-# ADD LINK32 /nologo /subsystem:windows /dll /machine:I386 /out:"..\..\..\built\Release\tools\Plugins\MayaDTXLoader\IMFLithDTX.dll"
+# ADD LINK32 mfc42.lib /nologo /subsystem:windows /dll /machine:I386 /out:"..\..\..\built\Release\tools\Plugins\MayaDTXLoader\IMFLithDTX.dll"
 
 !ENDIF 
 
