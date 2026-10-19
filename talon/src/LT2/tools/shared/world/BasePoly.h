@@ -40,7 +40,7 @@
 								CBasePoly();
 								CBasePoly( CEditBrush *pBrush );
 								CBasePoly( CEditBrush *pBrush, CMoWordArray &indices );
-								CBasePoly( CEditBrush *pBrush, uint32 i0, uint32 i1, uint32 i2, bool bUpdatePlane=FALSE );
+								CBasePoly( CEditBrush *pBrush, WORD i0, WORD i1, WORD i2, BOOL bUpdatePlane=FALSE );
 			virtual				~CBasePoly()		{}
 
 			void				Term();
@@ -56,7 +56,7 @@
 		// Functionality.
 		public:
 
-			bool				IsValid();
+			BOOL				IsValid();
 
 			// Called when a poly is split.
 			virtual void		CopyAttributes( CBasePoly *pOther, CStringHolder *pStringHolder=NULL )	{}
@@ -65,31 +65,31 @@
 			void				DecrementPoints( uint32 index );
 
 			// Tells if the point is in the polygon's plane or in the poly itself.
-			bool				PointInPlane(const LTVector &point );
-			bool				PointInPoly(const LTVector &point );
+			BOOL				PointInPlane(const LTVector &point );
+			BOOL				PointInPoly(const LTVector &point );
 
 			void				RemoveCollinearVertices();
-			bool				IsConvex();
+			BOOL				IsConvex();
 
 			void				GetCenterPoint( CVector &centerPt );
 
 			void				Flip();
 			void				UpdatePlane();
 
-			bool				GetTriangles( CMoArray<CBasePoly*> &polies );
+			BOOL				GetTriangles( CMoArray<CBasePoly*> &polies );
 
 
 		// Useful little helper geometry functions.
 		public:
 
-			bool				Intersect(const LTVector &a, const LTVector &b, const LTVector &c, const LTVector &d );
-			bool				Diagonalie( uint32 a, uint32 b );
+			BOOL				Intersect(const LTVector &a, const LTVector &b, const LTVector &c, const LTVector &d );
+			BOOL				Diagonalie( WORD a, WORD b );
 
-			bool				LeftOn( uint32 a, uint32 b, uint32 c );
-			bool				Left( uint32 a, uint32 b, uint32 c );
-			bool				InsideDiagonal( uint32 a, uint32 b );
+			BOOL				LeftOn( WORD a, WORD b, WORD c );
+			BOOL				Left( WORD a, WORD b, WORD c );
+			BOOL				InsideDiagonal( WORD a, WORD b );
 	
-			bool				ValidTriangle( uint32 a, uint32 b, uint32 c );
+			BOOL				ValidTriangle( WORD a, WORD b, WORD c );
 
 		
 		// Accessors.
@@ -101,7 +101,8 @@
 			WORD&				Index( uint32 i )		{ return m_Indices[i]; }
 			WORD&				NextIndex( uint32 i )	{ return m_Indices.Next(i); }
 			WORD&				LastIndex()				{ return m_Indices.Last(); }
-			uint32				NumVerts() const		{ return m_Indices.GetSize(); }
+			// talon: a WORD in 2001: UpdatePlane (0x401430) masks it to 16 bits
+			WORD				NumVerts() const		{ return (WORD)m_Indices.GetSize(); }
 			
 			// talon: not inline in 2001: BasePoly.obj has them as functions
 			// (0x401ad0, 0x401af0), which RaySelect calls

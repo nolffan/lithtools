@@ -46,7 +46,7 @@ CBasePoly::CBasePoly( CEditBrush *pBrush, CMoWordArray &indices )
 }
 
 
-CBasePoly::CBasePoly( CEditBrush *pBrush, uint32 i0, uint32 i1, uint32 i2, bool bUpdatePlane )
+CBasePoly::CBasePoly( CEditBrush *pBrush, WORD i0, WORD i1, WORD i2, BOOL bUpdatePlane )
 {
 	m_pBrush = pBrush;
 	m_Indices.SetSize( 3 );
@@ -110,13 +110,13 @@ void CBasePoly::SaveBasePolyTBW( CAbstractIO& OutFile )
 )
 */
 
-bool CBasePoly::IsValid()
+BOOL CBasePoly::IsValid()
 {
 	for( uint32 i=0; i < NumVerts(); i++ )
 		if( m_Indices[i] >= m_pBrush->m_Points )
-			return false;
+			return FALSE;
 
-	return true;
+	return TRUE;
 }
 
 
@@ -128,7 +128,7 @@ void CBasePoly::DecrementPoints( uint32 index )
 }
 
 
-bool CBasePoly::PointInPlane( const LTVector &point )
+BOOL CBasePoly::PointInPlane( const LTVector &point )
 {
 	CReal dist = Normal().Dot( point ) - Dist();
 	return (dist > -POINT_SIDE_EPSILON) && (dist < POINT_SIDE_EPSILON);
@@ -136,7 +136,7 @@ bool CBasePoly::PointInPlane( const LTVector &point )
 
 
 
-bool CBasePoly::PointInPoly( const LTVector &point )
+BOOL CBasePoly::PointInPoly( const LTVector &point )
 {
 	CReal		area;
 
@@ -144,10 +144,10 @@ bool CBasePoly::PointInPoly( const LTVector &point )
 	{
 		area = g_TriArea2( Normal(), Pt(i), NextPt(i), point );
 		if( area > 0 )
-			return false;
+			return FALSE;
 	}
 
-	return true;
+	return TRUE;
 }
 
 
@@ -173,7 +173,7 @@ void CBasePoly::RemoveCollinearVertices()
 }
 
 
-bool CBasePoly::IsConvex()
+BOOL CBasePoly::IsConvex()
 {
 	CVector			v1, v2, v3;
 	CVector			vec1, vec2;
@@ -202,13 +202,13 @@ bool CBasePoly::IsConvex()
 		else
 		{
 			if( sign < 0.0f && dot > 0.0f )
-				return false;
+				return FALSE;
 			else if( sign > 0.0f && dot < 0.0f )
-				return false;
+				return FALSE;
 		}
 	}
 
-	return true;
+	return TRUE;
 }
 
 
@@ -242,9 +242,9 @@ void CBasePoly::UpdatePlane()
 }
 
 
-bool CBasePoly::GetTriangles( CMoArray<CBasePoly*> &polies )
+BOOL CBasePoly::GetTriangles( CMoArray<CBasePoly*> &polies )
 {
-	uint32			i, i1, i2;
+	WORD			i, i1, i2;
 	CReal			area;
 	
 	RestartLoop:;
@@ -280,7 +280,7 @@ bool CBasePoly::GetTriangles( CMoArray<CBasePoly*> &polies )
 			polies.Append( new CBasePoly(m_pBrush, m_Indices[0], m_Indices[1], m_Indices[2], true) );
 	}
 	
-	return true;
+	return TRUE;
 }
 
 
@@ -298,10 +298,10 @@ CEditVert& CBasePoly::NextPt( uint32 i )
 	return m_pBrush->m_Points[m_Indices.Next(i)];
 }
 
-bool CBasePoly::Intersect( const LTVector &a, const LTVector &b, const LTVector &c, const LTVector &d )
+BOOL CBasePoly::Intersect( const LTVector &a, const LTVector &b, const LTVector &c, const LTVector &d )
 {
 	CPlane		plane;
-	bool		bIntersect;
+	BOOL		bIntersect;
 
 	
 	plane.m_Normal = Normal().Cross( b - a );
@@ -317,7 +317,7 @@ bool CBasePoly::Intersect( const LTVector &a, const LTVector &b, const LTVector 
 		return bIntersect;
 	}
 	else
-		return false;	
+		return FALSE;	
 }
 
 
@@ -328,11 +328,13 @@ bool CBasePoly::Intersect( const LTVector &a, const LTVector &b, const LTVector 
 //						with the middle vertex; only checks nonblocked condition.
 // ----------------------------------------------------------------------- //
 
-bool CBasePoly::Diagonalie( uint32 a, uint32 b )
+// talon: 16-bit in 2001: 0x401db0 compares k and k1 as WORDs and the
+// count sign-extended from 16 bits, read again on every pass
+BOOL CBasePoly::Diagonalie( WORD a, WORD b )
 {
-	uint32		k, k1;
+	WORD		k, k1;
 
-	for( k=0; k < m_Indices; k++ )
+	for( k=0; k < (int16)m_Indices.GetSize(); k++ )
 	{
 		k1 = m_Indices.NextI( k );
 
@@ -340,11 +342,11 @@ bool CBasePoly::Diagonalie( uint32 a, uint32 b )
 		if( !( (k==a) || (k1==a) || (k==b) || (k1==b) ) )
 		{
 			if( Intersect(Pt(a), Pt(b), Pt(k), Pt(k1)) )
-				return false;
+				return FALSE;
 		}
 	}
 
-	return true;
+	return TRUE;
 }
 
 
@@ -353,7 +355,7 @@ bool CBasePoly::Diagonalie( uint32 a, uint32 b )
 //		PURPOSE:		Tells if C is left of or on line AB.
 // ----------------------------------------------------------------------- //
 
-bool CBasePoly::LeftOn( uint32 a, uint32 b, uint32 c )
+BOOL CBasePoly::LeftOn( WORD a, WORD b, WORD c )
 {
 	CReal area = g_TriArea2( Normal(), Pt(a), Pt(b), Pt(c) );
 	return (area <= 0.0f);
@@ -365,7 +367,7 @@ bool CBasePoly::LeftOn( uint32 a, uint32 b, uint32 c )
 //		PURPOSE:		Tells if C is left of line AB.
 // ----------------------------------------------------------------------- //
 
-bool CBasePoly::Left( uint32 a, uint32 b, uint32 c )
+BOOL CBasePoly::Left( WORD a, WORD b, WORD c )
 {
 	CReal area = g_TriArea2( Normal(), Pt(a), Pt(b), Pt(c) );
 	return (area < 0.0f);
@@ -378,7 +380,7 @@ bool CBasePoly::Left( uint32 a, uint32 b, uint32 c )
 //                      in the vicinity of a.
 // ----------------------------------------------------------------------- //
 
-bool CBasePoly::InsideDiagonal( uint32 a, uint32 b )
+BOOL CBasePoly::InsideDiagonal( WORD a, WORD b )
 {
     uint32	a_plus_1, a_minus_1;
 
@@ -401,14 +403,14 @@ bool CBasePoly::InsideDiagonal( uint32 a, uint32 b )
 //		PURPOSE:		Tells if (a,b,c) is a valid triangle on this poly.
 // ----------------------------------------------------------------------- //
 
-bool CBasePoly::ValidTriangle( uint32 a, uint32 b, uint32 c )
+BOOL CBasePoly::ValidTriangle( WORD a, WORD b, WORD c )
 {
 	if( InsideDiagonal(a, c) )
 	{
 		return Diagonalie( a, c );
 	}
 	else
-		return false;
+		return FALSE;
 }
 
 
