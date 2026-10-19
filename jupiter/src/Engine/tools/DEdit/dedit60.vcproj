@@ -118,7 +118,7 @@ copy &quot;$(TargetPath)&quot; ..\..\..\tools
 				Outputs="..\..\..\tools\dedit.exe"/>
 			<Tool
 				Name="VCLinkerTool"
-				AdditionalDependencies="d3drm.lib ddraw.lib d3dx9.lib d3d9.lib dxguid.lib winmm.lib tdguard.lib"
+				AdditionalDependencies="ddraw.lib d3dx9.lib d3d9.lib dxguid.lib winmm.lib tdguard.lib"
 				OutputFile="$(OutDir)/dedit.exe"
 				LinkIncremental="1"
 				SuppressStartupBanner="TRUE"
