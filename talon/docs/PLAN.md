@@ -23,11 +23,30 @@ with VC6 SP5, and bring it back.
 
 ## 2. The world processors
 
-No source; their descendant is Build 69's PreProcessor (Processor.exe of
-the SDK build 51 is the Jupiter one, already a different program: it
-writes world version 85).
+No source of any version; their descendant is Build 69's PreProcessor
+(the SDK build 51's Processor.exe is already the Jupiter one, writing world
+version 85). `progress/Processor-avp2-map.md` is the map.
 
 - [ ] **Processor.exe (AvP2)**, cl 12.00.8966, static MFC, 340 KB of code.
+  - [x] Its libraries: StdLith, zlib 1.0.4 and RegMgr from
+    `src/LT2/lithshared` compile identically to the AvP2 release's prebuilt
+    libraries (153/153, 82/82, 14/14): /MT, no /Ob2 for StdLith and zlib.
+  - [x] The project (`src/LT2/tools/PreProcessor/Processor.dsw`), with the
+    shared engine and world code taken from Build 69 (about 130 of its
+    functions match as Build 69 has them). Not in the default build until
+    it compiles: `make -f build/build.mk WITH_PROCESSOR=1`.
+  - [ ] Bring the shared classes back to 2001. Their class layouts come from
+    the shipped vtables (tools/guides/07, `vtabaudit.py`, `vtabmap.py`): the
+    LTA load/save methods Build 69 has are not in the 2001 classes, and
+    removing a virtual changes every call through the vtable, so each class
+    is laid out from the image, not trimmed by hand. Compiled against build
+    51's SDK headers (src/Engine/sdk/inc, the tool code's TVector3) with the
+    LT2 libraries.
+  - [ ] The core, module by module in image order (the map): BSP generation
+    (0x402c90..), problem brushes and leak files (0x40b540..), DTX output,
+    world properties and texture flags (0x411690..), lighting (0x415cb0..),
+    physics and terrain (0x425d20..), the MFC application and its dialogs,
+    the main processing driver and DAT output (0x42f900.., 0x43e7e0..).
 - [ ] **Processor.exe (NOLF)**, cl 12.00.8447, 415 KB: 85% the same
   strings as AvP2's; after AvP2's, as its diff.
 

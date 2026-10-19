@@ -189,7 +189,12 @@ Notes:
 (Nothing needed for the plan. `FORMATS.md` shows CJ's tools serve Tron
 2.0, so VC6 8799, Tron's own compiler, isn't needed.)
 
-- Lesser leads not fetched: archive.org `lith-tech-ftp-dump.-7z` (61 MB; its
-  listing shows only `lithtech_lg.avi` and one unnamed file),
+- archive.org `lith-tech-ftp-dump.-7z` (61 MB), fetched: two LithTech promo
+  videos, `New3DMax.zip` (a Shogo-era DEdit and `abcexp.dle`), `os_ltdev.zip`
+  (a 1998 developer setup: Client.exe, TProcessor and the world-version
+  converters conv39to40 .. Conv44to45) and `ltsdk242.zip`, the 1998
+  LithTech 1.x SDK ("DirectEngine" API headers, samples, and 1998 builds of
+  DEdit, ModelEdit, Processor and LithRez). No tool source.
+- Lesser leads not fetched:
   `sudden-attack-full-source-dev-tools` and `Combat-Arms-tools-source-code`
   (leaked later Jupiter-derived trees), `shogo-mad-dev-tools` (LithTech 1.0).

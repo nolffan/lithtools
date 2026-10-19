@@ -6,3 +6,4 @@ progress/__pycache__/
 *.sbr
 *.idb
 *.pch
+build/__pycache__/

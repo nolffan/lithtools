@@ -1,0 +1,77 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+# talon: the world processor and the LT2 libraries it links; written for
+# this project.
+
+###############################################################################
+
+Project: "LT2_StdLith"=..\..\lithshared\stdlith\Lib_StdLith.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_ZLib"=..\..\lithshared\zlib\Lib_ZLib.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_RegMgr"=..\..\lithshared\regmgr\regmgr60.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "Processor"=.\Processor.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LT2_StdLith
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name LT2_ZLib
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name LT2_RegMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+

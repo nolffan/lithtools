@@ -51,7 +51,14 @@ TARGETS = [
     # 70; NOLF Tools 001's (2001-01-03, cl 12.00.8447) NOLF's 66
     # (FORMATS.md). Static MFC; provisional ranges as the editors'.
     dict(label="Processor.exe (AvP2)", what="world processor, AvP2 (v1.0)", kind="image",
-         shipped=AVP2 + "/Processor.exe", stem="Processor-avp2", built=None, optional=True,
+         shipped=AVP2 + "/Processor.exe", stem="Processor-avp2",
+         # src/LT2/tools/PreProcessor/Processor.dsw, built with
+         # WITH_PROCESSOR=1 while its sources do not all compile. Its own
+         # code is followed by the LT2 libraries (StdLith 0x0044eab0, zlib
+         # 0x00450ad0, RegMgr 0x004564e0..0x00456742: Monolith's, ours to
+         # build, so inside the range) and from 0x0045680f static MFC
+         # (progress/Processor-avp2-map.md)
+         built="src/LT2/built/Release/tools/Processor/Processor.exe", optional=True,
          app=[(0x00401000, 0x0045680f)]),
     dict(label="Processor.exe (NOLF)", what="world processor, NOLF (Tools 001)", kind="image",
          shipped=NOLF + "/Processor.exe", stem="Processor-nolf", built=None, optional=True,
