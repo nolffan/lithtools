@@ -1020,8 +1020,8 @@ bool C_LTB_PS2_File::ExportFile( Model* pModel, uint32 memorySize)
 	
 	// Write the header.
 	prevSection = 0;//save_StartSection(SECTION_HEADER, prevSection);
-	m_pFile->WriteVal((uint32)MODEL_FILE_VERSION);
-	pModel->SetFileVersion(MODEL_FILE_VERSION);
+	m_pFile->WriteVal((uint32)m_nModelVersion);	// lithtools: was MODEL_FILE_VERSION
+	pModel->SetFileVersion(m_nModelVersion);
 
     int numWeights=pModel->m_VertexWeights;
 

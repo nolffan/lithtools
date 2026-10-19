@@ -118,6 +118,8 @@ int main(int argc, char* argv[])
 		cout << "\t-ac2     compress animations even more. Possibly losing float precision."<<endl;
 		cout << "\t-acpv    animation compression 16 bit (for rotations only), plus rle. " <<endl;
 		cout << "\t-nogeom  don't put geometry into ltb file. (space saving)."<<endl;
+		cout << "\t-ModelVersion N  model file version to write: 23 (the default;"<<endl;
+		cout << "\t         NOLF2, Contract J.A.C.K., Tron 2.0) to 25 (Build 69)."<<endl;
 
 		cout << "\n\tnote: don't forget to convert child models as well." << endl;
 		cout << endl;
@@ -218,6 +220,20 @@ int main(int argc, char* argv[])
 		
 
 		C_LTB_D3D_File MyFile;
+
+		// lithtools: the model file version to write (ltb_file.h)
+		if (g_cmdLine.GetParamVal("ModelVersion"))
+		{
+			int nVersion = atoi(g_cmdLine.GetParamVal("ModelVersion"));
+			if (nVersion < 23 || nVersion > MODEL_FILE_VERSION)
+			{
+				cerr << "ModelVersion must be 23 to " << MODEL_FILE_VERSION << endl;
+				return RET_INVALID_PARAMS;
+			}
+			MyFile.SetModelVersion(nVersion);
+		}
+		if (bVerbose)
+			cerr << "ModelVersion " << MyFile.GetModelVersion() << endl;
 		
 		if (!MyFile.OpenFile(pOutFileName)) {
 			cout << "Error opening file." << pOutFileName << endl; 

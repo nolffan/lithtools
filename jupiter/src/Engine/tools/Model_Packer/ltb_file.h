@@ -15,11 +15,22 @@
 // for tools 
 // Derive the different types of LTB Files from this guy...
 // ------------------------------------------------------------------------
+// lithtools: the model file version written into an .ltb. Build 69 writes
+// MODEL_FILE_VERSION (25); NOLF2, Contract J.A.C.K. and Tron 2.0 shipped and
+// were tooled for version 23, whose OBB records have no radius (the radius
+// came with version 24, and a 2003 engine reading a newer file would misread
+// a model that has OBBs). Model_Packer's ModelVersion parameter picks it.
+#define LITHTOOLS_DEFAULT_MODEL_VERSION	23
+
 class C_LTB_File {
 public:
 	C_LTB_File(){ 
 		m_pFile = NULL; 
+		m_nModelVersion = LITHTOOLS_DEFAULT_MODEL_VERSION;
 	}
+
+	void   SetModelVersion(uint32 nVersion)	{ m_nModelVersion = nVersion; }
+	uint32 GetModelVersion() const			{ return m_nModelVersion; }
 	
 	~C_LTB_File()							{ 
 		CloseFile(); 
@@ -129,7 +140,9 @@ protected:
 				// and not as radii.
 				float fRadius = vSub.Mag()/4.0f;
 
-				m_pFile->Write( &fRadius, sizeof(float));
+				// lithtools: version 23 OBB records end at the node index
+				if (m_nModelVersion >= 24)
+					m_pFile->Write( &fRadius, sizeof(float));
 			}
 		}
 	}
@@ -140,6 +153,7 @@ protected:
 	virtual uint16 GetFileVersion() = 0;
 
 	ILTStream* m_pFile;
+	uint32     m_nModelVersion;		// lithtools: see LITHTOOLS_DEFAULT_MODEL_VERSION
 };
 
 

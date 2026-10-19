@@ -50,8 +50,8 @@ bool C_LTB_D3D_File::ExportD3DFile(	Model*  pModel,
 	assert(pModel->m_CommandString);
 	
 	// Write the model header.
-	m_pFile->WriteVal((uint32)MODEL_FILE_VERSION);
-	pModel->SetFileVersion(MODEL_FILE_VERSION);
+	m_pFile->WriteVal((uint32)m_nModelVersion);	// lithtools: was MODEL_FILE_VERSION
+	pModel->SetFileVersion(m_nModelVersion);
 
 	//build up a string table that can be used to store all the strings
 	//CModelStringTable StringTable;
