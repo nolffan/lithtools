@@ -106,42 +106,9 @@
 			inline void			SetPPFlags(uint32 flags){ m_PPFlags = flags;}
 
 			// Find the center of the polygon
-			inline LTVector CalcCenter() const
-			{
-				LTVector vRV(0, 0, 0);
-
-				for(uint32 nCurrVert = 0; nCurrVert < NumVerts(); nCurrVert++)
-				{
-					vRV += Pt(nCurrVert);
-				}
-
-				vRV /= (float)NumVerts();
-				return vRV;
-			}
 
 			// Extents tracking 
-			inline void CalcExtents(PReal fExpand = 0.0f) const
-			{
-				m_vExtentsMin = Pt(0);
-				m_vExtentsMax = m_vExtentsMin;
 
-				for (uint32 nVertLoop = 1; nVertLoop < NumVerts(); ++nVertLoop)
-				{
-					const PVector& vPt = Pt(nVertLoop);
-					VEC_MIN(m_vExtentsMin, m_vExtentsMin, vPt);
-					VEC_MAX(m_vExtentsMax, m_vExtentsMax, vPt);
-				}
-
-				m_vExtentsMin -= fExpand;
-				m_vExtentsMax += fExpand;
-			}
-
-			inline bool OverlapExtents(const CPrePoly &pOtherPoly) const
-			{
-				return	(pOtherPoly.m_vExtentsMin.x < m_vExtentsMax.x) && (pOtherPoly.m_vExtentsMax.x > m_vExtentsMin.x) &&
-						(pOtherPoly.m_vExtentsMin.y < m_vExtentsMax.y) && (pOtherPoly.m_vExtentsMax.y > m_vExtentsMin.y) &&
-						(pOtherPoly.m_vExtentsMin.z < m_vExtentsMax.z) && (pOtherPoly.m_vExtentsMax.z > m_vExtentsMin.z);
-			}
 
 		public:
 
