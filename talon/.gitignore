@@ -1,0 +1,4 @@
+out/
+.build/
+.wine/
+src/**/[Bb]uilt/

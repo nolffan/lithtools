@@ -1,0 +1,9 @@
+[submodule "talon/tools"]
+	path = talon/tools
+	url = git@github.com:nolffan/tools.git
+[submodule "talon/toolchains"]
+	path = talon/toolchains
+	url = git@github.com:nolffan/toolchains.git
+[submodule "talon/rez"]
+	path = talon/rez
+	url = git@github.com:nolffan/rez.git
