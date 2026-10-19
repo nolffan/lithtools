@@ -77,7 +77,7 @@ public:
     force_inline LTLink *operator[](unsigned long i);
     force_inline LTLink *AsDLink()   {return (LTLink*)this;}
     force_inline LTLink *AsLTLink()  {return (LTLink*)this;}
-    force_inline bool IsTiedOff();
+    force_inline LTBOOL IsTiedOff();
 
 
 public:
@@ -142,7 +142,7 @@ force_inline LTLink* CheapLTLink::operator[](unsigned long i) {
     return ((LTLink**)this)[i];
 }
 
-force_inline bool CheapLTLink::IsTiedOff() {
+force_inline LTBOOL CheapLTLink::IsTiedOff() {
     return m_pPrev == this && m_pNext == this;
 }
 

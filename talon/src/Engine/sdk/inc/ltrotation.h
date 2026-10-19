@@ -160,7 +160,7 @@ struct LTRotation
 		quat_ConvertFromMatrix(m_Quat, mat.m);
 	}
 
-	bool operator == ( const LTRotation &q ) const
+	LTBOOL operator == ( const LTRotation &q ) const
 	{
 		return	m_Quat[0] == q.m_Quat[0] &&
 				m_Quat[1] == q.m_Quat[1] &&
@@ -168,7 +168,7 @@ struct LTRotation
 				m_Quat[3] == q.m_Quat[3];
 	}
 
-	bool operator != ( const LTRotation &q ) const
+	LTBOOL operator != ( const LTRotation &q ) const
 	{
 		return	m_Quat[0] != q.m_Quat[0] ||
 				m_Quat[1] != q.m_Quat[1] ||
@@ -176,7 +176,7 @@ struct LTRotation
 				m_Quat[3] != q.m_Quat[3];
 	}
 
-	bool IsIdentity() const
+	LTBOOL IsIdentity() const
 	{
 		return	m_Quat[0] == 0.0f &&
 				m_Quat[1] == 0.0f &&

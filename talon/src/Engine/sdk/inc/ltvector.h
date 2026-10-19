@@ -67,13 +67,6 @@ struct TVector3 {
 	{
 		return (*this) / this->Length();
 	}
-
-	const TVector3 GetNormalized() const
-	{
-		T vMag = this->Mag();
-		return (*this) / vMag;
-	}
-
 	const TVector3& Normalize()
 	{
 		(*this) /= this->Length();

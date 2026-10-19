@@ -115,54 +115,6 @@ inline void quat_Conjugate
     c[QZ] = -q[QZ];
     c[QW] = q[QW];
 }
-
-// ------------------------------------------------------------------------
-// quat_RotVec( result-vec, quaternion, input-vector )
-//
-// evaluate v' = qvq-1
-// q being the quat, q-1 its conjugate, and v a vector.
-// we assume that the quaternion is a unit quaternion.
-// this is faster and more specific than doing:
-//	conv_to_quat( v, point );
-//	quat_Mul( v', q, v );
-//	quat_Conjugate( c, q ); 
-//	quat_Mul( v'', v', c ); 
-//
-// ( i've left some of the operations commented out to indicate reasoning. )
-// ------------------------------------------------------------------------
-__inline
-void quat_RotVec( float *pnt_res, const float *quat, const float *pnt_in )
-{
-	float  cj[4];
-	float  r1[4] ;
-			
-	float *v = r1; // intermediate result
-	const float *a = quat; // rotation
-	const float *b = pnt_in;// source vector
-
-	// evaluate quat * vector
-	// bw == 0.0f
-    v[QX] = a[QW]*b[QX]  /*+ax *bw */  + a[QY]*b[QZ] - a[QZ]*b[QY];
-    v[QY] = a[QW]*b[QY] - a[QX]*b[QZ] /* +ay * bw*/ + a[QZ]*b[QX];
-    v[QZ] = a[QW]*b[QZ] + a[QX]*b[QY] - a[QY]*b[QX] /* + az * bw */;
-    v[QW] =/* aw * bw */- a[QX]*b[QX] - a[QY]*b[QY] - a[QZ]*b[QZ];
-
-	// make the conjugate of quat.
-	cj[QX] = -a[QX]; cj[QY] = -a[QY];  cj[QZ] = -a[QZ]; cj[QW] = a[QW];
-
-	// reassign
-	v = pnt_res ;// final result
-	a = r1 ; // result from qv
-	b = cj ; // conjuagate
-
-	// evaluate vector * conj
-	v[QX] = a[QW]*b[QX] + a[QX]*b[QW] + a[QY]*b[QZ] - a[QZ]*b[QY];
-    v[QY] = a[QW]*b[QY] - a[QX]*b[QZ] + a[QY]*b[QW] + a[QZ]*b[QX];
-    v[QZ] = a[QW]*b[QZ] + a[QX]*b[QY] - a[QY]*b[QX] + a[QZ]*b[QW];
-    /* v[QW] = a[QW]*b[QW] - a[QX]*b[QX] - a[QY]*b[QY] - a[QZ]*b[QZ]; */
-}
-
-
 #endif//doxygen
 
 

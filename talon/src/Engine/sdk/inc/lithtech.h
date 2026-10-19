@@ -5,7 +5,7 @@ Base LithTech header file
 #ifndef __LITHTECH_H__
 #define __LITHTECH_H__
 
-#pragma warning (disable:4786) // No truncation warnings, please..
+
 
 /*!
 Engine define

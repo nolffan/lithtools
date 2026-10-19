@@ -11,16 +11,6 @@
 #define __STRING_H__
 #endif
 
-#ifndef __STDARG_H__
-#include <stdarg.h>
-#define __STDARG_H__
-#endif
-
-#ifndef __STDIO_H__
-#include <stdio.h>
-#define __STDIO_H__
-#endif
-
 #ifndef __LTASSERT_H__
 #include "ltassert.h"
 #endif
@@ -37,38 +27,27 @@
 #include "coordinate_frame.h"
 #endif
 
-#ifndef __LTMEM_H__
-#include "ltmem.h"
-#endif
-
-#ifndef __ILTMEMORY_H__
-#include "iltmemory.h"
-#endif
-
-
 #define LTNULL 0
+#define LTTRUE 1
+#define LTFALSE 0
 
 #define BEGIN_EXTERNC() extern "C" \
     {
 #define END_EXTERNC() };
 
-#ifdef __LINUX
-	#define MODULE_EXPORT
-	#define MODULE_IMPORT
-	#define _MAX_PATH 256
-	#include <ctype.h>
-	inline int stricmp(const char* string1, const char* string2)
-	{ return strcasecmp(string1, string2); }
-	inline char* strupr(char* s)
-	{ while (*s) { *s = toupper(*s); ++s; } return s; }
-	inline int notSupportedLinux ()
-	{  ASSERT( false && "Not supported on Linux" ); }
-
+#if defined(__LINUX)
+#define _MAX_PATH 256
+#define VSPRINTF(s,n,m,e) vsprintf (s,m,e)
+#else
+#define VSPRINTF(s,n,m,e) _vsnprintf (s,n,m,e)
 #endif
 
-#ifdef _WIN32
-	#define MODULE_EXPORT __declspec(dllexport)
-	#define MODULE_IMPORT __declspec(dllimport)
+#ifdef __LINUX
+inline int stricmp(const char* string1, const char* string2)
+{ return strcasecmp(string1, string2); }
+#include <ctype.h>
+inline char* strupr(char* s)
+{ while (*s) { *s = toupper(*s); ++s; } return s; }
 #endif
 
 class ILTBaseClass;
@@ -76,42 +55,6 @@ class ILTBaseClass;
 class IAggregate;
 #define LPAGGREGATE IAggregate*
 
-
-
-/*!
-Safe string length
-*/
-inline uint32 LTStrLen(const char* pszStr1)
-{
-	if(pszStr1)
-		return (uint32)strlen(pszStr1);
-	return 0;
-}
-
-#ifndef __LINUX
-inline uint32 LTStrLen(const wchar_t* pszStr1)
-{
-	if(pszStr1)
-		return (uint32)wcslen(pszStr1);
-	return 0;
-}
-#endif
-
-/*!
-Called to determine if the provided string is empty. This will assume that NULL strings are 
-empty, and that the provided string, if not null, points to at least one character
-*/
-inline bool LTStrEmpty(const char* pszStr)
-{
-	return !pszStr || (pszStr[0] == '\0');
-}
-
-#ifndef __LINUX
-inline bool LTStrEmpty(const wchar_t* pszStr)
-{
-	return !pszStr || (pszStr[0] == (wchar_t)'\0');
-}
-#endif
 
 
 /*!
@@ -132,292 +75,12 @@ a normal string copy.
 /*!
 Safe string copy (strncpy doesn't always null terminate, but this does).
 */
+inline void LTStrCpy(char *pDest, const char *pSrc, unsigned long destBytes) {
+    if (destBytes == 0)
+        return;
 
-
-inline void LTStrCpy(char *pDest, const char *pSrc, uint32 nBufferChars) 
-{
-	if (!pDest || (nBufferChars == 0))
-	{
-		ASSERT(!"LTStrCpy: Invalid destination buffer provided");
-		return;
-	}
-
-	if(!pSrc)
-	{
-		ASSERT(!"LTStrCpy: Invalid source string provided");
-		pSrc = "";
-	}
-
-	if (!(nBufferChars > LTStrLen(pSrc)))
-		ASSERT(!"LTStrCpy : Copy source is truncated");
-
-	strncpy(pDest, pSrc, nBufferChars - 1);
-	pDest[nBufferChars - 1] = '\0';
-}
-
-
-
-#ifndef __LINUX
-inline void LTStrCpy(wchar_t *pDest, const wchar_t *pSrc, uint32 nBufferChars) 
-{
-
-#ifndef _FINAL 
-
-	if (!pDest || (nBufferChars == 0))
-	{
-		ASSERT(!"LTStrCpy: Invalid destination buffer provided");
-		return;
-	}
-
-	if(!pSrc)
-	{
-		ASSERT(!"LTStrCpy: Invalid source string provided");
-		pSrc = L"";
-	}
-
-	if ( !(nBufferChars > LTStrLen(pSrc)) )
-	{
-		ASSERT(!"LTStrCpy : Copy source is truncated");
-	}
-#endif
-
-	wcsncpy(pDest, pSrc, nBufferChars - 1);
-	pDest[nBufferChars - 1] = '\0';
-}
-#endif
-
-
-/*!
-Safe string duplication. This insures that all strings are allocated in the same manner
-and that it handles all cases, of which some aren't handled by standard strdup. The caller
-is responsible for freeing this memory using the array delete operator.
-*/
-inline char* LTStrDup(const char* pszString)
-{
-	//handle a null input
-	if(!pszString)
-		return NULL;
-
-	//allocate the string
-	char* pRV = new char[strlen(pszString) + 1];
-
-	//handle out of memory conditions
-	if(pRV)
-	{
-		strcpy(pRV, pszString);
-	}
-	else
-	{
-		assert(!"Error: Failed to allocate memory for string. Possible non-terminating string");
-	}
-
-	return pRV;
-}
-
-#ifndef __LINUX
-inline wchar_t* LTStrDup(const wchar_t* pszString)
-{
-	//handle a null input
-	if(!pszString)
-		return NULL;
-
-	//allocate the string
-	wchar_t* pRV = new wchar_t[LTStrLen(pszString) + 1];
-
-	//handle out of memory conditions
-	if(pRV)
-	{
-		wcscpy(pRV, pszString);
-	}
-	else
-	{
-		assert("LTStrDup: Failed to allocate memory for string. Possible non-terminating string");
-	}
-
-	return pRV;
-}
-#endif
-
-/*!
-Safe substring copy (strncpy doesn't always null terminate, but this does).
-*/
-inline void LTStrnCpy(char* pDest, const char* pSrc, uint32 destBytes, uint32 srcLen)
-{
-	if( destBytes == 0 )
-		return;
-
-	uint32 copyLen = (destBytes <= srcLen) ? (destBytes-1) : srcLen;
-
-#ifndef _FINAL
-	// do a sanity check to make sure we don't truncate source's data.
-	if( pSrc && copyLen != srcLen )
-	{
-		ASSERT(!"LTStrnCpy : Copy source is truncated");
-	}
-#endif
-
-	strncpy( pDest, pSrc, copyLen );
-	pDest[copyLen] = '\0';
-}
-
-/*!
-Safe string concatenation (strncat doesn't always null terminate, but this does).
-*/
-inline void LTStrCat(char *pDest, const char *pSrc, uint32 destBytes)
-{
-	if (destBytes == 0)
-		return;
-
-	uint32 destLen = strlen(pDest);
-	uint32 catLen = destBytes - destLen - 1;
-
-#ifndef _FINAL 
-	// do a sanity check to make sure we don't truncate source's data.
-	if( pSrc && catLen < strlen(pSrc) )
-	{
-		ASSERT(!"LTStrCat : Concatenate source is truncated");
-	}
-#endif
-
-	strncat(pDest, pSrc, catLen);
-	pDest[destLen + catLen] = '\0';
-}
-
-#ifndef __LINUX
-inline void LTStrCat(wchar_t *pDest, const wchar_t *pSrc, uint32 nBufferChars) 
-{
-
-	if (!pDest || (nBufferChars == 0))
-	{
-		ASSERT(!"LTStrCat: Invalid destination buffer provided");
-		return;
-	}
-
-	if(!pSrc)
-	{
-		ASSERT(!"LTStrCat: Invalid source string provided");
-		pSrc = L"";
-	}
-
-	uint32 destLen = LTStrLen(pDest);
-	uint32 catLen = nBufferChars - destLen - 1;
-
-#ifndef _FINAL
-	if ( !(catLen >= LTStrLen(pSrc)))
-		ASSERT(!"LTStrCat : Copy source is truncated");
-#endif
-
-	wcsncat(pDest, pSrc, catLen);
-	pDest[destLen + catLen] = '\0';
-}
-#endif
-
-
-/*!
-Safe substring concatenation (strncat doesn't always terminate, but this does).
-*/
-inline void LTStrnCat(char* pDest, const char* pSrc, uint32 destBytes, uint32 srcLen)
-{
-	if( destBytes == 0 )
-		return;
-
-	uint32 destLen = strlen(pDest);
-	uint32 catLen = ((destBytes - destLen) <= srcLen) ? (destBytes-destLen-1) : srcLen;
-
-#ifndef _FINAL
-	// do a sanity check to make sure we don't truncate source's data.
-	if( pSrc && catLen != srcLen )
-	{
-		ASSERT(!"LTStrnCat : Concatenate source is truncated");
-	}
-#endif
-
-	strncat( pDest, pSrc, catLen );
-	pDest[destLen + catLen] = '\0';
-}
-
-
-/*!
-Case sensitive string comparison
-*/
-inline int32 LTStrCmp(const char* pszStr1, const char* pszStr2)
-{
-#ifndef _FINAL
-	if ( !(pszStr1 && pszStr2) )
-		ASSERT(!"Error: Invalid input to LTStrCmp");
-#endif
-
-	if(!pszStr1)
-		return (pszStr2) ? -1 : 0;
-	if(!pszStr2)
-		return 1;
-
-	return strcmp(pszStr1, pszStr2);
-}
-
-#ifndef __LINUX
-inline int32 LTStrCmp(const wchar_t* pszStr1, const wchar_t* pszStr2)
-{
-#ifndef _FINAL
-	if ( !(pszStr1 && pszStr2) )
-		ASSERT(!"Error: Invalid input to LTStrCmp");
-#endif
-
-	if(!pszStr1)
-		return (pszStr2) ? -1 : 0;
-	if(!pszStr2)
-		return 1;
-
-	return wcscmp(pszStr1, pszStr2);
-}
-#endif
-
-/*!
-Case sensitive string equality comparison
-*/
-inline bool LTStrEquals(const char* pszStr1, const char* pszStr2)
-{
-	return (LTStrCmp(pszStr1, pszStr2) == 0);
-}
-
-#ifndef __LINUX
-inline bool LTStrEquals(const wchar_t* pszStr1, const wchar_t* pszStr2)
-{
-	return (LTStrCmp(pszStr1, pszStr2) == 0);
-}
-#endif
-
-
-/*!
-Safe string formatting (vsnprintf doesn't always null terminate, but this does).
-*/
-inline void LTVSNPrintF(char *buffer, size_t count, const char *format, va_list argptr)
-{
-	if(count)
-	{
-#ifdef __LINUX
-		//!!!NOTE: There is no buffer checking on this linux version, potential buffer overruns
-		//could ensue.
-		vsprintf(buffer, format, argptr);
-#else
-		_vsnprintf(buffer, count, format, argptr);
-#endif
-		buffer[count - 1] = '\0';
-	}
-}
-
-/*!
-Safe string formatting (snprintf doesn't always null terminate, but this does).
-*/
-inline void LTSNPrintF(char *buffer, size_t count, const char *format, ...)
-{
-	if(count)
-	{
-		va_list marker;
-		va_start(marker, format);
-		LTVSNPrintF(buffer, count, format, marker);
-		va_end(marker);
-	}
+    strncpy(pDest, pSrc, destBytes - 1);
+    pDest[destBytes - 1] = 0;
 }
 
 /*!
@@ -445,7 +108,6 @@ Maximum number of skins per model.
 */
 #define MAX_MODEL_TEXTURES      32
 #define MAX_MODEL_RENDERSTYLES  8
-#define MAX_CHILD_MODELS 32
 
 //! The most trackers that can be added to a single model.
 const uint32 MAX_TRACKERS_PER_MODEL = 16;
@@ -512,6 +174,14 @@ Set up a color with transparency.
 
 
 
+class ILTMessage;
+typedef ILTMessage*     HMESSAGEREAD;
+typedef ILTMessage*     HMESSAGEWRITE;
+
+
+
+
+
 /*!
 Handle definitions.  It defines them in this weird way so that
 you can't accidentally cast between them.
@@ -559,6 +229,12 @@ typedef enum {
     Intersect=2
 } PolySide;
 
+#define MAX_FORCEUPDATE_OBJECTS 200
+struct ForceUpdate {
+    HOBJECT *m_Objects; //! This array is MAX_FORCEUPDATE_OBJECTS large.
+    uint32 m_nObjects;
+};
+
 #define MAX_OCS_CLASSNAME_LEN   64
 
 /*!
@@ -571,36 +247,205 @@ typedef uint8 ANIMTRACKERID;
 const ANIMTRACKERID MAIN_TRACKER = 0xFF;
 
 
+
+/*!
+ObjectCreateStruct::m_CreateFlags
+*/
+
+enum
+{
+/*!
+The default behavior -- if the files this object needs are not loaded,
+the engine will load them up.  If this flag is not set, the object
+won't be visible until its file is loaded (from a ThreadLoadFile or an
+object created with this flag set).  This is currently only supported
+by models and their textures.
+
+\note If this is set and the needed file is being loaded in a thread,
+it will wait for the thread to finish loading.
+*/
+    OCS_AUTOLOAD       = (1<<0),
+
+};
+
+
+
+/*!
+This structure is used when creating objects.  When you want to
+create an object, you call ILTServer::CreateObject with one of these.
+The structure you pass in is passed to the object's PostPropRead function,
+where it can override whatever it wants to.
+*/
+struct ObjectCreateStruct {
+    ObjectCreateStruct() {
+        Clear();
+    }
+
+    void Clear() {
+        int i;
+
+        m_ObjectType = 0;
+        m_ContainerCode = 0;
+        m_CreateFlags = OCS_AUTOLOAD;
+        m_Flags = 0;
+        m_Flags2 = 0;
+        m_Pos.Init();
+        m_Scale.Init(1.0f, 1.0f, 1.0f);
+        m_Rotation.Init();
+        m_UserData = 0;
+        m_ClassName[0] = 0;
+        m_Filename[0] = 0;
+
+        for (i=0; i < MAX_MODEL_TEXTURES; i++) {
+            m_SkinNames[i][0] = 0;
+        }
+        for (i=0; i < MAX_MODEL_RENDERSTYLES; i++) {
+            m_RenderStyleNames[i][0] = 0;
+        }
+
+        m_Name[0] = 0;
+        m_NextUpdate = 0.0f;
+        m_fDeactivationTime = 0.0f;
+    }
+
+/*!
+Main info.
+*/
+    uint16 m_ObjectType;
+
+/*!
+Container code if it's a container.  It's in here because
+you can only set it at creation time.
+*/
+    uint16 m_ContainerCode;
+
+//! Combination of OCS_ flags above.
+    uint32 m_CreateFlags;
+
+    uint32 m_Flags;
+    uint32 m_Flags2;
+
+    LTVector m_Pos;
+    LTVector m_Scale;
+    LTRotation m_Rotation;
+
+
+//! User data.
+    uint32 m_UserData;
+
+/*!
+NOTE: this is ONLY used during MID_PRECREATE messages.  The engine fills this in
+before calling MID_PRECREATE so the object can get its class info during the
+MID_PRECREATE call.  Otherwise it is not used at all.
+*/
+    char m_ClassName[MAX_OCS_CLASSNAME_LEN];
+
+/*!
+This is the model, sound, or sprite filename.
+It also can be the WorldModel name.
+This can be zero-length when it's not needed.
+*/
+    char m_Filename[MAX_CS_FILENAME_LEN+1];  //!
+
+
+    union {
+/*!
+This can be zero-length. If you set it for an
+OT_MODEL, it's the skin filename.
+*/
+        char m_SkinName[MAX_CS_FILENAME_LEN+1];  //!
+        char m_SkinNames[MAX_MODEL_TEXTURES][MAX_CS_FILENAME_LEN+1];
+    };
+
+    union {
+/*!
+This can be zero-length. If you set it for an
+OT_MODEL, it's the skin filename.
+*/
+        char m_RenderStyleName[MAX_CS_FILENAME_LEN+1];   //!
+        char m_RenderStyleNames[MAX_MODEL_RENDERSTYLES][MAX_CS_FILENAME_LEN+1];
+    };
+
+/*!
+Server only info.
+*/
+
+//! This object's name.
+    char m_Name[MAX_CS_FILENAME_LEN+1];
+
+//! This will be the object's starting NextUpdate.
+    float m_NextUpdate;
+
+//! Amount of time before object deactivates self.
+    float m_fDeactivationTime;
+};
+
+
+
+/*!
+Initialize an ObjectCreateStruct.
+*/
+#define INIT_OBJECTCREATESTRUCT(theStruct) \
+{ \
+    (theStruct).Clear();\
+}
+
 /*!
 Model hook.
 */
 
 //! Use the texture for this model (if any).
-#define MHF_USETEXTURE		(1<<0)
-
-//! If doing glow, use the default render style and don't map it
-#define MHF_NOGLOW			(1<<1)
+#define MHF_USETEXTURE      1
 
 struct ModelHookData
 {
-	HLOCALOBJ	m_hObject;
+    HLOCALOBJ m_hObject;
 
 //! Combination of MHF_ flags above.
-	uint32		m_HookFlags;
+    unsigned long m_Flags;
 
 /*!
 The model's object flags.  You can modify them
 in here without changing the model's flags
 permanently.
 */
-	uint32		m_ObjectFlags;
+    unsigned long m_ObjectFlags;
 
 //! RGB 0-255
-	LTVector	m_LightAdd;
+    LTVector *m_LightAdd;
 
 //! RGB 0-255
-	LTVector	m_ObjectColor;
+    LTVector *m_ObjectColor;
 };
+
+
+/*!
+Model instance hook data.
+*/
+#define MIH_CLIPPLANE       (1<<0)
+
+class ModelInstanceHookData
+{
+public:
+    uint32 m_Flags;
+
+/*!
+Extra clip plane in world space, used if MIH_CLIPPLANE is set.
+*/
+    LTPlane m_ClipPlane;
+};
+
+
+
+/*!
+One of these can be associated with each model object and this function will be
+called before rendering the model.
+
+\param hObj The model object about to be rendered.
+\param pData You fill this in.
+\param flags Currently unused.
+*/
+typedef void (*ModelInstanceHookFn)(HLOCALOBJ hObj, ModelInstanceHookData *pData, uint32 flags);
 
 /*!
 For Canvases.
@@ -612,8 +457,7 @@ Render modes are what are used to describe a video mode/video card.
 */
 struct RMode
 {
-//!	Does this mode support hardware TnL?
-    bool m_bHWTnL;
+    LTBOOL m_bHardware;
 
 //! This is what the DLLs use to identify a card.
     char m_InternalName[128];
@@ -621,10 +465,8 @@ struct RMode
 //! This is a 'friendly' string describing the card.
     char m_Description[128];
 
-//! The dimensions and bit depth of this mode
     uint32 m_Width, m_Height, m_BitDepth;
 
-//! The next mode in the list
     RMode *m_pNext;
 };
 
@@ -651,7 +493,7 @@ enum LTSurfaceBlend {
 Rendering callback for dynamic particle volume effects.
 Returns false if it needs to be called again to complete rendering.
 */
-typedef bool (*VolumeEffectDPUpdateFn)(void* pUser, void* pVertexBufferData, void* pLightingData, uint32 nVBNumVerts, uint32 nPrevFilledVerts, uint32& nNumFilledVerts);
+typedef bool (*VolumeEffectDPUpdateFn)(void* pUser, void* pVertexBufferData, uint32 nVBNumVerts, uint32 nPrevFilledVerts, uint32& nNumFilledVerts);
 
 /*!
 Initialization structure for a volume effect.  This is passed to ILTClient::SetupVolumeEffect()
@@ -662,21 +504,15 @@ struct VolumeEffectInfo
 	enum EffectType
 	{
 		kUninitialized,						// an uninitialized effect
-		kDynamicParticles					// a vertex buffer is passed across and filled in by the object (snow, grass)
+		kDynamicParticles					// a trilist is passed across and filled in by the object (snow, rain)
 	};
 
 	// lighting to be used for dynamic particles
 	enum DynamicParticleLighting
 	{
-		kNone,								// color values will not be modified
-		kSinglePointNonDirectional			// the light at the sample point is calculated independent of surface normal
-	};
-
-	// primitive type used for rendering dynamic particles
-	enum DynamicParticlePrimitive
-	{
-		kTrilist,							// the vertex buffer will be rendered as non-indexed tris
-		kQuadlist							// the vertex buffer will be rendered as indexed quads (4 verts per particle)
+		kNone,								// light values will not be modified
+		kConstant,							// the light constant will be used
+		kFirstVertNonDirectional			// only the first vert of a primitive will be lit
 	};
 
 	EffectType m_EffectType;
@@ -684,12 +520,11 @@ struct VolumeEffectInfo
 
 	// dynamic particle specific information
 	VolumeEffectDPUpdateFn m_DPUpdateFn;	// function that fills in the vertex buffer
-	DynamicParticlePrimitive m_DPPrimitive;	// primitive type to be used for rendering
 	void* m_DPUserData;						// user data pointer passed back to the update function
 	DynamicParticleLighting m_DPLighting;	// lighting type to be used
 	uint32 m_DPLightConstant;				// constant light value to be used if lighting is kConstant
-	bool m_DPSaturate;						// true if saturated lighting (MODULATE2X) should be used
-	const char* m_DPTextureName;					// filename of the texture to be used for this particle system
+	uint32 m_DPMaxNumParticles;				// maximum number of particles that may be created (may be used to size VB)
+	char* m_DPTextureName;					// filename of the texture to be used for this particle system
 };
 
 
@@ -703,8 +538,7 @@ enum
     DEVICETYPE_KEYBOARD    = 1,
     DEVICETYPE_MOUSE       = 2,
     DEVICETYPE_JOYSTICK    = 4,
-    DEVICETYPE_GAMEPAD     = 8,
-    DEVICETYPE_UNKNOWN     = 16
+    DEVICETYPE_UNKNOWN     = 8
 };
 
 
@@ -764,9 +598,6 @@ struct DeviceInput {
 //! object instance code for the control that changed (DIK_ code for control)
 	uint16 m_ControlCode;
 
-//! Device object id.  Used with DeviceObject::m_nObjectId
-	uint32 m_nObjectId;
-
 //! input value for the control
     uint32 m_InputValue;
 };
@@ -789,9 +620,6 @@ struct DeviceObject {
 
 //! name of object ("x-axis", "button 0", etc.)
     char m_ObjectName[64];
-
-//! Object Id
-	uint32 m_nObjectId;
 
 //! low end of range for this object
     float m_RangeLow;
@@ -840,9 +668,6 @@ struct DeviceBinding {
 
 //! real name of this trigger ("##21" instead of "Space bar")
     char strRealName[INPUTNAME_LEN];
-
-//! Object Id
-	uint32 m_nObjectId;
 
 //! scale to multiply input by
     float nScale;
@@ -895,22 +720,21 @@ public:
 
     void Clear() {
         m_dwFlags = 0;
-        m_dwMaxConnections = 0;
-        m_dwCurConnections = 0;
+        m_dwMaxPlayers = 0;
+        m_dwCurPlayers = 0;
         m_Ping = 0;
         m_sName[0] = 0;
-        m_bHasPassword = false;
+        m_sPassword[0] = 0;
         m_HostIP[0] = 0;
         m_HostPort = NO_HOST_PORT;
         m_pNext = LTNULL;
-		m_nGameType = 0;
     }
 
     uint32 m_dwFlags;
     LTGUID m_guidApp;
     LTGUID m_guidInst;
-    uint32 m_dwMaxConnections;
-    uint32 m_dwCurConnections;
+    uint32 m_dwMaxPlayers;
+    uint32 m_dwCurPlayers;
     uint32 m_Ping; //! Ping time in milliseconds.
 
 /*!
@@ -920,8 +744,7 @@ Host info.  0 length string and NO_HOST_PORT if not on TCP/IP.
     uint32 m_HostPort;
 
     char m_sName[MAX_NETSESSIONNAME_LEN];
-	char m_bHasPassword;
-	uint8 m_nGameType;
+    char m_sPassword[MAX_NETPASSWORD_LEN];
     NetSession *m_pNext;
 };
 
@@ -931,21 +754,9 @@ Structure used by to instruct a driver to create/host a new session.
 struct NetHost {
     uint32 m_Port; //! Port if TCP/IP.  If zero, it uses the default.
     uint32 m_dwFlags;
-    uint32 m_dwMaxConnections;
+    uint32 m_dwMaxPlayers;
     char m_sName[MAX_NETSESSIONNAME_LEN];
-    bool m_bHasPassword;
-	uint8 m_nGameType;
-};
-
-/*!
-Ping status results
-*/
-
-enum {
-	PING_STATUS_UNKNOWN = 0, // The ping ID queried was unknown
-	PING_STATUS_SUCCESS = 1, // The ping was successfully processed
-	PING_STATUS_WAITING = 2, // The ping has not been responded to
-	PING_STATUS_TIMEOUT = 3, // The ping timed out
+    char m_sPassword[MAX_NETPASSWORD_LEN];
 };
 
 /*!
@@ -995,12 +806,13 @@ Sound 3D provider IDs.
 
 enum
 {
-
+    
     SOUND3DPROVIDERID_NONE                   =  0,
     SOUND3DPROVIDERID_DS3D_HARDWARE          =  1,
-    SOUND3DPROVIDERID_DS3D_SOFTWARE          =  2,
-	SOUND3DPROVIDERID_DS3D_DEFAULT			 =  3,
-    SOUND3DPROVIDERID_UNKNOWN                =  4
+    SOUND3DPROVIDERID_DS3D_HARDWARE_EAX      =  2,
+    SOUND3DPROVIDERID_DS3D_SOFTWARE          =  3,
+	SOUND3DPROVIDERID_DS3D_DEFAULT			 =  4,
+    SOUND3DPROVIDERID_UNKNOWN                =  5
 };
 
 
@@ -1259,11 +1071,6 @@ structure's \b m_dwFlags member variable.
 };
 
 
-/*!
-The maximum number of sound volume classes allowed.  Can't imagine you'd need more than this,
-but can be a maximum of 255
-*/
-#define MAX_SOUND_VOLUME_CLASSES		15
 
 /*!
 Defines a variety of options for sounds. The options you choose can drastically change
@@ -1346,12 +1153,6 @@ sounds and if \b PLAYSOUND_ATTACHED is not used.
 Game defined user data. The 32bit value will be passed to \b IClientShell::OnPlaySound().\
 */
     uint32 m_UserData;
-
-/*!
-Sound type.  This is used with functions to allow different classes of sounds to be
-played with different volume ranges
-*/
-	uint8 m_nSoundVolumeClass;
 };
 
 #define PLAYSOUNDINFO_COPY(dest, src) \
@@ -1546,9 +1347,9 @@ public:
 /*!
 Parse the next set of tokens.
 
-\return true if it parsed anything.
+\return LTTRUE if it parsed anything.
 */
-    bool Parse();
+    LTBOOL Parse();
 
 /*!
 Parses until it finds tokens with pLookFor as the first one.
@@ -1556,9 +1357,9 @@ skipCount says how many to skip.
 You can use this just like Parse like this:
 
 
-while(ParseFind("AmbientLight", false)) { ... }
+while(ParseFind("AmbientLight", LTFALSE)) { ... }
 */
-    bool ParseFind(char *pLookFor, bool bCaseSensitive, uint32 minTokens=1);
+    LTBOOL ParseFind(char *pLookFor, LTBOOL bCaseSensitive, uint32 minTokens=1);
 
 private:
     const char *m_pCommandPos;
@@ -1580,10 +1381,10 @@ public:
         if (m_nElements < m_MaxListSize) {
             m_pArray[m_nElements] = obj;
             m_nElements++;
-            return true;
+            return LTTRUE;
         }
 
-        return false;
+        return LTFALSE;
     }
 
     inline T GetObject(uint32 index) {
@@ -1628,11 +1429,11 @@ Intersection stuff.
 */
 
 /*!
-\return true to select this object and false to not select it.
+\return LTTRUE to select this object and LTFALSE to not select it.
 */
-typedef bool (*ObjectFilterFn)(HOBJECT hObj, void *pUserData);
+typedef LTBOOL (*ObjectFilterFn)(HOBJECT hObj, void *pUserData);
 
-typedef bool (*PolyFilterFn)(HPOLY hPoly, void *pUserData);
+typedef LTBOOL (*PolyFilterFn)(HPOLY hPoly, void *pUserData);
 
 /*!
 Pass this in to the IntersectSegment routine.
@@ -1644,8 +1445,6 @@ public:
         m_Flags = 0;
         m_FilterFn = 0;
         m_PolyFilterFn = 0;
-		m_FilterActualIntersectFn = 0;
-		m_pActualIntersectUserData = LTNULL;
         m_pUserData = LTNULL;
 
         m_From.Init();
@@ -1673,35 +1472,22 @@ A combination of the intersect flags (in ltcodes.h).
 /*!
 If this is not LTNULL, then it will call this function when it has a
 POSSIBLE object intersection (it doesn't know if it really intersects
-yet when it calls this).  If you return false from this function,
+yet when it calls this).  If you return LTFALSE from this function,
 then it will ignore the object and continue on.
 */
     ObjectFilterFn m_FilterFn;
 
 /*!
-If this is not LTNULL, then it will call this function when it has an
-ACTUAL object intersection.  If you return false from this function,
-then it will ignore the object and continue on.
-*/
-    ObjectFilterFn m_FilterActualIntersectFn;
-
-/*!
 If this is not LTNULL, then it will call this function when it has a
-poly intersection. If you return false from this function,
+poly intersection. If you return LTFALSE from this function,
 then it will ignore the poly and continue on.
 */
     PolyFilterFn m_PolyFilterFn;
 
 /*!
-Passed into pUserData of m_Filter function.
+Passed into pUserData of the filter function.
 */
     void *m_pUserData;
-
-/*!
-Passed into pUserDaga of m_FilterActualIntersectFn function
-*/
-
-	void *m_pActualIntersectUserData;
 };
 
 
@@ -1713,7 +1499,6 @@ struct IntersectInfo {
         m_hObject = LTNULL;
         m_hPoly = INVALID_HPOLY;
         m_SurfaceFlags = 0;
-		m_hNode = INVALID_MODEL_NODE;
     }
 
 /*!
@@ -1742,13 +1527,6 @@ Surface flags of what it hit (these aren't object flags, and are
 only set if it hit the world or a WorldModel).
 */
     uint32 m_SurfaceFlags;
-
-/*!
-Model node hit by the intersection of ray to OBB.
-Value is INVALID_MODEL_NODE if it didn't hit one.
-*/	
-	HMODELNODE m_hNode;
-
 };
 
 #define ClientIntersectInfo     IntersectInfo
@@ -1757,13 +1535,44 @@ Value is INVALID_MODEL_NODE if it didn't hit one.
 typedef void (*ModelHookFn)(ModelHookData *pData, void *pUser);
 
 /*!
+GenericProp -
+Here's a list of which property types map to which variables:
+
+PT_STRING
+
+- m_Vec and m_Color if it's formatted like '1 2 3', m_String, m_Long, m_Float, m_Bool.
+- If this is 'true' or 'false', it will set m_Long, m_Float, and m_Bool to 0 or 1.
+
+PT_VECTOR   - m_Vec, m_String ('1 2 3')
+PT_COLOR    - m_Color, m_String ('1 2 3')
+PT_REAL     - m_String, m_Long, m_Float, m_Bool
+PT_FLAGS    - m_String, m_Long, m_Float, m_Bool
+PT_BOOL     - m_String, m_Long, m_Float, m_Bool
+PT_LONGINT - m_String, m_Long, m_Float, m_Bool
+PT_ROTATION - m_Rotation and m_Vec (with euler rotation).
+*/
+
+#define MAX_GP_STRING_LEN 256
+
+struct GenericProp {
+    LTVector m_Vec;
+    LTVector m_Color;
+
+    char m_String[MAX_GP_STRING_LEN+1];
+    LTRotation m_Rotation;
+    int32 m_Long;
+    float m_Float;
+    LTBOOL m_Bool;
+};
+
+/*!
 Helper functions.
 */
 
 /*!
-\return Returns true if the point is touching or inside the box.
+\return Returns LTTRUE if the point is touching or inside the box.
 */
-inline bool base_IsPtInBox(const LTVector *pPt, const LTVector *pBoxMin, const LTVector *pBoxMax) {
+inline LTBOOL base_IsPtInBox(LTVector *pPt, LTVector *pBoxMin, LTVector *pBoxMax) {
     return (pPt->x >= pBoxMin->x) && (pPt->y >= pBoxMin->y) && (pPt->z >= pBoxMin->z) &&
         (pPt->x <= pBoxMax->x) && (pPt->y <= pBoxMax->y) && (pPt->z <= pBoxMax->z);
 }
@@ -1772,7 +1581,7 @@ inline bool base_IsPtInBox(const LTVector *pPt, const LTVector *pBoxMin, const L
 /*!
 Just test on XZ.
 */
-inline bool base_IsPtInBoxXZ(const LTVector *pPt, const LTVector *pBoxMin, const LTVector *pBoxMax) {
+inline LTBOOL base_IsPtInBoxXZ(LTVector *pPt, LTVector *pBoxMin, LTVector *pBoxMax) {
     return (pPt->x >= pBoxMin->x) && (pPt->z >= pBoxMin->z) &&
         (pPt->x <= pBoxMax->x) && (pPt->z <= pBoxMax->z);
 }
@@ -1782,26 +1591,52 @@ Object flags.
 */
 enum
 {
-    FLAG_VISIBLE =					(1<<0),
+    FLAG_VISIBLE =            (1<<0),
 
 //! Does this model cast shadows?
-    FLAG_SHADOW =					(1<<1),
+    FLAG_SHADOW =             (1<<1),
 
 //! Biases the Z towards the view so a sprite doesn't clip as much.
-    FLAG_SPRITEBIAS =				(1<<2),
+    FLAG_SPRITEBIAS =         (1<<2),
+
+/*!
+If this is set, it draws a model in 2 passes.  In the
+second pass, it scales down the color with ColorR,
+ColorG, and ColorB.  This is used to tint the skins
+in multiplayer.  Note: it uses powers of 2 to determine
+scale so the color scale maps like this:
+
+> 253 = 1.0
+> 126 = 0.5
+> 62  = 0.25
+> 29  = 0.12
+otherwise 0
+*/
+// FLAG_MODELTINT Is no longer supported.
+    FLAG_MODELTINT = (1<<2),
 
 //! Should this light cast shadows (slower)?
-    FLAG_CASTSHADOWS =				(1<<3),
+    FLAG_CASTSHADOWS =        (1<<3),
 
 //! Sprites only.
-    FLAG_ROTATABLESPRITE =			(1<<3),
+
+
+    FLAG_ROTATABLESPRITE =	(1<<3),
 
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
 	// minor fix for a common misspelling
 	#define FLAG_ROTATEABLESPRITE	FLAG_ROTATABLESPRITE
 #endif // DOXYGEN_SHOULD_SKIP_THIS
 
+
+
+//! Models: draw with a detail texture.
+    FLAG_DETAILTEXTURE =      (1<<3),
+
 //! Particle systems only.
+    FLAG_UPDATEUNSEEN =       (1<<3),
+
+
 /*!
 If this is set, the engine will update
 particles even when they're invisible.
@@ -1809,7 +1644,11 @@ You should check FLAG_WASDRAWN
 on any particle systems you're iterating
 over so you don't update invisible ones.
 */
-    FLAG_UPDATEUNSEEN =				(1<<3),
+
+//! Use the 'fastlight' method for this light.
+    FLAG_SOLIDLIGHT =         (1<<4),
+
+    FLAG_MODELWIREFRAME =     (1<<4),
 
 /*!
 The engine sets this if a particle system
@@ -1817,22 +1656,25 @@ or PolyGrid was drawn.  You can use this to
 determine whether or not to do some expensive
 calculations on it.
 */
-    FLAG_WASDRAWN =					(1<<4),
+    FLAG_WASDRAWN =           (1<<4),
 
 //! Disable Z read/write on sprite (good for lens flares).
-    FLAG_SPRITE_NOZ =				(1<<4),
+    FLAG_SPRITE_NOZ =        (1<<4),
 
 //! Shrinks the sprite as the viewer gets nearer.
-    FLAG_GLOWSPRITE =				(1<<5),
+    FLAG_GLOWSPRITE =             (1<<5),
 
 //! Lights only - tells it to only light the world.
-    FLAG_ONLYLIGHTWORLD =			(1<<5),
+    FLAG_ONLYLIGHTWORLD =         (1<<5),
+
+//! Environment map the model.
+    FLAG_ENVIRONMENTMAP =         (1<<5),
 
 //! For PolyGrids - says to only use the environment map (ignore main texture).
-    FLAG_ENVIRONMENTMAPONLY =		(1<<5),
+    FLAG_ENVIRONMENTMAPONLY =     (1<<5),
 
 //! Lights only - don't light backfacing polies.
-    FLAG_DONTLIGHTBACKFACING =		(1<<6),
+    FLAG_DONTLIGHTBACKFACING =    (1<<6),
 
 /*!
 This is used for objects that are really close to the camera and would
@@ -1843,13 +1685,16 @@ to clip their near Z much closer to the eyepoint. This can be used for:
 - sprites without FLAG_ROTATEABLESPRITE
 - canvases
 */
-    FLAG_REALLYCLOSE =				(1<<6),
+    FLAG_REALLYCLOSE =            (1<<6),
 
 //! Disables fog on WorldModels, Sprites, Particle Systems and Canvases only.
-    FLAG_FOGDISABLE =				(1<<7),
+    FLAG_FOGDISABLE =         (1<<7),
+
+//! Does a 200ms transition between model animations.
+    FLAG_ANIMTRANSITION =     (1<<7),
 
 //! Lights only - tells it to only light objects (and not the world).
-    FLAG_ONLYLIGHTOBJECTS =			(1<<7),
+    FLAG_ONLYLIGHTOBJECTS =   (1<<7),
 
 /*!
 LT normally compresses the position and rotation info
@@ -1857,16 +1702,19 @@ to reduce packet size.  Some things must be exact
 (like some WorldModels) so this will
 enlarge the packets for better accuracy.
 */
-    FLAG_FULLPOSITIONRES =			(1<<8),
+    FLAG_FULLPOSITIONRES =    (1<<8),
 
 /*!
 Just use the object's color and global light scale.
 (Don't affect by area or by dynamic lights).
 */
-    FLAG_NOLIGHT =					(1<<9),
+    FLAG_NOLIGHT =            (1<<9),
+    
+//! Don't draw this object if we're using software rendering.
+    FLAG_HARDWAREONLY =       (1<<10),
 
-//! Determines whether or not this object is paused and should not animate or update in a visible manner
-    FLAG_PAUSED =					(1<<10),
+//! Draw in portals even if the object is invisible.
+    FLAG_PORTALVISIBLE =      (1<<10),
 
 /*!
 Uses minimal network traffic to represent rotation
@@ -1876,19 +1724,22 @@ Mutually exclusive with FLAG_FULLPOSITIONRES (FLAG_FULLPOSITIONRES
 forces full uncompressed rotation distribution, and FLAG_YROTATION
 is ignored)
 */
-    FLAG_YROTATION =				(1<<11),
+    FLAG_YROTATION =          (1<<11),
 
 //! Object is hit by raycasts.
-    FLAG_RAYHIT =					(1<<12),
+    FLAG_RAYHIT =             (1<<12),
 
 //! Object can't go thru other solid objects.
-    FLAG_SOLID =					(1<<13),
+    FLAG_SOLID =              (1<<13),
 
 //! Use simple box physics on this object (used for WorldModels and containers).
-    FLAG_BOXPHYSICS =				(1<<14),
+    FLAG_BOXPHYSICS =         (1<<14),
+
+//! Particle systems: disables use of global light scale.
+    FLAG_NOGLOBALLIGHTSCALE = (1<<14),
 
 //! This object is solid on the server and nonsolid on the client.
-    FLAG_CLIENTNONSOLID =			(1<<15),
+    FLAG_CLIENTNONSOLID =     (1<<15),
 
 };
 
@@ -1900,15 +1751,15 @@ is ignored)
 /*!
 Which flags the client knows about.
 */
-#define CLIENT_FLAGMASK (FLAG_VISIBLE|FLAG_SHADOW|\
-                         FLAG_ROTATEABLESPRITE|FLAG_PAUSED|\
+#define CLIENT_FLAGMASK (FLAG_VISIBLE|FLAG_SHADOW|FLAG_MODELTINT|\
+                         FLAG_ROTATEABLESPRITE|FLAG_SOLIDLIGHT|\
                          FLAG_REALLYCLOSE|FLAG_SPRITE_NOZ|FLAG_FOGDISABLE|\
-                         FLAG_FULLPOSITIONRES|FLAG_NOLIGHT|\
-                         FLAG_YROTATION|FLAG_RAYHIT|\
+                         FLAG_FULLPOSITIONRES|FLAG_NOLIGHT|FLAG_ENVIRONMENTMAP|\
+                         FLAG_HARDWAREONLY|FLAG_YROTATION|FLAG_RAYHIT|\
                          FLAG_SOLID|FLAG_BOXPHYSICS|FLAG_CLIENTNONSOLID)
 
 
-/*!
+/*! 
 This indicates all of the available flags for modification.  (Useful for SetObjectFlags.)
 */
 #define FLAGMASK_ALL (0xFFFFFFFF)
@@ -1946,8 +1797,8 @@ Server only flags.
 //! The object won't get get MID_MODELSTRINGKEY messages unless it sets this flag.
 #define FLAG_MODELKEYS          (1<<19)
 
-//! Object is touchable when other objects move into it, but doesn't touch objects when it moves.
-#define FLAG_TOUCHABLE          (1<<20)
+//! Save and restore this object when switching worlds.
+#define FLAG_KEEPALIVE          (1<<20)
 
 //! Force client updates even if the object is OT_NORMAL or invisible.
 #define FLAG_FORCECLIENTUPDATE  (1<<24)
@@ -1989,7 +1840,7 @@ If you clear these flags (flags &= ~FLAG_OPTIMIZEMASK) and the object doesn't ha
 a special effect message, the engine never even iterates over the object for movement,
 raycasting, visibility, etc.  Use this whenever you can.
 */
-#define FLAG_OPTIMIZEMASK (FLAG_VISIBLE|FLAG_SOLID|FLAG_TOUCH_NOTIFY|FLAG_TOUCHABLE|\
+#define FLAG_OPTIMIZEMASK (FLAG_VISIBLE|FLAG_SOLID|FLAG_TOUCH_NOTIFY|\
     FLAG_RAYHIT|FLAG_FORCECLIENTUPDATE|/*FLAG_GOTHRUWORLD|*/FLAG_CONTAINER)
 
 /*!
@@ -2001,29 +1852,42 @@ enum
 // client.  If you add a new flag in the high 16 bits, the client will
 // never hear about it!
 
-//! If this is a dynamic light, it will always light the world regardless of what the console variable settings say
-    FLAG2_FORCEDYNAMICLIGHTWORLD =  (1<<0),
+//! This object is invisible in portals.
+    FLAG2_PORTALINVISIBLE =   (1<<0),
 
-//! For sprites - do additive blending.
-    FLAG2_ADDITIVE =				(1<<1),
+//! For WorldModels and models - use chromakeying to draw.
+    FLAG2_CHROMAKEY =         (1<<1),
 
-//! For sprites. Multiplied color blending.
-    FLAG2_MULTIPLY =				(1<<2),
+//! For models and sprites - do additive blending.
+    FLAG2_ADDITIVE =          (1<<2),
 
-//! Use a y-axis aligned cylinder to collide with the BSP.
-    FLAG2_PLAYERCOLLIDE =			(1<<3),
+//! For models and sprites. Multiplied color blending.
+    FLAG2_MULTIPLY =          (1<<3),
+
+//Use a y-axis aligned cylinder to collide with the BSP.
+    FLAG2_CYLINDER_CD =	      (1<<4),
+
+//NOTE:  Same flag as above for backward compatibility.
+    FLAG2_PLAYERCOLLIDE =     (1<<4),
 
 /*!
 For models - re-calculates the directional lighting
 when the object moves.
 */
-    FLAG2_DYNAMICDIRLIGHT =			(1<<4),
+    FLAG2_DYNAMICDIRLIGHT =   (1<<5),
 
 /*!
 Don't render this object thru the normal stuff,
 only render it when processing sky objects.
 */
-    FLAG2_SKYOBJECT =				(1<<5),
+    FLAG2_SKYOBJECT =         (1<<6),
+
+
+/*!
+Treat this world model as a fog volume object
+used for rendering fog volumes.
+*/
+    FLAG2_FOGOBJECT =         (1<<7),
 
 /*!
 !forces an object to be considered translucent
@@ -2031,29 +1895,25 @@ during rendering. This should be used when
 an object has parts that are translucent, but
 overall the alpha is completely opaque.
 */
-    FLAG2_FORCETRANSLUCENT =		(1<<6),
+    FLAG2_FORCETRANSLUCENT =  (1<<10),
 
 /*!
-Disables the client-side prediction on this object
+Add a default collision object when the object is
+created.  (Implemented in BaseClass/BaseClassClient)
 */
-	FLAG2_DISABLEPREDICTION =		(1<<7),
+    FLAG2_COLLISIONOBJECT =	(1<<12),
 
 /*!
-Enables transferring of dims to the client
+When the object's position is updated through a call to
+ILTPhysics::SetPosition or ILTPhysics::SetRotation, perform a non-solid
+collision update on the object's associated collision
+object.  If the flag is not set, the associated collision
+object will just be zapped to the new position/rotation.
+(Implemented in BaseClass/BaseClassClient)
 */
-	FLAG2_SERVERDIMS		=		(1<<8),
-
-/*!
-Indicates that objects with this flag are non-solid to other objects with this flag
-*/
-	FLAG2_SPECIALNONSOLID	=		(1<<9),
-
-/*!
-Enables the use of Model OBBs on IntersectSegment calls() for this object
-*/
-   FLAG2_USEMODELOBBS		=		(1<<10),
-
+    FLAG2_NONSOLIDCOLLISIONUPDATE =	(1<<13),
 };
+
 
 /*!
 Different object types.  Some can only be created on the client.
@@ -2099,7 +1959,6 @@ enum
 /*!
 NOTE: the high bit of the object type is reserved
 for the engine's networking.
-ALSO NOTE: The networking assumes there are < 16 object types!
 */
     NUM_OBJECTTYPES =     12,
 };
@@ -2139,330 +1998,14 @@ Maximum number of sky objects.
 #define MATH_ONE_OVER_128	0.0078125f
 
 
+#define LTDIFF(a,b) (((a) < (b)) ? ((b) - (a)) : ((a) - (b)))
+#define LTMIN(a,b) ((a) < (b) ? (a) : (b))
+#define LTMAX(a,b) ((a) > (b) ? (a) : (b))
+#define LTABS(a) ((a) > 0 ? (a) : -(a))
+#define LTCLAMP(a, min, max) ((a) < (min) ? (min) : ((a) > (max) ? (max) : (a)))
+#define LTLERP(min, max, t) ((min) + ((max) - (min)) * (t))
+
 #define INLINE_FN __inline
-
-template<class T, class TB>
-INLINE_FN T LTDIFF(T a, TB b) { return ((a < (T)b) ? ((T)b - a) : (a - (T)b)); }
-template<class T, class TB>
-INLINE_FN T LTMIN(T a, TB b) { return ((a < (T)b) ? a : (T)b); }
-template<class T, class TB>
-INLINE_FN T LTMAX(T a, TB b) { return ((a > (T)b) ? a : (T)b); }
-template<class T>
-INLINE_FN T LTABS(T a) { return ((a >= 0) ? a : -a); }
-template<class T, class TB, class TC>
-INLINE_FN T LTCLAMP(T a, TB min, TC max) { return ((a < (T)min) ? (T)min : ((a > (T)max) ? (T)max : a)); }
-template<class T, class TMAX, class TINTERP>
-INLINE_FN T LTLERP(T min, TMAX max, TINTERP t) { return (min + (((T)max - min) * t)); }
-
-/*!
-Vertex shader definition
-*/
-class LTVertexShader
-{
-public:
-
-//! invalid vertex shader ID
-	enum
-	{
-		VERTEXSHADER_INVALID = 0xFFFFFFFF
-	};
-
-//! max number of user-defined constants (4 floats each)
-	enum
-	{
-		MAX_CONSTANT_REGISTERS = 96
-	};
-
-public:
-
-//! is the shader valid?
-	virtual bool			IsValidShader() const = 0;
-
-//! vertex shader ID
-    int						GetID() const				{ return m_ShaderID; }
-
-//! name of shader (filename)
-    const char* 			GetName() const				{ return m_FileName; }
-
-//! next in list
-    LTVertexShader*			GetNext()					{ return m_pNext; }
-
-//! get the values in a constant register
-	virtual bool			GetConstant(unsigned RegisterNum, float *pf0, float *pf1, float *pf2, float *pf3) = 0;
-
-//! set the values in a constant register
-	virtual bool			SetConstant(unsigned RegisterNum, float f0, float f1, float f2, float f3) = 0;
-
-//! copies the values in the given matrix to the four constant registers starting at RegisterNum
-	virtual bool			SetConstant(unsigned RegisterNum, const LTMatrix &Matrix) = 0;
-
-//! get the constant array, there are 4 floats per register
-	virtual float*			GetConstants() = 0;
-
-//! get the number of constants, there are 4 floats per register
-	unsigned				GetNumConstants() const		{ return MAX_CONSTANT_REGISTERS*4; }
-
-protected:
-
-	LTVertexShader()
-		: m_ShaderID(VERTEXSHADER_INVALID),
-		  m_pNext(LTNULL)
-	{
-		m_FileName[0] = '\0';
-	}
-
-protected:
-
-    int						m_ShaderID; 			// shader ID
-    char 					m_FileName[_MAX_PATH]; 	// shader filename
-    LTVertexShader*			m_pNext; 				// next in list
-};
-
-
-
-/*!
-Pixel shader definition
-*/
-class LTPixelShader
-{
-public:
-
-	enum
-	{
-//! reserved ID for world envbumpmap shader
-		PIXELSHADER_ENVBUMPMAP 	= -52,
-//! reserved ID for screen glow shader
-		PIXELSHADER_SCREENGLOW 	= -51,
-//! reserved ID for shadow blur shader
-		PIXELSHADER_SHADOWBLUR 	= -50,
-//! invalid pixel shader ID
-		PIXELSHADER_INVALID		= 0xFFFFFFFF
-	};
-
-//! max number of user-defined constants (4 floats each)
-	enum
-	{
-		MAX_CONSTANT_REGISTERS = 8
-	};
-
-public:
-
-//! is the shader valid?
-	virtual bool				IsValidShader() const = 0;
-
-//! pixel shader ID
-    int							GetID() const				{ return m_ShaderID; }
-
-//! name of shader (filename if loaded from file)
-    const char* 				GetName() const				{ return m_FileName; }
-
-//! next in list
-    LTPixelShader*				GetNext()					{ return m_pNext; }
-
-//! get the values in a constant register
-	virtual bool				GetConstant(unsigned RegisterNum, float *pf0, float *pf1, float *pf2, float *pf3) = 0;
-
-//! set the values in a constant register
-	virtual bool				SetConstant(unsigned RegisterNum, float f0, float f1, float f2, float f3) = 0;
-
-//! copies the values in the given matrix to the four constant registers starting at RegisterNum
-	virtual bool				SetConstant(unsigned RegisterNum, const LTMatrix &Matrix) = 0;
-
-//! get the constant array, there are 4 floats per register
-	virtual float*				GetConstants() = 0;
-
-//! get the number of constants, there are 4 floats per register
-	unsigned					GetNumConstants() const		{ return MAX_CONSTANT_REGISTERS*4; }
-
-protected:
-
-	LTPixelShader()
-		: m_ShaderID(PIXELSHADER_INVALID),
-		  m_pNext(LTNULL)
-	{
-		m_FileName[0] = '\0';
-	}
-
-protected:
-
-    int						m_ShaderID; 			// shader ID
-    char 					m_FileName[_MAX_PATH]; 	// shader filename
-    LTPixelShader*			m_pNext; 				// next in list
-};
-
-
-
-/*!
-Shader device state (used in IClientShell shader callback functions)
-*/
-class LTShaderDeviceState
-{
-public:
-
-//! matrix types
-	enum LTMatrixType
-	{
-		MATRIXTYPE_WORLD0,				// world matrix 0
-		MATRIXTYPE_WORLD1,				// world matrix 1
-		MATRIXTYPE_WORLD2,				// world matrix 2
-		MATRIXTYPE_WORLD3,				// world matrix 3
-		MATRIXTYPE_VIEW,				// view matrix
-		MATRIXTYPE_PROJECTION,			// projection matrix
-		MATRIXTYPE_VIEWPROJECTION,		// view * projection matrix
-		MATRIXTYPE_TEXTURE0,			// matrix for texture stage 0
-		MATRIXTYPE_TEXTURE1,			// matrix for texture stage 1
-		MATRIXTYPE_TEXTURE2,			// matrix for texture stage 2
-		MATRIXTYPE_TEXTURE3,			// matrix for texture stage 3
-		MATRIXTYPE_TEXTURE4,			// matrix for texture stage 4 (pc only)
-		MATRIXTYPE_TEXTURE5,			// matrix for texture stage 5 (pc only)
-		MATRIXTYPE_TEXTURE6,			// matrix for texture stage 6 (pc only)
-		MATRIXTYPE_TEXTURE7,			// matrix for texture stage 7 (pc only)
-	};
-
-//! light types
-	enum LTLightType
-	{
-		LIGHTTYPE_POINT,				// point light
-		LIGHTTYPE_SPOT,					// spot light
-		LIGHTTYPE_DIRECTIONAL,			// directional light
-	};
-
-//! light settings
-	struct LTLightDesc
-	{
-		LTLightType		m_LightType;	// type of light
-		bool			m_Active;		// is this light active
-		LTRGB			m_Diffuse;		// diffuse color
-		LTRGB			m_Specular;		// specular color
-		LTRGB			m_Ambient;		// ambient color
-		LTVector		m_Position;		// light position (point and spot only)
-		LTVector		m_Direction;	// light direction (directional and spot only)
-		float			m_Range;		// distance beyond which the light has no effect (point and spot only)
-		float			m_Falloff;		// decrease in illumination between a spotlight's inner cone and outer cone (spot only)
-		float			m_Atten0;		// values specifying how the light intensity changes over distance (point and spot only)
-		float			m_Atten1;		// values specifying how the light intensity changes over distance (point and spot only)
-		float			m_Atten2;		// values specifying how the light intensity changes over distance (point and spot only)
-		float			m_Theta;		// angle, in radians, of a spotlight's inner cone (spot only)
-		float			m_Phi;			// angle, in radians, of a spotlight's outer cone (spot only)
-	};
-
-//! camera settings
-	struct LTCameraDesc
-	{
-		LTVector		m_Position;		// camera position
-		LTRotation		m_Rotation;		// camera rotation
-    	float           m_xFov;			// field of view
-		float			m_yFov;			// field of view
-	};
-
-//! get a matrix from the device; set Transpose to true to have the matrix transposed
-	virtual bool			GetMatrix(LTMatrixType MatrixType, bool Transpose, LTMatrix *pMatrix) const = 0;
-
-//! get a light from the device; LightIndex is in the range [0,7]
-	virtual bool			GetLight(unsigned LightIndex, LTLightDesc *pLightDesc) const = 0;
-
-//! get the camera from the device
-	virtual bool			GetCamera(LTCameraDesc *pCameraDesc) const = 0;
-
-protected:
-
-	LTShaderDeviceState()
-	{
-	}
-};
-
-class   SharedTexture;
-typedef SharedTexture* HTEXTURE;
-
-struct LTTechniqueInfo
-{
-	char szName[128];
-	int  nPasses;
-};
-
-class LTEffectShader
-{
-public:
-	enum
-	{
-		//! invalid effect shader ID
-		EFFECTSHADER_INVALID		= 0xFFFFFFFF
-	};
-
-
-	//! effect shader ID
-	int							GetID() const				{ return m_ShaderID; }
-
-	//! name of effect shader (filename if loaded from file)
-	const char* 				GetName() const				{ return m_FileName; }
-
-	//! next in list
-	LTEffectShader*				GetNext()					{ return m_pNext; }
-
-	virtual LTRESULT SetBool(const char* szParam, LTBOOL bBool) const = 0; 
-	virtual LTRESULT SetBoolArray(const char* szParam, LTBOOL *bBool, int nCount) const = 0; 
-	virtual LTRESULT SetFloat(const char* szParam, float fFloat) const = 0; 
-	virtual LTRESULT SetFloatArray(const char* szParam, float *fFloat, int nCount) const = 0; 
-	virtual LTRESULT SetInt(const char* szParam, int nInt) const = 0; 
-	virtual LTRESULT SetIntArray(const char* szParam, int *nInt, int nCount) const = 0; 
-
-	virtual LTRESULT SetMatrix(const char* szParam, LTMatrix &mMatrix) const = 0; 
-	virtual LTRESULT SetMatrixArray(const char* szParam, LTMatrix *mMatrix, int nCount) const = 0; 
-
-	//TODO
-	//SetMatrixPointerArray Sets an array of pointers to nontransposed matrices. 
-		
-	virtual LTRESULT SetMatrixTranspose(const char* szParam, LTMatrix &mMatrix) const = 0; 
-	virtual LTRESULT SetMatrixTransposeArray(const char* szParam, LTMatrix *mMatrix, int nCount) const = 0; 
-
-	//TODO
-	//SetMatrixTransposePointerArray Sets an array of pointers to transposed matrices. 
-
-	//SetString Sets a string. 
-	virtual LTRESULT SetString(const char* szParam, const char* szString) const = 0; 
-
-	//SetTechnique Sets the active technique. 
-	virtual LTRESULT SetTechnique(const char* szTechnique) const = 0; 
-
-	//
-	virtual LTRESULT ValidateTechnique(const char* szTechnique) const = 0;
-
-	virtual LTRESULT FindFirstValidTechnique(LTTechniqueInfo* pInfo) const = 0;
-
-	//SetTexture Sets a texture. 
-	virtual LTRESULT SetTexture(const char* szParam, HTEXTURE hTexture) const = 0; 
-
-	//SetTextureRT sends a user made render target to the effect as a texture.
-	virtual LTRESULT SetTextureRT(const char* szParam, HRENDERTARGET hRenderTarget) const = 0; 
-	//SetValue Set the value of an arbitrary parameter or annotation, including simple types, structs, arrays, strings, shaders and textures.  
-		
-	//SetVector Sets a vector. 
-	//SetVectorArray Sets an array of vectors. 
-	virtual LTRESULT SetVector(const char* szParam, float *fFloat) const = 0;  //4 floats
-	virtual LTRESULT SetVectorArray(const char* szParam, float *fFloat, int nCount) const = 0; // 4 floats * nCount
-
-protected:
-	LTEffectShader():
-		 m_ShaderID(EFFECTSHADER_INVALID),
-		 m_pNext(NULL)
-	{
-		 m_FileName[0] = '\0';
-	}
-
-protected:
-
-	int					m_ShaderID; 			// shader ID
-	char 				m_FileName[_MAX_PATH]; 	// shader filename
-	LTEffectShader*		m_pNext; 				// next in list
-};
-
-
-
-/*!
-Exported function so that game modules hooking into the engine can access the memory library
-in the global space
-*/
-
-extern "C" MODULE_EXPORT ILTMemory* LTGetILTMemory();
+//*/
 
 #endif  //! __LTBASEDEFS_H__

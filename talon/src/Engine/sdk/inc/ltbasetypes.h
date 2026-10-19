@@ -21,6 +21,7 @@ Base types.
 */
 	typedef unsigned int LTBOOL;
 	typedef float LTFLOAT;
+	typedef double LTDFLOAT;
 	typedef uint32 LTRESULT;
 
 
@@ -74,20 +75,6 @@ Model handles.
 	#define INVALID_MODEL_ANIM ((HMODELANIM)-1)
 
 /*!
-Effect Shader handles.
-*/
-	typedef uint32 HEFFECTPOOL;
-	#define INVALID_EFFECT_POOL ((HEFFECTPOOL)-1)
-	#define NO_EFFECT_POOL INVALID_EFFECT_POOL
-
-/*!
-Render Target handles
-*/
-	typedef uint32 HRENDERTARGET;
-	#define INVALID_RENDER_TARGET ((HRENDERTARGET)-1)
-	#define DEFAULT_RENDER_TARGET 0
-
-/*!
 Poly reference.
 */
 	struct HPOLY
@@ -117,6 +104,7 @@ Poly reference.
 Color types (different byte ordering for cross platform development).
 */
 	struct LTRGB			{ uint8 b, g, r, a; };
+	struct LTBGR			{ uint8 r, g, b, a; };
 
 /*!
 Globally unique identifier.
@@ -190,9 +178,7 @@ More complicated types.
     #include "ltlink.h"
     #endif
 
-    #ifndef __LTRENDERERSTATS_H__
-    #include "ltrendererstats.h"
-    #endif
+
 
 
 /*!
@@ -243,26 +229,6 @@ The ILTTransform interface can be used to work with these objects.
 		LTVector    m_Scale;
 	};
 
-/*!
-This is oriented bounding box used for models.
-*/
-	// For backward compatability
-	struct ModelOBB_Depricated {
-		LTVector		m_Pos;		// local pos or offset.
-		LTVector		m_Size;		// box size 
-		LTVector		m_Basis[3]; // orientation. XYZ
-		uint32			m_iNode;	// which  model node  do I belong to?
-	};
-
-	struct ModelOBB {
-		LTVector		m_Pos;		// local pos or offset.
-		LTVector		m_Size;		// box size 
-		LTVector		m_Basis[3]; // orientation. XYZ
-		uint32			m_iNode;	// which  model node  do I belong to?
-		float			m_Radius;   // "Best fit" sphere radius of the OBB.
-									// Used to speed up "early out" OBB checks
-	};
-
 
 /*!
 Sky definition.
@@ -273,34 +239,10 @@ Sky definition.
 		LTVector	m_ViewMin, m_ViewMax;	
 	};
 
-/*!
-Node Control Data
-	This structure holds all the data that is passed into the node contol callback
-*/
-	struct NodeControlData
-	{
-		//this matrix is the transform of the parent of this node
-		const LTMatrix*		m_pParentTransform;
-
-		//this matrix specifies the transform from the parent to the child in binding
-		//position space
-		const LTMatrix*		m_pFromParentTransform;
-
-		//this matrix holds the current transform of the child. This includes
-		//the animation, other previous node controllers, and this is the matrix
-		//that should be modified and placed in global space
-		LTMatrix*			m_pNodeTransform;
-
-		//the handle of the model
-		HOBJECT				m_hModel;
-
-		//the node that is being modified
-		HMODELNODE			m_hNode;
-	};
-
-	typedef void (*NodeControlFn)(const NodeControlData&, void* pUserData);
 
 	typedef void (*ConsoleProgramFn)(int argc, char **argv);
+
+	typedef void (*NodeControlFn)(HOBJECT hObj, HMODELNODE hNode, LTMatrix *pGlobalMat, void *pUserData);
 
 
 
@@ -337,9 +279,6 @@ This is used to distinguish between different object resources
 
 //! The render styles associated with the object 0...MAX_RENDERSTYLES
 		eObjectResource_RenderStyle,
-
-//! The extra childmodels associated with the object 0...MAX_CHILDMODELS
-		eObjectResource_ChildModel,
 	};
 
 #endif //! __LTBASETYPES_H__

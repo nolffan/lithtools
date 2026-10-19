@@ -336,30 +336,6 @@ public:
 
 		return *this;
 	}
-
-	//each component will be set to the lower of the current value or the passed in value
-	void Min(const LTVector2& v)
-	{
-		Init(LTMIN(x, v.x), LTMIN(y, v.y));
-	}
-
-	//each component will be set to the larger of the current value or the passed in value
-	void Max(const LTVector2& v)
-	{
-		Init(LTMAX(x, v.x), LTMAX(y, v.y));
-	}
-
-	//each component will be set to the lower of the current value or the passed in value
-	LTVector2 GetMin(const LTVector2& v) const
-	{
-		return LTVector2(LTMIN(x, v.x), LTMIN(y, v.y));
-	}
-	//each component will be set to the larger of the current value or the passed in value
-	LTVector2 GetMax(const LTVector2& v) const
-	{
-		return LTVector2(LTMAX(x, v.x), LTMAX(y, v.y));
-	}
-
 };
 
 
@@ -367,7 +343,6 @@ public:
 typedef LTVector2<float>	LTVector2f;
 typedef LTVector2<double>	LTVector2d;
 typedef LTVector2<uint16>	LTVector2u16;
-typedef LTVector2<int32>	LTVector2n;
 
 
 //---------------------------------------------------------------------------//

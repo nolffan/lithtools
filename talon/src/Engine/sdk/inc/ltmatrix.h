@@ -134,7 +134,7 @@ struct LTMatrix {
         m[3][0] = m30;  m[3][1] = m31;  m[3][2] = m32;  m[3][3] = m33;
     }
 
-    bool Inverse();
+    LTBOOL Inverse();
 
     LTMatrix MakeInverse() const
 	{
@@ -321,27 +321,31 @@ inline void MatTranspose(LTMatrix *pMat)
 	pMat->Transpose();
 }
 
+//Mat3 = Mat1 * Mat2
+#define M1 pMat1->m
+#define M2 pMat2->m
+
 inline void MatMul(LTMatrix *pDest, const LTMatrix *pMat1, const LTMatrix *pMat2) 
 {
-    pDest->m[0][0] = pMat1->m[0][0]*pMat2->m[0][0] + pMat1->m[0][1]*pMat2->m[1][0] + pMat1->m[0][2]*pMat2->m[2][0] + pMat1->m[0][3]*pMat2->m[3][0];
-    pDest->m[1][0] = pMat1->m[1][0]*pMat2->m[0][0] + pMat1->m[1][1]*pMat2->m[1][0] + pMat1->m[1][2]*pMat2->m[2][0] + pMat1->m[1][3]*pMat2->m[3][0];
-    pDest->m[2][0] = pMat1->m[2][0]*pMat2->m[0][0] + pMat1->m[2][1]*pMat2->m[1][0] + pMat1->m[2][2]*pMat2->m[2][0] + pMat1->m[2][3]*pMat2->m[3][0];
-    pDest->m[3][0] = pMat1->m[3][0]*pMat2->m[0][0] + pMat1->m[3][1]*pMat2->m[1][0] + pMat1->m[3][2]*pMat2->m[2][0] + pMat1->m[3][3]*pMat2->m[3][0];
+    pDest->m[0][0] = M1[0][0]*M2[0][0] + M1[0][1]*M2[1][0] + M1[0][2]*M2[2][0] + M1[0][3]*M2[3][0];
+    pDest->m[1][0] = M1[1][0]*M2[0][0] + M1[1][1]*M2[1][0] + M1[1][2]*M2[2][0] + M1[1][3]*M2[3][0];
+    pDest->m[2][0] = M1[2][0]*M2[0][0] + M1[2][1]*M2[1][0] + M1[2][2]*M2[2][0] + M1[2][3]*M2[3][0];
+    pDest->m[3][0] = M1[3][0]*M2[0][0] + M1[3][1]*M2[1][0] + M1[3][2]*M2[2][0] + M1[3][3]*M2[3][0];
 
-    pDest->m[0][1] = pMat1->m[0][0]*pMat2->m[0][1] + pMat1->m[0][1]*pMat2->m[1][1] + pMat1->m[0][2]*pMat2->m[2][1] + pMat1->m[0][3]*pMat2->m[3][1];
-    pDest->m[1][1] = pMat1->m[1][0]*pMat2->m[0][1] + pMat1->m[1][1]*pMat2->m[1][1] + pMat1->m[1][2]*pMat2->m[2][1] + pMat1->m[1][3]*pMat2->m[3][1];
-    pDest->m[2][1] = pMat1->m[2][0]*pMat2->m[0][1] + pMat1->m[2][1]*pMat2->m[1][1] + pMat1->m[2][2]*pMat2->m[2][1] + pMat1->m[2][3]*pMat2->m[3][1];
-    pDest->m[3][1] = pMat1->m[3][0]*pMat2->m[0][1] + pMat1->m[3][1]*pMat2->m[1][1] + pMat1->m[3][2]*pMat2->m[2][1] + pMat1->m[3][3]*pMat2->m[3][1];
+    pDest->m[0][1] = M1[0][0]*M2[0][1] + M1[0][1]*M2[1][1] + M1[0][2]*M2[2][1] + M1[0][3]*M2[3][1];
+    pDest->m[1][1] = M1[1][0]*M2[0][1] + M1[1][1]*M2[1][1] + M1[1][2]*M2[2][1] + M1[1][3]*M2[3][1];
+    pDest->m[2][1] = M1[2][0]*M2[0][1] + M1[2][1]*M2[1][1] + M1[2][2]*M2[2][1] + M1[2][3]*M2[3][1];
+    pDest->m[3][1] = M1[3][0]*M2[0][1] + M1[3][1]*M2[1][1] + M1[3][2]*M2[2][1] + M1[3][3]*M2[3][1];
 
-    pDest->m[0][2] = pMat1->m[0][0]*pMat2->m[0][2] + pMat1->m[0][1]*pMat2->m[1][2] + pMat1->m[0][2]*pMat2->m[2][2] + pMat1->m[0][3]*pMat2->m[3][2];
-    pDest->m[1][2] = pMat1->m[1][0]*pMat2->m[0][2] + pMat1->m[1][1]*pMat2->m[1][2] + pMat1->m[1][2]*pMat2->m[2][2] + pMat1->m[1][3]*pMat2->m[3][2];
-    pDest->m[2][2] = pMat1->m[2][0]*pMat2->m[0][2] + pMat1->m[2][1]*pMat2->m[1][2] + pMat1->m[2][2]*pMat2->m[2][2] + pMat1->m[2][3]*pMat2->m[3][2];
-    pDest->m[3][2] = pMat1->m[3][0]*pMat2->m[0][2] + pMat1->m[3][1]*pMat2->m[1][2] + pMat1->m[3][2]*pMat2->m[2][2] + pMat1->m[3][3]*pMat2->m[3][2];
+    pDest->m[0][2] = M1[0][0]*M2[0][2] + M1[0][1]*M2[1][2] + M1[0][2]*M2[2][2] + M1[0][3]*M2[3][2];
+    pDest->m[1][2] = M1[1][0]*M2[0][2] + M1[1][1]*M2[1][2] + M1[1][2]*M2[2][2] + M1[1][3]*M2[3][2];
+    pDest->m[2][2] = M1[2][0]*M2[0][2] + M1[2][1]*M2[1][2] + M1[2][2]*M2[2][2] + M1[2][3]*M2[3][2];
+    pDest->m[3][2] = M1[3][0]*M2[0][2] + M1[3][1]*M2[1][2] + M1[3][2]*M2[2][2] + M1[3][3]*M2[3][2];
 
-    pDest->m[0][3] = pMat1->m[0][0]*pMat2->m[0][3] + pMat1->m[0][1]*pMat2->m[1][3] + pMat1->m[0][2]*pMat2->m[2][3] + pMat1->m[0][3]*pMat2->m[3][3];
-    pDest->m[1][3] = pMat1->m[1][0]*pMat2->m[0][3] + pMat1->m[1][1]*pMat2->m[1][3] + pMat1->m[1][2]*pMat2->m[2][3] + pMat1->m[1][3]*pMat2->m[3][3];
-    pDest->m[2][3] = pMat1->m[2][0]*pMat2->m[0][3] + pMat1->m[2][1]*pMat2->m[1][3] + pMat1->m[2][2]*pMat2->m[2][3] + pMat1->m[2][3]*pMat2->m[3][3];
-    pDest->m[3][3] = pMat1->m[3][0]*pMat2->m[0][3] + pMat1->m[3][1]*pMat2->m[1][3] + pMat1->m[3][2]*pMat2->m[2][3] + pMat1->m[3][3]*pMat2->m[3][3];
+    pDest->m[0][3] = M1[0][0]*M2[0][3] + M1[0][1]*M2[1][3] + M1[0][2]*M2[2][3] + M1[0][3]*M2[3][3];
+    pDest->m[1][3] = M1[1][0]*M2[0][3] + M1[1][1]*M2[1][3] + M1[1][2]*M2[2][3] + M1[1][3]*M2[3][3];
+    pDest->m[2][3] = M1[2][0]*M2[0][3] + M1[2][1]*M2[1][3] + M1[2][2]*M2[2][3] + M1[2][3]*M2[3][3];
+    pDest->m[3][3] = M1[3][0]*M2[0][3] + M1[3][1]*M2[1][3] + M1[3][2]*M2[2][3] + M1[3][3]*M2[3][3];
 }
 
 inline void MatMul_InPlace(const LTMatrix *pMat1, LTMatrix *pMat2) 
@@ -509,7 +513,7 @@ inline void Mat_SetBasisVectors(LTMatrix *pMat, const LTVector *pRight, const LT
     pMat->SetBasisVectors(pRight, pUp, pForward);
 }
 
-inline bool LTMatrix::Inverse() 
+inline LTBOOL LTMatrix::Inverse() 
 {
     int iRow, i, j, iTemp, iTest;
     float mul, fTest, fLargest;
@@ -565,7 +569,7 @@ inline bool LTMatrix::Inverse()
         //They're all too small.. sorry.
         if (iLargest == -1)
         {
-            return false;
+            return LTFALSE;
         }
 
         //Swap the rows.
@@ -613,7 +617,7 @@ inline bool LTMatrix::Inverse()
         }
     }
 
-    return true;
+    return LTTRUE;
 }
 
 inline void LTMatrix::SetupReflectionMatrix(const LTVector& N, const LTVector& vOrigin)

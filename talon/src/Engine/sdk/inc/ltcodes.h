@@ -51,7 +51,13 @@ The engine calls ClientShell::OnObjectRemove() when the object goes away.
 The engine automatically sets the object's dimensions to its 
 animation dimensions.  This tells it not to.
 */
-	CF_DONTSETDIMS =      (1<<2)  ,
+CF_DONTSETDIMS =      (1<<2)  ,
+
+/*!
+While using node control, tells the engine you will not move
+any nodes outside the bounding radius.
+*/
+    CF_INSIDERADIUS =     (1<<3)  ,
 
 //! Hint to the renderer that this canvas is solid so it will be drawn first.
     CF_SOLIDCANVAS =      (1<<4)  ,
@@ -170,11 +176,48 @@ enum
 /*@}*/
 
 /*!
-Flags for sending messages.
+Flags to EndMessage2().
 */
 
 enum
 {
+/*!
+For new LithTech 3.0 multi-player (i.e. if _LT_SMP_ is defined)
+the MESSAGE_NAGGLE and MESSAGE_NAGGLEFAST flags are not used,
+since messages are automatically grouped.  These flags will be
+removed entirely in a future release.
+
+If you have compiled-out the new 3.0 multi-player (#undef _LT_SMP_)
+then these flags function as they did in the 2.x versions
+of the engine.  Setting either of these flags allows the engine
+to group messages that are smaller than 256 bytes into larger 
+chunks.  On the server these messages can then be automatically
+grouped with client update information that the server generates
+internally.  Messages that are greater than 255 bytes long will not
+be grouped, so you should make every effort to keep your message
+sizes as small as possible so that they can be grouped.
+
+It is highly recommended that you set MESSAGE_NAGGLE for 
+for all your messages.  Both MESSAGE_NAGGLE and MESSAGE_NAGGLEFAST
+function identically except that messages in the larger chunks
+will grouped according to which flag was used, which might result
+in some ordering anomalies on delivery.  Using one flag or the other
+(but not both) for all your messages will help ensure that
+messages are delivered in the order that they were sent.
+
+\note
+
+\em All naggled messages get discarded if a new world is
+loaded on the server to prevent old info from getting to 
+the client, but those cases still can pop up if you send
+unguaranteed messages.
+*/
+    MESSAGE_NAGGLE =      (1<<0)  ,
+
+//! Same effect as MESSAGE_NAGGLE (ignored in new 3.0 multi-player)
+//Please see the description of MESSAGE_NAGGLE.
+    MESSAGE_NAGGLEFAST =  (1<<1)  ,
+
 /*!  
 Send with guaranteed delivery.  Try to send as many network
 messages as possible without guaranteed delivery.  Initialization
@@ -188,8 +231,33 @@ the engine.  Rather than develop your own mechanisms to resend
 unguaranteed messages to ensure that they arrive at their destination
 in the proper order, you may want to strongly consider using 
 guaranteed messages.
+
+\note \em Don't change this value.  
 */
-    MESSAGE_GUARANTEED =  (1<<0)
+    MESSAGE_GUARANTEED =  (1<<7),  //! 
+
+/*!
+If the SendBandwidth console variable is set the engine limits its 
+outgoing bandwidth by dropping packets if it's sending too fast. 
+Guaranteed messages will still be guaranteed; they will just take longer 
+to arrive at their destination.
+
+If new LithTech 3.0 multi-player is not enabled (#undef _LT_SMP_)
+then the 2.x behavior is maintained.  This will force the packet to be
+sent anyway regardless of the value of the SendBandwidth console variable
+setting.
+
+With new LithTech 3.0 multi-player MESSAGE_NOTHROTTLE is used only
+for unguaranteed packets to keep them from being discarded immediately
+when the SendBandwidth limit has been exceeded.  However MESSAGE_NOTHROTTLE
+does not ensure that they won't be discarded anyway since if the 
+bandwidth target is being exceeded, all unguaranteed packets are subject
+to being discarded at the discretion of the unguaranteed message
+protocol handler the time that the final send packet is built.
+*/                                       
+    MESSAGE_NOTHROTTLE =  (1<<6),  //! 
+
+    MESSAGE_NAGGLEMASK =  0x3
 };
 
 
@@ -264,15 +332,6 @@ enum
 
 //! Fill in the \b HPOLY for this intersection (this slows it down a little).
     INTERSECT_HPOLY =         4   ,
-
-//! HACK FIX - Gee wouldn't it be nice to intersect objects if the from point
-//  is inside the object's dims.  If so, you need to set this flag since a bunch
-//  of game code counts on broken behavoir
-	CHECK_FROM_POINT_INSIDE_OBJECTS =	8,
-
-//! Try to hit model oriented bounding boxes if the model has them.
-//  (There is a performance hit for doing so)
-	INTERSECT_MODELOBBS =		16,
 };
 
 
