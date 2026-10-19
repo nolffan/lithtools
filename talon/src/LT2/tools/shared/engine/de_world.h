@@ -61,6 +61,9 @@
 
 	#define MAX_LM_GRID_SIZE			255
 
+	// talon: the LT2 SDK has no LTRGB; this is build 51's (ltbasetypes.h)
+	struct LTRGB			{ uint8 b, g, r, a; };
+
 	struct LTRGBColor
 	{
 		union

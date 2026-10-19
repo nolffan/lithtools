@@ -141,7 +141,7 @@ public:
 		uint32 GetTotalSampleCount() const { return m_vSize.x * m_vSize.y * m_vSize.z; }
 
 		// Offset and size, relative to the main world's light grid
-		TVector3<uint32> m_vOffset, m_vSize;
+		_CVector<uint32> m_vOffset, m_vSize;
 		// Sample data
 		uint8 *m_pSamples;
 

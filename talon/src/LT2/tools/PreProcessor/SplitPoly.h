@@ -203,9 +203,10 @@
 			//newPt = A + ( (B - A) * t );
 			for( k=0; k < 3; k++ )
 			{
-				if(pPlane->m_Normal[k] == (PReal)1)
+				// talon: the LT2 _CVector has no const operator[]
+				if(((PVector&)pPlane->m_Normal)[k] == (PReal)1)
 					newPt[k] = pPlane->m_Dist;
-				else if(pPlane->m_Normal[k] == (PReal)-1)
+				else if(((PVector&)pPlane->m_Normal)[k] == (PReal)-1)
 					newPt[k] = -pPlane->m_Dist;
 				else
 					newPt[k] = A[k] + ((B[k] - A[k]) * t);
