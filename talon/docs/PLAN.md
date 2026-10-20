@@ -74,6 +74,11 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       to 2001 (one texture a surface); matched. CPreMainWorld is laid out
       from its constructor (0x431060): 0xf8 bytes, with three virtuals
       for the DAT file not yet named.
+    - [~] gettextureinfo (0x413490..0x413a10): Build 69's brought back to
+      2001, with the LIGHTDEFS texture-light parser written from the
+      image. Matched but ParseLightDefs, near by the operand order of one
+      add in CMoArray::Insert2's inline (the declaration-count kind?
+      dummy declarations, local order and names don't move it).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),

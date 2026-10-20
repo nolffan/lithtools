@@ -6,52 +6,30 @@
 #define __GETTEXTUREINFO_H__
 
 
+	// talon: the 2001 texture light, from its constructor (inlined at
+	// 0x413535) and the LIGHTDEFS parser. The names are ours.
 	class TLightDef
 	{
 		public:
 
 					TLightDef()
 					{
-						m_bCentered			= false;
-						m_bDirectional		= false;
-						m_bLightModels		= false;
-						m_bClipLight		= true;
-						m_bApproxLinear		= true;
-						m_UOffset			= 0.0f;
+						m_bCentered			= FALSE;
+						m_bDirectional		= FALSE;
 						m_VOffset			= 0.0f;
-						m_ZOffset			= 1.0f;
-						m_Radius			= 0.0f;
-						m_BrightScale		= 1.0f;
-						m_FOVDegrees		= 90.0f;
+						m_UOffset			= 0.0f;
+						m_ZOffset			= 0.0f;
+						m_Radius			= 100.0f;
 
-						m_Coefficients.Init(1, 0, 19);
 						m_InnerColor.Init(255, 255, 255);
+						m_OuterColor.Init(0, 0, 0);
 					}
 
-			//determines if this light should only be created at the center of
-			//the polygon
-			bool	m_bCentered;
+			//only created at the center of the polygon
+			BOOL	m_bCentered;
 
-			//determines if this texture light is an omni or directional light
-			bool	m_bDirectional;
-
-			//specifies the brightscale of this light
-			PReal	m_BrightScale;
-
-			//determine if the light should be clipped to geometry
-			bool	m_bClipLight;
-
-			//determines if the light should be added to the list of objects
-			//to light models
-			bool	m_bLightModels;
-
-			//determines if the coefficients should be used, or the default
-			//ones should be used to approximate linear lighting based upon
-			//the radius
-			bool	m_bApproxLinear;
-			
-			//the field of view if it is a directional light, in degrees
-			PReal	m_FOVDegrees;
+			//a directional light, not an omni
+			BOOL	m_bDirectional;
 
 			//UV coordinates of lights.
 			PReal	m_UOffset;
@@ -60,15 +38,10 @@
 			//the amount to extrude texture light along normal of polygon
 			PReal	m_ZOffset;
 
-			//the radius of the light. If the radius is 0, the coefficients should
-			//be used insteal
 			PReal	m_Radius;
 
-			//the ABC coefficients of the texture light
-			PVector	m_Coefficients;
-
-			//the inner color of the light
 			PVector	m_InnerColor;
+			PVector	m_OuterColor;
 	};
 
 

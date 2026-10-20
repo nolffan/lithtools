@@ -336,6 +336,9 @@ Processor.exe (AvP2)	sub_4133d0
 Processor.exe (AvP2)	sub_4133e0
 Processor.exe (AvP2)	sub_413430
 Processor.exe (AvP2)	sub_413470
+Processor.exe (AvP2)	sub_413490
+Processor.exe (AvP2)	sub_413780
+Processor.exe (AvP2)	sub_4139c0
 Processor.exe (AvP2)	sub_414ab0
 Processor.exe (AvP2)	sub_414ae0
 Processor.exe (AvP2)	sub_414c50

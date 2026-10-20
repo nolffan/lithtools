@@ -393,7 +393,7 @@
     },
     "Processor.exe (AvP2)": {
       "attempted": 0,
-      "bytes_identical": 66218,
+      "bytes_identical": 66925,
       "bytes_total": 339757,
       "crt": 1916,
       "crt_bytes": 115002,
@@ -402,20 +402,20 @@
       "encrypted": 0,
       "encrypted_bytes": 0,
       "funcs": 1535,
-      "identical": 431,
+      "identical": 434,
       "kind": "image",
       "middleware": 0,
       "middleware_bytes": 0,
-      "near": 28,
+      "near": 29,
       "small": 27,
       "started": false,
-      "todo": 1049,
+      "todo": 1045,
       "unlinked": 0,
       "unlinked_bytes": 0,
       "unplaced": 116,
       "unplaced_bytes": 24379,
-      "unwritten": 1049,
-      "unwritten_bytes": 257174
+      "unwritten": 1045,
+      "unwritten_bytes": 255800
     },
     "Processor.exe (NOLF)": {
       "attempted": 0,
@@ -446,16 +446,16 @@
   },
   "total": {
     "attempted": 0,
-    "bytes_identical": 85325,
+    "bytes_identical": 86032,
     "bytes_total": 2256181,
     "funcs": 16959,
-    "identical": 536,
-    "near": 28,
+    "identical": 539,
+    "near": 29,
     "small": 108,
-    "todo": 16287,
+    "todo": 16283,
     "unplaced": 116,
     "unplaced_bytes": 24379,
-    "unwritten": 16287,
-    "unwritten_bytes": 2153705
+    "unwritten": 16283,
+    "unwritten_bytes": 2152331
   }
 }
