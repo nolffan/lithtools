@@ -304,6 +304,12 @@ Processor.exe (AvP2)	sub_411c90
 Processor.exe (AvP2)	sub_411cb0
 Processor.exe (AvP2)	sub_411f00
 Processor.exe (AvP2)	sub_411f30
+Processor.exe (AvP2)	sub_411fe0
+Processor.exe (AvP2)	sub_412020
+Processor.exe (AvP2)	sub_4120a0
+Processor.exe (AvP2)	sub_4120f0
+Processor.exe (AvP2)	sub_412160
+Processor.exe (AvP2)	sub_412180
 Processor.exe (AvP2)	sub_4121c0
 Processor.exe (AvP2)	sub_4122b0
 Processor.exe (AvP2)	sub_4122f0

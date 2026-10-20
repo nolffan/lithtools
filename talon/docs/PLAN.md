@@ -66,6 +66,10 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     - [x] FindWorldModel (0x411670..0x411f60): the 2001 version (world
       models from objects, surface flags from bool properties), written
       from the image; matched.
+    - [x] genericprop_setup (0x411f60..0x4121c0): Build 69's brought back
+      to 2001; matched but its static initializer (0x411f60..0x411fe0),
+      which constructs an unused 12-byte global (0x484e04) from a header
+      not yet found.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
