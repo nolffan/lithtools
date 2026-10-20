@@ -12,13 +12,12 @@
 #include "conparse.h"
 #include "genericprop_setup.h"
 #include "ltquatbase.h"
+#include "parse_world_info.h"
 
 // talon: the 2001 lightmap maker (0x415770..0x41e020), written from the
 // image with Build 69's as a guide (Build 69 rewrote it: no lighting BSP or
 // light groups of this kind here). The names of what Build 69 lacks are ours.
 
-// Defined in parse_world_info (0x425940), not written yet.
-LTBOOL ParseAmbientLight(char *pStr, LTVector *pAmbient);
 
 //the name to use for the main base lightmap animation (every world has this one)
 #define BASE_LIGHTANIM_NAME "LightAnim_BASE"

@@ -229,6 +229,10 @@ SOURCE=.\Node.cpp
 
 SOURCE=..\shared\world\node_ops.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\parse_world_info.cpp
+# End Source File
 # End Group
 # End Target
 # End Project

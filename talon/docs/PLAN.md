@@ -116,6 +116,9 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     - [x] Node (0x425490..0x425520): Build 69's plus SetParentNodes; matched.
     - [x] node_ops (0x425520..0x425940): Build 69's, with no_DestroyNode
       taking the node off the region's lists itself; matched.
+    - [x] parse_world_info (0x425940..0x425b10): Build 69's with
+      LightTableRes and PBlockSize; matched. The physics module starts at
+      0x425b10.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
