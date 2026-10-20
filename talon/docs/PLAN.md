@@ -91,6 +91,10 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       virtual, by reference, 0x44e8e0).
     - [x] lightmap_compress (0x414fb0..0x415200): the 2001 RLE (32-bit
       pixels, shadow-map runs), written from the image; matched.
+    - [~] lightmap_planes (0x415200..0x415770, the names ours): the six
+      lightmap planes, FindLMPlane and GetLMPlaneVectors, written from the
+      image. Near: the static initializer, which builds each PVector
+      argument in a temporary and copies it (ours constructs in place).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),

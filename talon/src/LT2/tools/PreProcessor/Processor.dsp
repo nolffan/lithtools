@@ -151,6 +151,10 @@ SOURCE=..\shared\engine\lightmap_compress.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\lightmap_planes.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\world_tree.cpp
 # End Source File
 # Begin Source File
