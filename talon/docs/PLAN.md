@@ -119,6 +119,24 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     - [x] parse_world_info (0x425940..0x425b10): Build 69's with
       LightTableRes and PBlockSize; matched. The physics module starts at
       0x425b10.
+    - [~] PreBrush (0x42b8e0..0x42c9c0; the name ours: MakeTempBrush and
+      its plane snapping), pregeometry, PreLeaf, PreLightMap, PrePoly
+      (..0x42f580): written from the image and Build 69's; mostly matched,
+      nears are MakeTempBrush, CalcSnappedPlane, CPreLeaf's ctor/dtor,
+      RemoveCollinearVertices, MakePortal.
+    - [~] PreWorld (0x430a40..0x43e5a0): Build 69's brought back to 2001
+      (the DAT format, light anims, AI volumes, sub-BSPs, physics blocks),
+      written in four parts in parallel and folded together. Mostly
+      matched; near: CPreWorld::LoadFile and SaveFile (structure right),
+      CPreMainWorld::LoadFile, SaveLightAnims, SetupPolyArrays,
+      TermGeometry, InitPolyVertexIndices, MakePolyEdges and a few more.
+      Not written: CPreSubBsp's constructor (0x433af0).
+    - [~] ProblemBrushes (0x43e5a0..0x43e700, the name ours) and
+      Processing (0x43e700..0x441cb0): matched but DoProcessing (the
+      2001 CEditRegion is 0x128 bytes; ours still has the prefab
+      manager), MakeWorldPVS, AddWorldModels, SaveDATFile; not written:
+      GenerateSurfaces (needs the 2001 CEditPoly).
+    - [ ] The MFC application (0x42f580..0x430a40).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),

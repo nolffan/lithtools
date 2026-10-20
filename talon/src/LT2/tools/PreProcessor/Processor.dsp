@@ -233,6 +233,38 @@ SOURCE=..\shared\world\node_ops.cpp
 
 SOURCE=..\shared\engine\parse_world_info.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\PreBrush.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\pregeometry.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\PreLeaf.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\PreLightMap.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\PrePoly.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\PreWorld.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ProblemBrushes.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Processing.cpp
+# End Source File
 # End Group
 # End Target
 # End Project

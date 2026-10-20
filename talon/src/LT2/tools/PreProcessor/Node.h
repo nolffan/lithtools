@@ -37,9 +37,13 @@
 			// Sets m_pParentNode down the tree (0x4254f0, the name is ours).
 			void			SetParentNodes(CNode *pParent);
 
-			uint32			m_Index;
-			uint32			m_Unknown_0c[3];
-			uint16			m_Unknown_18;
+			// talon, W3: the sphere around the subtree's polies
+			// (CPreWorld::CalcNodeBoundingBoxes; the names are ours).
+			PVector			m_vCenter;
+			PReal			m_fRadius;
+
+			// Index into the world's nodes (saving).
+			uint16			m_Index;
 			uint16			m_Unknown_1a;
 
 			const CPrePlane	*m_pPlane;

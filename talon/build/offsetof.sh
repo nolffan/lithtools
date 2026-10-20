@@ -30,7 +30,7 @@ probe=_offsetof_probe_$$
     done
 } > "$dir/$probe.cpp"
 docker run --rm --init -u "$(id -u):$(id -g)" -e HOME=/tmp/home -v "$PWD:/repo" -w /repo cjacksrc-build \
-    bash -c "cd $dir && WINEPREFIX=/repo/.wine/drives WINEPATH='t:\\msvc-6.00-8966\\BIN' \
+    bash -c "cd $dir && WINEPREFIX=${PFX:-/repo/.wine/drives} WINEPATH='t:\\msvc-6.00-8966\\BIN' \
         INCLUDE='t:\\msvc-6.00-8966\\INCLUDE;t:\\msvc-6.00-8966\\MFC\\INCLUDE' \
         wine /repo/toolchains/msvc-6.00-8966/BIN/cl.exe /nologo /MT /GX /O2 /I . /I ..\\\\shared\\\\engine \
         /I ..\\\\shared\\\\world /I win /I ..\\\\DEdit\\\\draw /I ..\\\\..\\\\sdk\\\\inc \

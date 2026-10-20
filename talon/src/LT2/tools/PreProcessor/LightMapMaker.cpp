@@ -13,6 +13,7 @@
 #include "genericprop_setup.h"
 #include "ltquatbase.h"
 #include "parse_world_info.h"
+#include "pregeometry.h"
 
 // talon: the 2001 lightmap maker (0x415770..0x41e020), written from the
 // image with Build 69's as a guide (Build 69 rewrote it: no lighting BSP or
@@ -1075,11 +1076,6 @@ static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly)
 // How far a texture light is tiled across a poly, in each direction.
 #define TEXTURE_LIGHT_ITERATIONS	100
 
-// talon: in the PreWorld module (not written yet); the names are ours.
-// val rounded down to a multiple of mod (0x42cea0).
-PReal FloorToMultiple(PReal val, PReal mod);
-// Whether vPt (on its plane) is inside pPoly (0x42cee0).
-BOOL IsPtOverPoly(CPrePoly *pPoly, PVector &vPt);
 
 static BOOL CalcVertNormals(CPreWorld *pWorld, CMoArray<PVector> &normals);
 
@@ -1423,8 +1419,8 @@ void CLightMapMaker::GetTextureLights()
 						fU = pSurface->m_TextureP.Dot(vMin - pSurface->m_TextureO);
 						fV = pSurface->m_TextureQ.Dot(vMin - pSurface->m_TextureO);
 
-						fU = FloorToMultiple(fU, (PReal)pInfo->m_Width) + pDef->m_UOffset;
-						fV = FloorToMultiple(fV, (PReal)pInfo->m_Height) + pDef->m_VOffset;
+						fU = SnapNumberToGrid(fU, (PReal)pInfo->m_Width) + pDef->m_UOffset;
+						fV = SnapNumberToGrid(fV, (PReal)pInfo->m_Height) + pDef->m_VOffset;
 
 						vRowStart = pSurface->InverseP * fU + pSurface->m_TextureO + pSurface->InverseQ * fV;
 						PVector vStepU = pSurface->InverseP * (PReal)pInfo->m_Width;
@@ -1442,7 +1438,7 @@ void CLightMapMaker::GetTextureLights()
 								t = (pPlane->m_Dist - VEC_DOT(vPos, pPlane->m_Normal)) / VEC_DOT(vNormal, pPlane->m_Normal);
 								vTest = vPos + vNormal * t;
 
-								if(IsPtOverPoly(pPoly, vTest))
+								if(InsideConvex(pPoly, vTest))
 								{
 									AddLightDef(pDef, vTest + pPoly->Normal() * pDef->m_ZOffset, pPoly);
 									bHit = TRUE;

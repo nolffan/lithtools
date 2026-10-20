@@ -38,9 +38,9 @@
 		// These should be set by the caller.
 		char	**m_Argv;
 		uint32	m_Argc;
-		char	m_InputFile[MAX_PATH]; // Input filename (like worlds\test1.ed).
-		uint8	m_Unknown_120[0x1ac - 0x120];
-		char	m_ProjectDir[0x274 - 0x1ac];
+		char	m_InputFile[200];	// Input filename (like worlds\test1, without .ed).
+		char	m_OutputFile[200];	// talon: the DAT file (0x441470).
+		char	m_ProjectDir[200];
 
 		BOOL	m_bTextureFlags;
 		BOOL	m_bSelectProblemBrushes;
@@ -73,13 +73,25 @@
 		BOOL	m_bNoSnapNoCSG;			// NoSnap and hull maker brushes take no part in CSG
 		BOOL	m_bBalanceBSPs;			// cleared by -NoBalanceBSPs
 
-		// The processor will fill these in.
+		// The processor will fill these in (talon: the 2001 set, in the
+		// order ShowStatusText (0x441860) and GetWorldStats (0x4406d0) use).
 		uint32	m_nInputPolies, m_nInputVertices, m_nInputObjects;
+		uint32	m_nPoliesRemoved;		// unseen polies the PVS removed
 		uint32	m_nOutputPolies, m_nOutputVertices, m_TreeDepth;
+		uint32	m_VisListMemory;
+		uint32	m_nLeaves, m_nVisibleLeaves;
 		uint32	m_LMDataSize;
+		PReal	m_LMCompressionRatio;
+		uint32	m_LightTableSize;		// bytes
 	};
 
 	extern CProcessorGlobs *g_pGlobs;
+
+	// talon: ProblemBrushes.cpp (0x43e5a0; the names are ours): the brushes
+	// the brush checks found, for SelectProblemBrushes and
+	// SelectOutOfBoundsBrushes.
+	extern CMoArray<CEditBrush*>	g_ProblemBrushes;
+	extern CMoArray<CEditBrush*>	g_OutOfBoundsBrushes;
 
 
 	// ------------------------------------------------------ //
@@ -94,8 +106,8 @@
 		eST_Normal		//used for displaying what the processor is doing
 	};
 
-	// Initializes the global structure
-	void InitProcessOptions(CProcessorGlobs *pGlobs, const char* pszInputFile);
+	// Initializes the global structure from its m_Argv (0x43e7e0).
+	void InitProcessOptions(CProcessorGlobs *pGlobs);
 
 	// Do all the processing.
 	void DoProcessing(CProcessorGlobs *pGlobs);
@@ -115,6 +127,20 @@
 	// Functions the system-dependent stuff implements.
 	// ------------------------------------------------------ //
 
+	// talon: shows a status line in the window (0x430220, the name is ours).
+	void	DrawStatusTextToScreen(const char *pMsg);
+
+	// talon: the window's progress stages (0x4302a0, 0x4303a0, 0x4304f0;
+	// the names are ours).
+	#define PROGRESS_BSP			0
+	#define PROGRESS_HULLS			2
+	#define PROGRESS_PVS			3
+	#define PROGRESS_MERGEBRUSHES	4
+	void	StartProgressStage(int iStage);
+	void	EndProgressStage(int iStage, BOOL bUnknown);
+	// Stage 3 becomes "Full Optimization".
+	void	SetFullOptimization();
+
 	// Functions for the back end user interface see IPackerOutput for more details
 	void	ActivateTask(const char* pszTaskName);
 	void	ActivateSubTask(const char* pszSubTaskName);
@@ -130,11 +156,11 @@
 	uint32 AskQuestion(const char *pQuestion, uint32 type);
 
 	// Does a union on all brush geometry and converts to world geometry.
-	bool MergeBrushes(
+	BOOL MergeBrushes(
 		GenList<CEditBrush*> &brushes,
 		CPreWorld *pWorld);
 
 	// Make a BSP.
-	bool MakeBsp(CPreWorld *pWorld);
+	BOOL MakeBsp(CPreWorld *pWorld, BOOL bMinimizePolies, BOOL bHullMakers, BOOL bUseOriginalPolies);
 
 #endif  // __PROCESSING_H__

@@ -59,7 +59,7 @@
 	void BuildFrameOfReference(PVector *pVec, PVector *pUpRef, PVector *pRight, PVector *pUp, PVector *pForward);
 
 	PReal SnapNumberToGrid(PReal num, PReal gridSize);
-	bool InsideConvex(CPrePoly *pPoly, PVector &pt);
+	BOOL InsideConvex(CPrePoly *pPoly, PVector &pt);
 
 
 #endif  // __PREGEOMETRY_H__

@@ -32,6 +32,9 @@
 
 						CPreLightMap();
 
+		// talon: 0x42d870.
+		void			Term();
+
 		// TRUE if every pixel is black (0x42d8b0).
 		BOOL			AllBlack();
 
@@ -39,6 +42,10 @@
 		// (0x42d930) or as a shadow map (0x42da60). The names are ours.
 		BOOL			CompressLightMap(uint32 width, uint32 height, uint32 *pData);
 		BOOL			CompressShadowMap(uint32 width, uint32 height, uint32 *pData);
+
+		// talon: back to pixels (0x42da40) or to a shadow map's bytes (0x42db60).
+		BOOL			Decompress(uint32 *pData);
+		BOOL			DecompressShadowMap(uint8 *pData);
 
 	public:
 

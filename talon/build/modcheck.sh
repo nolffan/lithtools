@@ -17,7 +17,7 @@ img=$(python3 -I -c "import sys; sys.path.insert(0,'progress'); import targets; 
 dir=$(python3 -I -c "import sys,os; sys.path.insert(0,'progress'); import targets; print(os.path.dirname(next(t['built'] for t in targets.TARGETS if t['stem']=='$tgt')))")
 O=$dir/$obj.obj
 docker run --rm --init -u "$(id -u):$(id -g)" -e HOME=/tmp/home -v "$PWD:/repo" -w /repo cjacksrc-build \
-    make -s -f build/build.mk WITH_PROCESSOR=1 "$O" 2>&1 | grep -E "error" | head -20
+    make -s -f build/build.mk WITH_PROCESSOR=1 ${PFX:+PFX=$PFX} "$O" 2>&1 | grep -E "error" | head -20
 [ -f "$O" ] || exit 1
 out=$(python3 -I tools/exematch.py "$img" "$O" 2>&1)
 echo "$out" | tail -1

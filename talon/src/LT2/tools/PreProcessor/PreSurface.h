@@ -29,6 +29,8 @@
 		public:
 
 							CPreSurface();
+							// talon (W2): out of line in 2001 (0x438a50, in PreWorld.cpp).
+							~CPreSurface();
 
 			BOOL			ShouldLightmap() const;
 			void			SetupLMVectors();
@@ -44,7 +46,8 @@
 
 			// The brush it came from (hull making reports it as a problem brush).
 			CEditBrush		*m_pBrush;
-			uint32			m_Unknown_0c[2];
+			// List of polies on this surface (BuildSurfacePolyLists).
+			CMultiLinkList<CPrePoly*> m_PolyList;
 
 			// talon: the texture's origin and vectors (the texture lights use
 			// them; the names are ours).
@@ -59,7 +62,8 @@
 			PVector			InverseP, InverseQ;
 
 			PVector			m_TextureP, m_TextureQ;
-			uint32			m_Unknown_68[7];
+			PVector			m_InverseTextureP, m_InverseTextureQ;
+			uint32			m_Unknown_80;
 
 			const char		*m_pTextureName;
 

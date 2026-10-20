@@ -110,6 +110,30 @@
 	void CalcPortalPlane(CPrePortal *pPortal);
 
 
+	// talon (W2): what CPreLeaf::m_Unknown_58 holds (CPreWorld::LoadFile
+	// reads each as two uint16s; the names are ours).
+	struct LeafPolyRef
+	{
+		uint16		m_Unknown_00;
+		uint16		m_Unknown_02;
+	};
+
+	// talon (W2): what CPreLeaf::m_Unknown_6c holds: 0x18 bytes, a byte array
+	// and a word after it (CPreWorld::LoadFile; the constructor is out of
+	// line at 0x43afb0, in PreWorld.cpp). The names are ours.
+	class CPreLeafList
+	{
+		public:
+
+							CPreLeafList();
+
+			// talon: so the parts that used m_Unknown_6c[i]->GetSize() compile.
+			uint32			GetSize() const		{ return m_Data.GetSize(); }
+
+			CMoArray<uint8>	m_Data;
+			uint32			m_Unknown_14;
+	};
+
 	class CPreLeaf
 	{
 		public:
@@ -122,8 +146,11 @@
 			CMoArray<CPrePortal*>	m_Unknown_00;
 			CMoArray<CPrePortal*>	m_Portals;
 			CLinkedList<CPrePoly*>	m_Polies;
-			CMoArray<void*>			m_Unknown_58;
-			CMoArray<void*>			m_Unknown_6c;
+			// talon (W2): two uint16s each (CPreWorld::LoadFile).
+			CMoArray<LeafPolyRef>	m_Unknown_58;
+			// talon: arrays freed with the leaf (0x42d1c0); what they hold is
+			// not known yet.
+			CMoArray<CPreLeafList*>	m_Unknown_6c;
 			uint16					m_Unknown_80;
 			uint16					m_Unknown_82;
 
@@ -136,7 +163,11 @@
 			// Index into the world's m_Leaves.
 			uint16					m_Index;
 
-			uint32					m_Unknown_8c[5];
+			// talon, W3: the sphere around its portals (CPreWorld::CalcLeafSpheres;
+			// the names are ours).
+			PVector					m_vCenter;
+			PReal					m_fRadius;
+			uint32					m_Unknown_9c;
 			uint32					m_Unknown_a0;
 	};
 

@@ -179,6 +179,83 @@ private:
 };
 
 
+// talon (W2): a poly's light animation: the animation's index in the main
+// world's m_LightAnims and the poly's in its m_Polies (the names are ours).
+struct PolyAnimRef
+{
+	uint16		m_iAnim;
+	uint16		m_iRef;
+};
+
+// talon (W2): the physics blocks, a grid of boxes over the world (made
+// by the physics module, 0x425d20; the names are ours).
+struct PBlock
+{
+	void		*m_pData;		// W3: a little BSP, m_nNodes SaveNodes.
+	uint16		m_nNodes;
+	uint16		m_iRoot;
+};
+
+struct PBlockTable
+{
+	PVector		m_vMin;
+	PVector		m_Unknown_0c;
+	uint32		m_nBlocks[3];
+	uint32		m_nBlocksXY;
+	uint32		m_nBlocksTotal;
+	PBlock		*m_pBlocks;
+
+				PBlockTable()	{Clear();}
+
+	// talon, W1: zeroes it (0x433b80; the name is ours).
+	void		Clear();
+};
+
+
+
+// talon (W2): what CPreWorld::m_PolyArray holds in 2001: 0x6c bytes with
+// polies and nodes of its own (constructor 0x433af0; LoadSubBsp reads it).
+// The names are ours. (W3: laid out from LoadSubBsp and SaveSubBsp; a BSP
+// saved after the world's own, with its own physics blocks.)
+class CPreSubBsp
+{
+public:
+
+							CPreSubBsp();
+
+	uint8					m_Unknown_00[4];
+	uint32					m_Unknown_04;
+	CMoArray<CPrePoly*>		m_Polies;
+	NODEREF					m_RootNode;
+	CNodeList				m_Nodes;
+	uint32					m_Unknown_2c;
+	PVector					m_Unknown_30;
+	PBlockTable				m_PBlocks;
+};
+
+
+// talon, W3: what CPreWorld::MakePolyEdges fills (the names are ours).
+struct PolyEdges
+{
+					PolyEdges()	{m_pEdges = NULL;}
+					// Inline in SaveFile; out of line at 0x437f80 (SaveFile's unwind).
+					~PolyEdges()
+					{
+						uint32 i;
+
+						if(m_pEdges)
+						{
+							for(i=0; i < m_nPolies; i++)
+								delete m_pEdges[i];
+
+							delete m_pEdges;
+						}
+					}
+
+	uint32			m_nPolies;
+	uint16			**m_pEdges;		// Per poly, an edge index per vertex.
+};
+
 class CPreWorld
 {
 public:
@@ -207,16 +284,38 @@ public:
 	void				RemoveUnusedGeometry();
 	void				RemoveUnusedPlanes();
 	void				RemoveUnusedSurfaces();
-	bool				RemoveUnusedPoints();
+	BOOL				RemoveUnusedPoints();
 
 	uint32				TagUsedSurfaces();
-	void				SetupIndexMap( CMoByteArray &pointsUsed, CMoDWordArray &indexMap, uint32 &nPointsUsed );
+
+	// talon (W2): helpers of SaveFile (0x4361f0, 0x436400; the names are ours).
+	BOOL				GetPolyLightAnims(CMoArray< CMoArray<PolyAnimRef> > &polyAnims, uint32 &nRefs);
+	void				GetUniqueSurfaces(CMoArray<CPreSurface*> &surfaces, CMoArray<uint32> &surfaceMap);
+	void				SetupIndexMap( CMoByteArray &pointsUsed, CMoWordArray &indexMap, uint32 &nPointsUsed );
 
 	CPrePlane*			FindOrAddPlane(PVector normal, PReal dist);
 	CPrePlane*			AddPlane(PVector &normal, PReal dist);
 
 	void				SetPolyIndices();
 	void				SetPlaneIndices();
+
+	// talon, W1 (called by CPreMainWorld's): a world model's part of the DAT
+	// file (0x434630, 0x436ad0; the names are ours). LoadFile returns 0 if
+	// it loaded.
+	uint32				LoadFile(CAbstractIO &file);
+
+	// talon (W2): reads one of m_PolyArray's (0x437fc0, thiscall; the name
+	// is ours). polies is LoadFile's poly-by-index array.
+	BOOL				LoadSubBsp(CAbstractIO &file, CMoArray<CPrePoly*> &polies, CPreSubBsp *pBsp);
+	BOOL				SaveFile(CAbstractIO &file);
+
+	// talon, W3: m_Leaves[i]->m_Index = i (0x4394d0; the name is ours).
+	void				SetLeafIndices();
+
+	// talon, W3: each poly's edges as indices into the world's edges, each
+	// edge once; returns the number of edges (0x439050; the name is ours).
+	uint32				MakePolyEdges(PolyEdges &edges);
+	uint16				FindEdge(CMoArray<struct EdgeHashEntry*> &edgeHash, uint32 iPt1, uint32 iPt2);	// 0x4392a0
 	
 	void				GetTextureNames( CMoArray<const char*> &texNames );
 	uint16				FindTextureName( const char *pName, CMoArray<const char*> &texNames );
@@ -229,12 +328,20 @@ public:
 	void				UpdateBoundingBox();
 	// talon: 0x43a290, the bounding boxes of the BSP nodes from the root
 	// down (name provisional).
+	// talon, W3: the box under pNode; sets the nodes' spheres (0x439e60).
+	BOOL				CalcNodeBoundingBoxes_R(NODEREF pNode, PVector &vMin, PVector &vMax);
 	void				CalcNodeBoundingBoxes();
 	// talon: 0x43ab10 and 0x43a2b0 (names provisional).
 	uint32				NumNodes();
 	void				TermLeaves();
 	
 	int					GetTreeDepth();
+
+	// talon, P: counts for the processor's stats (0x43aad0, 0x43ab60,
+	// 0x43abc0; the names are ours).
+	uint32				NumDetailNodes();
+	uint32				CalcVisListMemory();
+	uint32				NumVisibleLeaves();
 
 	void				RemoveAllNodes();
 
@@ -258,6 +365,22 @@ public:
 public:
 
 	uint32				NumPolyVerts();
+
+	// talon, W3: counts for the DAT file (0x43aba0, 0x43abf0; the names
+	// are ours).
+	uint32				CalcVisListCount();
+	uint32				NumLeafPolies();
+
+	// talon, W3: the box of the polies on pUser's surface (0x43ac10), and
+	// each leaf's sphere around its portals (0x43ad20). The names are ours.
+	void				GetSurfaceBoundingBox(struct PreSurfaceUser *pUser, PVector *pMin, PVector *pMax);
+	void				CalcLeafSpheres();
+
+	// talon, W3: the rest of the DAT file's (0x4384a0, 0x4386d0, 0x438830;
+	// the names are ours).
+	void				SaveSubBsp(CAbstractIO &file, CPreSubBsp *pBsp);
+	BOOL				LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable);
+	void				SavePBlockTable(CAbstractIO &file, PBlockTable *pTable);
 
 	void				FindTextureOrigins();
 
@@ -285,7 +408,8 @@ public:
 	// This list is setup in BrushToWorld then emptied after BSP generation.
 	CGLinkedList<CPrePoly*>		m_OriginalBrushPolies;
 
-	uint32						m_Unknown_50[12];
+	// talon: the physics blocks (W2).
+	PBlockTable					m_PBlocks;
 
 	CGLinkedList<CPrePlane*>	m_Planes;
 	CGLinkedList<CPreSurface*>	m_Surfaces;
@@ -319,7 +443,8 @@ public:
 	uint32						m_WorldInfoFlags;
 
 	// Extra poly array for indexed look-ups
-	CMoArray<CPrePoly*>			m_PolyArray;
+	// talon (W2): sub-BSPs in 2001 (LoadFile news them).
+	CMoArray<CPreSubBsp*>		m_PolyArray;
 };
 
 
@@ -356,10 +481,21 @@ public:
 	// talon: the light animation named pName, or NULL (0x433620).
 	CPreLightAnim*			FindLightAnim(const char *pName);
 
+	// talon, W1: whether the light animations fit the world (0x432e90).
+	BOOL					CheckLightAnims();
+
+	// talon, W1: removes the AIVolumes' and MusicVolumes' world models
+	// (0x433000).
+	void					RemoveAIVolumes();
+
+	// talon, W1: the lightmaps' size over their compressed size (0x433520).
+	PReal					CalcLMCompressionRatio();
+
 	// Get the physics and visibility BSPs. Just searches for a CPreWorld with
 	// WIF_PHYSICSBSP or WIF_VISBSP.
 	CPreWorld*				GetPhysicsBSP();
 	const CPreWorld*		GetPhysicsBSP() const;
+	CPreWorld*				GetVisBSP();							// talon, W1: 0x433810
 
 	//goes through all world models, and removes all unused geometry
 	//associated with the world model. This will also update the bounding
@@ -388,11 +524,19 @@ public:
 	// talon: the lightmap grid size (the lighting reads it through this).
 	PReal					GetLMGridSize() const	{return m_LMGridSize;}
 
-	// talon: the DAT file's (0x431470, 0x431c00, 0x431820). What they are
-	// is not worked out yet; the names are placeholders.
-	virtual BOOL			Unknown_00(ILTStream *pStream, BOOL bUnknown);
-	virtual BOOL			Unknown_04(ILTStream *pStream);
-	virtual BOOL			Unknown_08(ILTStream *pStream);
+	// talon, W1: the DAT file (0x431470, 0x431c00, 0x431820; the names are
+	// ours). LoadFile returns 0 if it loaded, 1 for a wrong version, 2 if
+	// it is corrupt (or a world model's error). SaveObjectsOnly copies
+	// inFile, a DAT file, to outFile with these objects.
+	virtual uint32			LoadFile(CAbstractIO &file, BOOL bLoadObjects);
+	virtual BOOL			SaveFile(CAbstractIO &file);
+	virtual BOOL			SaveObjectsOnly(CAbstractIO &outFile, CAbstractIO &inFile);
+
+	// talon, W1: the light animations' part of it (0x432380, 0x432a40), and
+	// the vis BSP's leaves' polies after loading (0x433880).
+	BOOL					LoadLightAnims(CAbstractIO &file);
+	BOOL					SaveLightAnims(CAbstractIO &file);
+	BOOL					SetupLeafPolies();
 
 public:
 
@@ -428,7 +572,16 @@ void BuildSurfacePolyLists(CGLinkedList<CPreSurface*> &surfaces, CGLinkedList<CP
 void TermSurfacePolyLists(CGLinkedList<CPreSurface*> &surfaces);
 
 //utility functions for conversion between nodes and indices
-int NodeToIndex(NODEREF node);
+// talon, W3: inline in 2001.
+inline uint32 NodeToIndex(NODEREF node)
+{
+	if(node == NODE_IN)
+		return (uint32)-1;
+	else if(node == NODE_OUT)
+		return (uint32)-2;
+	else
+		return node->m_Index;
+}
 
 
 // ------------------------------------------------------------------------ //

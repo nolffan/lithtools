@@ -71,6 +71,11 @@ public:
 	RegionLoadStatus		LoadTBW( const char* filename, CEditProjectMgr* pProject, uint32& nVersion );
 	void					SaveTBW( CAbstractIO& OutFile );
 
+	// talon: the 2001 ED file, read from and written to a stream (0x410570,
+	// 0x410af0; the names and the flags' meanings are ours).
+	RegionLoadStatus		LoadFile( CAbstractIO& InFile, uint32& nVersion, BOOL bUnknown );
+	void					SaveFile( CAbstractIO& OutFile, BOOL bUnknown );
+
 	void					SaveHeaderLTA(CLTAFile* pFile, uint32 level, DWORD versionCode );
 	BOOL					RecurseAndLoadNodeLTA( CLTANode* pParseNode, CWorldNode *pNode, CEditProjectMgr* pProject );
 	void					RecurseAndSaveNodeLTA( CLTAFile* pFile, CWorldNode *pNode, uint32 level );
