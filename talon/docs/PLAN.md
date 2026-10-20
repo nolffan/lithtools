@@ -103,7 +103,12 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       25 near (inline budget, operand order, registers and stack slots),
       listed by `build/modcheck.sh Processor-avp2 LightMapMaker 0x415770
       0x41e070`. Written in five parts in parallel, then folded together.
-    - [ ] ltquatbase (0x423dd0..0x4240e0) and mathlt_impl (0x424210..).
+    - [x] ltquatbase (0x423dd0..0x4240e0): the SDK's source as it is;
+      matched.
+    - [~] mathlt_impl (0x424210..0x424b40): Build 69's brought back to 2001
+      (ILTMath's own virtuals; the vector overloads; GetEulerAngles written
+      from the image). Matched but GetEulerAngles: one temporary in another
+      stack slot.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),

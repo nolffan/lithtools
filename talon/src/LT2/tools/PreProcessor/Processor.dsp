@@ -159,6 +159,14 @@ SOURCE=.\LightMapMaker.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\..\sdk\inc\ltquatbase.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\mathlt_impl.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\world_tree.cpp
 # End Source File
 # Begin Source File
