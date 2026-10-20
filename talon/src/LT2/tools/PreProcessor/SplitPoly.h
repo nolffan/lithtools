@@ -151,7 +151,7 @@
 	// polygons are allocated for you in sides[].
 	// ----------------------------------------------------------------------- //
 	template<class T, class P>
-	bool SplitPoly(P *pPlane, T *pToSplit, T *sides[2], SplitStruct *pStruct)
+	BOOL SplitPoly(P *pPlane, T *pToSplit, T *sides[2], SplitStruct *pStruct)
 	{
 		uint32		k, iCur, iNext, nFront, nBack, nEdgeSplits;
 		PolySide	curSide, nextSide;

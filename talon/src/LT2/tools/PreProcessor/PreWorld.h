@@ -233,6 +233,9 @@ public:
 	// talon: 0x43a290, the bounding boxes of the BSP nodes from the root
 	// down (name provisional).
 	void				CalcNodeBoundingBoxes();
+	// talon: 0x43ab10 and 0x43a2b0 (names provisional).
+	uint32				NumNodes();
+	void				TermLeaves();
 	
 	int					GetTreeDepth();
 
@@ -278,7 +281,8 @@ public:
 	// Description of the world.
 	CGLinkedList<CPrePoly*>		m_Polies;
 
-	CMoArray<void*>				m_Unknown_1c;
+	// The leaves hull making found (CPreLeaf::m_Index indexes it).
+	CMoArray<CPreLeaf*>			m_Leaves;
 	CMoArray<void*>				m_Unknown_30;
 
 	// This list is setup in BrushToWorld then emptied after BSP generation.

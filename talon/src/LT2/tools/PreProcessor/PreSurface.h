@@ -19,6 +19,7 @@
 	class CPrePlane;
 	class CPrePoly;
 	class CEditPoly;
+	class CEditBrush;
 
 	// The 2001 class, laid out from its constructor (0x4306e0),
 	// SetupLMVectors (0x430790) and the code that reads it. m_Unknown_*
@@ -44,7 +45,9 @@
 
 		public:
 
-			uint32			m_Unknown_08[6];
+			// The brush it came from (hull making reports it as a problem brush).
+			CEditBrush		*m_pBrush;
+			uint32			m_Unknown_0c[5];
 
 			// Vectors defining LIGHTMAP texture space on this surface.
 			// These are the INVERSE texture vectors (just like in the de_world structures).

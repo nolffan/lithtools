@@ -5,6 +5,7 @@
 
 	#include "preplane.h"
 	class CPrePoly;
+	class CPreLeaf;
 
 	// Special node indices.
 	#define NODE_IN		((CNode*)-1)
@@ -19,7 +20,7 @@
 						{
 							m_pPlane				= NULL;
 							m_pPoly					= NULL;
-							m_Unknown_24			= 0;
+							m_pLeaf					= NULL;
 							m_Unknown_28			= 0;
 							m_pParentNode			= NULL;
 							m_Sides[0] = m_Sides[1] = NULL;
@@ -40,7 +41,8 @@
 
 			const CPrePlane	*m_pPlane;
 			CPrePoly		*m_pPoly;
-			uint32			m_Unknown_24;
+			// The leaf on its front side, where that side is a leaf.
+			CPreLeaf		*m_pLeaf;
 			uint32			m_Unknown_28;
 			CNode			*m_pParentNode;
 			CNode			*m_Sides[2];

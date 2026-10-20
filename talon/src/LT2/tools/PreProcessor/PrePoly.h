@@ -27,6 +27,7 @@
 
 	// Defines....
 	class CPreWorld;
+	class CPrePortal;
 	class LMMWorld;
 	
 	#define PP_POSTREMOVE						(1<<0)	// Used in various places..
@@ -68,6 +69,10 @@
 
 			// Make a copy of the poly.
 			CPrePoly*			Clone() const;
+
+			// talon: a portal of the given size on this poly's plane, for hull
+			// making (0x42e200; name provisional).
+			CPrePortal*			MakePortal(PReal fSize);
 
 
  

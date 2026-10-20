@@ -83,6 +83,10 @@ SOURCE=.\BspGen.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\create_hulls.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\pixelformat.cpp
 # End Source File
 # Begin Source File
