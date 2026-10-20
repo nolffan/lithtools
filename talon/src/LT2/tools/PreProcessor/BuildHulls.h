@@ -3,8 +3,8 @@
 //	BSP into the leaves the PVS is made from.
 // ------------------------------------------------------------------ //
 
-#ifndef __CREATE_HULLS_H__
-#define __CREATE_HULLS_H__
+#ifndef __BUILDHULLS_H__
+#define __BUILDHULLS_H__
 
 	class CPreWorld;
 	class CEditBrush;

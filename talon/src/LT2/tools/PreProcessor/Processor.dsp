@@ -83,7 +83,7 @@ SOURCE=.\BspGen.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\create_hulls.cpp
+SOURCE=.\BuildHulls.cpp
 # End Source File
 # Begin Source File
 

@@ -1,4 +1,7 @@
 // ------------------------------------------------------------------ //
+//	BuildHulls.cpp (the name is ours; it sorts between BspGen and classbind,
+//	its neighbours in the image).
+//
 //	Hull making: portalizes the BSP. Starting from the portals of a box
 //	around the world, each node's leaf is split by the node's plane, the
 //	node's own poly makes the portal between the two sides, and the front
@@ -11,7 +14,7 @@
 #include "bdefs.h"
 #include "preworld.h"
 #include "preleaf.h"
-#include "create_hulls.h"
+#include "BuildHulls.h"
 #include "processing.h"
 #include "splitpoly.h"
 
