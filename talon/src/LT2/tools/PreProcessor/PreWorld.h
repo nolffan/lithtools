@@ -190,17 +190,6 @@ public:
 	void				Term();
 	void				TermGeometry();
 
-	//gets the default LM grid size of the world
-	inline uint32		GetDefaultLMGridSize() const;
-
-	//gets the LM grid size for a surface. If the surface has an invalid LM grid
-	//size, it will instead return the default LM grid size for this world.
-	inline uint32		GetLMGridSize(const CPreSurface* pSurf) const;
-
-	//gets the LM grid size for a polygon. If the surface has an invalid LM grid
-	//size, it will instead return the default LM grid size for this world.
-	inline uint32		GetLMGridSize(const CPrePoly* pPoly) const;
-
 	// Gets a world vertex given a poly index.
 	PVertex&			PolyPt(CPrePoly *pPoly, uint32 i);
 
@@ -352,17 +341,6 @@ public:
 
 	void					RemoveLightAnim(CPreLightAnim *pAnim);
 
-	//gets the default LM grid size (see comments below)
-	inline uint32			GetDefaultLMGridSize() const	{return m_DefaultLMGridSize;}
-
-	//gets the LM grid size for a surface. If the surface has an invalid LM grid
-	//size, it will instead return the default LM grid size for this world.
-	inline uint32			GetLMGridSize(const CPreSurface* pSurf) const;
-
-	//gets the LM grid size for a polygon. If the surface has an invalid LM grid
-	//size, it will instead return the default LM grid size for this world.
-	inline uint32			GetLMGridSize(const CPrePoly* pPoly) const;
-
 	// Get the physics and visibility BSPs. Just searches for a CPreWorld with
 	// WIF_PHYSICSBSP or WIF_VISBSP.
 	CPreWorld*				GetPhysicsBSP();
@@ -388,39 +366,25 @@ public:
 	// Collect the blocker polys from the world
 	// Returns the number of polys found
 	uint32					CollectBlockerPolys();
-	// Get the array of blocker polys
-	typedef CMoArray<CPreBlockerPoly*> TBlockerPolyList;
-	TBlockerPolyList&		GetBlockerPolys() { return m_BlockerPolys; }
 
 	// collect the particle blocker polys from the world and return the number found
 	uint32					CollectParticleBlockerPolys();
-	// Get the array of particle blocker polys
-	TBlockerPolyList&		GetParticleBlockerPolys() { return m_ParticleBlockerPolys; }
+
+	// talon: the DAT file's (0x431470, 0x431c00, 0x431820). What they are
+	// is not worked out yet; the names are placeholders.
+	virtual BOOL			Unknown_00(ILTStream *pStream, BOOL bUnknown);
+	virtual BOOL			Unknown_04(ILTStream *pStream);
+	virtual BOOL			Unknown_08(ILTStream *pStream);
 
 public:
 
-	// This holds the data needed for the light grid.
-	LightTable						m_LightTable;
-	PVector*						m_pLightGrid;
-
-	// All the light animations (including the base one).
-	CMoArray<CPreLightAnim*>		m_LightAnims;
-
-	// All the light groups
-	typedef std::vector<CPreLightGroup*> TLightGroupList;
-	TLightGroupList					m_aLightGroups;
+	// talon: the 2001 layout, from its constructor (0x431060, inlined in
+	// DoProcessing). m_Unknown_* are members whose use is not known yet.
+	CMoArray<void*>					m_Unknown_04;
 
 	// No objects are stored in here, but this is created and maintained 
 	// so at runtime it knows how to create the WorldTree.
 	WorldTree						m_WorldTree;
-
-	// talon, provisional: the 2001 class (constructed at 0x415930, with two
-	// vtables) is not laid out yet. BspGen and the lighting read a float
-	// lightmap grid size at 0xf4, so it is placed there; the members around
-	// it are still Build 69's. (The 2001 WorldTree is 8 bytes smaller than
-	// Build 69's, with no terrain list, so 8 bytes pad it back.)
-	uint32							m_Unknown_e8[3];
-	PReal							m_LMGridSize;
 
 	CMoArray<CBaseEditObj*>			m_Objects;
 	
@@ -434,24 +398,10 @@ public:
 
 	CStringHolder					m_StringHolder;
 
-	//the LM grid size is a ratio of how many texture pixels get
-	//mapped to one lightmap pixel. This value is the global
-	//default LM grid size, which means that unless the surface
-	//overrides it, it will be used to split apart the world
-	uint32							m_DefaultLMGridSize;
+	uint32							m_Unknown_f0;
 
-	TBlockerPolyList				m_BlockerPolys;
-
-	// list of polygons that block particles
-	TBlockerPolyList				m_ParticleBlockerPolys;
-
-	//the amount this world of offset from its original source world (this occurs to center the world
-	//around the origin for better accuracy, but this info needs to be passed to game side so it
-	//can map coordinates back to the source level for debugging and error reporting)
-	LTVector						m_vWorldOffset;
-
-	// array of chunks of data to be stored in the world file
-	std::vector<CPreBlindData*>		m_BlindObjectData;
+	// The lightmap grid size: texture pixels to a lightmap pixel.
+	PReal							m_LMGridSize;
 };
 
 // Builds poly lists for poly groups that 'look' like surfaces.
@@ -466,52 +416,6 @@ int NodeToIndex(NODEREF node);
 // Inlines.
 // ------------------------------------------------------------------------ //
 
-//gets the LM grid size for a surface. If the surface has an invalid LM grid
-//size, it will instead return the default LM grid size for this world.
-inline uint32 CPreMainWorld::GetLMGridSize(const CPreSurface* pSurf) const
-{
-	ASSERT(pSurf);
-
-	//if it is an invalid value, then we just return the default
-	if(pSurf->GetLMGridSize() == 0)
-	{
-		return GetDefaultLMGridSize();
-	}
-
-	//was a valid value, so return it
-	return pSurf->GetLMGridSize();
-}
-
-//gets the LM grid size for a polygon. If the surface has an invalid LM grid
-//size, it will instead return the default LM grid size for this world.
-inline uint32 CPreMainWorld::GetLMGridSize(const CPrePoly* pPoly) const
-{
-	//just call the other one
-	return GetLMGridSize(pPoly->m_pSurface);
-}
-
-//gets the default LM grid size of the world
-inline uint32 CPreWorld::GetDefaultLMGridSize() const
-{
-	ASSERT(m_pMainWorld);
-	return m_pMainWorld->GetDefaultLMGridSize();
-}
-
-//gets the LM grid size for a surface. If the surface has an invalid LM grid
-//size, it will instead return the default LM grid size for this world.
-inline uint32 CPreWorld::GetLMGridSize(const CPreSurface* pSurf) const
-{
-	ASSERT(m_pMainWorld);
-	return m_pMainWorld->GetLMGridSize(pSurf);
-}
-
-//gets the LM grid size for a polygon. If the surface has an invalid LM grid
-//size, it will instead return the default LM grid size for this world.
-inline uint32 CPreWorld::GetLMGridSize(const CPrePoly* pPoly) const
-{
-	ASSERT(m_pMainWorld);
-	return m_pMainWorld->GetLMGridSize(pPoly);
-}
 
 
 

@@ -103,6 +103,10 @@ SOURCE=.\FindWorldModel.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\gettextureflags.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\pixelformat.cpp
 # End Source File
 # Begin Source File

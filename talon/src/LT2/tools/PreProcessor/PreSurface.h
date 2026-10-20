@@ -40,9 +40,6 @@
 
 			inline uint32	GetLMPlaneIndex() const		{return m_Flags >> 29;}
 
-			//gets the LM grid size from this surface
-			inline uint16	GetLMGridSize() const		{ return m_LMGridSize; }
-
 		public:
 
 			// The brush it came from (hull making reports it as a problem brush).
@@ -64,7 +61,9 @@
 			// Plane for this surface.
 			CPrePlane		*m_pPlane;
 
-			uint16			m_LMGridSize;
+			// talon: the texture's flags (gettextureflags); the 2001 surface has
+			// no lightmap grid size of its own.
+			uint16			m_TextureFlags;
 
 			// Surface flags (flags defined in surface.h).
 			uint32			m_Flags;
