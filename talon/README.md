@@ -28,7 +28,7 @@ in what order, `../INVENTORY.md` where every shipped binary comes from.
 |---|---|--:|--:|---|--:|--:|
 | `DEdit.exe` | world editor (Talon, Update 1/2) | 0 / 4,537 | 0 / 572,875 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 4,537 | 0 |
 | `ModelEdit.exe` | model editor (Talon, Update 1/2) | 0 / 1,908 | 0 / 221,282 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,908 | 0 |
-| `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 441 / 1,534 | 68,490 / 339,757 bytes | `████░░░░░░░░░░░░░░░░` 20.1% | 1,036 | 118 |
+| `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 452 / 1,535 | 71,036 / 339,733 bytes | `████░░░░░░░░░░░░░░░░` 20.9% | 1,025 | 117 |
 | `Processor.exe (NOLF)` | world processor, NOLF (Tools 001) | 0 / 2,739 | 0 / 415,152 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 2,739 | 0 |
 | `IMFLithDTX.dll` | Maya .dtx image plug-in (Update 2) | 105 / 186 | 19,107 / 19,893 bytes | `███████████████████░` 96.0% | 0 | 0 |
 | `MaxDTXLoader30.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2) | 0 / 255 | 0 / 20,503 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 255 | 0 |
@@ -43,7 +43,7 @@ in what order, `../INVENTORY.md` where every shipped binary comes from.
 | `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 0 / 426 | 0 / 50,246 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 426 | 0 |
 | `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 0 / 747 | 0 / 116,377 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 747 | 0 |
 | `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 0 / 747 | 0 / 116,377 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 747 | 0 |
-| **All** | | **546 / 16,958** | **87,597 / 2,256,181 bytes** | `░░░░░░░░░░░░░░░░░░░░` **3.8%** | **16,274** | **118** |
+| **All** | | **557 / 16,959** | **90,143 / 2,256,157 bytes** | `░░░░░░░░░░░░░░░░░░░░` **3.9%** | **16,263** | **117** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte

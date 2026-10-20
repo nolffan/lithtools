@@ -115,6 +115,10 @@ SOURCE=.\LeafPortals.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\LeakFile.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\pixelformat.cpp
 # End Source File
 # Begin Source File
@@ -140,6 +144,10 @@ SOURCE=..\shared\engine\bindmgr.cpp
 # Begin Source File
 
 SOURCE=..\shared\engine\light_table.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\lightmap_compress.cpp
 # End Source File
 # Begin Source File
 

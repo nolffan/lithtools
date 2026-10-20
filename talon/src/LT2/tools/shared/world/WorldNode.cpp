@@ -467,6 +467,19 @@ char *CWorldNode::GetName()
 }
 
 /************************************************************************/
+// Returns the position
+LTVector& CWorldNode::GetPos()
+{
+	CVectorProp *pProp;
+	
+	pProp = (CVectorProp*)m_PropList.GetProp(g_PosName, TRUE);
+	if(pProp)
+		return pProp->m_Vector;
+	else
+		return g_DummyPos;
+}
+
+/************************************************************************/
 // Sets the name
 void CWorldNode::SetName(const char *lpszName)
 {
@@ -480,19 +493,6 @@ void CWorldNode::SetName(const char *lpszName)
 		OnPropertyChanged(pProp, true, NULL);
 #endif
 	}
-}
-
-/************************************************************************/
-// Returns the position
-LTVector CWorldNode::GetPos()
-{
-	CVectorProp *pProp;
-	
-	pProp = (CVectorProp*)m_PropList.GetProp(g_PosName, TRUE);
-	if(pProp)
-		return pProp->m_Vector;
-	else
-		return g_DummyPos;
 }
 
 /************************************************************************/

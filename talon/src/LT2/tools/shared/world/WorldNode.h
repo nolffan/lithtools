@@ -89,7 +89,8 @@ class CWorldNode : public CGLLNode
 		char					*GetName();						// Returns the name			
 		void					SetName(const char *lpszName);	// Sets the name
 
-		virtual LTVector		GetPos();						// Returns the position
+		// talon: not virtual in 2001, and by reference (0x44e8e0).
+		LTVector&				GetPos();						// Returns the position
 		virtual void			SetPos(const LTVector &v);		// Sets the position
 		virtual LTVector		GetOr();						// Returns the rotation
 		virtual void			SetOr(const LTVector &v);		// Sets the rotation

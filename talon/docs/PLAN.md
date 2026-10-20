@@ -85,6 +85,12 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       Near: MakeBoxPortals (one SetVert inlined that shipped calls) and
       CalcPortalPlane (the operand order of commutative ops in the
       Newell sums; the source order doesn't move it).
+    - [x] LeakFile (0x4144f0..0x414e40, the name ours): FindLeakPath and
+      MakeLeakFile, written from the image; matched (but two CMoArray
+      template instances). CWorldNode::GetPos is the 2001 accessor (not
+      virtual, by reference, 0x44e8e0).
+    - [x] lightmap_compress (0x414fb0..0x415200): the 2001 RLE (32-bit
+      pixels, shadow-map runs), written from the image; matched.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
