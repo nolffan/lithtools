@@ -67,7 +67,8 @@ the vis container to output any visible objects.
 		NOA_Objects=0,			// Objects
 		NOA_Lights,				// Static lights
 		NOA_VisContainers,		// Vis containers
-		NOA_TerrainSections,	// Terrain sections
+		// talon: no terrain sections in 2001 (a node has three lists:
+		// WorldTreeNode's constructor, 0x44cc30).
 		NUM_NODEOBJ_ARRAYS
 	} NodeObjArray;
 

@@ -24,6 +24,10 @@
 											// 2. FLAG_GOTHRUWORLD is checked for world models
 											//    with this WorldBsp.
 	
+	// talon: in 2001, a terrain world model (create_world_tree subdivides its
+	// polies to TerrainNodeSize). The name is ours.
+	#define WIF_TERRAIN				(1<<3)
+
 	#define WIF_PHYSICSBSP			(1<<4)	// This is the physics BSP (only one of these).
 	#define WIF_VISBSP				(1<<5)	// This is the visibility BSP (only one of these).
 

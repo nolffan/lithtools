@@ -417,8 +417,9 @@ public:
 	// talon, provisional: the 2001 class (constructed at 0x415930, with two
 	// vtables) is not laid out yet. BspGen and the lighting read a float
 	// lightmap grid size at 0xf4, so it is placed there; the members around
-	// it are still Build 69's.
-	uint32							m_Unknown_f0;
+	// it are still Build 69's. (The 2001 WorldTree is 8 bytes smaller than
+	// Build 69's, with no terrain list, so 8 bytes pad it back.)
+	uint32							m_Unknown_e8[3];
 	PReal							m_LMGridSize;
 
 	CMoArray<CBaseEditObj*>			m_Objects;

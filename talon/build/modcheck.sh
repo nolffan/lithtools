@@ -27,4 +27,4 @@ awk -F, -v lo=$((lo)) -v hi=$((hi)) 'NR>1{a=strtonum($1); if (a>=lo && a<hi) pri
     "out/reference/$tgt-functions.csv" | while read -r a s; do
     h=$(printf '0x%x' $((a))); grep -qx "$h" <<< "$matched" || echo "  $a $s"; done
 echo "-- ours not matched:"
-echo "$out" | grep -E "^\s+----" | grep -vE '_\$E|\?\$'
+echo "$out" | grep -E "^\s+----" | grep -vE '_\$E|----     \?\?\$|----     \?[A-Za-z0-9_]+@\?\$'

@@ -1,4 +1,3 @@
-
 #include "bdefs.h"
 #include "brushtoworld.h"
 #include "prepoly.h"
@@ -6,10 +5,40 @@
 #include "editpoly.h"
 #include "splitpoly.h"
 
+// talon: the 2001 version (0x40a510..0x40b540). Terrain world models are
+// subdivided to their own node size, so each poly goes down the tree with
+// the world model it came from.
+
+// A poly and its world model (the names are ours).
+struct WTPolyRef
+{
+	CEditPoly		*m_pPoly;
+	CWorldModelDef	*m_pWorldModel;
+};
+
+PReal g_TerrainNodeSize;
 PReal g_WorldNodeSize;
 
+// Subdivision size for areas with terrain polies.
+PReal GetTerrainNodeSize(char *pInfoString)
+{
+	ConParse	parse;
+	PReal		ret;
+
+	parse.Init(pInfoString);
+	if(parse.ParseFind("TerrainNodeSize", FALSE, 1))
+	{
+		ret = (PReal)atof(parse.m_Args[1]);
+		return DCLAMP(ret, (PReal)1.0, (PReal)20000.0);
+	}
+	else
+	{
+		return (PReal)800.0;
+	}
+}
+
 // Subdivision size for areas with normal world polies.
-PReal GetWorldNodeSize(const char *pInfoString)
+PReal GetWorldNodeSize(char *pInfoString)
 {
 	ConParse	parse;
 	PReal		ret;
@@ -26,32 +55,32 @@ PReal GetWorldNodeSize(const char *pInfoString)
 	}
 }
 
-bool DoesPolyIntersectNode(CEditPoly *pPoly, WorldTreeNode *pNode)
+BOOL DoesPolyIntersectNode(CPrePoly *pPoly, WorldTreeNode *pNode)
 {
 	uint32			i, j;
 	LTPlane			thePlane;
-	bool			bOutside;
+	BOOL			bOutside;
 	SplitStruct		splitStruct;
 	PolySide		side;
-	
+
 
 	// Trivial reject if all points are outside any of the planes..
 	for(i=0; i < NUM_WTPLANES; i++)
 	{
 		pNode->SetupPlane(i, &thePlane);
 
-		bOutside = true;
+		bOutside = TRUE;
 		for(j=0; j < pPoly->NumVerts(); j++)
 		{
 			if(thePlane.DistTo(pPoly->Pt(j)) > 0.0f)
 			{
-				bOutside = false;
+				bOutside = FALSE;
 				break;
 			}
 		}
 
 		if(bOutside)
-			return false;
+			return FALSE;
 	}
 
 	// Trivial accept..
@@ -59,14 +88,14 @@ bool DoesPolyIntersectNode(CEditPoly *pPoly, WorldTreeNode *pNode)
 	{
 		if(base_IsPtInBox(&pPoly->Pt(i), &pNode->m_BBoxMin, &pNode->m_BBoxMax))
 		{
-			return true;
+			return TRUE;
 		}
 	}
 
 	// Ok, clip it up.
-	CPrePoly *pTemp = EditPolyToPrePoly(pPoly);
+	CPrePoly *pTemp = pPoly->Clone();
 	if(!pTemp)
-		return false;
+		return FALSE;
 
 	for(i=0; i < NUM_WTPLANES; i++)
 	{
@@ -75,16 +104,14 @@ bool DoesPolyIntersectNode(CEditPoly *pPoly, WorldTreeNode *pNode)
 		side = GetPolySide(&thePlane, pTemp, &splitStruct);
 		if(side == BackSide)
 		{
-			if (pTemp)
-				DeletePoly(pTemp);
-			return false;
+			return FALSE;
 		}
 		else if(side == Intersect)
 		{
 			// Clip.
-			CPrePoly *pNewPoly = CreatePoly(CPrePoly, pTemp->NumVerts()+2, false);
+			CPrePoly *pNewPoly = CreatePoly(CPrePoly, pTemp->NumVerts()+2, FALSE);
 			if(!pNewPoly)
-				return false;
+				return FALSE;
 
 			SplitPolySide(FrontSide, &thePlane, pTemp, pNewPoly, &splitStruct);
 			DeletePoly(pTemp);
@@ -92,50 +119,68 @@ bool DoesPolyIntersectNode(CEditPoly *pPoly, WorldTreeNode *pNode)
 		}
 	}
 	DeletePoly(pTemp);
-	
-	return true;
+
+	return TRUE;
 }
 
 
-bool CWTCallback(WorldTree *pWorldTree, 
-	WorldTreeNode *pNode, 
-	CMoArray<CEditPoly*> *pPolies,
-	CMoArray<CEditPoly*> *pInsidePolies)
+BOOL CWTCallback(WorldTree *pWorldTree,
+	WorldTreeNode *pNode,
+	CMoArray<WTPolyRef> *pPolies,
+	CMoArray<WTPolyRef> *pInsidePolies)
 {
 	// Find out which polies are inside this node.
-	bool bMainWorld = false;
+	BOOL bTerrain = FALSE;
+	BOOL bMainWorld = FALSE;
+	BOOL bInside;
+	CPrePoly *pTemp;
 
 	for(uint32 i=0; i < pPolies->GetSize(); i++)
 	{
-		if(DoesPolyIntersectNode(pPolies->Get(i), pNode))
-		{
-			pInsidePolies->Append(pPolies->Get(i));
+		WTPolyRef &ref = pPolies->Get(i);
 
-			// (MainWorld stuff gets subdivide smallest so no need to keep testing polies).
-			bMainWorld = true;
+		pTemp = EditPolyToPrePoly(ref.m_pPoly);
+		if(!pTemp)
+			return FALSE;
+
+		bInside = DoesPolyIntersectNode(pTemp, pNode);
+		DeletePoly(pTemp);
+
+		if(bInside)
+		{
+			pInsidePolies->Append(ref);
+
+			if(ref.m_pWorldModel->m_WorldInfoFlags & WIF_TERRAIN)
+				bTerrain = TRUE;
+			else
+				bMainWorld = TRUE;
 		}
 	}
 
-	// Either use GetMinWorldBoxSize or GetMinTerrainBoxSize to determine
+	// Use the world or the terrain node size to determine
 	// if the node should be divided further.
 	if(bMainWorld)
 	{
 		return pNode->m_MinSize > g_WorldNodeSize;
 	}
+	else if(bTerrain)
+	{
+		return pNode->m_MinSize > g_TerrainNodeSize;
+	}
 	else
 	{
 		// Nothing in here.. definitely don't divide further!
-		return false;
+		return FALSE;
 	}
 }
 
 
-bool CreateNodes_R(	WorldTree *pWorldTree, WorldTreeNode *pNode,
-					PVector *pMin, PVector *pMax, uint32 depth, CMoArray<CEditPoly*> *pPolies)
+BOOL CreateNodes_R(	WorldTree *pWorldTree, WorldTreeNode *pNode,
+					PVector *pMin, PVector *pMax, uint32 depth, CMoArray<WTPolyRef> *pPolies)
 {
 	WorldTreeNode			*pChild;
 	uint32					i;
-	CMoArray<CEditPoly*>	insidePolies;
+	CMoArray<WTPolyRef>		insidePolies;
 
 
 	pNode->TermChildren();
@@ -150,19 +195,19 @@ bool CreateNodes_R(	WorldTree *pWorldTree, WorldTreeNode *pNode,
 	pNode->SetBBox(*pMin, *pMax);
 
 	// It'll avoid making a node if we're past MAX_NODE_LEVEL, but it would have to
-	// be a ridiculously large tree to have > 16 levels (4^16 or 4294967296 nodes 
+	// be a ridiculously large tree to have > 16 levels (4^16 or 4294967296 nodes
 	// would be in the tree...)
 	ASSERT(depth < MAX_NODE_LEVEL);
 
 	// Subdivide?
 	insidePolies.SetCacheSize(pPolies->GetSize() / 2); // For speed...
-	if(depth < MAX_NODE_LEVEL && 
+	if(depth < MAX_NODE_LEVEL &&
 		CWTCallback(pWorldTree, pNode, pPolies, &insidePolies))
 	{
 		if(!pNode->Subdivide())
-			return false;
+			return FALSE;
 
-		// Recurse		
+		// Recurse
 		for(i=0; i < MAX_WTNODE_CHILDREN; i++)
 		{
 			pChild = pNode->m_ChildrenA[i];
@@ -171,20 +216,20 @@ bool CreateNodes_R(	WorldTree *pWorldTree, WorldTreeNode *pNode,
 				&pChild->m_BBoxMin, &pChild->m_BBoxMax, depth+1, &insidePolies))
 			{
 				pNode->Term();
-				return false;
+				return FALSE;
 			}
 		}
 	}
-	
-	return true;
+
+	return TRUE;
 }
 
 
-bool CreateWorldTree(WorldTree *pWorldTree, 
+BOOL CreateWorldTree(WorldTree *pWorldTree,
 	CMoArray<CWorldModelDef*> &worldModels, char *pInfoString)
 {
 	uint32					i, iPoly, iOutPoly, iBrush;
-	CMoArray<CEditPoly*>	rootPolies;
+	CMoArray<WTPolyRef>		rootPolies;
 	CEditBrush				*pBrush;
 	CWorldModelDef			*pWorldModel;
 	PVector					minBox, maxBox;
@@ -193,10 +238,11 @@ bool CreateWorldTree(WorldTree *pWorldTree,
 
 
 	// Figure out node sizes.
+	g_TerrainNodeSize = GetTerrainNodeSize(pInfoString);
 	g_WorldNodeSize = GetWorldNodeSize(pInfoString);
 
 	pWorldTree->Term();
-		
+
 	// Build the initial poly list.
 	for(i=0; i < worldModels.GetSize(); i++)
 	{
@@ -211,10 +257,13 @@ bool CreateWorldTree(WorldTree *pWorldTree,
 		for(iBrush=0; iBrush < pWorldModel->m_Brushes; iBrush++)
 		{
 			pBrush = pWorldModel->m_Brushes[iBrush];
-		
+
 			for(iPoly=0; iPoly < pBrush->m_Polies; iPoly++)
 			{
-				rootPolies[iOutPoly] = pBrush->m_Polies[iPoly];
+				pPoly = pBrush->m_Polies[iPoly];
+				WTPolyRef *pRef = &rootPolies[iOutPoly];
+				pRef->m_pPoly = pPoly;
+				pRef->m_pWorldModel = pWorldModel;
 				iOutPoly++;
 			}
 		}
@@ -225,11 +274,11 @@ bool CreateWorldTree(WorldTree *pWorldTree,
 	if(rootPolies.GetSize() > 0)
 	{
 		minBox.Init((PReal)MAX_CREAL, (PReal)MAX_CREAL, (PReal)MAX_CREAL);
-		maxBox = -minBox;
-		
+		maxBox.Init((PReal)-MAX_CREAL, (PReal)-MAX_CREAL, (PReal)-MAX_CREAL);
+
 		for(iPoly=0; iPoly < rootPolies; iPoly++)
 		{
-			pPoly = rootPolies[iPoly];
+			pPoly = rootPolies[iPoly].m_pPoly;
 
 			for(i=0; i < pPoly->NumVerts(); i++)
 			{
@@ -247,6 +296,3 @@ bool CreateWorldTree(WorldTree *pWorldTree,
 	return CreateNodes_R(pWorldTree, &pWorldTree->m_RootNode,
 		&minBox, &maxBox, 0, &rootPolies);
 }
-
-
-

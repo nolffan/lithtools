@@ -7,7 +7,7 @@
 	#include "preworld.h"
 
 	// Creates the WorldTree based on the spatial layout of the polies.
-	bool CreateWorldTree(WorldTree *pWorldTree, 
+	BOOL CreateWorldTree(WorldTree *pWorldTree, 
 		CMoArray<CWorldModelDef*> &worldModels, char *pInfoString);
 
 

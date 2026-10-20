@@ -53,12 +53,18 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       120 of its 125 compiled functions identical; four near
       (GenerateBspTree, AddReversedPoly, SplitPoly,
       MinimizeNodePolySize).
-    - [~] Hull making (create_hulls.cpp, 0x408370..0x409f80): the
+    - [~] Hull making (BuildHulls.cpp, 0x408370..0x409f80): the
       portalization for the PVS, written from the image (no source
       survives). 54 of its 58 compiled functions identical; three near
       (MakeHulls, MakeHulls_R, CreatePoly<CPrePortal>).
-    - [ ] create_world_tree (0x409f80..), then the rest of the BSP
-      modules, problem brushes and leak files (0x40b540..), DTX output,
+    - [x] classbind, conparse (0x409f80..0x40a510): Build 69's brought
+      back to 2001 (the 2001 tokenizer is rewritten from the image);
+      matched but cp_Parse (loop layout).
+    - [x] create_world_tree (0x40a510..0x40b540): the 2001 version, with
+      terrain node sizes; matched. world_tree (0x44df60..) matched too,
+      once its node lists lost the terrain one.
+    - [ ] The rest of the BSP modules, problem brushes and leak files
+      (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
     physics and terrain (0x425d20..), the MFC application and its dialogs,
     the main processing driver and DAT output (0x42f900.., 0x43e7e0..).
