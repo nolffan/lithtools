@@ -34,6 +34,9 @@
 			void			ClearPolyPostRemove();
 			void			ClearNodePostRemove();
 
+			// Sets m_pParentNode down the tree (0x4254f0, the name is ours).
+			void			SetParentNodes(CNode *pParent);
+
 			uint32			m_Index;
 			uint32			m_Unknown_0c[3];
 			uint16			m_Unknown_18;

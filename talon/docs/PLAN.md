@@ -109,6 +109,13 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       (ILTMath's own virtuals; the vector overloads; GetEulerAngles written
       from the image). Matched but GetEulerAngles: one temporary in another
       stack slot.
+    - [x] Navigator (0x424b40..0x425490, DEdit/draw): Build 69's brought
+      back to 2001 (no LTA; the look-at point saved; a description as its
+      length and bytes; BOOL returns); matched. ("PNB" in the string map is
+      the bytes of its vtable's first entry, 0x00424e50.)
+    - [x] Node (0x425490..0x425520): Build 69's plus SetParentNodes; matched.
+    - [x] node_ops (0x425520..0x425940): Build 69's, with no_DestroyNode
+      taking the node off the region's lists itself; matched.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),

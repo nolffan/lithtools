@@ -221,6 +221,14 @@ SOURCE=.\Win\Threads.cpp
 
 SOURCE=..\DEdit\draw\Navigator.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\Node.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\world\node_ops.cpp
+# End Source File
 # End Group
 # End Target
 # End Project

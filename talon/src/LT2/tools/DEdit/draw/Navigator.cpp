@@ -18,8 +18,9 @@
 #include "bdefs.h"
 #include "navigator.h"
 #include "oldtypes.h"
-#include "ltamgr.h"
-#include "ltasaveutils.h"
+
+// talon: the 2001 one (0x424b40..0x425490): no LTA files; the look-at
+// point is saved too, and a description is its length and its characters.
 
 /***************************************************************/
 // CNavigator Class
@@ -62,26 +63,38 @@ void CNavigator::UpdateLooking()
 }
 
 
-bool CNavigator::LoadTBW(CAbstractIO& InFile)
+BOOL CNavigator::LoadTBW(CAbstractIO& InFile)
 {
 	InFile >> m_Up.x >> m_Up.y >> m_Up.z;
 	InFile >> m_Forward.x >> m_Forward.y >> m_Forward.z;
 	InFile >> m_Right.x >> m_Right.y >> m_Right.z;
 	InFile >> m_Position.x >> m_Position.y >> m_Position.z;
+	InFile >> m_LookAt.x >> m_LookAt.y >> m_LookAt.z;
 	InFile >> m_LookAtDist;
 	
-	return true;
+	return TRUE;
 }
 
-bool CNavigator::SaveTBW(CAbstractIO& OutFile)
+BOOL CNavigator::SaveTBW(CAbstractIO& OutFile)
 {
-	OutFile << m_Up.x << m_Up.y << m_Up.z;
-	OutFile << m_Forward.x << m_Forward.y << m_Forward.z;
-	OutFile << m_Right.x << m_Right.y << m_Right.z;
-	OutFile << m_Position.x << m_Position.y << m_Position.z;
+	OutFile << m_Up.x;
+	OutFile << m_Up.y;
+	OutFile << m_Up.z;
+	OutFile << m_Forward.x;
+	OutFile << m_Forward.y;
+	OutFile << m_Forward.z;
+	OutFile << m_Right.x;
+	OutFile << m_Right.y;
+	OutFile << m_Right.z;
+	OutFile << m_Position.x;
+	OutFile << m_Position.y;
+	OutFile << m_Position.z;
+	OutFile << m_LookAt.x;
+	OutFile << m_LookAt.y;
+	OutFile << m_LookAt.z;
 	OutFile << m_LookAtDist;
 	
-	return true;
+	return TRUE;
 }
 
 
@@ -94,84 +107,6 @@ bool CNavigator::SaveTBW(CAbstractIO& OutFile)
 ( lookatdist -0.001327 )
 */
 
-BOOL CNavigator::LoadLTA(CLTANode* pParseNode)
-{
-	// Load the orientation vectors
-	CLTANode* pTemp = CLTAUtil::ShallowFindList(pParseNode, "up");
-	if( pTemp ) {
-		//file >> m_Up.x;			file >> m_Up.y;			file >> m_Up.z;
-		m_Up.x = GetFloat(pTemp->GetElement(1));
-		m_Up.y = GetFloat(pTemp->GetElement(2));
-		m_Up.z = GetFloat(pTemp->GetElement(3));
-	}
-	pTemp = CLTAUtil::ShallowFindList(pParseNode, "forward");
-	if( pTemp ){
-		// file >> m_Forward.x;	file >> m_Forward.y;	file >> m_Forward.z;
-		m_Forward.x = GetFloat(pTemp->GetElement(1));
-		m_Forward.y = GetFloat(pTemp->GetElement(2));
-		m_Forward.z = GetFloat(pTemp->GetElement(3));
-	}
-	pTemp = CLTAUtil::ShallowFindList(pParseNode, "right");
-	if( pTemp ){
-		// file >> m_Right.x;		file >> m_Right.y;		file >> m_Right.z;	
-		m_Right.x = GetFloat(pTemp->GetElement(1));
-		m_Right.y = GetFloat(pTemp->GetElement(2));
-		m_Right.z = GetFloat(pTemp->GetElement(3));
-	}
-	
-	// Load the position
-	pTemp = CLTAUtil::ShallowFindList(pParseNode, "position");
-	if( pTemp ) {
-		// file >> m_Position.x;	file >> m_Position.y;	file >> m_Position.z;
-		m_Position.x = GetFloat(pTemp->GetElement(1));
-		m_Position.y = GetFloat(pTemp->GetElement(2));
-		m_Position.z = GetFloat(pTemp->GetElement(3));
-	}
-
-	// Load the look-at vector
-	pTemp = CLTAUtil::ShallowFindList(pParseNode, "lookat");
-	if( pTemp ) {
-		// file >> m_LookAt.x;		file >> m_LookAt.y;		file >> m_LookAt.z;
-		m_LookAt.x = GetFloat(pTemp->GetElement(1));
-		m_LookAt.y = GetFloat(pTemp->GetElement(2));
-		m_LookAt.z = GetFloat(pTemp->GetElement(3));
-	}
-
-	// Load the look-at distance
-	pTemp = CLTAUtil::ShallowFindList(pParseNode, "lookatdist");
-	if( pTemp ) {
-		// file >> m_LookAtDist;
-		m_LookAtDist = GetFloat(pTemp->GetElement(1));
-	}
-	
-	return TRUE;
-}
-
-
-/*********************************************************/
-// Save
-BOOL CNavigator::SaveLTA(CLTAFile* pFile, uint32 level)
-{
-	PrependTabs(pFile, level);
-	pFile->WriteStr("( navigator");
-		PrependTabs(pFile, level+1);
-		pFile->WriteStrF("( up %f %f %f )", m_Up.x, m_Up.y, m_Up.z );
-		PrependTabs(pFile, level+1);
-		pFile->WriteStrF("( forward %f %f %f )", m_Forward.x, m_Forward.y, m_Forward.z );
-		PrependTabs(pFile, level+1);
-		pFile->WriteStrF("( right %f %f %f )", m_Right.x, m_Right.y, m_Right.z );
-		PrependTabs(pFile, level+1);
-		pFile->WriteStrF("( position %f %f %f )", m_Position.x, m_Position.y, m_Position.z );
-		PrependTabs(pFile, level+1);
-		pFile->WriteStrF("( lookat %f %f %f )", m_LookAt.x, m_LookAt.y, m_LookAt.z );
-		PrependTabs(pFile, level+1);
-		pFile->WriteStrF("( lookatdist %f )", m_LookAtDist );
-
-	PrependTabs(pFile, level);
-	pFile->WriteStr(")");
-
-	return TRUE;
-}
 			
 
 /***************************************************************/
@@ -231,88 +166,14 @@ void CNavigatorPosItem::SetDescription(char *lpszDescription)
 	}
 }
 
-/*********************************************************/
-// Load LTA
-BOOL CNavigatorPosItem::LoadLTA(CLTANode* pParseNode)
+
+
+BOOL CNavigatorPosItem::LoadTBW(CAbstractIO& InFile)
 {
 	// Reset this class
 	Term();
 
-	// Load each navigator
-	CLTANodeIterator NodeIter(pParseNode);
-	CLTANode* pNavNode;
-
-	while((pNavNode = NodeIter.FindNextList("navigator")) != NULL)
-	{
-		CNavigator *pNavigator = new CNavigator;
-		pNavigator->LoadLTA(pNavNode);
-		m_NavigatorArray.Add(pNavigator);
-	}
-
-	// Load the length of the description string
-	DWORD dwBufferSize=0;
-	CLTANode*  pDescription = CLTAUtil::ShallowFindList(pParseNode,"description");
-	const char* descString = GetString(PairCdrNode(pDescription));
-	dwBufferSize = strlen(descString);
-	// file >> dwBufferSize;
-
-	if (dwBufferSize > 0)
-	{
-		// Load the description buffer
-		char *lpszBuffer=new char[dwBufferSize+1];
-		memset(lpszBuffer, NULL, dwBufferSize+1);
-
-		// file.Read(lpszBuffer, dwBufferSize);
-		strcpy(lpszBuffer,descString);
-
-		SetDescription(lpszBuffer);
-		delete []lpszBuffer;
-	}
-	else
-	{
-		SetDescription("\0");
-	}
-	
-	return TRUE;
-}
-
-
-
-/*********************************************************/
-// SaveLTA
-BOOL CNavigatorPosItem::SaveLTA(CLTAFile* pFile, uint32 level)
-{
-	PrependTabs(pFile, level);
-	pFile->WriteStr("( navigatorpositem");
-		// Save each navigator
-		unsigned int i;
-		for (i=0; i < m_NavigatorArray.GetSize(); i++)
-		{
-			m_NavigatorArray[i]->SaveLTA(pFile, level+1);
-		}
-		// Save the length of the description string
-		char *lpszDescription=GetDescription();
-		if (lpszDescription)
-		{
-			PrependTabs(pFile, level+1);
-			pFile->WriteStrF("( description \"%s\" )", lpszDescription);
-		}
-		else
-		{
-			PrependTabs(pFile, level+1);
-			pFile->WriteStr("( description \"\" )");
-		}
-	PrependTabs(pFile, level);
-	pFile->WriteStr(")");
-	return TRUE;
-}
-
-bool CNavigatorPosItem::LoadTBW(CAbstractIO& InFile)
-{
-	// Reset this class
-	Term();
-
-	uint32 nNumNav;
+	uint32 nNumNav = 0;
 	InFile >> nNumNav;
 
 	for(uint32 nCurrNav = 0; nCurrNav < nNumNav; nCurrNav++)
@@ -322,30 +183,49 @@ bool CNavigatorPosItem::LoadTBW(CAbstractIO& InFile)
 		m_NavigatorArray.Add(pNavigator);
 	}
 
-	// Load the length of the description string
-	char pszDescription[512];
-	InFile.ReadString(pszDescription, sizeof(pszDescription));
-	SetDescription(pszDescription);
+	// Load the description
+	uint32 nLen = 0;
+	InFile >> nLen;
+	if(nLen > 0)
+	{
+		char *pszDescription = new char[nLen+1];
+		memset(pszDescription, 0, nLen+1);
+		InFile.Read(pszDescription, nLen);
+		SetDescription(pszDescription);
+		delete [] pszDescription;
+	}
+	else
+	{
+		SetDescription("");
+	}
 	
-	return true;
+	return TRUE;
 }
 
-bool CNavigatorPosItem::SaveTBW(CAbstractIO& OutFile)
+BOOL CNavigatorPosItem::SaveTBW(CAbstractIO& OutFile)
 {
 	//save each navigator
-	uint32 nNumNav = m_NavigatorArray.GetSize();
-	OutFile << nNumNav;
+	OutFile << m_NavigatorArray.GetSize();
 
-	for (uint32 i=0; i < nNumNav; i++)
+	for (uint32 i=0; i < m_NavigatorArray.GetSize(); i++)
 	{
 		m_NavigatorArray[i]->SaveTBW(OutFile);
 	}
 
-	// Save the length of the description string
+	// Save the description
 	char *lpszDescription = GetDescription();
-	OutFile.WriteString(lpszDescription ? lpszDescription : "");
+	if(lpszDescription)
+	{
+		uint32 nLen = strlen(lpszDescription);
+		OutFile << nLen;
+		OutFile.Write(lpszDescription, nLen);
+	}
+	else
+	{
+		OutFile << (uint32)0;
+	}
 
-	return true;
+	return TRUE;
 }
 
 
@@ -353,52 +233,7 @@ bool CNavigatorPosItem::SaveTBW(CAbstractIO& OutFile)
 // CNavigatorPosArray Class
 /***************************************************************/
 
-// Load
-BOOL CNavigatorPosArray::LoadLTA(CLTANode* pParseNode)
-{
-	// Remove all of the items
-	unsigned int i;
-	for (i=0; i < GetSize(); i++)
-	{
-		delete GetAt(i);
-	}
-	SetSize(0);
-
-
-	// Load the number of items
-	uint32 dwNumItems=0;
-	dwNumItems = pParseNode->GetNumElements();
-
-	// Load each item
-	for (i=0; i < dwNumItems; i++)
-	{
-		CNavigatorPosItem *pItem=new CNavigatorPosItem;
-		pItem->LoadLTA(pParseNode->GetElement(i));
-		Add(pItem);
-	}
-
-	return TRUE;
-}
-
-/*********************************************************/
-// SaveLTA
-BOOL CNavigatorPosArray::SaveLTA(CLTAFile* pFile, uint32 level)
-{
-	PrependTabs(pFile, level);
-	pFile->WriteStr("( navigatorposlist (");
-		// Save each item
-		unsigned int i;
-		for (i=0; i < GetSize(); i++)
-		{
-			GetAt(i)->SaveLTA(pFile, level+1);		
-		}
-	PrependTabs(pFile, level);
-	pFile->WriteStr(") )");
-
-	return TRUE;
-}
-
-bool CNavigatorPosArray::LoadTBW(CAbstractIO& InFile)
+BOOL CNavigatorPosArray::LoadTBW(CAbstractIO& InFile)
 {
 	// Remove all of the items
 	uint32 i;
@@ -420,20 +255,19 @@ bool CNavigatorPosArray::LoadTBW(CAbstractIO& InFile)
 		Add(pItem);
 	}
 
-	return true;
+	return TRUE;
 }
 
-bool CNavigatorPosArray::SaveTBW(CAbstractIO& OutFile)
+BOOL CNavigatorPosArray::SaveTBW(CAbstractIO& OutFile)
 {
 	//write out the size
-	uint32 nNumPos = GetSize();
-	OutFile << nNumPos;
+	OutFile << GetSize();
 
-	for(uint32 nCurrPos = 0; nCurrPos < nNumPos; nCurrPos++)
+	for(uint32 nCurrPos = 0; nCurrPos < GetSize(); nCurrPos++)
 	{
 		GetAt(nCurrPos)->SaveTBW(OutFile);
 	}
 
-	return true;
+	return TRUE;
 }
 

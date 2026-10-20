@@ -25,8 +25,6 @@
 
 // Defines....
 
-class CLTANode;
-class CLTAFile;
 
 /************************************************************************/
 class CNavigator : public CCS
@@ -46,11 +44,8 @@ class CNavigator : public CCS
 		void		LookAt(LTVector vPt);
 				
 		// Load/Save
-		BOOL		LoadLTA(CLTANode* pParseNode);
-		BOOL		SaveLTA(CLTAFile* pFile, uint32 level);
-
-		bool		LoadTBW(CAbstractIO& InFile);
-		bool		SaveTBW(CAbstractIO& OutFile);
+		BOOL		LoadTBW(CAbstractIO& InFile);
+		BOOL		SaveTBW(CAbstractIO& OutFile);
 
 	public:
 
@@ -76,11 +71,8 @@ public:
 	void		Term();
 
 	// Load/Save
-	BOOL		LoadLTA(CLTANode* pParseNode);
-	BOOL		SaveLTA(CLTAFile* pFile, uint32 level);
-
-	bool		LoadTBW(CAbstractIO& InFile);
-	bool		SaveTBW(CAbstractIO& OutFile);
+	BOOL		LoadTBW(CAbstractIO& InFile);
+	BOOL		SaveTBW(CAbstractIO& OutFile);
 
 	// Access to member variables
 	void		SetDescription(char *lpszDescription);
@@ -100,11 +92,8 @@ class CNavigatorPosArray : public CMoArray<CNavigatorPosItem *>
 {	
 public:
 	// Load/Save
-	BOOL		LoadLTA(CLTANode* pParseNode);
-	BOOL		SaveLTA(CLTAFile* pFile, uint32 level);
-
-	bool		LoadTBW(CAbstractIO& InFile);
-	bool		SaveTBW(CAbstractIO& OutFile);
+	BOOL		LoadTBW(CAbstractIO& InFile);
+	BOOL		SaveTBW(CAbstractIO& OutFile);
 };
 
 #endif  // __NAVIGATOR_H__
