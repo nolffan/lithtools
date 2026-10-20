@@ -99,6 +99,10 @@ SOURCE=.\create_world_tree.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\FindWorldModel.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\pixelformat.cpp
 # End Source File
 # Begin Source File

@@ -25,17 +25,18 @@
 	};
 
 
-	//this will find a boolean property of the specified name and return the
-	//property value associated with it. If it cannot find the property,
-	//it will return bDefault
-	bool GetBoolPropVal(CPropList *pList, char *pName, bool bDefault = false);
-	
 	// Finds all the world models.
 	// The first world model is always the main world.
 	void FindWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels);
-	
+
+	// talon: the world models of the AIVolumes and MusicVolumes (0x411c00,
+	// the name is ours).
+	void FindAIVolumes(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels);
+
 	uint32 GetBrushType(CEditBrush *pBrush);
-	uint8  GetLMGridSize(CEditBrush *pBrush);
+
+	// The brush's DetailLevel, at most MAX_SURFACE_DETAIL_LEVEL.
+	uint32 GetDetailLevel(CEditBrush *pBrush);
 
 
 #endif  // __FINDWORLDMODEL_H__

@@ -63,6 +63,9 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     - [x] create_world_tree (0x40a510..0x40b540): the 2001 version, with
       terrain node sizes; matched. world_tree (0x44df60..) matched too,
       once its node lists lost the terrain one.
+    - [x] FindWorldModel (0x411670..0x411f60): the 2001 version (world
+      models from objects, surface flags from bool properties), written
+      from the image; matched.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
