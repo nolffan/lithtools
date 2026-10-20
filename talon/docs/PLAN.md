@@ -79,6 +79,12 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       image. Matched but ParseLightDefs, near by the operand order of one
       add in CMoArray::Insert2's inline (the declaration-count kind?
       dummy declarations, local order and names don't move it).
+    - [~] LeafPortals (0x413a10..0x4144f0, the name ours): the portal
+      helpers (ClonePortal, CopyPortal, the PVS's two-portal clipper,
+      MakeBoxPortals, Flip, CalcPortalPlane), written from the image.
+      Near: MakeBoxPortals (one SetVert inlined that shipped calls) and
+      CalcPortalPlane (the operand order of commutative ops in the
+      Newell sums; the source order doesn't move it).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
