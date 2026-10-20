@@ -2,11 +2,11 @@
 #include "bdefs.h"
 #include "classbind.h"
 #include "bindmgr.h"
-#include "ltobjectcreate.h"
-
-
+// talon: the 2001 struct (0x14 bytes) has two members ahead of these;
+// their use is not known yet.
 struct ClassBindModule
 {
+	uint32		m_Unknown_00[2];
 	HBINDMODULE	m_hModule;
 	ClassDef	**m_pClassDefs;
 	int			m_nClassDefs;
@@ -34,27 +34,17 @@ static void cb_VerifyClassDefProperties(ClassBindModule *pModule)
 }
 
 
-#ifdef __PS2
-extern ClassDef** ObjectDLLSetup(int *nDefs, ILTServer *pServer, int *version);
-#endif
+// talon: called after the properties are verified; empty in the release
+// build (name ours).
+static void cb_CheckClassDefs(ClassBindModule *pModule)
+{
+}
+
 
 int cb_LoadModule(const char *pModuleName, ILTServer *pServer, HCLASSMODULE *phModule, int *version)
 {
 	ClassBindModule *pModule;
-	// this is alloced here and then returned :(
-	pModule = (ClassBindModule*)malloc(sizeof(ClassBindModule));
 	HBINDMODULE hModule;
-
-	// platforms that use static binding should just call the funciton.
-	// Otherwise figure out which function and call that
-
-	#ifdef __PS2
-	pModule->m_hModule = NULL;
-	// FIX THIS MJS - should not hard code to a name with "DLL" in it
-	pModule->m_pClassDefs = ObjectDLLSetup(&pModule->m_nClassDefs, 
-	                                       pServer, version);
-
-	#else
 	ObjectDLLSetupFn theFunction;
 	int status;
 
@@ -72,6 +62,7 @@ int cb_LoadModule(const char *pModuleName, ILTServer *pServer, HCLASSMODULE *phM
 	}
 
 	// Ok.. setup the HCLASSMODULE.
+	pModule = (ClassBindModule*)malloc(sizeof(ClassBindModule));
 	pModule->m_hModule = hModule;
 	pModule->m_pClassDefs = theFunction(&pModule->m_nClassDefs, pServer, version);
 
@@ -81,10 +72,10 @@ int cb_LoadModule(const char *pModuleName, ILTServer *pServer, HCLASSMODULE *phM
 		bm_UnbindModule(hModule);
 		return CB_VERSIONMISMATCH;
 	}
-	#endif
 
 	// Verify all properties!
 	cb_VerifyClassDefProperties(pModule);
+	cb_CheckClassDefs(pModule);
 
 	*phModule = pModule;
 	return CB_NOERROR;

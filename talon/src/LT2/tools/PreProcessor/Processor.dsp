@@ -91,6 +91,10 @@ SOURCE=..\shared\engine\classbind.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\shared\engine\conparse.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\create_world_tree.cpp
 # End Source File
 # Begin Source File
