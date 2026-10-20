@@ -11,11 +11,12 @@
 set -u
 cd "$(dirname "$0")/.."
 dir=src/LT2/tools/PreProcessor
-probe=_offsetof_probe
+probe=_offsetof_probe_$$
 {
     echo '#include "bdefs.h"'
     echo '#include "preworld.h"'
     echo '#include "bspgen.h"'
+    echo '#include "lightmapmaker.h"'
     echo '#include <stddef.h>'
     i=0
     for q in "$@"; do
@@ -43,7 +44,7 @@ qs = sys.argv[1:]
 for line in sys.stdin:
     m = re.search(r"\((\d+)\) : error C2440.*char \(\*\)\[(\d+)\]", line)
     if m:
-        i = int(m.group(1)) - 5
+        i = int(m.group(1)) - 6
         n = int(m.group(2)) - 1
         print("%-50s %#x (%d)" % (qs[i] if 0 <= i < len(qs) else "?", n, n))
     elif "error" in line and "C2440" not in line:

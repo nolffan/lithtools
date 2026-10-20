@@ -110,6 +110,11 @@
 			inline uint32		GetPPFlags() const		{ return m_PPFlags;}
 			inline void			SetPPFlags(uint32 flags){ m_PPFlags = flags;}
 
+			// talon: the poly's vertices, then the extra ones in m_Unknown_0c, as
+			// one list (the lightmap maker's; the names are ours).
+			uint32				NumAllVerts() const		{ return NumVerts() + m_Unknown_0c.GetSize(); }
+			CPolyVert&			AllVert(uint32 i)		{ return (i >= NumVerts()) ? m_Unknown_0c[i - NumVerts()] : Vert(i); }
+
 			// Find the center of the polygon
 
 			// Extents tracking 

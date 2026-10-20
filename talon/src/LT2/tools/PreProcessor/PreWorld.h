@@ -46,10 +46,15 @@ void CheckNodes(CNode *pRoot);
 class CPreLightFrame
 {
 public:
+							CPreLightFrame();
 							~CPreLightFrame();
 	
 	// One lightmap for each poly..
 	CMoArray<CPreLightMap*>	m_PolyMaps;
+
+	// talon: 2001; one for each poly too, made with m_PolyMaps by the
+	// lightmap maker (0x418b70). What it holds is not known yet.
+	CMoArray<CMoArray<uint32>*>	m_Unknown_14;
 };
 
 
@@ -90,6 +95,9 @@ public:
 	char						m_Name[MAX_LIGHTANIMNAME_LEN];
 	CMoArray<CPreLightFrame*>	m_Frames;
 	CMoArray<CPrePolyRef>		m_Polies;		// Polies that this LightAnim affects.
+
+	// talon: CreateLightAnim's bShadowMap.
+	LTBOOL						m_bShadowMap;
 };
 
 
@@ -339,7 +347,14 @@ public:
 	uint32					CalcLMDataSize();
 	void					RemoveAllLightMaps();
 
+	// talon: fills each world model's poly array (0x30) from its poly
+	// list (0x432d70; the name is ours).
+	void					SetupPolyArrays();
+
 	void					RemoveLightAnim(CPreLightAnim *pAnim);
+
+	// talon: the light animation named pName, or NULL (0x433620).
+	CPreLightAnim*			FindLightAnim(const char *pName);
 
 	// Get the physics and visibility BSPs. Just searches for a CPreWorld with
 	// WIF_PHYSICSBSP or WIF_VISBSP.
@@ -370,6 +385,9 @@ public:
 	// collect the particle blocker polys from the world and return the number found
 	uint32					CollectParticleBlockerPolys();
 
+	// talon: the lightmap grid size (the lighting reads it through this).
+	PReal					GetLMGridSize() const	{return m_LMGridSize;}
+
 	// talon: the DAT file's (0x431470, 0x431c00, 0x431820). What they are
 	// is not worked out yet; the names are placeholders.
 	virtual BOOL			Unknown_00(ILTStream *pStream, BOOL bUnknown);
@@ -380,7 +398,8 @@ public:
 
 	// talon: the 2001 layout, from its constructor (0x431060, inlined in
 	// DoProcessing). m_Unknown_* are members whose use is not known yet.
-	CMoArray<void*>					m_Unknown_04;
+	// All the light animations (including the base one).
+	CMoArray<CPreLightAnim*>		m_LightAnims;
 
 	// No objects are stored in here, but this is created and maintained 
 	// so at runtime it knows how to create the WorldTree.

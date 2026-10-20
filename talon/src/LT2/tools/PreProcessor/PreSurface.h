@@ -44,7 +44,11 @@
 
 			// The brush it came from (hull making reports it as a problem brush).
 			CEditBrush		*m_pBrush;
-			uint32			m_Unknown_0c[5];
+			uint32			m_Unknown_0c[2];
+
+			// talon: the texture's origin and vectors (the texture lights use
+			// them; the names are ours).
+			PVector			m_TextureO;
 
 			// Vectors defining LIGHTMAP texture space on this surface.
 			// These are the INVERSE texture vectors (just like in the de_world structures).
@@ -54,7 +58,8 @@
 			// These are the texture vectors with inverse magnitude.
 			PVector			InverseP, InverseQ;
 
-			uint32			m_Unknown_50[13];
+			PVector			m_TextureP, m_TextureQ;
+			uint32			m_Unknown_68[7];
 
 			const char		*m_pTextureName;
 

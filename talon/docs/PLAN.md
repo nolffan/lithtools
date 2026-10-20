@@ -95,6 +95,15 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       lightmap planes, FindLMPlane and GetLMPlaneVectors, written from the
       image. Near: the static initializer, which builds each PVector
       argument in a temporary and copies it (ours constructs in place).
+    - [~] LightMapMaker (0x415770..0x41e070): the 2001 lightmap maker,
+      written from the image with Build 69's as a guide (it is a
+      WorldTreeHelper and the ILTPreLight; per-world-model LMMWorlds in a
+      WorldTree; threads; texture lights; light animations made by the
+      objects' PreLight functions; light groups). 348 rows matched; about
+      25 near (inline budget, operand order, registers and stack slots),
+      listed by `build/modcheck.sh Processor-avp2 LightMapMaker 0x415770
+      0x41e070`. Written in five parts in parallel, then folded together.
+    - [ ] ltquatbase (0x423dd0..0x4240e0) and mathlt_impl (0x424210..).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
