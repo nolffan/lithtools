@@ -4,6 +4,7 @@
 
 #include "lithtech/dtx.hpp"
 
+#include <iterator>
 #include <algorithm>
 #include <cstring>
 #include <fstream>

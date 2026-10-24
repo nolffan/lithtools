@@ -4,6 +4,11 @@
 
 #include "lithtech/rez.hpp"
 
+#include <vector>
+#include <string>
+#include <iterator>
+#include <chrono>
+#include <tuple>
 #include <algorithm>
 #include <cctype>
 #include <cerrno>

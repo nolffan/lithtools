@@ -5,6 +5,8 @@
 // commands that the original kept for its ZMgr build are enabled, and there
 // are extra commands for debugging and build scripts (see `lithrez help`).
 
+#include <cstdlib>
+#include <cctype>
 #include <lithtech/rez.hpp>
 
 #include <algorithm>

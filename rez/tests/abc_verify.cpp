@@ -31,7 +31,7 @@ int main(int argc, char** argv) {
         try {
             m = abc::read(d);
         } catch (const std::exception& ex) {
-            std::printf("FAIL %s: %s\n", e.path().c_str(), ex.what());
+            std::printf("FAIL %s: %s\n", e.path().u8string().c_str(), ex.what());
             ++failed;
             continue;
         }

@@ -50,7 +50,7 @@ struct Texture {
     std::vector<Section> sections;
     bool truncated = false;
 
-    Bpp bpp() const { return Bpp(extra[2] ? extra[2] : BPP_32); }
+    Bpp bpp() const { return Bpp(extra[2] ? extra[2] : uint8_t(BPP_32)); }
     int texture_group() const { return extra[0]; }
     int mipmaps_to_use() const { return extra[1]; }
     int non_s3tc_mip_offset() const { return extra[3]; }
