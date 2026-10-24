@@ -2,6 +2,8 @@
 
 abc   .abc models, versions 9-12 (NOLF, AvP2, AvP2 Primal Hunt)
 dtx   .dtx textures, version -5 (NOLF to Tron 2.0)
+ltb   .ltb models, model versions 18 to 25 (NOLF2, Contract J.A.C.K., Tron 2.0)
 """
 from . import abc  # noqa: F401
 from . import dtx  # noqa: F401
+from . import ltb  # noqa: F401

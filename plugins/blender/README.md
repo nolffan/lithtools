@@ -1,8 +1,13 @@
 # LithTech for Blender
 
 Import and export of LithTech models and textures in Blender (5.2 LTS and
-later), starting with the 2000-2001 engine (No One Lives Forever, Aliens
-versus Predator 2: `.abc` model version 12, DTX textures version -5), and
+later):
+
+| Game | Models | Textures |
+|---|---|---|
+| No One Lives Forever, Aliens versus Predator 2 (and Primal Hunt) | `.abc`, versions 9 to 12 | DTX version -5 |
+| No One Lives Forever 2, Contract J.A.C.K., Tron 2.0 | `.ltb`, model file versions 18 to 25 | DTX version -5 |
+
 meant to grow to every LithTech-era game.
 
 - `io_scene_lithtech/`: the Blender extension (`blender_manifest.toml`),
@@ -14,9 +19,11 @@ meant to grow to every LithTech-era game.
   with it.
 - `docs/`: the formats as found, with the evidence for each field (the
   shipped tools in `../../talon`, the engine reconstructions, Build 69).
-- `tests/`: `roundtrip_abc.py` and `roundtrip_dtx.py` read and write back
-  every shipped model and texture; `blender_roundtrip.py` (run inside
-  Blender) imports and exports every model through the extension.
+- `tests/`: `roundtrip_abc.py`, `roundtrip_ltb.py` and `roundtrip_dtx.py`
+  read and write back every shipped model and texture (`extract_abc.py` and
+  `extract_ltb.py` fill the asset cache first); `blender_roundtrip.py` and
+  `blender_roundtrip_ltb.py` (run inside Blender) import and export every
+  model through the extension.
 
 Game data is never committed; tests read it from the installed games
 (`~/src/rez/games`) through `~/src/tools/rezextract.py`.

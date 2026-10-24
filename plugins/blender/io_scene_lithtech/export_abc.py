@@ -461,7 +461,7 @@ def save(context, filepath, *, armature=None, scale=1.0, use_selection=False,
     m.command_string = arm_obj.get("lt_command_string", "")
     m.lod_distances = [float(d) for d in arm_obj.get("lt_lod_distances", [])]
     if "lt_header_reserved" in arm_obj:
-        m.header_reserved = bytes(arm_obj["lt_header_reserved"])
+        m.header_reserved = bytes(list(arm_obj["lt_header_reserved"]))
 
     # Pieces.
     candidates = context.selected_objects if use_selection else arm_obj.children_recursive

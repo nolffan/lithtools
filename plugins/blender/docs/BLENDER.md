@@ -1,7 +1,9 @@
 # The Blender extension
 
-`io_scene_lithtech` imports and exports LithTech models (`.abc`, versions 9
-to 12) and textures (`.dtx`, version -5) in Blender 5.2 LTS and later.
+`io_scene_lithtech` imports and exports LithTech models (`.abc` versions 9
+to 12: NOLF, AvP2; `.ltb` model file versions 18 to 25: NOLF2, Contract
+J.A.C.K., Tron 2.0) and textures (`.dtx`, version -5) in Blender 5.2 LTS
+and later.
 
 ## Installing
 
@@ -111,10 +113,55 @@ powers of two.
 
 Cube maps import as their first face, and export as a flat texture.
 
+## LTB models (NOLF2, Contract J.A.C.K., Tron 2.0)
+
+**File > Import / Export > LithTech Model (.ltb)**, or drop an `.ltb` on
+the viewport. The layout in Blender is the `.abc` one (armature, a mesh per
+piece, hidden LOD objects, socket empties, actions); `docs/LTB.md` has the
+format. What `.ltb` adds:
+
+| LTB | Blender |
+|---|---|
+| a LOD's D3D vertices | the mesh's vertices, in their stored order (UV seams are split vertices, as the game draws them) |
+| bone sets (up to four nodes for a run of vertices) | vertex groups; the sets themselves in `lt_bone_sets` |
+| rigid and vertex-animated meshes | weighted wholly to their node (`lt_bone_effector`) |
+| vertex animation frames | shape keys `<animation>\|<key>` |
+| a LOD's skins, render style, priority | `lt_textures`, `lt_texture_count`, `lt_render_style`, `lt_render_priority` |
+| animation compression | `lt_compression` (0 none, 1 relevant keys, 2 16-bit, 3 16-bit rotations) |
+
+**Skins.** In an extracted game tree the importer reads
+`ATTRIBUTES/MODELBUTES.TXT`, finds the model by its `ModelFile` and uses its
+`Skin0..N` (NOLF2's `player_action.ltb` gets `CateAction`, `CateCasualHead`
+and `CateCasualHair`); elsewhere it guesses as for `.abc`.
+
+**Export.** A mesh imported from an `.ltb` whose vertex and face counts
+haven't changed keeps its D3D layout (vertex order, bone sets, the blend
+weights where unchanged); any other mesh is laid out afresh: one D3D vertex
+per distinct vertex and UV, rigid if one bone (or none) deforms it, else
+skeletal with its triangles packed into bone sets of up to four bones (the
+strongest four per triangle). Animations keep their compression and the
+number of keys each channel had; new ones are written with 16-bit
+rotations (the most common kind) and a key per keyframe where a channel
+changes. The model file version is the imported one, else 23, which every
+shipped engine loads (*Version* chooses).
+
+Data Blender can't hold is kept for the export as well: keys that share a
+time (an F-curve can't key a frame twice), non-unit quaternions (some
+sockets and animations), bind matrices with scale, UVs of vertices no face
+uses, the stored normals and blend weights.
+
+**Round trip.** `tests/blender_roundtrip_ltb.py` imports, exports and
+compares every distinct shipped model: 2,273 (NOLF2, Contract J.A.C.K.,
+Tron 2.0 and the tools' and Jupiter builds' samples), all within float
+precision: positions within 0.001 units, rotations within 2e-7, and
+everything else exact, the allocation counts the engine sizes its memory
+by included. The 31 chunked files from before the format settled (the
+games can't load them) are read and written back but not imported.
+
 ## Not yet
 
-- Shogo/Blood 2-era `.abc` and the `.ltb` models of NOLF2, Contract
-  J.A.C.K. and Tron 2.0 (each should be its own module beside
-  `lithtech/abc.py`).
+- Shogo/Blood 2-era `.abc` (its own module beside `lithtech/abc.py`).
+- Matrix-palette skeletal meshes are read and written but no shipped model
+  uses them, so they're untested.
 - World files (`.dat`).
-- Reading the games' attribute files to pick skins exactly.
+- Reading the attribute files of NOLF and AvP2 to pick `.abc` skins (`.ltb` models already use MODELBUTES.TXT).

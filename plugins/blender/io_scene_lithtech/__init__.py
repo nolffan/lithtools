@@ -1,4 +1,4 @@
-"""LithTech formats for Blender: .abc models and .dtx textures."""
+"""LithTech formats for Blender: .abc and .ltb models and .dtx textures."""
 
 import os
 
@@ -163,6 +163,145 @@ class EXPORT_SCENE_OT_lithtech_abc(bpy.types.Operator, ExportHelper):
         sub.prop(self, "texture_format")
 
 
+class IMPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ImportHelper):
+    """Import LithTech models (.ltb): NOLF2, Contract J.A.C.K. and Tron 2.0"""
+    bl_idname = "import_scene.lithtech_ltb"
+    bl_label = "Import LithTech Model"
+    bl_options = {'REGISTER', 'UNDO', 'PRESET'}
+
+    filename_ext = ".ltb"
+    filter_glob: StringProperty(default="*.ltb", options={'HIDDEN'})
+    files: CollectionProperty(type=bpy.types.OperatorFileListElement,
+                              options={'HIDDEN', 'SKIP_SAVE'})
+    directory: StringProperty(subtype='DIR_PATH', options={'HIDDEN', 'SKIP_SAVE'})
+
+    scale: FloatProperty(
+        name="Scale", default=1.0, min=1e-6, soft_min=0.001, soft_max=10.0,
+        description="Blender units per LithTech unit (a NOLF character is about 100 "
+                    "units tall; 0.018 makes it 1.8 m)")
+    face_front: BoolProperty(
+        name="Face Front", default=True,
+        description="Turn the model to face Blender's front view (-Y); LithTech models "
+                    "face +Z, which becomes +Y. Only the armature object is turned, so "
+                    "exporting gives the same file")
+    import_animations: BoolProperty(name="Animations", default=True,
+                                    description="Import the animations as actions")
+    child_animations: BoolProperty(
+        name="Child Model Animations", default=True,
+        description="Also import the animations of the child models the model names "
+                    "(such as NOLF2's base models), when they are next to it")
+    import_lods: BoolProperty(name="LODs", default=True,
+                              description="Import the lower levels of detail as hidden objects")
+    import_sockets: BoolProperty(name="Sockets", default=True,
+                                 description="Import the sockets as empties on their bones")
+    import_textures: BoolProperty(
+        name="Skins", default=True,
+        description="Look for the model's skins (SKINS/<model>.dtx beside the MODELS "
+                    "directory, then <model>_*.dtx) and use them in the materials")
+    texture_dir: StringProperty(
+        name="Skin Directory", subtype='DIR_PATH', default="",
+        description="Another directory to look for skins in")
+
+    def execute(self, context):
+        from . import import_ltb
+        paths = [os.path.join(self.directory, f.name) for f in self.files if f.name] \
+            or [self.filepath]
+        for path in paths:
+            try:
+                import_ltb.load(context, path, scale=self.scale, face_front=self.face_front,
+                                import_animations=self.import_animations,
+                                child_animations=self.child_animations,
+                                import_lods=self.import_lods,
+                                import_sockets=self.import_sockets,
+                                import_textures=self.import_textures,
+                                texture_dirs=(bpy.path.abspath(self.texture_dir),)
+                                if self.texture_dir else ())
+            except Exception as e:  # report every failure, keep going
+                self.report({'ERROR'}, "%s: %s" % (os.path.basename(path), e))
+                import traceback
+                traceback.print_exc()
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        return self.invoke_popup(context) if self.filepath else super().invoke(context, event)
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.prop(self, "scale")
+        layout.prop(self, "face_front")
+        col = layout.column(heading="Include")
+        col.prop(self, "import_animations")
+        sub = col.column()
+        sub.active = self.import_animations
+        sub.prop(self, "child_animations")
+        col.prop(self, "import_lods")
+        col.prop(self, "import_sockets")
+        col.prop(self, "import_textures")
+        sub = layout.column()
+        sub.active = self.import_textures
+        sub.prop(self, "texture_dir")
+
+
+class EXPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ExportHelper):
+    """Export an armature and its meshes as a LithTech model (.ltb: NOLF2, Contract J.A.C.K., Tron 2.0)"""
+    bl_idname = "export_scene.lithtech_ltb"
+    bl_label = "Export LithTech Model (LTB)"
+    bl_options = {'PRESET'}
+
+    filename_ext = ".ltb"
+    filter_glob: StringProperty(default="*.ltb", options={'HIDDEN'})
+
+    scale: FloatProperty(
+        name="Scale", default=1.0, min=1e-6, soft_min=0.001, soft_max=1000.0,
+        description="LithTech units per Blender unit (set from the scale the model was "
+                    "imported at)")
+    use_selection: BoolProperty(name="Selected Only", default=False,
+                                description="Only the selected meshes and sockets")
+    export_animations: BoolProperty(
+        name="Animations", default=True,
+        description="Write the armature's actions; without them the model gets one "
+                    "animation, \"base\", at the rest pose")
+    version: EnumProperty(
+        name="Version",
+        items=[('AUTO', "As Imported", "The model file version it was imported from, else 23"),
+               ('23', "23 (NOLF2, Contract J.A.C.K., Tron 2.0)", "What the shipped engines load"),
+               ('24', "24", "Jupiter Build 69 samples"),
+               ('25', "25", "Jupiter Build 69 (MODEL_FILE_VERSION)")],
+        default='AUTO')
+
+    def invoke(self, context, event):
+        from . import export_abc
+        arm = export_abc.find_armature(context)
+        if arm is not None:
+            if "lt_scale" in arm and arm["lt_scale"]:
+                self.scale = 1.0 / arm["lt_scale"]
+            if not self.filepath or os.path.basename(self.filepath) == "untitled.ltb":
+                self.filepath = bpy.path.ensure_ext(arm.name, self.filename_ext)
+        return super().invoke(context, event)
+
+    def execute(self, context):
+        from . import export_abc, export_ltb
+        try:
+            _, written = export_ltb.save(
+                context, self.filepath, scale=self.scale, use_selection=self.use_selection,
+                export_animations=self.export_animations,
+                version=None if self.version == 'AUTO' else int(self.version))
+        except export_abc.ExportError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+        self.report({'INFO'}, "Wrote " + ", ".join(os.path.basename(p) for p in written))
+        return {'FINISHED'}
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.prop(self, "scale")
+        layout.prop(self, "use_selection")
+        layout.prop(self, "export_animations")
+        layout.prop(self, "version")
+
+
 # --------------------------------------------------------------------- #
 #  Textures
 # --------------------------------------------------------------------- #
@@ -269,6 +408,18 @@ class IO_FH_lithtech_abc(bpy.types.FileHandler):
         return poll_file_object_drop(context)
 
 
+class IO_FH_lithtech_ltb(bpy.types.FileHandler):
+    bl_idname = "IO_FH_lithtech_ltb"
+    bl_label = "LithTech Model (LTB)"
+    bl_import_operator = "import_scene.lithtech_ltb"
+    bl_export_operator = "export_scene.lithtech_ltb"
+    bl_file_extensions = ".ltb"
+
+    @classmethod
+    def poll_drop(cls, context):
+        return poll_file_object_drop(context)
+
+
 class IO_FH_lithtech_dtx(bpy.types.FileHandler):
     bl_idname = "IO_FH_lithtech_dtx"
     bl_label = "LithTech Texture"
@@ -282,11 +433,13 @@ class IO_FH_lithtech_dtx(bpy.types.FileHandler):
 
 def menu_import(self, context):
     self.layout.operator(IMPORT_SCENE_OT_lithtech_abc.bl_idname, text="LithTech Model (.abc)")
+    self.layout.operator(IMPORT_SCENE_OT_lithtech_ltb.bl_idname, text="LithTech Model (.ltb)")
     self.layout.operator(IMPORT_IMAGE_OT_lithtech_dtx.bl_idname, text="LithTech Texture (.dtx)")
 
 
 def menu_export(self, context):
     self.layout.operator(EXPORT_SCENE_OT_lithtech_abc.bl_idname, text="LithTech Model (.abc)")
+    self.layout.operator(EXPORT_SCENE_OT_lithtech_ltb.bl_idname, text="LithTech Model (.ltb)")
     self.layout.operator(EXPORT_IMAGE_OT_lithtech_dtx.bl_idname, text="LithTech Texture (.dtx)")
 
 
@@ -297,11 +450,14 @@ def menu_image(self, context):
 
 
 classes = (
+    IMPORT_SCENE_OT_lithtech_ltb,
+    EXPORT_SCENE_OT_lithtech_ltb,
     IMPORT_SCENE_OT_lithtech_abc,
     EXPORT_SCENE_OT_lithtech_abc,
     IMPORT_IMAGE_OT_lithtech_dtx,
     EXPORT_IMAGE_OT_lithtech_dtx,
     IO_FH_lithtech_abc,
+    IO_FH_lithtech_ltb,
     IO_FH_lithtech_dtx,
 )
 
