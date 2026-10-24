@@ -34,6 +34,15 @@ class ExportError(Exception):
     pass
 
 
+def nothing_to_export(context):
+    """Why find_armature found nothing, for the user."""
+    arms = [o for o in context.scene.objects if o.type == 'ARMATURE']
+    if len(arms) > 1:
+        return ("There are %d armatures: select the one to export (or a mesh it deforms)" % len(arms))
+    return ("Nothing to export: there's no model in the scene. Exporting writes the scene's "
+            "model to a file; to open a model, use File > Import > LithTech Model")
+
+
 def find_armature(context):
     obj = context.active_object
     if obj is not None:
@@ -444,7 +453,7 @@ def save(context, filepath, *, armature=None, scale=1.0, use_selection=False,
          texture_bpp=None):
     arm_obj = armature or find_armature(context)
     if arm_obj is None:
-        raise ExportError("select an armature, or a mesh deformed by one")
+        raise ExportError(nothing_to_export(context))
     if context.object and context.object.mode != 'OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')
 

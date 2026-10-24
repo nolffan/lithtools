@@ -428,7 +428,7 @@ def save(context, filepath, *, armature=None, scale=1.0, use_selection=False,
          export_animations=True, version=None):
     arm_obj = armature or export_abc.find_armature(context)
     if arm_obj is None:
-        raise ExportError("select an armature, or a mesh deformed by one")
+        raise ExportError(export_abc.nothing_to_export(context))
     if context.object and context.object.mode != 'OBJECT':
         bpy.ops.object.mode_set(mode='OBJECT')
     fps = context.scene.render.fps / context.scene.render.fps_base

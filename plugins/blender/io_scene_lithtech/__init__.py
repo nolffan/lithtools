@@ -127,11 +127,14 @@ class EXPORT_SCENE_OT_lithtech_abc(bpy.types.Operator, ExportHelper):
     def invoke(self, context, event):
         from . import export_abc
         arm = export_abc.find_armature(context)
-        if arm is not None:
-            if "lt_scale" in arm and arm["lt_scale"]:
-                self.scale = 1.0 / arm["lt_scale"]
-            if not self.filepath or os.path.basename(self.filepath) == "untitled.abc":
-                self.filepath = bpy.path.ensure_ext(arm.name, self.filename_ext)
+        if arm is None:
+            # Before the file browser: picking a file there overwrites it.
+            self.report({'ERROR'}, export_abc.nothing_to_export(context))
+            return {'CANCELLED'}
+        if "lt_scale" in arm and arm["lt_scale"]:
+            self.scale = 1.0 / arm["lt_scale"]
+        if not self.filepath or os.path.basename(self.filepath) == "untitled.abc":
+            self.filepath = bpy.path.ensure_ext(arm.name, self.filename_ext)
         return super().invoke(context, event)
 
     def execute(self, context):
@@ -273,11 +276,14 @@ class EXPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ExportHelper):
     def invoke(self, context, event):
         from . import export_abc
         arm = export_abc.find_armature(context)
-        if arm is not None:
-            if "lt_scale" in arm and arm["lt_scale"]:
-                self.scale = 1.0 / arm["lt_scale"]
-            if not self.filepath or os.path.basename(self.filepath) == "untitled.ltb":
-                self.filepath = bpy.path.ensure_ext(arm.name, self.filename_ext)
+        if arm is None:
+            # Before the file browser: picking a file there overwrites it.
+            self.report({'ERROR'}, export_abc.nothing_to_export(context))
+            return {'CANCELLED'}
+        if "lt_scale" in arm and arm["lt_scale"]:
+            self.scale = 1.0 / arm["lt_scale"]
+        if not self.filepath or os.path.basename(self.filepath) == "untitled.ltb":
+            self.filepath = bpy.path.ensure_ext(arm.name, self.filename_ext)
         return super().invoke(context, event)
 
     def execute(self, context):
