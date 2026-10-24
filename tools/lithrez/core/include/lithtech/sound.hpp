@@ -92,4 +92,62 @@ Info read_info(const uint8_t* data, std::size_t size);
 // Decodes the whole sound. Throws Error for a file it can't play.
 Pcm decode(const uint8_t* data, std::size_t size, Info* info = nullptr);
 
+// A 16-bit PCM .wav of a sound; with loop_end > loop_start, the loop as
+// LithTech's engine reads it (a cue point and its 'ltxt' length) and as a
+// "smpl" loop for other tools.
+std::vector<uint8_t> write_wav(const Pcm& pcm, uint32_t loop_start = 0, uint32_t loop_end = 0);
+
+// ---------------------------------------------------------------------------
+// The PS2 port's sound banks (*.lps, "LithTech PSX Sound Data 1.20"): the
+// per-level effect banks (lps/<world>.lps) and voice banks
+// (stream/mNN/vo_<world>.lps). Samples are mono PS-ADPCM (SPU "VAG"
+// frames). See docs/LPS.md.
+
+struct BankSound {
+    std::string name;                 // "LOCKPICK.WAV"
+    std::string group;                // its group path, "SND\DOORS"
+    std::string path;                 // group + name: the PC path
+    uint32_t flags = 0;               // bit 1: looping
+    uint32_t offset = 0, size = 0;    // the ADPCM, in the bank's data
+    uint32_t rate = 0;
+    uint32_t loop_start = 0;          // looping: byte offset of the loop-start frame
+    uint32_t play_size = 0;
+    uint32_t lip_start = 0, lip_count = 0;   // lip-sync bytes (20 a second)
+    uint32_t spu_addr = 0, spu_size = 0;     // the resident head in SPU RAM
+
+    bool looping() const { return flags & 2; }
+};
+
+struct BankGroup {
+    std::string name;
+    uint32_t n_children = 0, n_sounds = 0, first_child = 0, first_sound = 0;
+};
+
+struct Bank {
+    std::string version;              // "LithTech PSX Sound Data 1.20"
+    std::vector<BankSound> sounds;
+    std::vector<BankGroup> groups;    // the last is the root
+    std::vector<uint8_t> data;        // ADPCM
+    std::vector<uint8_t> lip;
+    std::vector<uint8_t> spu_image;   // voice banks: a ready copy of the sounds' heads
+
+    const uint8_t* adpcm(const BankSound& s) const { return data.data() + s.offset; }
+};
+
+bool is_bank(const uint8_t* data, std::size_t size);
+Bank read_bank(const uint8_t* data, std::size_t size);   // throws Error
+
+// PS-ADPCM to PCM, as far as the first frame flagged END (for a loop, one
+// pass through it); a frame flagged 7 (void) ends it unplayed. loop_start
+// and loop_end, if given, get the loop in samples, as the SPU plays it:
+// from the last LOOP START frame (or the start) to the END+LOOP frame's
+// end, or to the end of a loop that has no END frame; both 0 for a
+// one-shot.
+std::vector<int16_t> decode_ps_adpcm(const uint8_t* data, std::size_t size, uint32_t* loop_start = nullptr,
+                                     uint32_t* loop_end = nullptr);
+
+// One sound of a bank, mono at its rate.
+Pcm decode_bank_sound(const Bank& bank, std::size_t index, uint32_t* loop_start = nullptr,
+                      uint32_t* loop_end = nullptr);
+
 }  // namespace lithtech::sound

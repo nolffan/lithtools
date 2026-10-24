@@ -36,6 +36,9 @@ target_link_libraries(ltb_verify PRIVATE lithtech)
 # against FFmpeg.
 add_executable(sound_decode_all sound_decode_all.cpp)
 target_link_libraries(sound_decode_all PRIVATE lithtech)
+add_executable(sound_test sound_test.cpp)
+target_link_libraries(sound_test PRIVATE lithtech)
+add_test(NAME sound_test COMMAND sound_test)
 # Playback on an output device (a PulseAudio null sink in docker); see the
 # README.
 if(TARGET Qt6::Multimedia)

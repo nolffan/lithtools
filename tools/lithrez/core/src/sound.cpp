@@ -9,6 +9,7 @@
 #include <array>
 #include <cmath>
 #include <cstring>
+#include <functional>
 
 #define MINIMP3_IMPLEMENTATION
 #define MINIMP3_NO_SIMD_CHECK_WARNING
@@ -367,6 +368,204 @@ Pcm decode(const uint8_t* data, std::size_t size, Info* info) {
     }
     if (info) *info = p.info;
     return out;
+}
+
+std::vector<uint8_t> write_wav(const Pcm& pcm, uint32_t loop_start, uint32_t loop_end) {
+    std::vector<uint8_t> o;
+    auto u32 = [&o](uint32_t v) { for (int k = 0; k < 4; ++k) o.push_back(uint8_t(v >> (8 * k))); };
+    auto u16 = [&o](uint16_t v) { o.push_back(uint8_t(v)); o.push_back(uint8_t(v >> 8)); };
+    auto id = [&o](const char* c) { o.insert(o.end(), c, c + 4); };
+    const bool loop = loop_end > loop_start;
+    const uint32_t ch = uint32_t(std::max(pcm.channels, 1)), bytes = uint32_t(pcm.samples.size() * 2);
+    id("RIFF");
+    u32(0);   // filled in below
+    id("WAVE");
+    id("fmt ");
+    u32(16);
+    u16(WAVE_PCM);
+    u16(uint16_t(ch));
+    u32(uint32_t(pcm.sample_rate));
+    u32(uint32_t(pcm.sample_rate) * ch * 2);
+    u16(uint16_t(ch * 2));
+    u16(16);
+    id("data");
+    u32(bytes);
+    for (int16_t v : pcm.samples) u16(uint16_t(v));
+    if (bytes & 1) o.push_back(0);
+    if (loop) {
+        id("cue ");   // one point, on the data, named 1
+        u32(4 + 24);
+        u32(1);
+        u32(1);
+        u32(loop_start);
+        id("data");
+        u32(0);
+        u32(0);
+        u32(loop_start);
+        id("LIST");   // its length and label
+        u32(4 + (8 + 20) + (8 + 8));
+        id("adtl");
+        id("ltxt");
+        u32(20);
+        u32(1);
+        u32(loop_end - loop_start);
+        id("rgn ");
+        u16(0);
+        u16(0);
+        u16(0);
+        u16(0);
+        id("labl");
+        u32(8);
+        u32(1);
+        id("loop");
+        id("smpl");   // a forward loop, for other tools
+        u32(36 + 24);
+        u32(0);
+        u32(0);
+        u32(pcm.sample_rate ? uint32_t(1000000000ull / uint32_t(pcm.sample_rate)) : 0);
+        u32(60);
+        u32(0);
+        u32(0);
+        u32(0);
+        u32(1);
+        u32(0);
+        u32(0);
+        u32(0);
+        u32(loop_start);
+        u32(loop_end - 1);   // inclusive
+        u32(0);
+        u32(0);
+    }
+    const uint32_t riff = uint32_t(o.size() - 8);
+    for (int k = 0; k < 4; ++k) o[4 + std::size_t(k)] = uint8_t(riff >> (8 * k));
+    return o;
+}
+
+namespace {
+const char kBankMagic[32] = "LithTech PSX Sound Data 1.20\r\n\x1a";   // and a NUL
+constexpr std::size_t kBankHeader = 0x34, kBankSound = 72, kBankGroup = 48;
+}  // namespace
+
+bool is_bank(const uint8_t* d, std::size_t n) { return n >= kBankHeader && std::memcmp(d, kBankMagic, 32) == 0; }
+
+Bank read_bank(const uint8_t* d, std::size_t n) {
+    if (!is_bank(d, n)) throw Error("not a LithTech PSX sound bank");
+    Bank b;
+    b.version = "LithTech PSX Sound Data 1.20";
+    const uint32_t data_size = rd32(d + 32), n_groups = rd32(d + 36), n_sounds = rd32(d + 40),
+                   lip_size = rd32(d + 44), spu_size = rd32(d + 48);
+    const uint64_t groups_at = kBankHeader + uint64_t(n_sounds) * kBankSound,
+                   data_at = groups_at + uint64_t(n_groups) * kBankGroup;
+    if (data_at + data_size + lip_size + spu_size != n)
+        throw Error("the bank's sizes don't add up to its length");
+    for (uint32_t i = 0; i < n_sounds; ++i) {
+        const uint8_t* r = d + kBankHeader + std::size_t(i) * kBankSound;
+        BankSound s;
+        s.name = cstr(r, 32);
+        s.flags = rd32(r + 32);
+        s.offset = rd32(r + 36);
+        s.size = rd32(r + 40);
+        s.rate = rd32(r + 44);
+        s.loop_start = rd32(r + 48);
+        s.play_size = rd32(r + 52);
+        s.lip_start = rd32(r + 56);
+        s.lip_count = rd32(r + 60);
+        s.spu_addr = rd32(r + 64);
+        s.spu_size = rd32(r + 68);
+        if (uint64_t(s.offset) + s.size > data_size) throw Error("a sound lies outside the bank's data");
+        if (uint64_t(s.lip_start) + s.lip_count > lip_size) throw Error("a sound's lip-sync lies outside the bank");
+        s.path = s.name;
+        b.sounds.push_back(std::move(s));
+    }
+    for (uint32_t i = 0; i < n_groups; ++i) {
+        const uint8_t* r = d + groups_at + std::size_t(i) * kBankGroup;
+        BankGroup g;
+        g.name = cstr(r, 32);
+        g.n_children = rd32(r + 32);
+        g.n_sounds = rd32(r + 36);
+        g.first_child = rd32(r + 40);
+        g.first_sound = rd32(r + 44);
+        b.groups.push_back(std::move(g));
+    }
+    const uint8_t* p = d + data_at;
+    b.data.assign(p, p + data_size);
+    b.lip.assign(p + data_size, p + data_size + lip_size);
+    b.spu_image.assign(p + data_size + lip_size, p + data_size + lip_size + spu_size);
+    // The group tree, from the root (the last group): a sound's path is the
+    // group names down to its leaf.
+    std::vector<bool> seen(b.groups.size());
+    std::function<void(std::size_t, const std::string&, int)> walk = [&](std::size_t gi, const std::string& prefix, int depth) {
+        if (seen[gi] || depth > 64) throw Error("the bank's groups loop");
+        seen[gi] = true;
+        const BankGroup& g = b.groups[gi];
+        std::string here = g.name.empty() ? prefix : prefix.empty() ? g.name : prefix + "\\" + g.name;
+        for (uint64_t c = g.first_child; c < uint64_t(g.first_child) + g.n_children; ++c) {
+            if (c >= b.groups.size()) throw Error("a group's children lie outside the bank");
+            walk(std::size_t(c), here, depth + 1);
+        }
+        for (uint64_t k = g.first_sound; k < uint64_t(g.first_sound) + g.n_sounds; ++k) {
+            if (k >= b.sounds.size()) throw Error("a group's sounds lie outside the bank");
+            b.sounds[std::size_t(k)].group = here;
+            b.sounds[std::size_t(k)].path = here.empty() ? b.sounds[std::size_t(k)].name : here + "\\" + b.sounds[std::size_t(k)].name;
+        }
+    };
+    if (!b.groups.empty()) walk(b.groups.size() - 1, "", 0);
+    return b;
+}
+
+std::vector<int16_t> decode_ps_adpcm(const uint8_t* d, std::size_t n, uint32_t* loop_start, uint32_t* loop_end) {
+    static const int kFilter[5][2] = {{0, 0}, {60, 0}, {115, -52}, {98, -55}, {122, -60}};
+    std::vector<int16_t> out;
+    int s1 = 0, s2 = 0;
+    // The SPU's repeat address: the start, until a LOOP START frame sets it
+    // (every looping sound marks frame 2; one with an intro marks its loop
+    // again later, and the last before the end wins).
+    uint32_t repeat = 0, ls = 0, le = 0;
+    bool repeats = false;   // a frame with the LOOP bit
+    bool ended = false;
+    for (std::size_t o = 0; o + 16 <= n; o += 16) {
+        int shift = d[o] & 15, filt = d[o] >> 4;
+        const int flags = d[o + 1];
+        if (filt > 4) filt = 0;   // not valid on the SPU: taken as raw
+        if (shift > 12) shift = 9;   // the SPU's behaviour for 13 to 15
+        if (flags == 7) {   // a void frame: not played
+            ended = true;
+            break;
+        }
+        if (flags & 4) repeat = uint32_t(out.size());
+        repeats |= (flags & 2) != 0;
+        const int f0 = kFilter[filt][0], f1 = kFilter[filt][1];
+        for (int k = 2; k < 16; ++k)
+            for (int nib : {d[o + std::size_t(k)] & 15, d[o + std::size_t(k)] >> 4}) {
+                int v = int16_t(uint16_t(nib << 12));
+                v = (v >> shift) + ((s1 * f0 + s2 * f1 + 32) >> 6);
+                v = std::clamp(v, -32768, 32767);
+                out.push_back(int16_t(v));
+                s2 = s1;
+                s1 = v;
+            }
+        if (flags & 1) {   // END: with LOOP, back to the repeat address
+            ended = true;
+            if (flags & 2) ls = repeat, le = uint32_t(out.size());
+            break;
+        }
+    }
+    // A long streamed loop can run to the end of its data with no END frame.
+    if (!ended && repeats) ls = repeat, le = uint32_t(out.size());
+    if (loop_start) *loop_start = ls;
+    if (loop_end) *loop_end = le;
+    return out;
+}
+
+Pcm decode_bank_sound(const Bank& b, std::size_t i, uint32_t* loop_start, uint32_t* loop_end) {
+    if (i >= b.sounds.size()) throw Error("no such sound in the bank");
+    const BankSound& s = b.sounds[i];
+    Pcm p;
+    p.channels = 1;
+    p.sample_rate = int(s.rate);
+    if (!s.rate) throw Error("the sound has no sample rate");
+    p.samples = decode_ps_adpcm(b.adpcm(s), s.size, loop_start, loop_end);
+    return p;
 }
 
 bool Info::engine_loop(uint32_t& start, uint32_t& end) const {
