@@ -16,7 +16,9 @@ Candidates, tried against every disc's hashes (docs/PS2REZ.md):
 The hash is weak (h = h * 11 + c), so related strings give related hashes and
 some candidates match a file they don't name. A name is kept only when its
 extension is one the games use and agrees with the file's contents (a .dtx
-must be a DTX, and so on) and it has no stray characters; the first good name found for a hash wins.
+must be a DTX, and so on) and it has no stray characters; the first good name found for a hash wins
+(candidates are tried in sorted order, so the list comes out the same each
+time).
 """
 import argparse
 import os
@@ -183,7 +185,7 @@ def recover(rez, pcp, found):
             return True
         return False
 
-    for p in pcp:
+    for p in sorted(pcp):
         try_name(p)
     rx = re.compile(rb'[\x20-\x7e]{3,}')
     strs = set()
@@ -192,7 +194,7 @@ def recover(rez, pcp, found):
             strs.add(m.group().decode('latin-1'))
     for m in rx.finditer(rez.exe()):
         strs.add(m.group().decode('latin-1'))
-    for s in strs:
+    for s in sorted(strs):
         for part in re.split(r'["\s,;=()<>|%]+', s):
             if '.' in part or '\\' in part or '/' in part:
                 try_name(part)
@@ -205,8 +207,8 @@ def recover(rez, pcp, found):
         for part in re.split(r'["\s,;=()<>|\\/]+', s):
             if '.' in part and len(part) < 40:
                 bases.add(part)
-    for d in dirs:
-        for b in bases:
+    for d in sorted(dirs):
+        for b in sorted(bases):
             try_name(d + '\\' + b)
     idents = {s.rsplit('\\', 1)[-1].rsplit('.', 1)[0] for s in found.values()}
     for s in strs:
@@ -215,10 +217,10 @@ def recover(rez, pcp, found):
             'worlds\\%s.ltb', 'lps\\%s.lps']
     while True:
         n0 = len(found)
-        for i in list(idents):
+        for i in sorted(idents):
             for p in pats:
                 try_name(p % i)
-        for h, s in list(found.items()):
+        for h, s in sorted(found.items()):
             if s.lower().endswith('.txt'):
                 t = rez.read(h).decode('latin-1')
                 for q in re.findall(r'"([^"]+)"', t):
