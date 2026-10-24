@@ -273,16 +273,27 @@ std::vector<Mat4> bind_pose(const Model& m) {
     return out;
 }
 
+// The weights' biases needn't add up to 1, and the offsets are scaled to
+// match: in the shipped .abc models 1,707 vertices (47 models: AvP2's
+// Dunya and Ancient Predator, NOLF's MaleBystander_Style5, NOLF2's
+// DeadPilot...) total 1.5 to 11, and 10,419 more a little over or under 1.
+// Divided by the total, every vertex of all 754 models lands within 3
+// units of its stored bind position; undivided, those fly hundreds of
+// units off.
 Vec3 skin(const Vertex& v, const std::vector<Mat4>& M) {
     if (v.weights.empty()) return v.location;
     Vec3 s{0, 0, 0};
+    float total = 0;
     for (auto& w : v.weights) {
         if (w.node >= M.size()) continue;
         const Mat4& m = M[w.node];
         for (int i = 0; i < 3; ++i)
             s[i] += m[4 * i] * w.location[0] + m[4 * i + 1] * w.location[1] + m[4 * i + 2] * w.location[2] +
                     m[4 * i + 3] * w.bias;
+        total += w.bias;
     }
+    if (total > 0)
+        for (float& c : s) c /= total;
     return s;
 }
 

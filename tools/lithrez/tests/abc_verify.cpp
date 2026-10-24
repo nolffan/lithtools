@@ -1,7 +1,7 @@
 // Reads every .abc under a directory with lithtech::abc::read and checks the
-// skinning maths: skin(bind) gives back the stored position for vertices
-// whose biases sum to 1, and pose() at the first key of the first animation
-// gives back the bind matrices.
+// skinning maths: skin(bind) gives back the stored position of every weighted
+// vertex (whatever its biases total), and pose() at the first key of the
+// first animation gives back the bind matrices.
 #include <lithtech/abc.hpp>
 
 #include <cmath>
@@ -16,7 +16,8 @@ using namespace lithtech;
 int main(int argc, char** argv) {
     if (argc < 2) { std::printf("usage: abc_verify <dir>\n"); return 2; }
     int files = 0, failed = 0;
-    long verts = 0, skin_ok = 0, skin_checked = 0;
+    long verts = 0, skin_ok = 0, skin_near = 0, skin_checked = 0;
+    double worst_skin = 0;
     double worst_pose = 0;
     int pose_models = 0, pose_match = 0;
     for (auto& e : fs::recursive_directory_iterator(argv[1])) {
@@ -39,14 +40,14 @@ int main(int argc, char** argv) {
         for (auto& p : m.pieces)
             for (auto& v : p.lods[0].vertices) {
                 ++verts;
-                float sum = 0;
-                for (auto& w : v.weights) sum += w.bias;
-                if (std::fabs(sum - 1) > 1e-4f) continue;
+                if (v.weights.empty()) continue;   // every weighted vertex, whatever its biases total
                 ++skin_checked;
                 auto s = abc::skin(v, bind);
                 float dd = 0;
                 for (int i = 0; i < 3; ++i) dd = std::max(dd, std::fabs(s[i] - v.location[i]));
                 if (dd < 1e-2f) ++skin_ok;
+                if (dd < 3) ++skin_near;
+                worst_skin = std::max(worst_skin, double(dd));
             }
         if (!m.animations.empty() && !m.animations[0].keyframes.empty()) {
             auto P = abc::pose(m, m.animations[0], float(m.animations[0].keyframes[0].time));
@@ -63,9 +64,9 @@ int main(int argc, char** argv) {
             if (mw < 1e-3) ++pose_match;
         }
     }
-    std::printf("%d files, %d failed; %ld vertices, %ld with biases summing to 1, %ld of them skin back "
-                "within 0.01 (%.2f%%); first key of the first animation equals the bind pose in %d of %d models (worst %.4g)\n",
+    std::printf("%d files, %d failed; %ld vertices, %ld weighted: %ld skin back within 0.01 (%.2f%%), %ld within 3, "
+                "worst %.3g; first key of the first animation equals the bind pose in %d of %d models (worst %.4g)\n",
                 files, failed, verts, skin_checked, skin_ok, skin_checked ? 100.0 * skin_ok / skin_checked : 0.0,
-                pose_match, pose_models, worst_pose);
+                skin_near, worst_skin, pose_match, pose_models, worst_pose);
     return failed ? 1 : 0;
 }

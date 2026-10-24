@@ -384,8 +384,10 @@ private:
                 auto& v = L.vertices[vi];
                 pos[vi] = toGL(abc::skin(v, matrices));
                 QVector3D n(0, 0, 0), n0(v.normal[0], v.normal[1], v.normal[2]);
+                float total = 0;   // biases needn't add up to 1, as abc::skin says
                 for (auto& w : v.weights)
-                    if (w.node < nrm.size()) n += w.bias * nrm[w.node].mapVector(n0);
+                    if (w.node < nrm.size()) n += w.bias * nrm[w.node].mapVector(n0), total += w.bias;
+                if (total > 0) n /= total;
                 if (v.weights.empty()) n = n0;
                 nor[vi] = QVector3D(n.x(), n.y(), -n.z());
             }
