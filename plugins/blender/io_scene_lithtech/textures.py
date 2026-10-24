@@ -188,30 +188,67 @@ def _listdir_nocase(d):
         return {}
 
 
+def _case_variants(d):
+    """Every existing directory that is d but for letter case (a tree
+    extracted on a case-sensitive file system can hold CHARS/SKINS and
+    chars/skins side by side, as the PS2 disc's names do)."""
+    d = os.path.abspath(d)
+    parts = d.split(os.sep)
+    found = [os.sep]
+    for part in parts[1:]:
+        if not part:
+            continue
+        nxt = []
+        for base in found:
+            try:
+                nxt += [os.path.join(base, e) for e in os.listdir(base)
+                        if e.lower() == part.lower() and os.path.isdir(os.path.join(base, e))]
+            except OSError:
+                pass
+        found = nxt
+        if not found:
+            return [d]
+    return found
+
+
 def _skin_dirs(model_path, extra_dirs):
     """Where a model's skins may be: the extra directories, the model's own,
     and the SKINS directory beside each MODELS directory above it (NOLF and
-    AvP2 keep Foo/MODELS/x.abc with Foo/SKINS/x.dtx)."""
+    AvP2 keep Foo/MODELS/x.abc with Foo/SKINS/x.dtx; NOLF's weapons
+    MODELS_PV with SKINS_PV), in every letter case the tree has."""
     dirs = [d for d in extra_dirs if d]
     d = os.path.dirname(os.path.abspath(model_path))
-    dirs.append(d)
+    dirs += _case_variants(d)
     sub = []
     while True:
         parent, base = os.path.split(d)
         if not base:
             break
-        if base.lower() in ("models", "model"):
-            for e in _listdir_nocase(parent).items():
-                if e[0] in ("skins", "skin", "textures") and os.path.isdir(e[1]):
-                    t = e[1]
-                    for s in reversed(sub):
-                        t = _listdir_nocase(t).get(s.lower(), t)
-                    dirs.append(t)
-                    dirs.append(e[1])
+        low = base.lower()
+        if low in ("models", "model") or low.startswith("models_"):
+            # MODELS -> SKINS, and NOLF's weapon views MODELS_PV -> SKINS_PV,
+            # MODELS_HH -> SKINS_HH
+            suffix = low[len("models"):] if low.startswith("models_") else ""
+            want = ("skins" + suffix,) if suffix else ("skins", "skin", "textures")
+            for pv in _case_variants(parent):
+                for e in _listdir_nocase_all(pv):
+                    if os.path.basename(e).lower() in want and os.path.isdir(e):
+                        t = e
+                        for s in reversed(sub):
+                            t = _listdir_nocase(t).get(s.lower(), t)
+                        dirs.append(t)
+                        dirs.append(e)
             break
         sub.append(base)
         d = parent
     return dirs
+
+
+def _listdir_nocase_all(d):
+    try:
+        return [os.path.join(d, e) for e in os.listdir(d)]
+    except OSError:
+        return []
 
 
 def skin_candidates(model_path, extra_dirs=()):
