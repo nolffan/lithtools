@@ -602,14 +602,14 @@
     "lithrez.exe": {
       "attempted": 0,
       "bytes_identical": 21596,
-      "bytes_total": 22934,
-      "crt": 220,
-      "crt_bytes": 36533,
+      "bytes_total": 22309,
+      "crt": 278,
+      "crt_bytes": 37158,
       "driver": 0,
       "driver_bytes": 0,
       "encrypted": 0,
       "encrypted_bytes": 0,
-      "funcs": 177,
+      "funcs": 119,
       "identical": 108,
       "kind": "image",
       "middleware": 0,
@@ -617,27 +617,27 @@
       "near": 1,
       "small": 10,
       "started": true,
-      "todo": 58,
+      "todo": 0,
       "unlinked": 9,
       "unlinked_bytes": 546,
       "unplaced": 3,
       "unplaced_bytes": 17,
-      "unwritten": 58,
-      "unwritten_bytes": 625
+      "unwritten": 0,
+      "unwritten_bytes": 0
     }
   },
   "total": {
     "attempted": 0,
     "bytes_identical": 202363,
-    "bytes_total": 3121533,
-    "funcs": 24759,
+    "bytes_total": 3120908,
+    "funcs": 24701,
     "identical": 1151,
     "near": 67,
     "small": 149,
-    "todo": 23392,
+    "todo": 23334,
     "unplaced": 154,
     "unplaced_bytes": 50590,
-    "unwritten": 23392,
-    "unwritten_bytes": 2865009
+    "unwritten": 23334,
+    "unwritten_bytes": 2864384
   }
 }

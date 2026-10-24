@@ -20,7 +20,7 @@ RSC=rc.exe
 # PROP Target_Dir ""
 # ADD CPP /nologo /ML /W3 /GX /O2 /I "RezMgr" /I "Lith" /D "WIN32" /D "NDEBUG" /D "_CONSOLE" /D "_MBCS" /YX /FD /c
 LINK32=link.exe
-# ADD LINK32 kernel32.lib /nologo /subsystem:console /machine:I386
+# ADD LINK32 libc.lib kernel32.lib /nologo /subsystem:console /machine:I386
 
 !ENDIF
 

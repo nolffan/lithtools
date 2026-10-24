@@ -84,8 +84,10 @@ TARGETS = [
          partial_objs=["src/LT2/built/Release/tools/LithRez/*.obj",
                        "src/LT2/built/Release/tools/LithRez/RezMgr/*.obj",
                        "src/LT2/built/Release/tools/LithRez/Lith/*.obj"],
-         app=[(0x00401000, 0x00402dc0), (0x0040ad50, 0x0040ea90),
-              (0x0040fee0, 0x004101e5)]),
+         # (the kernel32 thunk at 0x0040e7d0 and the unwind funclets at
+         # 0x0040fee0..0x004101e5 are the runtime's kind: not counted)
+         app=[(0x00401000, 0x00402dc0), (0x0040ad50, 0x0040e7d0),
+              (0x0040e7e0, 0x0040ea90)]),
     # ---- DirectEngine's world processor (NOLF Tools 001) -----------------
     # "--- DirectEngine World Processor ---", built 1998-05-31 from
     # F:\Proj\DE\DEdit\TProcessor: the LithTech 1.0-era processor that

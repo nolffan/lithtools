@@ -1,0 +1,5 @@
+addr,reason
+0x004012fa,"part of ExtractDir at 0x00401210 (the enumeration split it at a branch target; matched whole)"
+0x0040b683,"part of CRezDir::GetRez(REZID, REZTYPE) at 0x0040b660 (enumeration split; matched whole)"
+0x0040d59d,"part of CRezMgr::StrToType at 0x0040d590 (enumeration split; matched whole)"
+0x0040dc1d,"part of rezhash's first function at 0x0040dc10 (enumeration split; matched whole)"
