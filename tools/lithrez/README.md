@@ -51,13 +51,18 @@ These read the game archives (never committed), so they aren't part of
 - `dtx_decode_all`, `abc_verify`, `ltb_verify`: textures and models.
 - `sound_decode_all <rez>...`: decodes every `.wav` (80,845 in the shipped
   games: 59,794 MP3, 17,867 PCM, 3,177 IMA ADPCM, one float, six empty).
+- The same tool over folders of loose files decodes the PS2 discs' sound
+  banks (416 `.lps` files, 58,403 sounds, 2,258 loops that agree with
+  their records) and stream music, and `tests/compare_lps.py <build> <dir
+  of ps2sound.py> <work dir> <folders>...` finds every bank sound's samples
+  equal to the nolfsrc ps2 branch's `build/ps2/ps2sound.py`.
 - `tests/compare_sound.py <build> <work dir> <rez>...`: a sample of every
   codec, channel count and rate against FFmpeg. PCM, float, A-law and mu-law
   match exactly and MP3 within FFmpeg's rounding. IMA ADPCM must equal the
   IMA recommendation's bitwise reference; FFmpeg uses a multiplying formula
   that rounds differently, and the script checks that is the only
   difference.
-- `sound_play_test <rez> <path>`: drives the sound preview on a real output
+- `sound_play_test <rez> <path>` (or `<bank.lps> <index>`): drives the sound preview on a real output
   device: playback at real-time speed, pause and resume, seeking while
   paused and while playing, looping (the sound's loop region if it has
   one), and stopping at the end. In docker, use a PulseAudio null sink:
@@ -136,6 +141,11 @@ archive is the same as one built on Windows.
   plays (a cue point and its length), which is shaded on the waveform and
   what Loop repeats. DirectMusic files (`.sgt`, `.sty`, `.dls`) don't play
   yet.
+- **PS2 sound banks:** a `.lps` (the PS2 port's level and voice banks,
+  `docs/LPS.md`) lists its sounds (name, group, rate, length, loop,
+  lip-sync) and plays the selected one in the same player, its loop as the
+  PS2's sound chip repeats it. Save as WAV writes the selected sounds, or
+  the whole bank in folders by group, with their loops.
 - **Settings:** case handling, compatibility (resource IDs), and the header
   title for new files. File > Rez File Information shows the header and lets
   you edit its title.
