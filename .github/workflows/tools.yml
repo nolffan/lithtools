@@ -93,10 +93,13 @@ jobs:
         run: ctest --test-dir build --output-on-failure
       - name: Package
         run: QMAKE="$(command -v qmake6 || command -v qmake)" tools/lithrez/packaging/linux.sh build dist "$NAME"
+      # Wrapped in the artifact's own zip (the default), so the release job
+      # gets this file back as it is; unwrapped (archive: false), a .zip
+      # would arrive unpacked.
       - uses: actions/upload-artifact@v7
         with:
+          name: ${{ env.NAME }}.tar.gz
           path: dist/${{ env.NAME }}.tar.gz
-          archive: false
           if-no-files-found: error
 
   windows:
@@ -126,10 +129,13 @@ jobs:
           Copy-Item build/Release/lithrez.exe, build/gui/Release/lithrez-studio.exe, tools/lithrez/README.md $stage
           windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$stage/lithrez-studio.exe"
           Compress-Archive -Path $stage -DestinationPath "dist/$env:NAME.zip"
+      # Wrapped in the artifact's own zip (the default), so the release job
+      # gets this file back as it is; unwrapped (archive: false), a .zip
+      # would arrive unpacked.
       - uses: actions/upload-artifact@v7
         with:
+          name: ${{ env.NAME }}.zip
           path: dist/${{ env.NAME }}.zip
-          archive: false
           if-no-files-found: error
 
   macos:
@@ -167,10 +173,13 @@ jobs:
           codesign --force --sign - "$stage/lithrez"
           lipo -info "$stage/lithrez"
           (cd dist && ditto -c -k --keepParent "$NAME" "$NAME.zip")
+      # Wrapped in the artifact's own zip (the default), so the release job
+      # gets this file back as it is; unwrapped (archive: false), a .zip
+      # would arrive unpacked.
       - uses: actions/upload-artifact@v7
         with:
+          name: ${{ env.NAME }}.zip
           path: dist/${{ env.NAME }}.zip
-          archive: false
           if-no-files-found: error
 
   blender:
@@ -192,10 +201,13 @@ jobs:
         run: |
           mkdir -p dist
           python3 plugins/blender/package.py "${{ needs.names.outputs.version }}" "dist/$NAME.zip"
+      # Wrapped in the artifact's own zip (the default), so the release job
+      # gets this file back as it is; unwrapped (archive: false), a .zip
+      # would arrive unpacked.
       - uses: actions/upload-artifact@v7
         with:
+          name: ${{ env.NAME }}.zip
           path: dist/${{ env.NAME }}.zip
-          archive: false
           if-no-files-found: error
 
   release:
@@ -264,7 +276,9 @@ jobs:
             gh release create "$TAG" --verify-tag --notes-file notes.md \
                 --generate-notes $pre --title "$TAG"
           fi
-          gh release upload "$TAG" dist/lithtools-"$NAME"-* --clobber
+          # Only the four packages, as files.
+          find dist -maxdepth 1 -type f -name "lithtools-$NAME-*" -print0 |
+            xargs -0 gh release upload "$TAG" --clobber
           # The nightly keeps only this commit's files, deleted once the new
           # ones are up so the page is never without a download.
           if [ "$TAG" = nightly ]; then
