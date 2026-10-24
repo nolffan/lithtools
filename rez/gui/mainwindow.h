@@ -9,6 +9,7 @@
 
 #include <lithtech/rez.hpp>
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -77,6 +78,9 @@ private:
     void openResource(lithtech::rez::Resource* r);
     QByteArray readData(const lithtech::rez::Resource* r) const;
     QByteArray findSkin(const lithtech::rez::Resource* model, int index, int count) const;
+    // The skins ATTRIBUTES/MODELBUTES.TXT gives a model (NOLF2, Contract
+    // J.A.C.K., Tron 2.0), by slot; empty if it doesn't list it.
+    QStringList butesSkins(const lithtech::rez::Resource* model) const;
     QString tempExtract(const lithtech::rez::Resource* r) const;
 
     // actions
@@ -120,6 +124,9 @@ private:
     Sel clipboard_;
     ViewMode mode_ = ViewMode::Details;
     int thumbRow_ = 0;
+    // MODELBUTES.TXT as parsed: ModelFile (lower case, backslashes) -> skins.
+    mutable const lithtech::rez::Resource* butesFrom_ = nullptr;
+    mutable std::map<QString, QStringList> butes_;
     QPoint dragStart_;
     bool dragArmed_ = false;
 

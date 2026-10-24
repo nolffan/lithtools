@@ -9,9 +9,10 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
   scripts.
 - **Rez Studio** (`rezstudio`, Qt 6): a successor to WinRez LT Studio. It
   has an Explorer-style rez editor, a DTX texture viewer with thumbnails, a
-  model preview for `.abc` models, and a string table editor for `CRes.dll`.
+  model preview for `.abc` (NOLF, AvP2) and `.ltb` (NOLF2, Contract
+  J.A.C.K., Tron 2.0) models, and a string table editor for `CRes.dll`.
 - **`core/`**: the shared library (`lithtech::rez`, `lithtech::dtx`,
-  `lithtech::abc`, `lithtech::pe`).
+  `lithtech::abc`, `lithtech::ltb`, `lithtech::pe`).
 
 `docs/REZ.md` describes the format and how these tools were checked against
 the originals.
@@ -90,8 +91,10 @@ archive is the same as one built on Windows.
 - **Make:** a new empty rez, a "Rez Project" from a folder (the same bytes
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
-- **Preview pane:** textures, models with their skins and animations, text,
-  and hex for everything else. Double-click opens the texture viewer, the
+- **Preview pane:** textures, models (`.abc` and `.ltb`) with their skins
+  and animations, text, and hex for everything else. For NOLF2, Contract
+  J.A.C.K. and Tron 2.0, skins come from the archive's own
+  `ATTRIBUTES/MODELBUTES.TXT` when it has one. Double-click opens the texture viewer, the
   model viewer, or (for a DLL) the string table editor; other files open
   with their system program.
 - **Settings:** case handling, compatibility (resource IDs), and the header

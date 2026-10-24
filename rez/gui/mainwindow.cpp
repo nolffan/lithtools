@@ -144,7 +144,7 @@ void MainWindow::buildActions() {
         w->show();
     });
     aModelViewer = mk(tr("&Model Viewer..."), {}, none, [this] {
-        QString f = QFileDialog::getOpenFileName(this, tr("Open Model"), {}, tr("LithTech models (*.abc)"));
+        QString f = QFileDialog::getOpenFileName(this, tr("Open Model"), {}, tr("LithTech models (*.abc *.ltb *.ABC *.LTB)"));
         if (f.isEmpty()) return;
         QFile file(f);
         if (!file.open(QIODevice::ReadOnly)) return;
@@ -738,7 +738,57 @@ QByteArray MainWindow::readData(const Resource* r) const {
     }
 }
 
+QStringList MainWindow::butesSkins(const Resource* model) const {
+    if (!archive_) return {};
+    Resource* bf = archive_->root().find_path("ATTRIBUTES\\MODELBUTES.TXT");
+    if (!bf) return {};
+    if (bf != butesFrom_) {
+        // [Model0] / ModelFile = "chars\models\player_action.ltb" / Skin0 = "..."
+        butes_.clear();
+        butesFrom_ = bf;
+        QString text = QString::fromLatin1(readData(bf));
+        QString modelFile;
+        QStringList skins;
+        auto flush = [&] {
+            if (!modelFile.isEmpty() && !butes_.count(modelFile)) butes_[modelFile] = skins;
+            modelFile.clear();
+            skins.clear();
+        };
+        static const QRegularExpression key(R"re(^\s*([A-Za-z0-9_]+)\s*=\s*(?:"([^"]*)"|(\S+)))re");
+        for (QString line : text.split('\n')) {
+            int c = line.indexOf("//");
+            if (c >= 0) line.truncate(c);
+            QString t = line.trimmed();
+            if (t.startsWith('[')) {
+                flush();
+                continue;
+            }
+            auto m = key.match(line);
+            if (!m.hasMatch()) continue;
+            QString k = m.captured(1), v = m.captured(2).isNull() ? m.captured(3) : m.captured(2);
+            if ((k.compare("ModelFile", Qt::CaseInsensitive) == 0 || k.compare("Filename", Qt::CaseInsensitive) == 0) &&
+                modelFile.isEmpty())
+                modelFile = v.replace('/', '\\').toLower();
+            else if (k.startsWith("Skin", Qt::CaseInsensitive)) {
+                bool ok;
+                int i = k.mid(4).toInt(&ok);
+                if (ok && i >= 0 && i < 16) {
+                    while (skins.size() <= i) skins << QString();
+                    if (skins[i].isEmpty()) skins[i] = v;
+                }
+            }
+        }
+        flush();
+    }
+    auto it = butes_.find(qs(model->path('\\')).toLower());
+    return it == butes_.end() ? QStringList() : it->second;
+}
+
 QByteArray MainWindow::findSkin(const Resource* model, int index, int count) const {
+    // The game's own list first, where the archive carries it.
+    QStringList listed = butesSkins(model);
+    if (index < listed.size() && !listed[index].isEmpty())
+        if (Resource* r = archive_->root().find_path(ss(listed[index]))) return readData(r);
     // Skins are chosen by the game's attribute files; guess as WinRez users
     // would: SKINS beside MODELS, <model>.dtx then <model>_*.dtx.
     if (!model->parent()) return {};
@@ -789,7 +839,7 @@ void MainWindow::preview(Resource* r) {
             previewStack_->setCurrentWidget(texPreview_);
             return;
         }
-    } else if (t == "ABC") {
+    } else if (t == "ABC" || t == "LTB") {
         if (modelPreview_->loadAbc(readData(r), qs(r->file_name()),
                                    [this, r](int i, int n) { return findSkin(r, i, n); }, &err)) {
             previewStack_->setCurrentWidget(modelPreview_);
@@ -849,7 +899,7 @@ void MainWindow::openResource(Resource* r) {
         w->show();
         return;
     }
-    if (t == "ABC") {
+    if (t == "ABC" || t == "LTB") {
         auto* v = new ModelView;
         v->setAttribute(Qt::WA_DeleteOnClose);
         v->setWindowTitle(qs(r->file_name()) + " - Rez Studio");

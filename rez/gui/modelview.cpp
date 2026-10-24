@@ -1,4 +1,5 @@
-// The model preview. An .abc is skinned on the CPU (lithtech::abc::pose and
+// The model preview. An .abc, or an .ltb read with lithtech::ltb and turned
+// into the same structures (ltb::to_abc), is skinned on the CPU (abc::pose and
 // skin, as the engine places vertices) and drawn with OpenGL 3.3 core, which
 // every platform Rez Studio runs on offers (macOS only offers core profiles).
 //
@@ -12,6 +13,7 @@
 
 #include <lithtech/abc.hpp>
 #include <lithtech/dtx.hpp>
+#include <lithtech/ltb.hpp>
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -47,6 +49,7 @@
 
 namespace abc = lithtech::abc;
 namespace dtx = lithtech::dtx;
+namespace ltb = lithtech::ltb;
 
 namespace {
 
@@ -417,7 +420,7 @@ private:
     }
 };
 
-QString infoText(const abc::Model& m, const QString& name, int skinsFound, int skinSlots) {
+QString infoText(const abc::Model& m, const QString& name, const QString& format, int skinsFound, int skinSlots) {
     std::size_t tris = 0, verts = 0;
     for (auto& p : m.pieces)
         if (!p.lods.empty()) {
@@ -426,7 +429,7 @@ QString infoText(const abc::Model& m, const QString& name, int skinsFound, int s
         }
     QString s;
     s += QStringLiteral("%1\n\n").arg(name);
-    s += QStringLiteral("Version      %1\n").arg(m.version);
+    s += QStringLiteral("Format       %1\n").arg(format);
     s += QStringLiteral("Pieces       %1\n").arg(m.pieces.size());
     s += QStringLiteral("Nodes        %1\n").arg(m.nodes.size());
     s += QStringLiteral("Triangles    %1 (LOD 0)\n").arg(tris);
@@ -635,8 +638,18 @@ ModelView::~ModelView() {
 bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup skins, QString* error) {
     clear();
     std::unique_ptr<abc::Model> m;
+    QString format;
     try {
-        m = std::make_unique<abc::Model>(abc::read(std::vector<uint8_t>(data.begin(), data.end())));
+        std::vector<uint8_t> bytes(data.begin(), data.end());
+        if (ltb::is_ltb(bytes)) {
+            // A Jupiter .ltb, drawn through the same structures as an .abc.
+            ltb::Model lm = ltb::read(bytes);
+            format = QStringLiteral("LTB, model file version %1").arg(lm.version);
+            m = std::make_unique<abc::Model>(ltb::to_abc(lm));
+        } else {
+            m = std::make_unique<abc::Model>(abc::read(bytes));
+            format = QStringLiteral("ABC version %1").arg(m->version);
+        }
     } catch (const std::exception& e) {
         QString msg = QStringLiteral("Can't show %1: %2").arg(name, QString::fromUtf8(e.what()));
         if (error) *error = msg;
@@ -679,7 +692,7 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
             d->lod->addItem(i == 0 ? tr("0 (full)")
                                    : QStringLiteral("%1 (%2)").arg(i).arg(double(d->model->lod_distances[i - 1])));
     }
-    d->info->setPlainText(infoText(*d->model, name, found, int(slotSet.size())));
+    d->info->setPlainText(infoText(*d->model, name, format, found, int(slotSet.size())));
     d->gl->setModel(d->model.get(), std::move(images));
     // Start on the first animation's first key if there is one (often the
     // base pose), else the bind pose.
@@ -693,6 +706,10 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
     for (QWidget* w : std::initializer_list<QWidget*>{d->anims, d->slider, d->lod, d->tex, d->wire, d->skel})
         w->setEnabled(true);
     return true;
+}
+
+bool ModelView::loadLtb(const QByteArray& data, const QString& name, SkinLookup skins, QString* error) {
+    return loadAbc(data, name, std::move(skins), error);   // loadAbc tells the formats apart
 }
 
 void ModelView::clear() {

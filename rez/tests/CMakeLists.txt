@@ -28,3 +28,7 @@ if(TARGET Qt6::Widgets)
   target_include_directories(pe_gui_shot PRIVATE ${PROJECT_SOURCE_DIR}/gui)
   target_link_libraries(pe_gui_shot PRIVATE lithtech Qt6::Widgets)
 endif()
+# .ltb reading over the extracted models (out/assets/ltb), and value dumps
+# to compare with plugins/blender's ltb.py.
+add_executable(ltb_verify ltb_verify.cpp)
+target_link_libraries(ltb_verify PRIVATE lithtech)

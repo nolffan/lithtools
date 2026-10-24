@@ -29,6 +29,7 @@ add_library(lithtech STATIC
   core/src/rez.cpp
   core/src/dtx.cpp
   core/src/abc.cpp
+  core/src/ltb.cpp
   core/src/pe_strings.cpp
 )
 target_include_directories(lithtech PUBLIC core/include)

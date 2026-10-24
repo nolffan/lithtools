@@ -1,5 +1,6 @@
 #pragma once
-// A simple model preview: an .abc drawn with OpenGL, textured with skins
+// A simple model preview: an .abc (NOLF, AvP2) or .ltb (NOLF2, Contract
+// J.A.C.K., Tron 2.0) drawn with OpenGL, textured with skins
 // found through a callback, with its animations playable.
 
 #include <QByteArray>
@@ -16,7 +17,9 @@ public:
 
     explicit ModelView(QWidget* parent = nullptr);
     ~ModelView() override;
+    // Either format: loadAbc tells .abc and .ltb apart by their first bytes.
     bool loadAbc(const QByteArray& data, const QString& name, SkinLookup skins, QString* error = nullptr);
+    bool loadLtb(const QByteArray& data, const QString& name, SkinLookup skins, QString* error = nullptr);
     void clear();
 
     // For tests and scripting: pick an animation (-1 for the bind pose) and
