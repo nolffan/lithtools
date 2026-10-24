@@ -1,0 +1,19 @@
+schema_version = "1.0.0"
+
+id = "io_scene_lithtech"
+version = "0.1.0"
+name = "LithTech Formats"
+tagline = "Import and export LithTech models (.abc) and textures (.dtx)"
+maintainer = "lithtools"
+type = "add-on"
+
+blender_version_min = "5.2.0"
+
+license = ["SPDX:GPL-3.0-or-later"]
+tags = ["Import-Export"]
+
+[permissions]
+files = "Read and write LithTech model and texture files"
+
+[build]
+paths_exclude_pattern = ["__pycache__/", "*.pyc"]
