@@ -9,6 +9,7 @@ qt_add_executable(lithrez-studio WIN32 MACOSX_BUNDLE
   modelview.h modelview.cpp
   stringtable.h stringtable.cpp
   soundview.h soundview.cpp
+  bankview.h bankview.cpp
   util.h util.cpp
   resources.qrc
 )

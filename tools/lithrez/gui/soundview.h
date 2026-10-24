@@ -6,6 +6,8 @@
 
 #include <QWidget>
 
+#include <lithtech/sound.hpp>
+
 class SoundView : public QWidget {
     Q_OBJECT
 public:
@@ -13,6 +15,10 @@ public:
     ~SoundView() override;
 
     bool loadWav(const QByteArray& data, const QString& name, QString* error = nullptr);
+    // A sound decoded elsewhere (a PS2 bank's), with its details text (the
+    // levels are added) and loop region in frames, if any.
+    bool loadPcm(lithtech::sound::Pcm pcm, const QString& name, const QString& details, qint64 loopStart = -1,
+                 qint64 loopEnd = -1);
     void clear();
 
     void play();
@@ -34,6 +40,7 @@ signals:
     void positionChanged(qint64 frame);
 
 private:
+    bool finishLoad(qint64 loopStart, qint64 loopEnd, const QString& text);
     struct Impl;
     Impl* d;
 };

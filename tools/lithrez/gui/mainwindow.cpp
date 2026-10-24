@@ -2,6 +2,7 @@
 
 #include "modelview.h"
 #include "soundview.h"
+#include "bankview.h"
 #include "stringtable.h"
 #include "textureview.h"
 #include "util.h"
@@ -83,7 +84,8 @@ QString typeLabel(const QString& ext) {
         {"TXT", "Text"}, {"DLL", "Library"}, {"LTO", "Object module"}, {"SPR", "Sprite"},
         {"PCX", "Image"}, {"TGA", "Image"}, {"BMP", "Image"}, {"MP3", "Sound"}, {"FXF", "Effects"},
         {"FCF", "Effects"}, {"LTA", "LithTech text"}, {"BUT", "Attributes"}, {"CFG", "Config"},
-        {"SGT", "Music segment"}, {"STY", "Music style"}, {"DLS", "Instruments"}, {"LIP", "Lip sync"}};
+        {"SGT", "Music segment"}, {"STY", "Music style"}, {"DLS", "Instruments"}, {"LIP", "Lip sync"},
+        {"LPS", "Sound bank"}};
     auto it = names.find(ext.toUpper());
     return it != names.end() ? it->second + " (" + ext.toUpper() + ")" : (ext.isEmpty() ? "File" : ext.toUpper() + " file");
 }
@@ -189,7 +191,7 @@ void MainWindow::buildActions() {
     });
 
     aSoundPlayer = mk(tr("S&ound Player..."), {}, none, [this] {
-        QString f = QFileDialog::getOpenFileName(this, tr("Open Sound"), {}, tr("Sounds (*.wav *.WAV)"));
+        QString f = QFileDialog::getOpenFileName(this, tr("Open Sound"), {}, tr("Sounds and PS2 sound banks (*.wav *.WAV *.lps *.LPS)"));
         if (f.isEmpty()) return;
         QFile file(f);
         if (!file.open(QIODevice::ReadOnly)) return;
@@ -453,6 +455,7 @@ void MainWindow::buildViews() {
     texPreview_ = new TextureView(previewStack_);
     modelPreview_ = new ModelView(previewStack_);
     soundPreview_ = new SoundView(previewStack_);
+    bankPreview_ = new BankView(previewStack_);
     textPreview_ = new QPlainTextEdit(previewStack_);
     textPreview_->setReadOnly(true);
     textPreview_->setLineWrapMode(QPlainTextEdit::NoWrap);
@@ -461,6 +464,7 @@ void MainWindow::buildViews() {
     previewStack_->addWidget(texPreview_);
     previewStack_->addWidget(modelPreview_);
     previewStack_->addWidget(soundPreview_);
+    previewStack_->addWidget(bankPreview_);
     previewStack_->addWidget(textPreview_);
     previewDock_->setWidget(previewStack_);
     addDockWidget(Qt::RightDockWidgetArea, previewDock_);
@@ -471,9 +475,10 @@ void MainWindow::buildViews() {
     // a sound stops when something else is previewed or the pane closes
     connect(previewStack_, &QStackedWidget::currentChanged, this, [this] {
         if (previewStack_->currentWidget() != soundPreview_) soundPreview_->stop();
+        if (previewStack_->currentWidget() != bankPreview_) bankPreview_->stop();
     });
     connect(previewDock_, &QDockWidget::visibilityChanged, this, [this](bool on) {
-        if (!on) soundPreview_->stop();
+        if (!on) soundPreview_->stop(), bankPreview_->stop();
     });
     resize(1280, 800);
 }
@@ -868,6 +873,9 @@ void MainWindow::preview(Resource* r) {
     } else if (t == "WAV") {
         previewStack_->setCurrentWidget(soundPreview_);   // first, so the last sound stops
         if (soundPreview_->loadWav(readData(r), qs(r->file_name()), &err)) return;
+    } else if (t == "LPS") {
+        previewStack_->setCurrentWidget(bankPreview_);
+        if (bankPreview_->loadBank(readData(r), qs(r->file_name()), &err)) return;
     } else if (t == "SGT" || t == "STY" || t == "DLS") {
         err = tr("DirectMusic %1: LithRez Studio can't play DirectMusic yet.")
                   .arg(t == "SGT" ? tr("segment") : t == "STY" ? tr("style") : tr("instrument collection"));
@@ -917,6 +925,20 @@ QString MainWindow::tempExtract(const Resource* r) const {
 }
 
 void MainWindow::openSound(const QByteArray& data, const QString& name) {
+    if (lithtech::sound::is_bank(reinterpret_cast<const uint8_t*>(data.constData()), size_t(data.size()))) {
+        auto* b = new BankView;
+        b->setAttribute(Qt::WA_DeleteOnClose);
+        b->setWindowTitle(name + " - LithRez Studio");
+        QString err;
+        if (!b->loadBank(data, name, &err)) {
+            QMessageBox::warning(this, tr("Sound Player"), err);
+            delete b;
+            return;
+        }
+        b->resize(760, 680);
+        b->show();
+        return;
+    }
     auto* v = new SoundView;
     v->setAttribute(Qt::WA_DeleteOnClose);
     v->setWindowTitle(name + " - LithRez Studio");
@@ -953,7 +975,7 @@ void MainWindow::openResource(Resource* r) {
         v->show();
         return;
     }
-    if (t == "WAV") {
+    if (t == "WAV" || t == "LPS") {
         openSound(readData(r), qs(r->file_name()));
         return;
     }

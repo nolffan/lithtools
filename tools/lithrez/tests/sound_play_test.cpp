@@ -5,8 +5,10 @@
 //   sound_play_test <file.rez> <path in rez> [screenshot.png]
 //   sound_play_test <file.wav> - [screenshot.png]
 //   sound_play_test <file.rez|file.wav> <path|-> --through
+//   sound_play_test <bank.lps> <sound index> [screenshot.png]   (a PS2 bank's sound, in the bank view)
 // --through only plays the sound from start to end (for recording what the
 // device receives).
+#include "bankview.h"
 #include "soundview.h"
 
 #include <lithtech/rez.hpp>
@@ -19,6 +21,7 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <functional>
 
 using namespace lithtech;
@@ -52,7 +55,8 @@ int main(int argc, char** argv) {
     QApplication app(argc, argv);
     if (argc < 3) return 2;
     QByteArray bytes;
-    if (QString(argv[2]) == "-") {
+    const bool isBank = QString(argv[1]).endsWith(".lps", Qt::CaseInsensitive);
+    if (QString(argv[2]) == "-" || isBank) {
         QFile f(argv[1]);
         if (!f.open(QIODevice::ReadOnly)) return 2;
         bytes = f.readAll();
@@ -71,11 +75,21 @@ int main(int argc, char** argv) {
         bytes = QByteArray(reinterpret_cast<const char*>(v.data()), int(v.size()));
     }
 
-    SoundView view;
-    view.resize(640, 720);
-    view.show();
+    SoundView own;
+    BankView bank;
+    QWidget& window = isBank ? static_cast<QWidget&>(bank) : own;
+    SoundView& view = isBank ? *bank.player() : own;
+    window.resize(isBank ? 760 : 640, isBank ? 900 : 720);
+    window.show();
     QString err;
-    if (!view.loadWav(bytes, QString::fromUtf8(argv[2]), &err)) {
+    if (isBank) {
+        if (!bank.loadBank(bytes, QString::fromUtf8(argv[1]).section('/', -1), &err)) {
+            std::printf("FAIL load: %s\n", qPrintable(err));
+            return 1;
+        }
+        bank.selectSound(std::atoi(argv[2]));
+        std::printf("bank: %d sounds; sound %s, %lld frames\n", bank.soundCount(), argv[2], (long long)view.frames());
+    } else if (!view.loadWav(bytes, QString::fromUtf8(argv[2]), &err)) {
         std::printf("FAIL load: %s\n", qPrintable(err));
         return 1;
     }
@@ -160,7 +174,7 @@ int main(int argc, char** argv) {
 
     if (argc > 3) {
         view.seek(view.frames() / 3);
-        view.grab().save(argv[3]);
+        window.grab().save(argv[3]);
     }
     std::printf("%s\n", failures ? "FAILED" : "all passed");
     return failures ? 1 : 0;

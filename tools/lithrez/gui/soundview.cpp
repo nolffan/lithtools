@@ -5,6 +5,7 @@
 #include <QAudioDevice>
 #include <QAudioSink>
 #include <QCheckBox>
+#include <QCoreApplication>
 #include <QFontDatabase>
 #include <QHBoxLayout>
 #include <QIODevice>
@@ -36,6 +37,24 @@ QString timeText(double s) {
     s = std::max(0.0, s);
     int m = int(s / 60);
     return QStringLiteral("%1:%2").arg(m).arg(s - m * 60, 5, 'f', 2, QChar('0'));
+}
+
+// The "Levels" lines of the details: peak and RMS over all channels.
+QString levelsText(const sound::Pcm& p) {
+    int peak = 0;
+    double sum = 0;
+    for (int16_t v : p.samples) {
+        peak = std::max(peak, std::abs(int(v)));
+        sum += double(v) * v;
+    }
+    auto dbfs = [](double v) {
+        return v > 0 ? QStringLiteral("%1 dBFS").arg(20 * std::log10(v / 32768.0), 0, 'f', 1) : QStringLiteral("silent");
+    };
+    const double rms = p.samples.empty() ? 0 : std::sqrt(sum / double(p.samples.size()));
+    return QStringLiteral("\n%1\n  %2 %3\n  %4 %5\n")
+        .arg(QCoreApplication::translate("SoundView", "Levels"))
+        .arg(QCoreApplication::translate("SoundView", "Peak"), -14).arg(dbfs(peak))
+        .arg(QCoreApplication::translate("SoundView", "RMS"), -14).arg(dbfs(rms));
 }
 
 // The sound as the output device takes it, read by QAudioSink in pull
@@ -375,37 +394,11 @@ bool SoundView::loadWav(const QByteArray& data, const QString& name, QString* er
     }
     const sound::Info& i = d->info;
     const sound::Pcm& p = d->pcm;
-    for (int c = 0; c < p.channels; ++c) {
-        auto& blk = d->peaks.blocks.emplace_back();
-        for (size_t f = 0; f < p.frames(); f += Peaks::kBlock) {
-            int16_t lo = 32767, hi = -32768;
-            for (size_t g = f; g < std::min(p.frames(), f + Peaks::kBlock); ++g) {
-                int16_t v = p.samples[g * size_t(p.channels) + size_t(c)];
-                lo = std::min(lo, v), hi = std::max(hi, v);
-            }
-            blk.emplace_back(lo, hi);
-        }
-    }
     // The loop: the engine's (a cue point and its length), else a "smpl"
     // loop; looping plays it as the game does, else the whole sound.
     uint32_t ls = 0, le = 0;
-    if (i.engine_loop(ls, le) || (i.has_loop && i.loop_end > i.loop_start && ((ls = i.loop_start), (le = i.loop_end), true))) {
-        le = std::min<uint32_t>(le, uint32_t(p.frames()));
-        if (le > ls) {
-            d->loopStart = d->wave->loopStart = ls;
-            d->loopEnd = d->wave->loopEnd = le;
-        }
-    }
-
-    // Levels, over all channels.
-    int peak = 0;
-    double sum = 0;
-    for (int16_t v : p.samples) {
-        peak = std::max(peak, std::abs(int(v)));
-        sum += double(v) * v;
-    }
-    auto dbfs = [](double v) { return v > 0 ? QStringLiteral("%1 dBFS").arg(20 * std::log10(v / 32768.0), 0, 'f', 1) : QStringLiteral("silent"); };
-    const double rms = p.samples.empty() ? 0 : std::sqrt(sum / double(p.samples.size()));
+    if (!(i.engine_loop(ls, le) || (i.has_loop && i.loop_end > i.loop_start && ((ls = i.loop_start), (le = i.loop_end), true))))
+        ls = le = 0;
 
     QString t;
     auto head = [&t](const QString& h) { t += (t.isEmpty() ? "" : "\n") + h + "\n"; };
@@ -444,9 +437,7 @@ bool SoundView::loadWav(const QByteArray& data, const QString& name, QString* er
     if (i.data_bytes && p.frames() && i.format_tag != sound::WAVE_PCM)
         row(tr("Compression"), tr("%1 : 1 against 16-bit PCM").arg(double(p.samples.size()) * 2 / i.data_bytes, 0, 'f', 1));
     if (i.has_fact) row(tr("fact"), tr("%1 samples").arg(i.fact_samples));
-    head(tr("Levels"));
-    row(tr("Peak"), dbfs(peak));
-    row(tr("RMS"), dbfs(rms));
+    t += levelsText(p);
 
     if (i.has_lith || i.has_cue) {
         head(tr("LithTech"));
@@ -484,7 +475,30 @@ bool SoundView::loadWav(const QByteArray& data, const QString& name, QString* er
              }
              return s;
          }()) + "\n";
-    d->text->setPlainText(t);
+    return finishLoad(ls, le, t);
+}
+
+// Shared by loadWav and loadPcm: the waveform's peaks, the loop, the
+// details, and the sound as the output device takes it.
+bool SoundView::finishLoad(qint64 loopStart, qint64 loopEnd, const QString& text) {
+    const sound::Pcm& p = d->pcm;
+    for (int c = 0; c < p.channels; ++c) {
+        auto& blk = d->peaks.blocks.emplace_back();
+        for (size_t f = 0; f < p.frames(); f += Peaks::kBlock) {
+            int16_t lo = 32767, hi = -32768;
+            for (size_t g = f; g < std::min(p.frames(), f + Peaks::kBlock); ++g) {
+                int16_t v = p.samples[g * size_t(p.channels) + size_t(c)];
+                lo = std::min(lo, v), hi = std::max(hi, v);
+            }
+            blk.emplace_back(lo, hi);
+        }
+    }
+    loopEnd = std::min<qint64>(loopEnd, qint64(p.frames()));
+    if (loopEnd > loopStart && loopStart >= 0) {
+        d->loopStart = d->wave->loopStart = loopStart;
+        d->loopEnd = d->wave->loopEnd = loopEnd;
+    }
+    d->text->setPlainText(text);
 
     if (!p.frames()) {
         d->status->setText(tr("This sound is empty: it has no samples."));
@@ -522,6 +536,14 @@ bool SoundView::loadWav(const QByteArray& data, const QString& name, QString* er
     d->wave->update();
     if (d->autoplay->isChecked()) play();
     return true;
+}
+
+bool SoundView::loadPcm(sound::Pcm pcm, const QString& name, const QString& details, qint64 loopStart,
+                        qint64 loopEnd) {
+    clear();
+    d->name = name;
+    d->pcm = std::move(pcm);
+    return finishLoad(loopStart, loopEnd, details + levelsText(d->pcm));
 }
 
 void SoundView::play() {

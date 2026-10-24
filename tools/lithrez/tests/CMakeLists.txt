@@ -42,7 +42,8 @@ add_test(NAME sound_test COMMAND sound_test)
 # Playback on an output device (a PulseAudio null sink in docker); see the
 # README.
 if(TARGET Qt6::Multimedia)
-  add_executable(sound_play_test sound_play_test.cpp ../gui/soundview.cpp ../gui/soundview.h)
+  add_executable(sound_play_test sound_play_test.cpp ../gui/soundview.cpp ../gui/soundview.h ../gui/bankview.cpp
+                 ../gui/bankview.h)
   set_target_properties(sound_play_test PROPERTIES AUTOMOC ON)
   target_include_directories(sound_play_test PRIVATE ../gui)
   target_link_libraries(sound_play_test PRIVATE lithtech Qt6::Widgets Qt6::Multimedia)
