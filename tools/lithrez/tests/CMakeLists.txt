@@ -32,3 +32,7 @@ endif()
 # to compare with plugins/blender's ltb.py.
 add_executable(ltb_verify ltb_verify.cpp)
 target_link_libraries(ltb_verify PRIVATE lithtech)
+# Sound decoding over whole archives; tests/compare_sound.py checks samples
+# against FFmpeg.
+add_executable(sound_decode_all sound_decode_all.cpp)
+target_link_libraries(sound_decode_all PRIVATE lithtech)

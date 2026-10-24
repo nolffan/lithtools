@@ -12,7 +12,7 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
   model preview for `.abc` (NOLF, AvP2) and `.ltb` (NOLF2, Contract
   J.A.C.K., Tron 2.0) models, and a string table editor for `CRes.dll`.
 - **`core/`**: the shared library (`lithtech::rez`, `lithtech::dtx`,
-  `lithtech::abc`, `lithtech::ltb`, `lithtech::pe`).
+  `lithtech::abc`, `lithtech::ltb`, `lithtech::sound`, `lithtech::pe`).
 
 `docs/REZ.md` describes the format and how these tools were checked against
 the originals.
@@ -26,10 +26,12 @@ ctest --test-dir build
 ```
 
 LithRez Studio needs Qt 6.2 or later (Widgets, OpenGL, OpenGLWidgets) and
-OpenGL 3.3. Without Qt only `lithrez` and the library are built.
+OpenGL 3.3. Without Qt only `lithrez` and the library are built. MP3
+decoding uses the vendored minimp3 (`third_party/minimp3`, CC0,
+with one fix described there).
 
 `docker/Dockerfile` is the Linux build environment used here (clang, CMake,
-Ninja, Qt 6):
+Ninja, Qt 6, and FFmpeg for the sound tests):
 
 ```
 docker build -t lithtools-rez-dev tools/lithrez/docker
@@ -38,6 +40,22 @@ docker run --rm -u $(id -u):$(id -g) -v $PWD:/src -w /src lithtools-rez-dev \
 ```
 
 `.github/workflows/tools.yml` builds, tests and packs on all three platforms: a release for every `v*` tag and a nightly for every push to master.
+
+### Checks against the shipped games
+
+These read the game archives (never committed), so they aren't part of
+`ctest`:
+
+- `tests/roundtrip_shipped.py`: every shipped `.rez` reads and writes back.
+- `dtx_decode_all`, `abc_verify`, `ltb_verify`: textures and models.
+- `sound_decode_all <rez>...`: decodes every `.wav` (80,845 in the shipped
+  games: 59,794 MP3, 17,867 PCM, 3,177 IMA ADPCM, one float, six empty).
+- `tests/compare_sound.py <build> <work dir> <rez>...`: a sample of every
+  codec, channel count and rate against FFmpeg. PCM, float, A-law and mu-law
+  match exactly and MP3 within FFmpeg's rounding. IMA ADPCM must equal the
+  IMA recommendation's bitwise reference; FFmpeg uses a multiplying formula
+  that rounds differently, and the script checks that is the only
+  difference.
 
 ## lithrez
 

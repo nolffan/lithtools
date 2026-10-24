@@ -31,8 +31,11 @@ add_library(lithtech STATIC
   core/src/abc.cpp
   core/src/ltb.cpp
   core/src/pe_strings.cpp
+  core/src/sound.cpp
 )
 target_include_directories(lithtech PUBLIC core/include)
+# minimp3 (CC0), for the MP3 sounds; see third_party/minimp3/README.md.
+target_include_directories(lithtech SYSTEM PRIVATE third_party/minimp3)
 
 add_executable(lithrez cli/lithrez.cpp)
 target_link_libraries(lithrez PRIVATE lithtech)
