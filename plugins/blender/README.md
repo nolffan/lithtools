@@ -7,6 +7,7 @@ later):
 |---|---|---|
 | No One Lives Forever, Aliens versus Predator 2 (and Primal Hunt) | `.abc`, versions 9 to 12 | DTX version -5 |
 | No One Lives Forever 2, Contract J.A.C.K., Tron 2.0 | `.ltb`, model file versions 18 to 25 | DTX version -5 |
+| No One Lives Forever (PS2) | | DTX version -5, 32P (palette alpha as the PS2 draws it) |
 
 meant to grow to every LithTech-era game.
 
@@ -23,7 +24,9 @@ meant to grow to every LithTech-era game.
   read and write back every shipped model and texture (`extract_abc.py` and
   `extract_ltb.py` fill the asset cache first); `blender_roundtrip.py` and
   `blender_roundtrip_ltb.py` (run inside Blender) import and export every
-  model through the extension.
+  model through the extension. `roundtrip_ps2_dtx.py` and
+  `blender_roundtrip_ps2_dtx.py` do the same for the PS2 textures (from
+  `out/assets/ps2`, the extracted PS2 discs).
 
 Game data is never committed; tests read it from the installed games
 (`~/src/rez/games`) through `~/src/tools/rezextract.py`.

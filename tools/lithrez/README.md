@@ -49,6 +49,8 @@ These read the game archives (never committed), so they aren't part of
 
 - `tests/roundtrip_shipped.py`: every shipped `.rez` reads and writes back.
 - `dtx_decode_all`, `abc_verify`, `ltb_verify`: textures and models.
+  `dtx_decode_all --ps2-alpha <folder>` decodes loose files, such as the
+  PS2 discs' 8,930 textures, reading palette alpha as the PS2 does.
 - `sound_decode_all <rez>...`: decodes every `.wav` (80,845 in the shipped
   games: 59,794 MP3, 17,867 PCM, 3,177 IMA ADPCM, one float, six empty).
 - The same tool over folders of loose files decodes the PS2 discs' sound

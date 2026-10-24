@@ -113,6 +113,19 @@ powers of two.
 
 Cube maps import as their first face, and export as a flat texture.
 
+The image also keeps the file it came from (`lt_dtx`) and a digest of its
+pixels (`lt_pixels`). Exported unchanged with *Format* "As Imported", it
+writes that file back byte for byte, so a DXT texture that was only looked
+at keeps its exact bytes.
+
+**PS2 textures** (32P: 256 colors, from the PS2 version of NOLF) import
+with their palette alpha read as the PS2 draws it (0x80 is opaque; the
+*Palette Alpha* import option is Auto, PS2 or Stored) and export back to
+32P (*Format* "32P (PS2)" turns any image into one). An edited image that
+still only uses its palette's colors keeps that palette; otherwise it is
+quantised to 256 colors again, with three mips as DEdit made them. See
+`DTX.md`, "PS2 textures".
+
 ## LTB models (NOLF2, Contract J.A.C.K., Tron 2.0)
 
 **File > Import / Export > LithTech Model (.ltb)**, or drop an `.ltb` on

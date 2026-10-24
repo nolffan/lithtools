@@ -120,7 +120,7 @@ BPPIdent values come from `pixelformat.h`. Level sizes come from
 | 4 | `BPP_S3TC_DXT1` | w·h / 2 | yes |
 | 5 | `BPP_S3TC_DXT3` | w·h | yes |
 | 6 | `BPP_S3TC_DXT5` | w·h | yes |
-| 7 | `BPP_32P` | w·h | 6 files (NOLF GOTY, NOLF2) |
+| 7 | `BPP_32P` | w·h | 6 PC files (NOLF GOTY, NOLF2); 8,746 on the PS2 discs |
 
 - **Mip sizes.** Each mip halves both dimensions with a shift (`dtx_Alloc`).
   S3TC sizes are **not** rounded up to whole 4×4 blocks: by `CalcImageSize`,
@@ -179,8 +179,9 @@ in the tools reverses them. The library keeps the file's order.
 
 Section types:
 
-- **`PALLETE32`** (6 files): the 256-color palette for `BPP_32P`, 1024
-  bytes.
+- **`PALLETE32`** (6 PC files, every PS2 32P texture): the 256-color
+  palette for `BPP_32P`, 1024 bytes. See "PS2 textures" below for its
+  alpha.
 - **`CUBEMAPDATA`** (76 files, all with `DTX_CUBEMAP`): faces 2-6 of a cube
   map. The base mips in the file are the first face. This section holds the
   other five, each with all its mips at the base face's sizes, concatenated:
@@ -231,6 +232,74 @@ there:
   engine would fail to load them (`dtx_Create` checks the stream's error
   status). `read()` keeps the short level and sets `truncated`, so they
   still round-trip. `read(data, lenient=False)` raises instead.
+
+## PS2 textures
+
+The PS2 version of NOLF (both discs, `LITH_PS2.REZ`) holds 4,465 DTX
+files per disc (six more files per disc got `.dtx` names when the
+archive's hashed names were recovered, but are binary attribute files:
+hash collisions). All are
+version -5 and need nothing new to read: every one reads and writes back
+byte for byte.
+
+| | US + Europe |
+|---|---|
+| `BPP_32P` | 8,746 |
+| `BPP_32` | 184 (63 with a leftover `PALLETE32` section, ignored) |
+| mips | 3 in 7,804, 1 in 1,097, 4 in 27 |
+| sections | only `PALLETE32`; header bytes zero or MSVC's 0xCD fill |
+
+**Where they come from.** DEdit's *Convert to 32P* (Build 69
+`DEdit/TextureDlg.cpp` `DoConvertTo32P`, `Misc/TextureHelper.cpp`
+`Write8BitDTX`, `shared/world/LTTexture.cpp`) made them, and the PS2 files
+fit it exactly:
+
+- the palette is the 256 most used colors of the 32-bit image, sorted by
+  use (`Convert32BitTo8BitPalletized`). Other pixels get the nearest entry
+  by `NearestColor`, which never updates its best distance and so returns
+  the last entry for every color it can't match exactly;
+- each entry is B, G, R, **A / 2** (`m_color.a/2;//128`): opaque is stored
+  as 0x7f. The PS2's GS takes 0x80 as opaque;
+- three mips (`CreateMipMaps(3)`), point sampled from the top level;
+- the flags are cut to `FULLBRITE`, `SECTIONSFIXED` and `32BITSYSCOPY`;
+  `m_Extra` (except the format), the user flags and the command string come
+  from the texture it replaced, and `m_Extra[1]` is set to the mip count.
+
+Of the palettes, 6,420 reach exactly 0x7f and 1,520 are all zero (made
+from textures whose alpha was unused and left 0).
+
+**Channel order.** B, G, R, A, as on the PC, with no CLUT swizzle: of 600
+PS2 textures compared with their PC twins at the same mip size, 589 match
+best that way (mean error 6.7 per channel, against 21.7 with the GS's CSM1
+bit swap and 34 with R and B exchanged). The rest are textures that
+changed between the versions.
+
+**Alpha.** The PC engine draws palette alpha as stored (`CC_32PtoBF`
+copies it), so the nine PS2-made `BPP_32P` files in the PC games (NOLF
+GOTY's `GL0007`, NOLF2's German menu sprites) are drawn half see-through
+there, glass included. On the PS2 the same bytes are opaque. Against the
+PC twins, PS2 alpha × 2 is the PC alpha (127 → 254, 98 → 196). So there
+are two readings of one format, and the file can't say which applies:
+
+- *stored* (`decode()`, the default; C++ `PaletteAlpha::Stored`): the PC's;
+- *PS2* (`decode(ps2_alpha=True)`, `ps2_palette_alpha()`;
+  `PaletteAlpha::Ps2`): the inverse of DEdit's halving. 0x7f and up is
+  255, below that a × 255 / 127 rounded, and an all-zero palette is
+  opaque. Only two PS2 files (`l1btn`, `r1btn`) have entries above 0x80.
+
+`Texture.ps2_style_palette` (no entry above 0x80) marks DEdit's output; it
+is true of the nine PC files too. LithRez Studio's texture view has a "PS2
+alpha" switch for textures from a PS2 archive. The Blender importer's
+*Auto* setting reads PS2 alpha when the palette is DEdit-style.
+
+**Writing.** `from_rgba(..., bpp=BPP_32P)` writes as DEdit did (three
+mips, its flags, alpha halved with `ps2_alpha`), but with a real palette:
+exact when the image has 256 colors or fewer (most used first), else a
+median cut in RGBA with each pixel mapped to the nearest entry. Lower mips
+are box filtered and mapped onto the same palette. `encode_32p(palette=,
+stored_palette=)` maps an image onto an existing palette and keeps its
+stored bytes. Every PS2 32P texture's image maps back onto its own
+palette exactly (`tests/roundtrip_ps2_dtx.py`).
 
 ## Alpha
 
