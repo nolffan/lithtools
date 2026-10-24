@@ -71,6 +71,20 @@ namespace {
 enum Roles { KindRole = Qt::UserRole + 1, PtrRole };
 enum Kind { KindDir = 1, KindRes = 2 };
 
+class DetailsItem : public QTreeWidgetItem {
+public:
+    using QTreeWidgetItem::QTreeWidgetItem;
+    bool operator<(const QTreeWidgetItem& o) const override {
+        int c = treeWidget() ? treeWidget()->sortColumn() : 0;
+        if (c == 2) {
+            QVariant a = data(c, Qt::UserRole), b = o.data(c, Qt::UserRole);
+            if (a.isValid() != b.isValid()) return !a.isValid();
+            return a.toULongLong() < b.toULongLong();
+        }
+        return QTreeWidgetItem::operator<(o);
+    }
+};
+
 const int kRecentMax = 8;
 
 QTemporaryDir& tempDir() {
@@ -636,7 +650,7 @@ void MainWindow::refreshContents() {
     QIcon fileIcon = style()->standardIcon(QStyle::SP_FileIcon);
     details_->setSortingEnabled(false);
     for (auto& d : current_->dirs()) {
-        auto* it = new QTreeWidgetItem(details_);
+        auto* it = new DetailsItem(details_);
         it->setText(0, qs(d->name));
         it->setIcon(0, dirIcon);
         it->setText(1, tr("Folder"));
@@ -648,7 +662,7 @@ void MainWindow::refreshContents() {
         li->setData(PtrRole, QVariant::fromValue(quintptr(d.get())));
     }
     for (auto& r : current_->resources()) {
-        auto* it = new QTreeWidgetItem(details_);
+        auto* it = new DetailsItem(details_);
         it->setText(0, qs(r->file_name()));
         it->setIcon(0, fileIcon);
         it->setText(1, typeLabel(qs(r->type_string())));
