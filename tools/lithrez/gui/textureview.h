@@ -35,6 +35,10 @@ public slots:
     void setMip(int mip);
     void setFace(int face);
     void setAlphaMode(TextureView::AlphaMode mode);
+    // Palette alpha as the PS2 draws it (0x80 opaque; see lithtech::dtx::
+    // PaletteAlpha) rather than as stored. For textures from a PS2 archive.
+    void setPs2Alpha(bool on);
+    bool ps2Alpha() const;
     void showInfo(bool show);
     // Asks for a file name (unless path is given) and writes the current
     // level/face; false on failure or cancel.
@@ -56,7 +60,7 @@ private:
 };
 
 // A thumbnail of a .dtx (null image if it can't be read), at most size px.
-QImage dtxThumbnail(const QByteArray& data, int size);
+QImage dtxThumbnail(const QByteArray& data, int size, bool ps2Alpha = false);
 
 // The standalone viewer: File > Open, zoom, mip/face, alpha, export PNG.
 class TextureWindow : public QMainWindow {

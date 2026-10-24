@@ -23,6 +23,23 @@ enum Flags : uint32_t {
     DTX_LUMBUMPMAP = 1u << 12,
 };
 
+// How BPP_32P palette alpha is read. The files are the same on both
+// platforms; what differs is how each engine draws them:
+//  Stored: as stored, as the PC engine draws them (CC_32PtoBF copies the
+//          palette's alpha).
+//  Ps2:    as the PS2 draws them. DEdit's "Convert to 32P", which made the
+//          PS2's textures, stores alpha halved (LTTexture's
+//          Convert32BitTo8BitPalletized: a/2, so opaque is 0x7f) because
+//          the PS2's GS takes 0x80 as opaque. Alpha is read back as it was
+//          authored: 0x7f and up is opaque (255), below that a * 255 / 127
+//          rounded; a palette whose alpha is all zero (made from a texture
+//          with no alpha) is opaque.
+// See plugins/blender/docs/DTX.md, "PS2".
+enum class PaletteAlpha { Stored, Ps2 };
+
+// The PS2 reading of a 256-entry palette's alpha (every 4th byte), in place.
+void ps2_palette_alpha(uint8_t* palette);
+
 class Error : public std::runtime_error {
 public:
     using std::runtime_error::runtime_error;
@@ -62,7 +79,11 @@ struct Texture {
     const Section* find_section(const std::string& type) const;
 
     // One level (and cube face 0-5) as RGBA.
-    Image decode(int mip = 0, int face = 0) const;
+    Image decode(int mip = 0, int face = 0, PaletteAlpha alpha = PaletteAlpha::Stored) const;
+    // BPP_32P with no palette alpha above 0x80: made by DEdit's "Convert to
+    // 32P" for the PS2 (every PS2 32P texture, and the nine 32P files that
+    // went out with the PC games too).
+    bool ps2_style_palette() const;
 };
 
 const char* bpp_name(Bpp b);
@@ -74,6 +95,7 @@ Texture read_file(const std::string& path, bool lenient = true);
 
 // RGBA from one level's stored pixels.
 Image decode_pixels(Bpp bpp, int width, int height, const uint8_t* data, std::size_t size,
-                    const uint8_t* palette_bgra = nullptr, uint32_t iflags = 0);
+                    const uint8_t* palette_bgra = nullptr, uint32_t iflags = 0,
+                    PaletteAlpha alpha = PaletteAlpha::Stored);
 
 }  // namespace lithtech::dtx

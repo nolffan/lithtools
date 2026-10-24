@@ -131,8 +131,31 @@ Texture read_file(const std::string& path, bool lenient) {
     return read(d, lenient);
 }
 
+void ps2_palette_alpha(uint8_t* pal) {
+    bool any = false;
+    for (int i = 0; i < 256; ++i) any |= pal[4 * i + 3] != 0;
+    for (int i = 0; i < 256; ++i) {
+        uint8_t& a = pal[4 * i + 3];
+        a = !any || a >= 0x7f ? 255 : uint8_t((a * 255 + 63) / 127);
+    }
+}
+
+bool Texture::ps2_style_palette() const {
+    const Section* p = find_section("PALLETE32");
+    if (bpp() != BPP_32P || !p) return false;
+    for (std::size_t i = 3; i < p->data.size() && i < 1024; i += 4)
+        if (p->data[i] > 0x80) return false;
+    return true;
+}
+
 Image decode_pixels(Bpp bpp, int width, int height, const uint8_t* data, std::size_t size,
-                    const uint8_t* pal, uint32_t iflags) {
+                    const uint8_t* pal, uint32_t iflags, PaletteAlpha alpha) {
+    uint8_t ps2pal[1024];
+    if (pal && bpp == BPP_32P && alpha == PaletteAlpha::Ps2) {
+        std::memcpy(ps2pal, pal, 1024);
+        ps2_palette_alpha(ps2pal);
+        pal = ps2pal;
+    }
     Image img;
     img.width = std::max(width, 0);
     img.height = std::max(height, 0);
@@ -243,7 +266,7 @@ Image decode_pixels(Bpp bpp, int width, int height, const uint8_t* data, std::si
     throw Error("unknown pixel format");
 }
 
-Image Texture::decode(int mip, int face) const {
+Image Texture::decode(int mip, int face, PaletteAlpha alpha) const {
     if (mip < 0 || mip >= int(mips.size())) throw Error("no such mip level");
     int w = std::max(width >> mip, 0), h = std::max(height >> mip, 0);
     const std::vector<uint8_t>* level = &mips[std::size_t(mip)];
@@ -272,7 +295,7 @@ Image Texture::decode(int mip, int face) const {
         palbuf.resize(1024, 0);
         pal = palbuf.data();
     }
-    return decode_pixels(bpp(), w, h, level->data(), level->size(), pal, iflags);
+    return decode_pixels(bpp(), w, h, level->data(), level->size(), pal, iflags, alpha);
 }
 
 }  // namespace lithtech::dtx

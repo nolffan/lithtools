@@ -6,6 +6,7 @@
 #include <QActionGroup>
 #include <QApplication>
 #include <QClipboard>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDragEnterEvent>
 #include <QDropEvent>
@@ -118,6 +119,7 @@ struct TextureView::Impl {
     QString name;
     int mip = 0, face = 0;
     AlphaMode alpha = AlphaMode::Blend;
+    bool ps2Alpha = false;
     double zoom = 0;      // 0 = fit
     QImage decoded;       // straight RGBA of the current level/face
 
@@ -125,6 +127,7 @@ struct TextureView::Impl {
     QComboBox* mipBox = nullptr;
     QComboBox* faceBox = nullptr;
     QComboBox* alphaBox = nullptr;
+    QCheckBox* ps2Box = nullptr;
     QLabel* faceLabel = nullptr;
     QToolButton* exportBtn = nullptr;
     QToolButton* copyBtn = nullptr;
@@ -156,6 +159,9 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     d->alphaBox->addItem(tr("Alpha blended"));
     d->alphaBox->addItem(tr("Ignore alpha"));
     d->alphaBox->addItem(tr("Alpha only"));
+    d->ps2Box = new QCheckBox(tr("PS2 alpha"), this);
+    d->ps2Box->setToolTip(tr("Show palette alpha as the PS2 draws it: 0x80 is opaque, and a palette with no alpha "
+                             "is opaque. The PC engine uses the stored values."));
     d->exportBtn = new QToolButton(this);
     d->exportBtn->setText(tr("Export PNG…"));
     d->copyBtn = new QToolButton(this);
@@ -172,6 +178,7 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     top->addWidget(d->faceLabel);
     top->addWidget(d->faceBox);
     top->addWidget(d->alphaBox);
+    top->addWidget(d->ps2Box);
     top->addStretch(1);
     top->addWidget(d->copyBtn);
     top->addWidget(d->exportBtn);
@@ -222,6 +229,7 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     });
     connect(d->alphaBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             [this](int i) { setAlphaMode(AlphaMode(i)); });
+    connect(d->ps2Box, &QCheckBox::toggled, this, &TextureView::setPs2Alpha);
     connect(d->exportBtn, &QToolButton::clicked, this, [this] { exportPng(); });
     connect(d->copyBtn, &QToolButton::clicked, this, &TextureView::copyImage);
     connect(d->infoBtn, &QToolButton::toggled, this, &TextureView::showInfo);
@@ -247,6 +255,7 @@ void TextureView::clear() {
     d->updating = false;
     d->faceBox->setVisible(false);
     d->faceLabel->setVisible(false);
+    d->ps2Box->setVisible(false);
     d->exportBtn->setEnabled(false);
     d->copyBtn->setEnabled(false);
     d->message->hide();
@@ -279,6 +288,7 @@ bool TextureView::loadDtx(const QByteArray& data, const QString& name, QString* 
     bool cube = d->tex.is_cubemap() && d->tex.find_section("CUBEMAPDATA");
     d->faceBox->setVisible(cube);
     d->faceLabel->setVisible(cube);
+    d->ps2Box->setVisible(d->tex.bpp() == lithtech::dtx::BPP_32P);
     refresh();
     emit textureChanged();
     return true;
@@ -312,6 +322,14 @@ void TextureView::setAlphaMode(AlphaMode mode) {
     refresh();
 }
 
+void TextureView::setPs2Alpha(bool on) {
+    d->ps2Alpha = on;
+    if (d->ps2Box->isChecked() != on) d->ps2Box->setChecked(on);
+    refresh();
+}
+
+bool TextureView::ps2Alpha() const { return d->ps2Alpha; }
+
 void TextureView::showInfo(bool show) {
     d->info->setVisible(show);
     if (d->infoBtn->isChecked() != show) d->infoBtn->setChecked(show);
@@ -322,7 +340,8 @@ void TextureView::refresh() {
     QString err;
     QImage img;
     try {
-        img = toQImage(d->tex.decode(d->mip, d->face));
+        img = toQImage(d->tex.decode(d->mip, d->face,
+                                     d->ps2Alpha ? lithtech::dtx::PaletteAlpha::Ps2 : lithtech::dtx::PaletteAlpha::Stored));
     } catch (const std::exception& e) {
         err = QString::fromUtf8(e.what());
     }
@@ -380,6 +399,21 @@ void TextureView::refresh() {
     h += row(tr("Detail scale"), QString::number(double(t.detail_scale()), 'g', 6));
     h += row(tr("Detail angle"), QString::number(t.detail_angle()));
     h += row(tr("Command"), t.command.empty() ? QStringLiteral("—") : QString::fromLatin1(t.command.c_str()).toHtmlEscaped());
+    if (const auto* pal = t.find_section("PALLETE32"); pal && t.bpp() == lithtech::dtx::BPP_32P) {
+        int amax = 0, colours = 0;
+        std::vector<bool> used(256);
+        for (const auto& m : t.mips)
+            for (uint8_t i : m) used[i] = true;
+        for (int i = 0; i < 256; ++i) {
+            if (4 * std::size_t(i) + 3 < pal->data.size()) amax = std::max<int>(amax, pal->data[4 * std::size_t(i) + 3]);
+            colours += used[std::size_t(i)];
+        }
+        h += row(tr("Palette"), tr("%1 of 256 colours used").arg(colours));
+        h += row(tr("Palette alpha"), amax == 0 ? tr("none (all zero: the PS2 draws it opaque)")
+                                                : tr("up to 0x%1").arg(amax, 2, 16, QLatin1Char('0')));
+        if (t.ps2_style_palette())
+            h += row(tr("Made for"), tr("the PS2 (DEdit's Convert to 32P: alpha halved, 0x80 is opaque)"));
+    }
     if (t.truncated) h += row(tr("Warning"), tr("the file ends inside its pixel data"));
     if (!err.isEmpty()) h += row(tr("Error"), err.toHtmlEscaped());
     h += QStringLiteral("</table>");
@@ -473,7 +507,7 @@ void TextureView::copyImage() {
 
 // ---------------------------------------------------------------------------
 
-QImage dtxThumbnail(const QByteArray& data, int size) {
+QImage dtxThumbnail(const QByteArray& data, int size, bool ps2Alpha) {
     if (size <= 0) return {};
     try {
         std::vector<uint8_t> v(data.begin(), data.end());
@@ -488,7 +522,7 @@ QImage dtxThumbnail(const QByteArray& data, int size) {
                 break;
             }
         }
-        QImage img = toQImage(t.decode(mip));
+        QImage img = toQImage(t.decode(mip, 0, ps2Alpha ? lithtech::dtx::PaletteAlpha::Ps2 : lithtech::dtx::PaletteAlpha::Stored));
         if (img.isNull()) return {};
         QImage scaled = img.scaled(size, size, Qt::KeepAspectRatio,
                                    std::max(img.width(), img.height()) > size ? Qt::SmoothTransformation : Qt::FastTransformation);
