@@ -6,3 +6,4 @@ jupiter/src/Engine/tools/Plugins/SDKFiles/
 jupiter/src/**/Release */
 __pycache__/
 jupiter/src/Engine/tools/Plugins/Photoshop/dtxformat/DTXFormat.pipl
+tools/lithrez/build/
