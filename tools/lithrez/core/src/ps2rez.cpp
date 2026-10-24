@@ -2,6 +2,7 @@
 // what LTIOREZ.IRX (the IOP module that reads it) requires of it.
 
 #include "lithtech/ps2rez.hpp"
+#include "lithtech/butes.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -133,6 +134,7 @@ std::string guess_extension(const uint8_t* d, std::size_t n) {
     if (n >= 4 && rd32(d) == 2) return "ltb";                        // PS2 model
     if (n >= 4 && rd32(d) == 0x42) return "ltb";                     // PS2 world (version 66)
     if (is(0, "/*") || is(0, "\r\n")) return "txt";
+    if (butes::looks_like(d, n)) return "but";   // needs the whole file
     return "bin";
 }
 
@@ -235,7 +237,8 @@ std::string Archive::name_of(const Entry& e) const {
     std::snprintf(buf, sizeof buf, "%08X", e.hash);
     std::string ext = "bin";
     if (e.size) {
-        auto head = read_at(file_offset(e), std::min<uint32_t>(e.size, 32));
+        // small files whole, so compiled attribute files can be recognised
+        auto head = read_at(file_offset(e), e.size <= (1u << 20) ? e.size : 32);
         ext = guess_extension(head.data(), head.size());
     }
     return std::string("_unnamed\\") + buf + "." + ext;

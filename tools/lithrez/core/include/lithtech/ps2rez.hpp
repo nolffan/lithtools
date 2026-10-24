@@ -75,7 +75,8 @@ private:
     mutable std::map<uint32_t, std::unordered_map<uint32_t, std::size_t>> by_weight_;
 };
 
-// A file extension guessed from the first bytes, for unnamed entries.
+// A file extension guessed from the content, for unnamed entries (a
+// compiled attribute file, .but, is recognised only from all of it).
 std::string guess_extension(const uint8_t* data, std::size_t size);
 
 // Where the archive is: a file of its own, or LITH_PS2.REZ inside an

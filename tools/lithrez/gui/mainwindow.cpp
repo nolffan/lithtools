@@ -7,6 +7,7 @@
 #include "textureview.h"
 #include "util.h"
 #include "wizard.h"
+#include <lithtech/butes.hpp>
 #include <lithtech/ps2rez.hpp>
 
 #include <QAction>
@@ -979,6 +980,16 @@ void MainWindow::preview(Resource* r) {
     } else if (t == "SGT" || t == "STY" || t == "DLS") {
         err = tr("DirectMusic %1: LithRez Studio can't play DirectMusic yet.")
                   .arg(t == "SGT" ? tr("segment") : t == "STY" ? tr("style") : tr("instrument collection"));
+    } else if (t == "BUT" && [&] {
+                   // the PS2's compiled attribute files, as ButeMgr text
+                   QByteArray b = readData(r);
+                   auto* p = reinterpret_cast<const uint8_t*>(b.constData());
+                   if (!lithtech::butes::looks_like(p, size_t(b.size()))) return false;
+                   textPreview_->setPlainText(qs(lithtech::butes::to_text(lithtech::butes::read(p, size_t(b.size())))));
+                   previewStack_->setCurrentWidget(textPreview_);
+                   return true;
+               }()) {
+        return;
     } else if (isTextType(t) || r->size < 64 * 1024) {
         QByteArray b = readData(r).left(256 * 1024);
         bool text = !b.isEmpty() && std::count_if(b.begin(), b.end(), [](char c) {

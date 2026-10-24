@@ -2,7 +2,13 @@
 """Recovers the file names of a PS2 LITH_PS2.REZ, which stores only their
 hashes, and writes the list lithrez compiles in (core/data/ps2-names.txt).
 
-    ps2_names.py --out core/data/ps2-names.txt --pc <PC NOLF game dir>... <PS2 ISO or LITH_PS2.REZ>...
+    ps2_names.py --out core/data/ps2-names.txt --butes-out core/data/ps2-bute-names.txt
+                 --pc <PC NOLF game dir>... <PS2 ISO or LITH_PS2.REZ>...
+
+It also writes the names of the attribute tags and keys (--butes-out): the
+PS2's compiled attribute files (.but) keep only their hashes (h * 31 + c,
+case-sensitive), and every [Tag] and Key = in the PS2's text files and the
+PC games' attribute files names all of them.
 
 Candidates, tried against every disc's hashes (docs/PS2REZ.md):
   1. every path in the PC NOLF archives (*.rez in the --pc directories);
@@ -90,8 +96,9 @@ class Ps2Rez:
         return b''
 
 
-def pc_paths(dirs):
-    """Every resource path in the .rez files of the given directories."""
+def pc_paths(dirs, texts=None):
+    """Every resource path in the .rez files of the given directories (and,
+    into texts, the contents of their ATTRIBUTES\\*.TXT)."""
     out = set()
 
     def walk(f, pos, size, prefix):
@@ -108,7 +115,7 @@ def pc_paths(dirs):
                 subs.append((d[o:e].decode('latin-1'), dpos, dsize))
                 o = e + 1
             else:
-                _p, _s, _t, _i = struct.unpack_from('<4I', d, o)
+                fpos, fsize, _t, _i = struct.unpack_from('<4I', d, o)
                 o += 16
                 tag = d[o:o + 4]
                 (nkeys,) = struct.unpack_from('<I', d, o + 4)
@@ -118,6 +125,11 @@ def pc_paths(dirs):
                 o = e + 2 + 4 * nkeys
                 ext = tag.rstrip(b'\0')[::-1].decode('latin-1')
                 out.add(prefix + name + ('.' + ext if ext else ''))
+                if texts is not None and ext.upper() == 'TXT' and prefix.upper().startswith('ATTRIBUTES'):
+                    here = f.tell()
+                    f.seek(fpos)
+                    texts.append(f.read(fsize).decode('latin-1'))
+                    f.seek(here)
         for name, dpos, dsize in subs:
             walk(f, dpos, dsize, prefix + name + '\\')
 
@@ -170,6 +182,17 @@ def plausible(name, data):
     if ext in ('but', 'txt', 'spr'):
         return k is None
     return True
+
+
+# Names the text files don't have: the compiled Layout of the PS2 variant
+# tables (an unnamed .but) was built from a source that spelled FlagItl
+# "FlatItl", so the game never finds that key (it asks for FlagItl).
+EXTRA_BUTE_NAMES = {'FlatItl'}
+
+
+def bute_words(text):
+    """The tag and key names in an attribute file's text."""
+    return set(re.findall(r'\[([^\]\r\n]+)\]', text)) | set(re.findall(r'^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=', text, re.M))
 
 
 def recover(rez, pcp, found):
@@ -235,10 +258,12 @@ def recover(rez, pcp, found):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--out', required=True)
+    ap.add_argument('--butes-out')
     ap.add_argument('--pc', action='append', default=[])
     ap.add_argument('discs', nargs='+')
     a = ap.parse_args()
-    pcp = pc_paths(a.pc)
+    pc_texts = []
+    pcp = pc_paths(a.pc, pc_texts)
     EXTS.update(p.rsplit('.', 1)[-1].lower() for p in pcp if '.' in p)
     print('%d PC paths' % len(pcp))
     names = {}
@@ -249,12 +274,25 @@ def main():
         print('%s: %d of %d named' % (os.path.basename(disc), got, len(rez.entries)))
         for h, n in found.items():
             names.setdefault(h, n)
+        for h, n in found.items():
+            if n.lower().endswith('.txt'):
+                pc_texts.append(rez.read(h).decode('latin-1'))
     with open(a.out, 'w', newline='\n') as f:
         f.write('# PS2 LITH_PS2.REZ file names, recovered by tests/ps2_names.py from the US and\n'
                 '# European discs (the archive stores only hashes). One name per line.\n')
         for h in sorted(names, key=lambda h: names[h].lower()):
             f.write(names[h] + '\n')
     print('%d names written' % len(names))
+    if a.butes_out:
+        words = set(EXTRA_BUTE_NAMES)
+        for t in pc_texts:
+            words |= bute_words(t)
+        with open(a.butes_out, 'w', newline='\n') as f:
+            f.write('# Attribute tag and key names for the PS2\'s compiled attribute files (.but),\n'
+                    '# collected by tests/ps2_names.py from the PS2 and PC text attribute files.\n')
+            for w in sorted(words, key=lambda w: (w.lower(), w)):
+                f.write(w + '\n')
+        print('%d attribute names written' % len(words))
 
 
 if __name__ == '__main__':

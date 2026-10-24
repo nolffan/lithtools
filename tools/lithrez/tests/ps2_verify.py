@@ -7,6 +7,8 @@ For each disc image (or LITH_PS2.REZ):
   1. lithrez x extracts every file, and each one is byte-identical to the
      reference extraction (<reference dir>/<region>, matched by name hash,
      as made by the nolfsrc ps2 branch's reader: see docs/PS2REZ.md);
+  1b. every compiled attribute file (.but) decodes to the end (lithrez cat
+     --text), with every tag and key named;
   2. lithrez roundtrip rebuilds the archive from its tables alone, and the
      result is byte-identical to the archive on the disc;
   3. on that rebuilt copy, edits go through lithrez add/rm: a file replaced
@@ -23,6 +25,7 @@ The reference dir holds ps2/<region>/ trees and ps2-<region>-names.txt files
 import hashlib
 import json
 import os
+import re
 import shutil
 import struct
 import subprocess
@@ -122,6 +125,16 @@ def main():
         check(differ == 0, '%d files identical to the reference extraction (%d zero-length), %d differ'
               % (same, empty, differ), fails)
         shutil.rmtree(os.path.join(wdir, 'x'))
+        # 1b. compiled attribute files as text
+        buts = [it for it in items if it['type'] == 'BUT' and it['size']]
+        ok = unnamed_keys = 0
+        for it in buts:
+            t = run(lithrez, 'cat', '--text', image, it['path']).stdout
+            if t[:1] == b'[':
+                ok += 1
+                unnamed_keys += len(re.findall(rb'^\[?#[0-9A-F]{8}', t, re.M))
+        check(ok == len(buts) and unnamed_keys == 0,
+              '%d of %d .but files decode as text, %d unnamed tags or keys' % (ok, len(buts), unnamed_keys), fails)
         # 2. rebuilt from the tables
         rebuilt = os.path.join(wdir, 'LITH_PS2.REZ')
         run(lithrez, 'roundtrip', image, rebuilt)

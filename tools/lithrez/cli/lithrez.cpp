@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cctype>
+#include <lithtech/butes.hpp>
 #include <lithtech/ps2rez.hpp>
 #include <lithtech/rez.hpp>
 
@@ -76,7 +77,8 @@ Extra commands:
   lithrez header <rez> [--json]                   the header fields
   lithrez dump <rez>                              directory blocks with offsets
   lithrez verify <rez>                            check the structure
-  lithrez cat <rez> <path>                        a resource's bytes to stdout
+  lithrez cat <rez> <path> [--text]               a resource's bytes to stdout (--text: a
+                                                  PS2 .but attribute file as text)
   lithrez get <rez> <path>... -o <dir>            extract chosen files/directories
   lithrez add <rez> <dir in rez> <file|dir>...    add or replace (creates <rez>)
   lithrez rm <rez> <path>...                      remove files or directories
@@ -570,6 +572,11 @@ int cmd_cat(const Args& a) {
     _setmode(_fileno(stdout), _O_BINARY);
 #endif
     auto d = r->read();
+    if (a.flags.count("text") && butes::looks_like(d.data(), d.size())) {   // a PS2 compiled attribute file
+        std::string t = butes::to_text(butes::read(d.data(), d.size()));
+        std::fwrite(t.data(), 1, t.size(), stdout);
+        return 0;
+    }
     std::fwrite(d.data(), 1, d.size(), stdout);
     return 0;
 }

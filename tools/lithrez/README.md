@@ -142,6 +142,8 @@ lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt fro
   recovered from the PC and PS2 data (`core/data/ps2-names.txt`, made by
   `tests/ps2_names.py`); the rest are `_UNNAMED/<hash>.<ext>`, and
   `--names <file>` adds more.
+- **Compiled attribute files** (`.but`, the PS2's binary attributes and
+  asset lists) show as text: `lithrez cat --text`, and Studio's preview.
 - **Editing** (`add`, `rm`, `f`, and Studio's edits) is experimental: it
   follows the IOP module's code but hasn't been run on a PS2 or an
   emulator. A replaced file replaces table 0's version and its identical
@@ -162,8 +164,9 @@ lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt fro
 - **Make:** a new empty rez, a "Rez Project" from a folder (the same bytes
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
-- **Preview pane:** textures, models (`.abc`, `.ltb` and the PS2's `.ltb`) with their skins
-  and animations, sounds, text, and hex for everything else. For NOLF2, Contract
+- **Preview pane:** textures, models (`.abc`, `.ltb` and the PS2's `.ltb`)
+  with their skins and animations, sounds, text (PS2 `.but` attribute files
+  decoded), and hex for everything else. For NOLF2, Contract
   J.A.C.K. and Tron 2.0, skins come from the archive's own
   `ATTRIBUTES/MODELBUTES.TXT` when it has one. Double-click opens the texture viewer, the
   model viewer, the sound player, or (for a DLL) the string table editor;

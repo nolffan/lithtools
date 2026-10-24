@@ -122,6 +122,39 @@ The recovered names spell folders differently (`Chars\`, `CHARS\`,
 `chars\`); the hash ignores case, so the tree upper-cases folder names (as
 the PC games' archives have them) and keeps each file name's case.
 
+## Compiled attribute files (.but)
+
+Next to each text attribute file and asset list (`Attributes\Weapons.txt`,
+`AssetLists\m01s01.txt`) the archive has a compiled one (`.but`), the form
+the PS2 loads. All little-endian:
+
+    u32 tag count
+    per tag: u32 name hash, u32 offset of its keys, u32 key count
+    keys:    u16 record size (8 + value, a multiple of 4), u16 type, u32 name hash, value
+
+| Type | Value | Text form |
+|---|---|---|
+| 1 | string, NUL-terminated, padded | `"..."` |
+| 2 | s32 | `1` |
+| 3 | float | `0.75` |
+| 4 | 3 floats | `<x, y, z>` |
+| 5 | 2 x s32 | `(x, y)` |
+| 6 | u32, 0 or 1 | `TRUE` / `FALSE` |
+| 7 | 2 floats | `[a, b]` |
+| 8 | 4 x s32 | `(left, top, right, bottom)` |
+
+The types were matched against the text files' values (`HelpSize = (13,23)`
+is type 5, `AttackVectorRange = [100.0, 500.0]` type 7). Tag and key names
+are stored only as hashes: `h = h * 31 + c` over the name as written
+(case-sensitive). Every `[Tag]` and `Key =` in the PS2's text files and the
+PC games' attribute files, plus one (3983 names, `core/data/ps2-bute-names.txt`,
+written by `tests/ps2_names.py`), names every tag and key of the 125 `.but`
+files on each disc. The one is `FlatItl`: the compiled `Layout` of the PS2
+variant tables (an unnamed `.but`) was built from a source that spelled the
+key `FlagItl` that way, so the game, which asks for `FlagItl`, never finds
+the Italian flag's texture there. `lithtech::butes` turns them back into text
+(`lithrez cat --text`, and LithRez Studio's preview); it doesn't write them.
+
 ## Editing (experimental)
 
 Nothing written here has been run on a PS2 or an emulator. What the writer
@@ -172,5 +205,6 @@ disc, and how the executable chooses a level's table.
   files leaves `lithrez verify --data` clean, with the changed files reading
   back and the rest unchanged; and a replacement in a copy of the disc
   image grows the volume and reads back.
+  Every `.but` file decodes as text with all its names.
 - `ps2rez_test` (ctest): a small archive made in the test, with a copy and
   a variant in its other tables, read and edited through `rez::Archive`.
