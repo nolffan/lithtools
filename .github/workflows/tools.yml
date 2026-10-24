@@ -1,0 +1,277 @@
+# The tools' release builds, as workflow artifacts:
+#   lithtools-<name>-windows-x64.zip       lithrez.exe and Rez Studio (Qt deployed)
+#   lithtools-<name>-linux-x86_64.tar.gz   lithrez and Rez Studio as an AppImage
+#   lithtools-<name>-macos-universal.zip   lithrez and Rez Studio.app (arm64 + x86_64)
+#   lithtools-<name>-blender.zip           the Blender extension (install from disk)
+# <name> is the tag (v1.2.0) or, for the nightly, nightly-<commit>. Each
+# platform builds rez/ with CMake, runs its tests and packs; nothing needs
+# game data.
+#
+# Pushing a tag (v*) also makes a GitHub release of it with the four files
+# attached; a tag with a hyphen in it is marked a pre-release. A release of
+# that tag made by hand beforehand is kept, with its text; the files are
+# added to it, replacing ones of the same name. A new release's text is
+# .github/release-notes.md, followed by GitHub's generated list of changes.
+#
+# A push to master whose builds pass updates the pre-release "nightly" the
+# same way: the tag nightly is moved to the commit, its files are replaced
+# by the commit's (named for it), and the text is .github/nightly-notes.md
+# followed by release-notes.md. The new files go up before the old ones are
+# deleted. It is edited in place, not made anew, so its page stays the same
+# and watchers are not notified of every merge, and it is never marked the
+# latest release. A run whose commit is no longer master's head leaves it
+# alone.
+name: Tools
+
+on:
+  push:
+    branches: [master]
+    tags: ['v*']
+  pull_request:
+    paths: ['rez/**', 'plugins/**', '.github/workflows/tools.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: tools-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  QT_VERSION: '6.8.3'
+
+jobs:
+  names:
+    runs-on: ubuntu-24.04
+    outputs:
+      name: ${{ steps.n.outputs.name }}
+      version: ${{ steps.n.outputs.version }}
+    steps:
+      # name: the files' names after lithtools-; version: what the binaries
+      # and the Blender extension report (semantic, as Blender wants).
+      - id: n
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
+        run: |
+          if [ "${REF#refs/tags/v}" != "$REF" ]; then
+            echo "name=$REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "version=${REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=nightly-${SHA:0:7}" >> "$GITHUB_OUTPUT"
+            echo "version=0.0.0-nightly+${SHA:0:7}" >> "$GITHUB_OUTPUT"
+          fi
+
+  linux:
+    needs: names
+    runs-on: ubuntu-22.04        # the oldest glibc we build on runs the most places
+    timeout-minutes: 60
+    env:
+      NAME: lithtools-${{ needs.names.outputs.name }}-linux-x86_64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: linux_gcc_64
+          cache: true
+      # The xcb platform plugin's libraries, which linuxdeploy bundles.
+      - name: Packages
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends ninja-build libgl-dev libegl-dev \
+            libxkbcommon-dev libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-keysyms1 \
+            libxcb-shape0 libxcb-xinerama0 libfuse2
+      - name: Build
+        run: |
+          cmake -S rez -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
+          cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: Package
+        run: QMAKE="$(command -v qmake6 || command -v qmake)" rez/packaging/linux.sh build dist "$NAME"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/${{ env.NAME }}.tar.gz
+          archive: false
+          if-no-files-found: error
+
+  windows:
+    needs: names
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      NAME: lithtools-${{ needs.names.outputs.name }}-windows-x64
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: win64_msvc2022_64
+          cache: true
+      - name: Build
+        run: |
+          cmake -S rez -B build -A x64 -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
+          cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+      - name: Package
+        shell: pwsh
+        run: |
+          $stage = "dist/$env:NAME"
+          New-Item -ItemType Directory -Force $stage | Out-Null
+          Copy-Item build/Release/lithrez.exe, build/gui/Release/rezstudio.exe, rez/README.md $stage
+          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$stage/rezstudio.exe"
+          Compress-Archive -Path $stage -DestinationPath "dist/$env:NAME.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/${{ env.NAME }}.zip
+          archive: false
+          if-no-files-found: error
+
+  macos:
+    needs: names
+    runs-on: macos-14
+    timeout-minutes: 60
+    env:
+      NAME: lithtools-${{ needs.names.outputs.name }}-macos-universal
+    steps:
+      - uses: actions/checkout@v4
+      - uses: jurplel/install-qt-action@v4
+        with:
+          version: ${{ env.QT_VERSION }}
+          arch: clang_64
+          cache: true
+      - name: Build
+        run: |
+          brew install ninja
+          cmake -S rez -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
+            -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
+          cmake --build build --parallel
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      # Not notarised: signed ad hoc, which arm64 Macs need to run it at all
+      # (the release notes say how to open it the first time).
+      - name: Package
+        run: |
+          stage="dist/$NAME"
+          mkdir -p "$stage"
+          cp -R build/gui/rezstudio.app "$stage/Rez Studio.app"
+          macdeployqt "$stage/Rez Studio.app"
+          codesign --force --deep --sign - "$stage/Rez Studio.app"
+          cp build/lithrez rez/README.md "$stage/"
+          codesign --force --sign - "$stage/lithrez"
+          lipo -info "$stage/lithrez"
+          (cd dist && ditto -c -k --keepParent "$NAME" "$NAME.zip")
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/${{ env.NAME }}.zip
+          archive: false
+          if-no-files-found: error
+
+  blender:
+    needs: names
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      NAME: lithtools-${{ needs.names.outputs.name }}-blender
+    steps:
+      - uses: actions/checkout@v4
+      # The format library imports without Blender; a quick check that the
+      # package is whole.
+      - name: Check
+        run: |
+          cd plugins/blender
+          python3 -c "import sys; sys.path.insert(0, '.'); from lithtech import abc, dtx; print('ok')"
+          python3 -m py_compile io_scene_lithtech/*.py io_scene_lithtech/lithtech/*.py
+      - name: Package
+        run: |
+          mkdir -p dist
+          python3 plugins/blender/package.py "${{ needs.names.outputs.version }}" "dist/$NAME.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/${{ env.NAME }}.zip
+          archive: false
+          if-no-files-found: error
+
+  release:
+    if: >-
+      startsWith(github.ref, 'refs/tags/v') ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    needs: [names, linux, windows, macos, blender]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write          # create the release and upload to it
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github
+          sparse-checkout-cone-mode: false
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: lithtools-*
+          path: dist
+          merge-multiple: true
+
+      - name: Release ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+          TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || 'nightly' }}
+          NAME: ${{ needs.names.outputs.name }}
+        run: |
+          find dist -type f -ls
+          notes() {   # the release text for $TAG, into notes.md
+            sed -e "s|{{TAG}}|$TAG|g" -e "s|{{NAME}}|$NAME|g" -e "s|{{REPO}}|$GH_REPO|g" \
+                .github/release-notes.md | sed '/^<!--/,/^-->/d' > body.md
+            if [ "$TAG" = nightly ]; then
+              sed -e "s|{{SHA}}|$SHA|g" -e "s|{{SHORT}}|${SHA:0:7}|g" \
+                  -e "s|{{REPO}}|$GH_REPO|g" -e "s|{{DATE}}|$(date -u '+%Y-%m-%d %H:%M UTC')|g" \
+                  .github/nightly-notes.md | cat - body.md > notes.md
+            else
+              mv body.md notes.md
+            fi
+          }
+          if [ "$TAG" = nightly ]; then
+            head="$(gh api "repos/$GH_REPO/git/ref/heads/master" --jq .object.sha)"
+            if [ "$head" != "$SHA" ]; then
+              echo "master is at $head now, not $SHA: the nightly is left as it is"
+              exit 0
+            fi
+            notes
+            if gh release view nightly >/dev/null 2>&1; then
+              # Moved, or made again if it was deleted by hand.
+              gh api -X PATCH "repos/$GH_REPO/git/refs/tags/nightly" \
+                  -f sha="$SHA" -F force=true >/dev/null ||
+                gh api -X POST "repos/$GH_REPO/git/refs" \
+                    -f ref=refs/tags/nightly -f sha="$SHA" >/dev/null
+              gh release edit nightly --prerelease --latest=false \
+                  --title "Nightly (${SHA:0:7})" --notes-file notes.md
+            else
+              gh release create nightly --target "$SHA" --prerelease --latest=false \
+                  --title "Nightly (${SHA:0:7})" --notes-file notes.md
+            fi
+          elif ! gh release view "$TAG" >/dev/null 2>&1; then
+            pre=; case "$TAG" in *-*) pre=--prerelease ;; esac
+            notes
+            gh release create "$TAG" --verify-tag --notes-file notes.md \
+                --generate-notes $pre --title "$TAG"
+          fi
+          gh release upload "$TAG" dist/lithtools-"$NAME"-* --clobber
+          # The nightly keeps only this commit's files, deleted once the new
+          # ones are up so the page is never without a download.
+          if [ "$TAG" = nightly ]; then
+            gh release view nightly --json assets --jq '.assets[].name' |
+              while read -r a; do
+                case "$a" in lithtools-"$NAME"-*) ;;
+                  *) echo "deleting $a"; gh release delete-asset nightly "$a" --yes < /dev/null ;;
+                esac
+              done
+          fi

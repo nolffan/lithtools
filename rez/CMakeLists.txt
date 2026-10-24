@@ -1,0 +1,53 @@
+cmake_minimum_required(VERSION 3.20)
+project(lithtools_rez VERSION 2.0 LANGUAGES CXX)
+
+# lithrez (command line) and Rez Studio (Qt 6), on a shared library of
+# LithTech formats. Builds with clang, gcc or MSVC on Linux, macOS and
+# Windows.
+
+# The version the binaries report: a release tag's, or "dev".
+set(LITHTOOLS_VERSION "dev" CACHE STRING "Version string the tools report")
+
+option(LITHREZ_BUILD_GUI "Build Rez Studio (needs Qt 6)" ON)
+option(LITHREZ_BUILD_TESTS "Build the tests" ON)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if(MSVC)
+  add_compile_options(/W4 /permissive- /utf-8)
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+else()
+  add_compile_options(-Wall -Wextra -Wno-unused-parameter)
+endif()
+
+add_library(lithtech STATIC
+  core/src/rez.cpp
+  core/src/dtx.cpp
+  core/src/abc.cpp
+  core/src/pe_strings.cpp
+)
+target_include_directories(lithtech PUBLIC core/include)
+
+add_executable(lithrez cli/lithrez.cpp)
+target_link_libraries(lithrez PRIVATE lithtech)
+target_compile_definitions(lithrez PRIVATE LITHREZ_VERSION="${LITHTOOLS_VERSION}")
+install(TARGETS lithrez RUNTIME DESTINATION bin)
+
+if(LITHREZ_BUILD_GUI)
+  find_package(Qt6 6.2 COMPONENTS Widgets OpenGL OpenGLWidgets)
+  if(Qt6_FOUND)
+    add_subdirectory(gui)
+  else()
+    message(WARNING "Qt 6 not found: Rez Studio will not be built")
+  endif()
+endif()
+
+if(LITHREZ_BUILD_TESTS)
+  enable_testing()
+  add_subdirectory(tests)
+endif()
