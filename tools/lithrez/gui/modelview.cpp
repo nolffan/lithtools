@@ -1,5 +1,5 @@
-// The model preview. An .abc, or an .ltb read with lithtech::ltb and turned
-// into the same structures (ltb::to_abc), is skinned on the CPU (abc::pose and
+// The model preview. An .abc, or an .ltb read with lithtech::ltb (or a PS2
+// one with lithtech::ps2ltb) and turned into the same structures (to_abc), is skinned on the CPU (abc::pose and
 // skin, as the engine places vertices) and drawn with OpenGL 3.3 core, which
 // every platform LithRez Studio runs on offers (macOS only offers core profiles).
 //
@@ -14,6 +14,7 @@
 #include <lithtech/abc.hpp>
 #include <lithtech/dtx.hpp>
 #include <lithtech/ltb.hpp>
+#include <lithtech/ps2ltb.hpp>
 
 #include <QCheckBox>
 #include <QComboBox>
@@ -50,6 +51,7 @@
 namespace abc = lithtech::abc;
 namespace dtx = lithtech::dtx;
 namespace ltb = lithtech::ltb;
+namespace ps2ltb = lithtech::ps2ltb;
 
 namespace {
 
@@ -643,7 +645,12 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
     QString format;
     try {
         std::vector<uint8_t> bytes(data.begin(), data.end());
-        if (ltb::is_ltb(bytes)) {
+        if (ps2ltb::is_ps2_model(bytes)) {
+            // a PS2 NOLF model (file type 2), drawn the same way
+            ps2ltb::Model pm = ps2ltb::read(bytes);
+            format = QStringLiteral("PS2 LTB, version 16");
+            m = std::make_unique<abc::Model>(ps2ltb::to_abc(pm));
+        } else if (ltb::is_ltb(bytes)) {
             // A Jupiter .ltb, drawn through the same structures as an .abc.
             ltb::Model lm = ltb::read(bytes);
             format = QStringLiteral("LTB, model file version %1").arg(lm.version);

@@ -32,6 +32,10 @@ endif()
 # to compare with plugins/blender's ltb.py.
 add_executable(ltb_verify ltb_verify.cpp)
 target_link_libraries(ltb_verify PRIVATE lithtech)
+# PS2 models over the extracted discs (out/assets/ps2), and value dumps to
+# compare with plugins/blender's ps2ltb.py (tests/ps2ltb_dump.py).
+add_executable(ps2ltb_verify ps2ltb_verify.cpp)
+target_link_libraries(ps2ltb_verify PRIVATE lithtech)
 # Sound decoding over whole archives; tests/compare_sound.py checks samples
 # against FFmpeg.
 add_executable(sound_decode_all sound_decode_all.cpp)

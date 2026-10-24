@@ -10,10 +10,11 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
 - **LithRez Studio** (`lithrez-studio`, Qt 6): a successor to WinRez LT Studio. It
   has an Explorer-style rez editor, a DTX texture viewer with thumbnails, a
   model preview for `.abc` (NOLF, AvP2) and `.ltb` (NOLF2, Contract
-  J.A.C.K., Tron 2.0) models, a sound player, and a string table editor for
+  J.A.C.K., Tron 2.0, and NOLF on the PS2) models, a sound player, and a string table editor for
   `CRes.dll`.
 - **`core/`**: the shared library (`lithtech::rez`, `lithtech::dtx`,
-  `lithtech::abc`, `lithtech::ltb`, `lithtech::sound`, `lithtech::pe`).
+  `lithtech::abc`, `lithtech::ltb`, `lithtech::ps2ltb`, `lithtech::sound`,
+  `lithtech::pe`).
 
 `docs/REZ.md` describes the format and how these tools were checked against
 the originals.
@@ -48,7 +49,9 @@ These read the game archives (never committed), so they aren't part of
 `ctest`:
 
 - `tests/roundtrip_shipped.py`: every shipped `.rez` reads and writes back.
-- `dtx_decode_all`, `abc_verify`, `ltb_verify`: textures and models.
+- `dtx_decode_all`, `abc_verify`, `ltb_verify`, `ps2ltb_verify`: textures
+  and models (`ps2ltb_verify --dump` against plugins/blender's
+  `tests/ps2ltb_dump.py` compares the C++ and Python PS2 readers).
   `dtx_decode_all --ps2-alpha <folder>` decodes loose files, such as the
   PS2 discs' 8,930 textures, reading palette alpha as the PS2 does.
 - `sound_decode_all <rez>...`: decodes every `.wav` (80,845 in the shipped
@@ -127,7 +130,7 @@ archive is the same as one built on Windows.
 - **Make:** a new empty rez, a "Rez Project" from a folder (the same bytes
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
-- **Preview pane:** textures, models (`.abc` and `.ltb`) with their skins
+- **Preview pane:** textures, models (`.abc`, `.ltb` and the PS2's `.ltb`) with their skins
   and animations, sounds, text, and hex for everything else. For NOLF2, Contract
   J.A.C.K. and Tron 2.0, skins come from the archive's own
   `ATTRIBUTES/MODELBUTES.TXT` when it has one. Double-click opens the texture viewer, the
