@@ -145,6 +145,22 @@ version 85). `progress/Processor-avp2-map.md` is the map.
 - [ ] **Processor.exe (NOLF)**, cl 12.00.8447, 415 KB: 85% the same
   strings as AvP2's; after AvP2's, as its diff.
 
+## 2b. The other tools (on the scoreboard since 2026-10-24)
+
+- [~] **lithrez.exe** (LithRez 1.00, Nov-6-1998; AvP2 v1.0 and NOLF Tools
+  001 ship the same file): Visual C++ 5.0 SP3 (`toolchains/msvc-5.00-7303`,
+  fetched from archive.org; build.mk's VC5), `src/LT2/tools/LithRez`.
+  lithrez.cpp and rezutils.cpp (the app), the 1998 RezMgr (rezmgr, rezhash,
+  rezfile) and Lith (basehash, baselist, virtlist) libraries, written from
+  the image with Build 69's 2004 sources as a guide. Links; 94.2% (all but
+  CRezMgr::Compact matched; the rest of the count is unwind funclets and
+  tiny functions to look at).
+- [ ] **TProcessor.exe** (DirectEngine World Processor, 1998, NOLF Tools
+  001): Visual C++ 5.0, 236 KB of code with zlib 1.0.4.
+- [ ] **LithExport.dll**, **LandExport.dll** (Softimage|3D exporters, AvP2
+  v1.0 and NOLF Tools 001; NOLF's LithExport a debug build) and
+  **LithMayaExport.mll** (Maya, 1999): need those packages' SDKs of the time.
+
 ## 3. The editors (cl 12.00.9044, static MFC)
 
 - [ ] **ModelEdit.exe** (221 KB of its own code), then **DEdit.exe** (573

@@ -65,6 +65,65 @@ TARGETS = [
     dict(label="Processor.exe (NOLF)", what="world processor, NOLF (Tools 001)", kind="image",
          shipped=NOLF + "/Processor.exe", stem="Processor-nolf", built=None, optional=True,
          app=[(0x00401000, 0x00469103)]),
+    # ---- the resource packer ---------------------------------------------
+    # LithRez 1.00 (Nov-6-1998), shipped unchanged in AvP2 Tools v1.0 and
+    # NOLF Tools 001 (same SHA-256). Linker 5.10 and no Rich header: Visual
+    # C++ 5.0; the C runtime static (libc, only KERNEL32 imported). Build
+    # 69 has its source (tools/LithRez, libs/rezmgr). The link: lithrez.obj
+    # (0x00401000..0x00402dc0; 0x00402dc0 is the runtime's printf), the C
+    # runtime members it pulls in, then RezMgr's objects (rezmgr, rezhash,
+    # rezfile) and Lith's (basehash, baselist, virtlist), 0x0040ad50..
+    # 0x0040ea90; after them the runtime's _stricmp, operator new and
+    # delete), more runtime, and at the end of .text the C++ unwind
+    # funclets (0x0040fee0..0x004101e5, jumping into lithrez.obj and RezMgr).
+    # lithrez.obj is lithrez.cpp then rezutils.cpp (0x004011e0).
+    dict(label="lithrez.exe", what="resource (.rez) packer, LithRez 1.00", kind="image",
+         shipped=AVP2 + "/lithrez.exe", stem="lithrez",
+         # src/LT2/tools/LithRez/LithRez.dsw (Visual C++ 5.0 SP3, build.mk's VC5)
+         built="src/LT2/built/Release/tools/LithRez/LithRez.exe", optional=True,
+         partial_objs=["src/LT2/built/Release/tools/LithRez/*.obj",
+                       "src/LT2/built/Release/tools/LithRez/RezMgr/*.obj",
+                       "src/LT2/built/Release/tools/LithRez/Lith/*.obj"],
+         app=[(0x00401000, 0x00402dc0), (0x0040ad50, 0x0040ea90),
+              (0x0040fee0, 0x004101e5)]),
+    # ---- DirectEngine's world processor (NOLF Tools 001) -----------------
+    # "--- DirectEngine World Processor ---", built 1998-05-31 from
+    # F:\Proj\DE\DEdit\TProcessor: the LithTech 1.0-era processor that
+    # NOLF Tools 001 still ships. Linker 5.10, no Rich header: Visual C++ 5.0
+    # (msvc-5.00-7303), with the multithreaded C runtime (libcmt: TlsAlloc
+    # imported) linked statically. libscan.py with that libcmt.lib puts the
+    # runtime from 0x0043b2f0 (exsup.obj's __global_unwind2) to 0x0044b9a0,
+    # and getch/putch at 0x00451910; zlib 1.0.4 is below it, ours to build.
+    dict(label="TProcessor.exe", what="DirectEngine world processor (1998, NOLF Tools 001)", kind="image",
+         shipped=NOLF + "/TProcessor.exe", stem="TProcessor", built=None, optional=True,
+         app=[(0x00401000, 0x0043b2f0)]),
+    # ---- the Softimage|3D and Maya exporters of AvP2 v1.0 and NOLF ------
+    # LithExport.dll (models) and LandExport.dll (terrain) are Softimage|3D
+    # plug-ins (they import SAA.dll), link 6.00, 2000-08 (AvP2 v1.0) and
+    # 2000-09 (NOLF Tools 001); the C runtime static. NOLF's LithExport is a
+    # debug build (libcmtd: its asserts name d:\proj\nolf\lt2\tools\model\
+    # softexport, and _chkesp starts the runtime). LithMayaExport.mll is a
+    # Maya (1.x/2.0) plug-in of 1999-02. Building any of them needs that
+    # package's SDK of the time, which we don't have yet. Ranges: to the
+    # runtime's first member libscan.py finds with msvc-6.00-8447's libcmt
+    # (libcmtd for NOLF's LithExport).
+    dict(label="LithExport.dll (AvP2)", what="Softimage|3D model exporter (AvP2 v1.0)", kind="image",
+         shipped=AVP2 + "/Exporters/LithExport.dll", stem="LithExport-avp2", built=None, optional=True,
+         app=[(0x10001000, 0x100290d0)]),
+    dict(label="LithExport.dll (NOLF)", what="Softimage|3D model exporter, debug build (NOLF Tools 001)", kind="image",
+         shipped=NOLF + "/Exporters/LithExport.dll", stem="LithExport-nolf", built=None, optional=True,
+         app=[(0x10001000, 0x10057800)]),
+    dict(label="LandExport.dll (AvP2)", what="Softimage|3D terrain exporter (AvP2 v1.0)", kind="image",
+         shipped=AVP2 + "/Exporters/LandExport.dll", stem="LandExport-avp2", built=None, optional=True,
+         app=[(0x10001000, 0x10013950)]),
+    dict(label="LandExport.dll (NOLF)", what="Softimage|3D terrain exporter (NOLF Tools 001)", kind="image",
+         shipped=NOLF + "/Exporters/LandExport.dll", stem="LandExport-nolf", built=None, optional=True,
+         app=[(0x10001000, 0x10013810)]),
+    # The runtime's first member is trnsctrl.obj (0x1000a949); the small
+    # functions from 0x1000a930 look like its own helpers: provisional.
+    dict(label="LithMayaExport.mll", what="Maya model exporter (1999, AvP2 v1.0)", kind="image",
+         shipped=AVP2 + "/Exporters/LithMayaExport.mll", stem="LithMayaExport", built=None, optional=True,
+         app=[(0x10001000, 0x1000a930)]),
     # ---- the plug-ins of AvP2 Tools Update 2 (built 2002-03-28) ----------
     dict(label="IMFLithDTX.dll", what="Maya .dtx image plug-in (Update 2)", kind="image",
          shipped=U2 + "/Exporters/IMFLithDTX.dll", stem="IMFLithDTX",

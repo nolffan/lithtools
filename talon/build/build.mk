@@ -67,11 +67,13 @@ TALON_RCFLAGS ?=
 #                                          WITH_PROCESSOR=1` tries it
 #   src/Libs/Libs.dsw                      Monolith's shared static libraries
 #   src/Engine/tools/Plugins/Plugins.dsw   the modelling-package plug-ins
+#   src/LT2/tools/LithRez/LithRez.dsw      LithRez 1.00 (1998), Visual C++ 5.0
 WORKSPACES := \
     src/LT2/lithshared/lithshared.dsw:LT2_StdLith,LT2_ZLib,LT2_RegMgr \
     $(if $(WITH_PROCESSOR),src/LT2/tools/PreProcessor/Processor.dsw:Processor) \
     src/Libs/Libs.dsw:ButeMgr,CryptMgr,DibMgr,GenRegMgr,Lib_Lith,MFCStub,RegMgr,regmgr32,Lib_StdLith,Lib_ZLib \
-    src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader
+    src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader \
+    src/LT2/tools/LithRez/LithRez.dsw:LithRez
 
 # ---------------------------------------------------------------------------
 # Wine and the toolchains
@@ -101,6 +103,18 @@ ws = $(if $(filter $(ROOT)/src $(ROOT)/src/%,$(1)),s:$(subst /,\,$(patsubst $(RO
 ENV_GAME := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(VC6))\BIN' \
     INCLUDE='$(call ws,$(VC6))\INCLUDE;$(call ws,$(VC6))\MFC\INCLUDE;$(call ws,$(VC6))\ATL\INCLUDE' \
     LIB='$(call ws,$(VC6))\LIB;$(call ws,$(VC6))\MFC\LIB'
+
+# LithRez (lithrez.exe, 1998) is Visual C++ 5.0 with Service Pack 3
+# (cl 11.00.7303, link 5.10.7303; progress/targets.py): a project built with
+# it sets ENV_/CL_/LINK_/LIBEXE_<project> to these.
+VC5     := $(TC)/msvc-5.00-7303
+ENV_VC5 := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(VC5))\BIN' \
+    INCLUDE='$(call ws,$(VC5))\INCLUDE' LIB='$(call ws,$(VC5))\LIB'
+CL_VC5     := $(VC5)/BIN/cl.exe
+LINK_VC5   := $(VC5)/BIN/link.exe
+LIBEXE_VC5 := $(VC5)/BIN/lib.exe
+$(foreach p,LithRez RezMgr Lith,$(eval ENV_$(p) := $$(ENV_VC5))$(eval CL_$(p) := $$(CL_VC5))\
+    $(eval LINK_$(p) := $$(LINK_VC5))$(eval LIBEXE_$(p) := $$(LIBEXE_VC5)))
 
 # The prefix: made the first time, then only checked; every tool run waits
 # for it (an order-only prerequisite, so it causes no rebuild).
@@ -149,21 +163,22 @@ $(call tool,$(1),$(4) | wine-drives,\
     cd $(2) && $(ENV_GAME) $(WINE) $(RC) $(TALON_RCFLAGS) $(call q,$(5) $(3)))
 endef
 
-# $(call library,<lib>,<project dir>,<flags>,<objects>,<objects as the project dir sees them>)
+# $(call library,<lib>,<project dir>,<flags>,<objects>,<objects as the project dir sees them>,
+#   <env>,<lib.exe>)
 define library
 $(call tool,$(1),$(4) | wine-drives,\
     cd $(2) && { printf '%s\n' $(call q,$(3) $(subst /,\,$(5))) > $(1:%=$(ROOT)/%).rsp; } && \
-    $(ENV_GAME) $(WINE) $(LIBEXE) '@$(call ws,$(ROOT)/$(1)).rsp')
+    $(6) $(WINE) $(7) '@$(call ws,$(ROOT)/$(1)).rsp')
 endef
 
 # $(call binary,<dll or exe>,<project dir>,<flags>,<prerequisites>,<inputs as the project dir sees them>,
-#   <the libraries' precompiled-header objects, as the project dir sees them>)
+#   <the libraries' precompiled-header objects, as the project dir sees them>,<env>,<link.exe>)
 # Through a response file, as Developer Studio links; with a map beside it.
 Z7 := $(findstring /Z7,$(TALON_CFLAGS))
 define binary
 $(call tool,$(1),$(4) | wine-drives,\
     cd $(2) && { printf '%s\n' $(call q,$(TALON_LDFLAGS) $(3) /map:$(call ws,$(ROOT)/$(basename $(1))).map $(subst /,\,$(5) $(if $(Z7),$(6)))) > $(1:%=$(ROOT)/%).rsp; } && \
-    $(ENV_GAME) $(WINE) $(LINK) '@$(call ws,$(ROOT)/$(1)).rsp')
+    $(7) $(WINE) $(8) '@$(call ws,$(ROOT)/$(1)).rsp')
 endef
 
 # $(call custom,<outputs>,<input>,<project dir>,<commands>): a source's

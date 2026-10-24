@@ -30,6 +30,13 @@ in what order, `../INVENTORY.md` where every shipped binary comes from.
 | `ModelEdit.exe` | model editor (Talon, Update 1/2) | 0 / 1,908 | 0 / 221,282 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,908 | 0 |
 | `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 938 / 1,556 | 161,660 / 339,668 bytes | `█████████░░░░░░░░░░░` 47.5% | 494 | 151 |
 | `Processor.exe (NOLF)` | world processor, NOLF (Tools 001) | 0 / 2,739 | 0 / 415,152 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 2,739 | 0 |
+| `lithrez.exe` | resource (.rez) packer, LithRez 1.00 | 108 / 177 | 21,596 / 22,934 bytes | `██████████████████░░` 94.1% | 58 | 3 |
+| `TProcessor.exe` | DirectEngine world processor (1998, NOLF Tools 001) | 0 / 1,313 | 0 / 236,426 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,313 | 0 |
+| `LithExport.dll (AvP2)` | Softimage|3D model exporter (AvP2 v1.0) | 0 / 1,407 | 0 / 156,440 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,407 | 0 |
+| `LithExport.dll (NOLF)` | Softimage|3D model exporter, debug build (NOLF Tools 001) | 0 / 3,701 | 0 / 266,971 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 3,701 | 0 |
+| `LandExport.dll (AvP2)` | Softimage|3D terrain exporter (AvP2 v1.0) | 0 / 488 | 0 / 72,663 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 488 | 0 |
+| `LandExport.dll (NOLF)` | Softimage|3D terrain exporter (NOLF Tools 001) | 0 / 488 | 0 / 72,291 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 488 | 0 |
+| `LithMayaExport.mll` | Maya model exporter (1999, AvP2 v1.0) | 0 / 205 | 0 / 37,716 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 205 | 0 |
 | `IMFLithDTX.dll` | Maya .dtx image plug-in (Update 2) | 105 / 186 | 19,107 / 19,893 bytes | `███████████████████░` 96.0% | 0 | 0 |
 | `MaxDTXLoader30.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2) | 0 / 255 | 0 / 20,503 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 255 | 0 |
 | `MaxDTXLoader40.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 4 (Update 2) | 0 / 263 | 0 / 20,810 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 263 | 0 |
@@ -43,7 +50,7 @@ in what order, `../INVENTORY.md` where every shipped binary comes from.
 | `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 0 / 426 | 0 / 50,246 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 426 | 0 |
 | `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 0 / 747 | 0 / 116,377 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 747 | 0 |
 | `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 0 / 747 | 0 / 116,377 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 747 | 0 |
-| **All** | | **1,043 / 16,980** | **180,767 / 2,256,092 bytes** | `█░░░░░░░░░░░░░░░░░░░` **8.0%** | **15,732** | **151** |
+| **All** | | **1,151 / 24,759** | **202,363 / 3,121,533 bytes** | `█░░░░░░░░░░░░░░░░░░░` **6.4%** | **23,392** | **154** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte
