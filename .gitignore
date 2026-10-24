@@ -4,5 +4,5 @@ out/
 jupiter/src/**/[Bb]uilt/
 jupiter/src/Engine/tools/Plugins/SDKFiles/
 jupiter/src/**/Release */
-scripts/__pycache__/
+__pycache__/
 jupiter/src/Engine/tools/Plugins/Photoshop/dtxformat/DTXFormat.pipl
