@@ -189,10 +189,16 @@ lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt fro
 - **Tools menu:** the texture viewer, model viewer, sound player and string
   editor, which also work on loose files.
 
+- **PS2:** File > Open (or dropping it on the window, or the command line)
+  takes a PS2 `LITH_PS2.REZ` or a PS2 disc image: browse it named, preview
+  and extract its files. Edits save back into the same kind of file (a disc
+  image stays a disc image) after a warning: editing them is experimental,
+  and the status bar says so while one is open.
+
 Command line, with WinRez LT's switches:
 
 ```
-lithrez-studio [file.rez | file.dtx | file.dll]
+lithrez-studio [file.rez | ps2 disc.iso | file.dtx | file.dll]
 lithrez-studio name.rez /C <files or folders>...   create name.rez from them
 lithrez-studio /A <files or folders>...            add them, then ask for a name
 lithrez-studio /X name.rez <folder>                extract everything

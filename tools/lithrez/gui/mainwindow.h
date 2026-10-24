@@ -142,6 +142,7 @@ private:
     QListWidget* icons_ = nullptr;
     QComboBox* location_ = nullptr;
     QLabel* status_ = nullptr;
+    QLabel* ps2Note_ = nullptr;   // shown while a PS2 archive is open
     QDockWidget* previewDock_ = nullptr;
     QStackedWidget* previewStack_ = nullptr;
     TextureView* texPreview_ = nullptr;

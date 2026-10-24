@@ -7,6 +7,7 @@
 #include "textureview.h"
 #include "util.h"
 #include "wizard.h"
+#include <lithtech/ps2rez.hpp>
 
 #include <QAction>
 #include <QActionGroup>
@@ -124,6 +125,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     buildToolbar();
     status_ = new QLabel(this);
     statusBar()->addWidget(status_, 1);
+    ps2Note_ = new QLabel(tr("PS2 archive: editing is experimental (not tested on a PS2)"), this);
+    ps2Note_->setToolTip(tr("LITH_PS2.REZ files are named from a list of recovered names; the rest are under _UNNAMED.\n"
+                            "Saving changes follows what the PS2's reader requires (docs/PS2REZ.md) but hasn't been\n"
+                            "tried on a PS2 or an emulator. Keep a copy of the original."));
+    ps2Note_->hide();
+    statusBar()->addPermanentWidget(ps2Note_);
     QSettings s;
     restoreGeometry(s.value("geometry").toByteArray());
     restoreState(s.value("state").toByteArray());
@@ -572,6 +579,7 @@ void MainWindow::newRez() {
     butesFrom_ = nullptr;
     butes_.clear();
     archive_ = std::make_unique<Archive>();
+    if (ps2Note_) ps2Note_->hide();
     archive_->header.user_title = std::string(QSettings().value("userTitle", qs(std::string(rez::kLithTechUserTitle))).toString().toUtf8());
     path_.clear();
     modified_ = false;
@@ -601,6 +609,7 @@ bool MainWindow::openRez(const QString& path) {
     archive_ = std::move(a);
     path_ = path;
     modified_ = false;
+    ps2Note_->setVisible(archive_->is_ps2());
     back_.clear();
     forward_.clear();
     clipboard_ = {};
@@ -1108,7 +1117,8 @@ void MainWindow::onActivated(Directory* d, Resource* r) {
 void MainWindow::doOpen() {
     if (!maybeSave()) return;
     QString f = QFileDialog::getOpenFileName(this, tr("Open Rez File"), QSettings().value("lastDir").toString(),
-                                             tr("Rez files (*.rez *.REZ);;All files (*)"));
+                                             tr("Rez files and PS2 discs (*.rez *.REZ *.iso *.ISO);;Rez files (*.rez *.REZ);;"
+                                                "PS2 disc images (*.iso *.ISO);;All files (*)"));
     if (f.isEmpty()) return;
     QSettings().setValue("lastDir", QFileInfo(f).absolutePath());
     openRez(f);
@@ -1119,6 +1129,17 @@ void MainWindow::doClose() {
 }
 
 bool MainWindow::saveTo(const QString& path) {
+    if (archive_->is_ps2()) {
+        bool inPlace = QFileInfo(path) == QFileInfo(path_);
+        auto r = QMessageBox::warning(
+            this, tr("Save PS2 archive"),
+            tr("Saving changes to a PS2 archive is experimental: it follows what the PS2's reader requires, but it "
+               "hasn't been tried on a PS2 or an emulator.%1\n\nSave anyway?")
+                .arg(inPlace ? tr("\n\n%1 will be changed in place; keep a copy of the original.").arg(QFileInfo(path).fileName())
+                             : QString()),
+            QMessageBox::Save | QMessageBox::Cancel, QMessageBox::Cancel);
+        if (r != QMessageBox::Save) return false;
+    }
     try {
         QApplication::setOverrideCursor(Qt::WaitCursor);
         rez::SaveOptions so;
@@ -1144,11 +1165,13 @@ bool MainWindow::doSave() {
 }
 
 bool MainWindow::doSaveAs() {
+    // a PS2 archive is saved as what it is: a disc image, or the archive alone
+    bool iso = archive_->is_ps2() && archive_->ps2->where.in_iso;
     QString f = QFileDialog::getSaveFileName(this, tr("Save Rez File"),
                                              path_.isEmpty() ? QSettings().value("lastDir").toString() : path_,
-                                             tr("Rez files (*.rez)"));
+                                             iso ? tr("PS2 disc images (*.iso)") : tr("Rez files (*.rez)"));
     if (f.isEmpty()) return false;
-    if (QFileInfo(f).suffix().isEmpty()) f += ".rez";
+    if (QFileInfo(f).suffix().isEmpty()) f += iso ? ".iso" : ".rez";
     QSettings().setValue("lastDir", QFileInfo(f).absolutePath());
     return saveTo(f);
 }
@@ -1296,6 +1319,27 @@ void MainWindow::doMerge() {
 
 void MainWindow::doInfo() {
     if (!archive_) return;
+    if (archive_->is_ps2()) {
+        const auto& p = *archive_->ps2;
+        std::size_t named = 0;
+        for (auto& e : p.tables[0])
+            if (lithtech::ps2rez::Names::global().find(e.hash, p.header.weight)) ++named;
+        QString text = tr("<b>%1</b><br>PS2 LITH_PS2.REZ%2<br><br>"
+                          "Version %3<br>%4 files in each of %5 tables (room for %6)<br>"
+                          "Data from sector %7; hash weight %8<br>%9 of the files named<br><br>"
+                          "Editing is experimental: see docs/PS2REZ.md.")
+                           .arg(path_.toHtmlEscaped(),
+                                p.where.in_iso ? tr(", in a disc image at sector %1").arg(p.where.lsn) : QString())
+                           .arg(p.header.version)
+                           .arg(p.header.entries)
+                           .arg(p.header.tables)
+                           .arg(p.capacity())
+                           .arg(p.header.data_sector)
+                           .arg(p.header.weight)
+                           .arg(named);
+        QMessageBox::information(this, tr("Rez File Information"), text);
+        return;
+    }
     const auto& h = archive_->header;
     QDialog dlg(this);
     dlg.setWindowTitle(tr("Rez File Information"));
@@ -1690,7 +1734,8 @@ void MainWindow::dropEvent(QDropEvent* e) {
         if (u.isLocalFile()) paths << u.toLocalFile();
     if (paths.isEmpty()) return;
     // A single .rez dropped on the window opens it; anything else is inserted.
-    if (paths.size() == 1 && paths[0].endsWith(".rez", Qt::CaseInsensitive) && Archive::probe(ss(paths[0]))) {
+    if (paths.size() == 1 && (paths[0].endsWith(".rez", Qt::CaseInsensitive) || paths[0].endsWith(".iso", Qt::CaseInsensitive)) &&
+        Archive::probe(ss(paths[0]))) {
         if (maybeSave()) openRez(paths[0]);
         return;
     }
