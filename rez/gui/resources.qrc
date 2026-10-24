@@ -1,5 +1,0 @@
-<RCC>
-  <qresource prefix="/">
-    <file alias="rezstudio.png">../packaging/rezstudio.png</file>
-  </qresource>
-</RCC>

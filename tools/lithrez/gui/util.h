@@ -1,5 +1,5 @@
 #pragma once
-// Small helpers shared by the Rez Studio windows.
+// Small helpers shared by the LithRez Studio windows.
 
 #include <QByteArray>
 #include <QString>

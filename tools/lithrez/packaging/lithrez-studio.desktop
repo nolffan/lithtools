@@ -1,8 +1,8 @@
 [Desktop Entry]
 Type=Application
-Name=Rez Studio
+Name=LithRez Studio
 Comment=Browse, edit and create LithTech .rez files
-Exec=rezstudio %F
-Icon=rezstudio
+Exec=lithrez-studio %F
+Icon=lithrez-studio
 Categories=Development;Utility;
 MimeType=application/x-lithtech-rez;

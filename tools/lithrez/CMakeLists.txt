@@ -1,14 +1,14 @@
 cmake_minimum_required(VERSION 3.20)
-project(lithtools_rez VERSION 2.0 LANGUAGES CXX)
+project(lithrez VERSION 2.0 LANGUAGES CXX)
 
-# lithrez (command line) and Rez Studio (Qt 6), on a shared library of
+# lithrez (command line) and LithRez Studio (Qt 6), on a shared library of
 # LithTech formats. Builds with clang, gcc or MSVC on Linux, macOS and
 # Windows.
 
 # The version the binaries report: a release tag's, or "dev".
 set(LITHTOOLS_VERSION "dev" CACHE STRING "Version string the tools report")
 
-option(LITHREZ_BUILD_GUI "Build Rez Studio (needs Qt 6)" ON)
+option(LITHREZ_BUILD_GUI "Build LithRez Studio (needs Qt 6)" ON)
 option(LITHREZ_BUILD_TESTS "Build the tests" ON)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -44,7 +44,7 @@ if(LITHREZ_BUILD_GUI)
   if(Qt6_FOUND)
     add_subdirectory(gui)
   else()
-    message(WARNING "Qt 6 not found: Rez Studio will not be built")
+    message(WARNING "Qt 6 not found: LithRez Studio will not be built")
   endif()
 endif()
 

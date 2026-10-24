@@ -1,5 +1,5 @@
 #pragma once
-// Rez Studio's main window: an Explorer-like view of a .rez file (WinRez
+// LithRez Studio's main window: an Explorer-like view of a .rez file (WinRez
 // LT's layout: folder tree on the left, contents on the right, location bar
 // with history), with a preview pane for textures, models and text.
 

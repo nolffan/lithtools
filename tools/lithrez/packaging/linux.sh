@@ -1,5 +1,5 @@
 #!/bin/sh
-# Packs a Linux build: lithrez and Rez Studio as an AppImage (Qt bundled by
+# Packs a Linux build: lithrez and LithRez Studio as an AppImage (Qt bundled by
 # linuxdeploy), in <out>/<name>.tar.gz unpacking to <name>/.
 #   linux.sh <build dir> <out dir> <name>
 # Needs QMAKE (or qmake6/qmake on PATH) for the Qt plugin, and network to
@@ -34,17 +34,17 @@ export EXTRA_PLATFORM_PLUGINS="$extra"
 stage=$(mktemp -d)
 app="$stage/AppDir"
 mkdir -p "$app/usr/share/applications" "$app/usr/share/icons/hicolor/256x256/apps"
-cp "$here/rezstudio.desktop" "$app/usr/share/applications/"
-cp "$here/rezstudio.png" "$app/usr/share/icons/hicolor/256x256/apps/rezstudio.png"
-(cd "$stage" && OUTPUT=RezStudio-x86_64.AppImage "$TOOLS/linuxdeploy" --appdir "$app" \
-    --executable "$build/gui/rezstudio" \
-    --desktop-file "$app/usr/share/applications/rezstudio.desktop" \
-    --icon-file "$app/usr/share/icons/hicolor/256x256/apps/rezstudio.png" \
+cp "$here/lithrez-studio.desktop" "$app/usr/share/applications/"
+cp "$here/lithrez-studio.png" "$app/usr/share/icons/hicolor/256x256/apps/lithrez-studio.png"
+(cd "$stage" && OUTPUT=LithRezStudio-x86_64.AppImage "$TOOLS/linuxdeploy" --appdir "$app" \
+    --executable "$build/gui/lithrez-studio" \
+    --desktop-file "$app/usr/share/applications/lithrez-studio.desktop" \
+    --icon-file "$app/usr/share/icons/hicolor/256x256/apps/lithrez-studio.png" \
     --plugin qt --output appimage >/dev/null)
 
 mkdir -p "$stage/$name"
 cp "$build/lithrez" "$stage/$name/"
-cp "$stage/RezStudio-x86_64.AppImage" "$stage/$name/"
+cp "$stage/LithRezStudio-x86_64.AppImage" "$stage/$name/"
 cp "$here/../README.md" "$stage/$name/README.md"
 tar -C "$stage" -czf "$out/$name.tar.gz" "$name"
 rm -rf "$stage"

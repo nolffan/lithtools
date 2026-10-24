@@ -1,0 +1,5 @@
+<RCC>
+  <qresource prefix="/">
+    <file alias="lithrez-studio.png">../packaging/lithrez-studio.png</file>
+  </qresource>
+</RCC>

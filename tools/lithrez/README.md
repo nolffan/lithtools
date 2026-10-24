@@ -1,4 +1,4 @@
-# lithrez and Rez Studio
+# lithrez and LithRez Studio
 
 Cross-platform tools for LithTech resource files (`.rez`), in C++17 with CMake;
 they build with clang, gcc or MSVC on Linux, macOS and Windows.
@@ -7,7 +7,7 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
   print like Monolith's LITHREZ (1.00 to 1.10), and the archives it creates
   are byte-identical to theirs. Extra commands cover debugging and build
   scripts.
-- **Rez Studio** (`rezstudio`, Qt 6): a successor to WinRez LT Studio. It
+- **LithRez Studio** (`lithrez-studio`, Qt 6): a successor to WinRez LT Studio. It
   has an Explorer-style rez editor, a DTX texture viewer with thumbnails, a
   model preview for `.abc` (NOLF, AvP2) and `.ltb` (NOLF2, Contract
   J.A.C.K., Tron 2.0) models, and a string table editor for `CRes.dll`.
@@ -20,21 +20,21 @@ the originals.
 ## Building
 
 ```
-cmake -S rez -B build -G Ninja          # -DLITHREZ_BUILD_GUI=OFF without Qt
+cmake -S tools/lithrez -B build -G Ninja          # -DLITHREZ_BUILD_GUI=OFF without Qt
 cmake --build build
 ctest --test-dir build
 ```
 
-Rez Studio needs Qt 6.2 or later (Widgets, OpenGL, OpenGLWidgets) and
+LithRez Studio needs Qt 6.2 or later (Widgets, OpenGL, OpenGLWidgets) and
 OpenGL 3.3. Without Qt only `lithrez` and the library are built.
 
 `docker/Dockerfile` is the Linux build environment used here (clang, CMake,
 Ninja, Qt 6):
 
 ```
-docker build -t lithtools-rez-dev rez/docker
+docker build -t lithtools-rez-dev tools/lithrez/docker
 docker run --rm -u $(id -u):$(id -g) -v $PWD:/src -w /src lithtools-rez-dev \
-    sh -c 'cmake -S rez -B out/rez-build -G Ninja && cmake --build out/rez-build'
+    sh -c 'cmake -S tools/lithrez -B out/lithrez-build -G Ninja && cmake --build out/lithrez-build'
 ```
 
 `.github/workflows/tools.yml` builds, tests and packs on all three platforms: a release for every `v*` tag and a nightly for every push to master.
@@ -79,7 +79,7 @@ leaves the header's second line blank, as Shogo and Blood 2 files have it.
 On Linux and macOS the directory is listed in Windows' (NTFS) order, so the
 archive is the same as one built on Windows.
 
-## Rez Studio
+## LithRez Studio
 
 - **Browse:** folder tree, location bar with history, Back/Forward/Up, and
   large icon, small icon, list and details views. Textures get thumbnails.
@@ -106,11 +106,11 @@ archive is the same as one built on Windows.
 Command line, with WinRez LT's switches:
 
 ```
-rezstudio [file.rez | file.dtx | file.dll]
-rezstudio name.rez /C <files or folders>...   create name.rez from them
-rezstudio /A <files or folders>...            add them, then ask for a name
-rezstudio /X name.rez <folder>                extract everything
-rezstudio /E name.rez                         extract, asking where
+lithrez-studio [file.rez | file.dtx | file.dll]
+lithrez-studio name.rez /C <files or folders>...   create name.rez from them
+lithrez-studio /A <files or folders>...            add them, then ask for a name
+lithrez-studio /X name.rez <folder>                extract everything
+lithrez-studio /E name.rez                         extract, asking where
 ```
 
 WinRez's Explorer integration (shell menus and DTX thumbnails in Explorer)

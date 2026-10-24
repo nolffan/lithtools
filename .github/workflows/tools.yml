@@ -1,10 +1,10 @@
 # The tools' release builds, as workflow artifacts:
-#   lithtools-<name>-windows-x64.zip       lithrez.exe and Rez Studio (Qt deployed)
-#   lithtools-<name>-linux-x86_64.tar.gz   lithrez and Rez Studio as an AppImage
-#   lithtools-<name>-macos-universal.zip   lithrez and Rez Studio.app (arm64 + x86_64)
+#   lithtools-<name>-windows-x64.zip       lithrez.exe and LithRez Studio (Qt deployed)
+#   lithtools-<name>-linux-x86_64.tar.gz   lithrez and LithRez Studio as an AppImage
+#   lithtools-<name>-macos-universal.zip   lithrez and LithRez Studio.app (arm64 + x86_64)
 #   lithtools-<name>-blender.zip           the Blender extension (install from disk)
 # <name> is the tag (v1.2.0) or, for the nightly, nightly-<commit>. Each
-# platform builds rez/ with CMake, runs its tests and packs; nothing needs
+# platform builds tools/lithrez with CMake, runs its tests and packs; nothing needs
 # game data.
 #
 # Pushing a tag (v*) also makes a GitHub release of it with the four files
@@ -28,7 +28,7 @@ on:
     branches: [master]
     tags: ['v*']
   pull_request:
-    paths: ['rez/**', 'plugins/**', '.github/workflows/tools.yml']
+    paths: ['tools/lithrez/**', 'plugins/**', '.github/workflows/tools.yml']
   workflow_dispatch:
 
 concurrency:
@@ -86,13 +86,13 @@ jobs:
             libxcb-shape0 libxcb-xinerama0 libfuse2
       - name: Build
         run: |
-          cmake -S rez -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+          cmake -S tools/lithrez -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
           cmake --build build --parallel
       - name: Test
         run: ctest --test-dir build --output-on-failure
       - name: Package
-        run: QMAKE="$(command -v qmake6 || command -v qmake)" rez/packaging/linux.sh build dist "$NAME"
+        run: QMAKE="$(command -v qmake6 || command -v qmake)" tools/lithrez/packaging/linux.sh build dist "$NAME"
       - uses: actions/upload-artifact@v7
         with:
           path: dist/${{ env.NAME }}.tar.gz
@@ -114,7 +114,7 @@ jobs:
           cache: true
       - name: Build
         run: |
-          cmake -S rez -B build -A x64 -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
+          cmake -S tools/lithrez -B build -A x64 -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
           cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
@@ -123,8 +123,8 @@ jobs:
         run: |
           $stage = "dist/$env:NAME"
           New-Item -ItemType Directory -Force $stage | Out-Null
-          Copy-Item build/Release/lithrez.exe, build/gui/Release/rezstudio.exe, rez/README.md $stage
-          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$stage/rezstudio.exe"
+          Copy-Item build/Release/lithrez.exe, build/gui/Release/lithrez-studio.exe, tools/lithrez/README.md $stage
+          windeployqt --release --no-translations --no-system-d3d-compiler --no-opengl-sw "$stage/lithrez-studio.exe"
           Compress-Archive -Path $stage -DestinationPath "dist/$env:NAME.zip"
       - uses: actions/upload-artifact@v7
         with:
@@ -148,7 +148,7 @@ jobs:
       - name: Build
         run: |
           brew install ninja
-          cmake -S rez -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+          cmake -S tools/lithrez -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 \
             -DLITHTOOLS_VERSION=${{ needs.names.outputs.version }}
           cmake --build build --parallel
@@ -160,10 +160,10 @@ jobs:
         run: |
           stage="dist/$NAME"
           mkdir -p "$stage"
-          cp -R build/gui/rezstudio.app "$stage/Rez Studio.app"
-          macdeployqt "$stage/Rez Studio.app"
-          codesign --force --deep --sign - "$stage/Rez Studio.app"
-          cp build/lithrez rez/README.md "$stage/"
+          cp -R build/gui/lithrez-studio.app "$stage/LithRez Studio.app"
+          macdeployqt "$stage/LithRez Studio.app"
+          codesign --force --deep --sign - "$stage/LithRez Studio.app"
+          cp build/lithrez tools/lithrez/README.md "$stage/"
           codesign --force --sign - "$stage/lithrez"
           lipo -info "$stage/lithrez"
           (cd dist && ditto -c -k --keepParent "$NAME" "$NAME.zip")

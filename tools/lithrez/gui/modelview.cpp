@@ -1,7 +1,7 @@
 // The model preview. An .abc, or an .ltb read with lithtech::ltb and turned
 // into the same structures (ltb::to_abc), is skinned on the CPU (abc::pose and
 // skin, as the engine places vertices) and drawn with OpenGL 3.3 core, which
-// every platform Rez Studio runs on offers (macOS only offers core profiles).
+// every platform LithRez Studio runs on offers (macOS only offers core profiles).
 //
 // Space: LithTech is left-handed with Y up and models face +Z. Negating Z
 // gives OpenGL's right-handed space without a mirror image; the negation

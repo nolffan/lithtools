@@ -1,9 +1,9 @@
-// Rez Studio. Command line (WinRez LT's switches, plus file opening):
-//   rezstudio [file.rez | file.dtx | file.dll | file.abc]
-//   rezstudio <name.rez> /C <file or folder>...   create name.rez from them
-//   rezstudio /A <file or folder>...              add them, then ask for a name
-//   rezstudio /X <name.rez> <target folder>       extract everything
-//   rezstudio /E <name.rez>                       extract, asking where
+// LithRez Studio. Command line (WinRez LT's switches, plus file opening):
+//   lithrez-studio [file.rez | file.dtx | file.dll | file.abc]
+//   lithrez-studio <name.rez> /C <file or folder>...   create name.rez from them
+//   lithrez-studio /A <file or folder>...              add them, then ask for a name
+//   lithrez-studio /X <name.rez> <target folder>       extract everything
+//   lithrez-studio /E <name.rez>                       extract, asking where
 
 #include "mainwindow.h"
 #include "modelview.h"
@@ -22,10 +22,10 @@
 
 int main(int argc, char** argv) {
     QApplication app(argc, argv);
-    QApplication::setApplicationName("Rez Studio");
+    QApplication::setApplicationName("LithRez Studio");
     QApplication::setOrganizationName("lithtools");
-    QApplication::setApplicationVersion(QStringLiteral(REZSTUDIO_VERSION));
-    QApplication::setWindowIcon(QIcon(":/rezstudio.png"));
+    QApplication::setApplicationVersion(QStringLiteral(LITHREZSTUDIO_VERSION));
+    QApplication::setWindowIcon(QIcon(":/lithrez-studio.png"));
 
     QStringList args = app.arguments().mid(1);
     auto sw = [&](const QString& s) { return args.indexOf(QRegularExpression("^[/-]" + s + "$", QRegularExpression::CaseInsensitiveOption)); };
@@ -76,14 +76,14 @@ int main(int argc, char** argv) {
         if (lithtech::rez::Archive::probe(a.toUtf8().toStdString())) w->openRez(a);
     }
     w->show();
-    // For tests and documentation: REZSTUDIO_SHOT=<png> [REZSTUDIO_GOTO=<path>]
-    // [REZSTUDIO_VIEW=large|small|list|details] grabs the window and quits.
-    if (qEnvironmentVariableIsSet("REZSTUDIO_SHOT")) {
+    // For tests and documentation: LITHREZSTUDIO_SHOT=<png> [LITHREZSTUDIO_GOTO=<path>]
+    // [LITHREZSTUDIO_VIEW=large|small|list|details] grabs the window and quits.
+    if (qEnvironmentVariableIsSet("LITHREZSTUDIO_SHOT")) {
         QTimer::singleShot(400, w, [w] {
-            w->testNavigate(qEnvironmentVariable("REZSTUDIO_GOTO"), qEnvironmentVariable("REZSTUDIO_VIEW"));
+            w->testNavigate(qEnvironmentVariable("LITHREZSTUDIO_GOTO"), qEnvironmentVariable("LITHREZSTUDIO_VIEW"));
         });
         QTimer::singleShot(2500, w, [w] {
-            w->grab().save(qEnvironmentVariable("REZSTUDIO_SHOT"));
+            w->grab().save(qEnvironmentVariable("LITHREZSTUDIO_SHOT"));
             QApplication::quit();
         });
     }

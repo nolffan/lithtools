@@ -85,7 +85,7 @@ int main(int argc, char** argv) {
     CHECK(get(w / "x" / "NOEXT") == "no extension");
     CHECK(fs::exists(w / "x" / "EMPTY.WAV"));
 
-    // Editing as Rez Studio does, then saving over the open file. (Windows
+    // Editing as LithRez Studio does, then saving over the open file. (Windows
     // won't replace a file another handle has open: close the others.)
     a.reset();
     b.reset();

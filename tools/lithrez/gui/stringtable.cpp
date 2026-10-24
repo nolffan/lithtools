@@ -235,7 +235,7 @@ struct StringTableWindow::Impl {
     }
 
     void addRecent(const QString& p) {
-        QSettings s(QStringLiteral("lithtools"), QStringLiteral("Rez Studio"));
+        QSettings s(QStringLiteral("lithtools"), QStringLiteral("LithRez Studio"));
         QStringList l = s.value(QStringLiteral("stringtable/recent")).toStringList();
         l.removeAll(p);
         l.prepend(p);
@@ -247,7 +247,7 @@ struct StringTableWindow::Impl {
 
     void updateRecent() {
         recentMenu->clear();
-        QSettings s(QStringLiteral("lithtools"), QStringLiteral("Rez Studio"));
+        QSettings s(QStringLiteral("lithtools"), QStringLiteral("LithRez Studio"));
         const QStringList l = s.value(QStringLiteral("stringtable/recent")).toStringList();
         int n = 1;
         for (const QString& p : l) {

@@ -150,7 +150,7 @@ void MainWindow::buildActions() {
         if (!file.open(QIODevice::ReadOnly)) return;
         auto* v = new ModelView;
         v->setAttribute(Qt::WA_DeleteOnClose);
-        v->setWindowTitle(QFileInfo(f).fileName() + " - Rez Studio");
+        v->setWindowTitle(QFileInfo(f).fileName() + " - LithRez Studio");
         QString dir = QFileInfo(f).absolutePath();
         QString stem = QFileInfo(f).completeBaseName();
         QString err;
@@ -226,8 +226,8 @@ void MainWindow::buildActions() {
 
     aSettings = mk(tr("&Settings..."), {}, none, [this] { doSettings(); });
     aHelp = mk(tr("&Help"), QKeySequence::HelpContents, QStyle::SP_MessageBoxQuestion, [this] {
-        QMessageBox::information(this, tr("Rez Studio Help"),
-            tr("<p><b>Rez Studio</b> reads, edits and creates LithTech .rez files.</p>"
+        QMessageBox::information(this, tr("LithRez Studio Help"),
+            tr("<p><b>LithRez Studio</b> reads, edits and creates LithTech .rez files.</p>"
                "<ul><li>Browse with the folder tree and the contents view; type a path in the location bar.</li>"
                "<li><b>Insert</b> adds files (or drag them in from your file manager); <b>Extract</b> writes the "
                "selection out (or drag it out).</li>"
@@ -236,7 +236,7 @@ void MainWindow::buildActions() {
                "<li><b>New Rez Project</b> builds a rez from a folder exactly as LithRez does.</li></ul>"
                "<p>The command line tool <tt>lithrez</tt> does the same for scripts and CI.</p>"));
     });
-    aAbout = mk(tr("&About Rez Studio"), {}, none, [this] { doAbout(); });
+    aAbout = mk(tr("&About LithRez Studio"), {}, none, [this] { doAbout(); });
 
     recentMenu_ = new QMenu(tr("Recent &Files"), this);
     for (int i = 0; i < kRecentMax; ++i) {
@@ -463,7 +463,7 @@ void MainWindow::buildViews() {
 
 void MainWindow::updateTitle() {
     QString name = path_.isEmpty() ? tr("Untitled") : QFileInfo(path_).fileName();
-    setWindowTitle(QStringLiteral("%1%2 - Rez Studio").arg(name, modified_ ? "*" : ""));
+    setWindowTitle(QStringLiteral("%1%2 - LithRez Studio").arg(name, modified_ ? "*" : ""));
     setWindowModified(modified_);
 }
 
@@ -494,7 +494,7 @@ void MainWindow::updateActions() {
 
 bool MainWindow::maybeSave() {
     if (!modified_) return true;
-    auto r = QMessageBox::question(this, tr("Rez Studio"), tr("Save the changes to %1?").arg(path_.isEmpty() ? tr("Untitled") : QFileInfo(path_).fileName()),
+    auto r = QMessageBox::question(this, tr("LithRez Studio"), tr("Save the changes to %1?").arg(path_.isEmpty() ? tr("Untitled") : QFileInfo(path_).fileName()),
                                    QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel);
     if (r == QMessageBox::Cancel) return false;
     if (r == QMessageBox::Save) return doSave();
@@ -902,7 +902,7 @@ void MainWindow::openResource(Resource* r) {
     if (t == "ABC" || t == "LTB") {
         auto* v = new ModelView;
         v->setAttribute(Qt::WA_DeleteOnClose);
-        v->setWindowTitle(qs(r->file_name()) + " - Rez Studio");
+        v->setWindowTitle(qs(r->file_name()) + " - LithRez Studio");
         QString err;
         if (!v->loadAbc(readData(r), qs(r->file_name()), [this, r](int i, int n) { return findSkin(r, i, n); }, &err)) {
             QMessageBox::warning(this, tr("Model"), err);
@@ -1191,8 +1191,8 @@ void MainWindow::doSettings() {
 }
 
 void MainWindow::doAbout() {
-    QMessageBox::about(this, tr("About Rez Studio"),
-                       tr("<h3>Rez Studio %1</h3><p>Reads, edits and creates LithTech resource files (.rez), "
+    QMessageBox::about(this, tr("About LithRez Studio"),
+                       tr("<h3>LithRez Studio %1</h3><p>Reads, edits and creates LithTech resource files (.rez), "
                           "with a texture viewer, a model preview and a string table editor.</p>"
                           "<p>Part of lithtools. Cross-platform successor to WinRez LT Studio's tools; "
                           "its files match LithRez's output byte for byte.</p>")

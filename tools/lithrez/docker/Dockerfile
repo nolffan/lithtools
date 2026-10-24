@@ -1,5 +1,5 @@
 # Build environment for lithtools/rez: clang, CMake, Ninja and Qt 6.
-#   docker build -t lithtools-rez-dev rez/docker
+#   docker build -t lithtools-rez-dev tools/lithrez/docker
 FROM ubuntu:24.04
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Draws rezstudio.png (256x256): a crate in LithTech orange on dark
+"""Draws lithrez-studio.png (256x256): a crate in LithTech orange on dark
 slate. Pure Python, so it needs nothing installed."""
 import struct
 import zlib
@@ -42,4 +42,4 @@ def chunk(t, d):
 
 png = b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", N, N, 8, 6, 0, 0, 0)) + \
     chunk(b"IDAT", zlib.compress(rows, 9)) + chunk(b"IEND", b"")
-open("rezstudio.png", "wb").write(png)
+open("lithrez-studio.png", "wb").write(png)
