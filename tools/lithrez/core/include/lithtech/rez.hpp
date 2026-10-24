@@ -17,6 +17,10 @@
 #include <string_view>
 #include <vector>
 
+namespace lithtech::ps2rez {
+class Archive;
+}
+
 namespace lithtech::rez {
 
 class Error : public std::runtime_error {
@@ -49,7 +53,7 @@ class Archive;
 struct DataSource {
     enum class Kind { None, Archive, Memory, File };
     Kind kind = Kind::None;
-    uint32_t offset = 0;                              // Archive
+    uint64_t offset = 0;                              // Archive (or File slice)
     std::shared_ptr<const std::vector<uint8_t>> bytes;  // Memory
     std::string path;                                 // File
     bool slice = false;   // File: `size` bytes at `offset` (e.g. inside another rez)
@@ -180,9 +184,18 @@ public:
     Archive(const Archive&) = delete;
     Archive& operator=(const Archive&) = delete;
 
+    // A RezMgr file, or a PS2 LITH_PS2.REZ (or a PS2 disc image holding
+    // one), whose files are named from the recovered names (ps2rez.hpp).
     static std::unique_ptr<Archive> open(const std::string& path, OpenOptions opts = {});
-    // Whether the file starts like a RezMgr file.
+    // Whether the file starts like a RezMgr file or is a PS2 archive.
     static bool probe(const std::string& path);
+
+    // Set for a PS2 archive: its tables, which save() updates from the tree
+    // (ps2rez::Archive::save) instead of writing a RezMgr file. Resource IDs
+    // are the name hashes; files without a recovered name are
+    // _UNNAMED\<HASH>.<ext>.
+    std::shared_ptr<ps2rez::Archive> ps2;
+    bool is_ps2() const { return ps2 != nullptr; }
 
     Header header;
     Directory& root() { return *root_; }
@@ -190,7 +203,7 @@ public:
     const std::string& file_path() const { return path_; }
 
     // Read size bytes at offset of the archive file.
-    std::vector<uint8_t> read_at(uint32_t offset, uint32_t size) const;
+    std::vector<uint8_t> read_at(uint64_t offset, uint32_t size) const;
 
     // Write the archive to path (to a temporary file first, so path may be
     // the file it was read from). Data is written in data_order, then each
@@ -214,6 +227,8 @@ private:
     std::unique_ptr<File> file_;
     uint64_t data_counter_ = 0;
     void attach(Directory& d);
+    void open_ps2(const std::string& path);
+    void save_ps2(const std::string& path);
     friend class Directory;
 };
 

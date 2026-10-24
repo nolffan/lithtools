@@ -52,3 +52,8 @@ if(TARGET Qt6::Multimedia)
   target_include_directories(sound_play_test PRIVATE ../gui)
   target_link_libraries(sound_play_test PRIVATE lithtech Qt6::Widgets Qt6::Multimedia)
 endif()
+# PS2 archives: a small one made in the test, read and edited.
+# tests/ps2_verify.py checks the shipped discs.
+add_executable(ps2rez_test ps2rez_test.cpp)
+target_link_libraries(ps2rez_test PRIVATE lithtech)
+add_test(NAME ps2rez_test COMMAND ps2rez_test ${CMAKE_CURRENT_BINARY_DIR}/ps2rez-work)

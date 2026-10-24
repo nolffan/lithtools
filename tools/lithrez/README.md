@@ -17,7 +17,9 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
   `lithtech::pe`).
 
 `docs/REZ.md` describes the format and how these tools were checked against
-the originals.
+the originals. Both tools also read the PS2 port's archive (`LITH_PS2.REZ`,
+straight out of a disc image or on its own): see [PS2 archives](#ps2-archives)
+and `docs/PS2REZ.md`.
 
 ## Building
 
@@ -49,6 +51,9 @@ These read the game archives (never committed), so they aren't part of
 `ctest`:
 
 - `tests/roundtrip_shipped.py`: every shipped `.rez` reads and writes back.
+- `tests/ps2_verify.py <lithrez> <work dir> <reference> <disc images>...`:
+  the PS2 discs extract byte-identical to a reference extraction, rebuild
+  byte-identical from their tables, and take edits (docs/PS2REZ.md).
 - `dtx_decode_all`, `abc_verify`, `ltb_verify`, `ps2ltb_verify`: textures
   and models (`ps2ltb_verify --dump` against plugins/blender's
   `tests/ps2ltb_dump.py` compares the C++ and Python PS2 readers).
@@ -117,6 +122,33 @@ leaves the header's second line blank, as Shogo and Blood 2 files have it.
 
 On Linux and macOS the directory is listed in Windows' (NTFS) order, so the
 archive is the same as one built on Windows.
+
+## PS2 archives
+
+The Operative: No One Lives Forever on the PS2 keeps its data in
+`LITH_PS2.REZ`, a different format (2048-byte sectors, 506 tables, files
+known only by a hash of their name). lithrez and LithRez Studio open it, or
+a PS2 disc image (`.iso`) holding it, as they open a `.rez`:
+
+```
+lithrez list "NOLF (USA).iso"                 every file, named
+lithrez x "NOLF (USA).iso" out/               extract everything
+lithrez cat LITH_PS2.REZ worlds/m01s01.ltb > m01s01.ltb
+lithrez header | verify [--data] | tables "NOLF (USA).iso"
+lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt from its tables
+```
+
+- **Names**: 6040 of the US disc's 6354 files are named from a list
+  recovered from the PC and PS2 data (`core/data/ps2-names.txt`, made by
+  `tests/ps2_names.py`); the rest are `_UNNAMED/<hash>.<ext>`, and
+  `--names <file>` adds more.
+- **Editing** (`add`, `rm`, `f`, and Studio's edits) is experimental: it
+  follows the IOP module's code but hasn't been run on a PS2 or an
+  emulator. A replaced file replaces table 0's version and its identical
+  copies (other tables' variants, such as PAL layouts, stay); data that
+  doesn't fit goes at the end (in a disc image, after the volume, which
+  grows); up to 46 files can be added. Names lithrez adds are kept in the
+  archive as `LITHTOOLS/NAMES.TXT`.
 
 ## LithRez Studio
 

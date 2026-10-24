@@ -34,6 +34,8 @@ add_library(lithtech STATIC
   ${CMAKE_CURRENT_BINARY_DIR}/ps2ltb_names.cpp
   core/src/pe_strings.cpp
   core/src/sound.cpp
+  core/src/ps2rez.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/ps2_names.cpp
 )
 target_include_directories(lithtech PUBLIC core/include)
 # The names for PS2 models' hashes: the Blender extension's list, compiled in.
@@ -53,6 +55,15 @@ foreach(_name IN LISTS _ps2_names)
 endforeach()
 string(APPEND _ps2_out "};\nextern const std::size_t kNameCount = ${_ps2_n};\n}\n")
 file(CONFIGURE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ps2ltb_names.cpp CONTENT "${_ps2_out}" @ONLY)
+# The PS2 archive's recovered file names (tests/ps2_names.py makes the list),
+# compiled in.
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/ps2_names.cpp
+  COMMAND ${CMAKE_COMMAND} -DIN=${CMAKE_CURRENT_SOURCE_DIR}/core/data/ps2-names.txt
+          -DOUT=${CMAKE_CURRENT_BINARY_DIR}/ps2_names.cpp -DNAME=kNamesText
+          -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_text.cmake
+  DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/core/data/ps2-names.txt ${CMAKE_CURRENT_SOURCE_DIR}/cmake/embed_text.cmake
+  VERBATIM)
 # minimp3 (CC0), for the MP3 sounds; see third_party/minimp3/README.md.
 target_include_directories(lithtech SYSTEM PRIVATE third_party/minimp3)
 

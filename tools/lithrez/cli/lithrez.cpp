@@ -7,6 +7,7 @@
 
 #include <cstdlib>
 #include <cctype>
+#include <lithtech/ps2rez.hpp>
 #include <lithtech/rez.hpp>
 
 #include <algorithm>
@@ -82,6 +83,14 @@ Extra commands:
   lithrez mkdir <rez> <path>                      add an empty directory
   lithrez diff <a.rez> <b.rez> [--data]           compare two archives
   lithrez roundtrip <rez> <out.rez>               read and write back unchanged
+  lithrez tables <ps2 rez>                        PS2: each table's layout
+
+PS2 archives (LITH_PS2.REZ, or a PS2 disc image holding one) work with v, x,
+list, header, dump, verify, cat, get, diff and roundtrip (which rebuilds the
+archive from its tables). Their files are named from a list of recovered
+names; the rest are _UNNAMED/<hash>.<ext>. add, rm and f edit them in place
+(experimental: checked against the IOP module's code, but not on a PS2).
+  --names <file>        more PS2 names (one per line, or "HASH<tab>name")
 
 Options for create/freshen/add:
   --time <seconds>      stamp this time on everything (default: now, or
@@ -228,6 +237,7 @@ int classic(int argc, char** argv) {
         case 'F': {
             auto a = open_checked(rezfile, rep);
             if (!a) break;
+            if (a->is_ps2()) std::printf("\nnote: editing a PS2 archive is experimental (not tested on a PS2)\n");
             std::printf("\nFreshening rez file %s from directory %s\n", rezfile.c_str(), target);
             rez::add_from_directory(*a, a->root(), target, co, rep, false);
             if (verbose) std::printf("\n");
@@ -239,6 +249,11 @@ int classic(int argc, char** argv) {
         case 'S': {
             auto a = open_checked(rezfile, rep);
             if (!a) break;
+            if (a->is_ps2()) {
+                std::printf("\nERROR! %s is a PS2 archive: its layout (five tables per level) can't be sorted\n",
+                            rezfile.c_str());
+                return 1;
+            }
             std::printf("\nSorting %s\n", rezfile.c_str());
             // Compact keeps the original as <name>.BAK.
             fs::path bak = fs::u8path(rezfile).replace_extension(".BAK");
@@ -327,9 +342,9 @@ int cmd_list(const Args& a) {
         std::transform(up.begin(), up.end(), up.begin(), ::toupper);
         if (!filter.empty() && up.find(filter) == std::string::npos) return;
         if (json) {
-            std::printf("%s\n {\"path\":%s,\"size\":%u,\"type\":%s,\"id\":%u,\"time\":%u,\"offset\":%u}",
+            std::printf("%s\n {\"path\":%s,\"size\":%u,\"type\":%s,\"id\":%u,\"time\":%u,\"offset\":%llu}",
                         first ? "" : ",", json_str(p).c_str(), r.size, json_str(r.type_string()).c_str(), r.id,
-                        r.time, r.source.kind == rez::DataSource::Kind::Archive ? r.source.offset : 0);
+                        r.time, (unsigned long long)(r.source.kind == rez::DataSource::Kind::Archive ? r.source.offset : 0));
         } else if (lng) {
             std::printf("%10u  %-4s  %10u  %10u  %s\n", r.size, r.type_string().c_str(), r.id, r.time, p.c_str());
         } else {
@@ -341,9 +356,59 @@ int cmd_list(const Args& a) {
     return 0;
 }
 
+// Each table's entries that differ from table 0's: where that level's
+// copies are.
+int cmd_tables(const Args& a) {
+    if (a.pos.empty()) return 2;
+    auto p = ps2rez::Archive::open(a.pos[0]);
+    std::map<uint32_t, const ps2rez::Entry*> t0;
+    for (auto& e : p->tables[0]) t0[e.hash] = &e;
+    std::printf("table  entries  moved  first sector  last sector\n");
+    for (std::size_t t = 0; t < p->tables.size(); ++t) {
+        std::size_t moved = 0;
+        uint32_t lo = 0xFFFFFFFFu, hi = 0;
+        for (auto& e : p->tables[t]) {
+            auto it = t0.find(e.hash);
+            if (t && it != t0.end() && it->second->sector == e.sector) continue;
+            ++moved;
+            if (e.size) lo = std::min(lo, e.sector), hi = std::max(hi, e.sector + e.sectors);
+        }
+        std::printf("%5zu  %7zu  %5zu  %12u  %11u\n", t, p->tables[t].size(), t ? moved : 0, lo == 0xFFFFFFFFu ? 0 : lo, hi);
+    }
+    return 0;
+}
+
+int ps2_header(const ps2rez::Archive& p, bool json) {
+    const auto& h = p.header;
+    std::size_t named = 0, files = 0;
+    for (auto& e : p.tables[0]) {
+        ++files;
+        if (ps2rez::Names::global().find(e.hash, h.weight)) ++named;
+    }
+    if (json) {
+        std::printf("{\"format\":\"ps2\",\"version\":%u,\"entries\":%u,\"hash_weight\":%u,\"data_sector\":%u,"
+                    "\"tables\":%u,\"capacity\":%u,\"named\":%zu,\"in_iso\":%s,\"offset\":%llu,\"lsn\":%u}\n",
+                    h.version, h.entries, h.weight, h.data_sector, h.tables, p.capacity(), named,
+                    p.where.in_iso ? "true" : "false", (unsigned long long)p.where.offset, p.where.lsn);
+        return 0;
+    }
+    std::printf("Format             PS2 LITH_PS2.REZ%s\n", p.where.in_iso ? " (in a disc image)" : "");
+    if (p.where.in_iso)
+        std::printf("Location           sector %u of the image (byte %llu), %llu bytes; volume %u sectors\n", p.where.lsn,
+                    (unsigned long long)p.where.offset, (unsigned long long)p.where.size, p.where.volume_sectors);
+    std::printf("Version            %u\n", h.version);
+    std::printf("Entries per table  %u (room for %u)\n", h.entries, p.capacity());
+    std::printf("Hash weight        %u\n", h.weight);
+    std::printf("Data from sector   %u\n", h.data_sector);
+    std::printf("Tables             %u\n", h.tables);
+    std::printf("Names              %zu of %zu files named\n", named, files);
+    return 0;
+}
+
 int cmd_header(const Args& a) {
     if (a.pos.empty()) return 2;
     auto ar = Archive::open(a.pos[0], {true});
+    if (ar->is_ps2()) return ps2_header(*ar->ps2, a.flags.count("json") > 0);
     auto& h = ar->header;
     if (a.flags.count("json")) {
         std::printf("{\"file_type\":%s,\"user_title\":%s,\"version\":%u,\"root_dir_pos\":%u,"
@@ -377,9 +442,9 @@ void dump_dir(const Directory& d, int depth) {
     std::string ind(depth * 2, ' ');
     std::printf("%s[%s] time %u\n", ind.c_str(), d.parent() ? d.name.c_str() : "(root)", d.time);
     for (auto& r : d.resources())
-        std::printf("%s  %-4s %-24s id %-10u size %-10u at %-10u time %u%s%s\n", ind.c_str(),
+        std::printf("%s  %-4s %-24s id %-10u size %-10u at %-10llu time %u%s%s\n", ind.c_str(),
                     r->type_string().c_str(), r->name.c_str(), r->id, r->size,
-                    r->source.kind == rez::DataSource::Kind::Archive ? r->source.offset : 0, r->time,
+                    (unsigned long long)(r->source.kind == rez::DataSource::Kind::Archive ? r->source.offset : 0), r->time,
                     r->description.empty() ? "" : (" desc \"" + r->description + "\"").c_str(),
                     r->keys.empty() ? "" : (" keys " + std::to_string(r->keys.size())).c_str());
     for (auto& s : d.dirs()) dump_dir(*s, depth + 1);
@@ -394,6 +459,59 @@ int cmd_dump(const Args& a) {
     return 0;
 }
 
+// A PS2 archive's tables: in the file, sizes and sector counts agreeing,
+// every table naming the same files, no two extents overlapping. With
+// --data, counts how many of the other tables' entries are copies of table
+// 0's version and how many are variants (PAL layouts, other languages).
+int verify_ps2(const ps2rez::Archive& p, const std::string& path, bool data) {
+    int problems = 0;
+    auto bad = [&](const std::string& s) {
+        if (++problems <= 20) std::printf("problem: %s\n", s.c_str());
+    };
+    uint64_t fsize = file_size(path);
+    std::set<uint32_t> names0;
+    for (auto& e : p.tables[0]) names0.insert(e.hash);
+    if (names0.size() != p.tables[0].size()) bad("table 0 names a file twice");
+    std::map<uint32_t, ps2rez::Entry> extents;   // by sector
+    std::map<uint32_t, const ps2rez::Entry*> t0;
+    for (auto& e : p.tables[0]) t0[e.hash] = &e;
+    std::size_t copies = 0, differ = 0;
+    for (std::size_t t = 0; t < p.tables.size(); ++t) {
+        std::set<uint32_t> names;
+        for (auto& e : p.tables[t]) {
+            names.insert(e.hash);
+            if (e.sectors != (e.size + ps2rez::kSector - 1) / ps2rez::kSector)
+                bad("table " + std::to_string(t) + ": sector count doesn't match the size");
+            if (e.size && e.sector < p.header.data_sector) bad("table " + std::to_string(t) + ": data inside the tables");
+            if (p.file_offset(e) + e.size > fsize) bad("table " + std::to_string(t) + ": data past the end of the file");
+            if (!e.size) continue;
+            auto [it, fresh] = extents.emplace(e.sector, e);
+            if (!fresh && (it->second.hash != e.hash || it->second.size != e.size))
+                bad("two files at sector " + std::to_string(e.sector));
+            if (fresh && t && data) {
+                auto o = t0.find(e.hash);
+                if (o != t0.end() && o->second->sector != e.sector) {
+                    ++copies;
+                    if (e.size != o->second->size || p.read(e) != p.read(*o->second)) ++differ;
+                }
+            }
+        }
+        if (names != names0) bad("table " + std::to_string(t) + " names different files from table 0");
+    }
+    uint64_t prev_end = 0;
+    for (auto& [s, e] : extents) {
+        if (uint64_t(s) * ps2rez::kSector < prev_end) bad("extents overlap at sector " + std::to_string(s));
+        prev_end = std::max(prev_end, (uint64_t(s) + e.sectors) * ps2rez::kSector);
+    }
+    std::printf("%s: PS2 archive, %zu tables of %u entries, %zu extents%s, %d problem(s)\n", path.c_str(),
+                p.tables.size(), p.header.entries, extents.size(),
+                data ? (", other tables' data: " + std::to_string(copies - differ) + " copies of table 0's, " +
+                        std::to_string(differ) + " variants").c_str()
+                     : "",
+                problems);
+    return problems ? 1 : 0;
+}
+
 int cmd_verify(const Args& a) {
     if (a.pos.empty()) return 2;
     int problems = 0;
@@ -404,13 +522,14 @@ int cmd_verify(const Args& a) {
         std::printf("FAIL %s\n", e.what());
         return 1;
     }
+    if (ar->is_ps2()) return verify_ps2(*ar->ps2, a.pos[0], a.flags.count("data") > 0);
     auto size = file_size(a.pos[0]);
     // Data ranges must lie in the file and not overlap.
     std::vector<std::pair<uint64_t, uint64_t>> ranges;
     std::map<std::string, int> names;
     walk(ar->root(), [&](const Resource& r) {
         if (r.size && r.source.kind == rez::DataSource::Kind::Archive) {
-            ranges.push_back({r.source.offset, uint64_t(r.source.offset) + r.size});
+            ranges.push_back({r.source.offset, r.source.offset + r.size});
             if (r.source.offset < rez::kHeaderSize) {
                 std::printf("problem: %s starts inside the header\n", r.path().c_str());
                 problems++;
@@ -540,6 +659,7 @@ int cmd_add(const Args& a) {
         }
     }
     ar->header.time = now;
+    if (ar->is_ps2()) std::printf("note: editing a PS2 archive is experimental (not tested on a PS2)\n");
     ar->save(a.pos[0], save_opts(a));
     std::printf("%d resource(s) added or replaced\n", rep.resources);
     return rep.errors ? 1 : 0;
@@ -562,6 +682,7 @@ int cmd_rm(const Args& a) {
         }
     }
     ar->header.time = rez::current_time(std::nullopt);
+    if (ar->is_ps2()) std::printf("note: editing a PS2 archive is experimental (not tested on a PS2)\n");
     ar->save(a.pos[0], save_opts(a));
     std::printf("%d item(s) removed\n", n);
     return 0;
@@ -603,6 +724,10 @@ int cmd_diff(const Args& a) {
 int cmd_roundtrip(const Args& a) {
     if (a.pos.size() < 2) return 2;
     auto ar = Archive::open(a.pos[0]);
+    if (ar->is_ps2()) {   // the archive alone, rebuilt from its tables
+        ar->ps2->write_rebuilt(a.pos[1]);
+        return 0;
+    }
     rez::SaveOptions so = save_opts(a);
     so.recompute_largest = false;
     ar->save(a.pos[1], so);
@@ -612,6 +737,26 @@ int cmd_roundtrip(const Args& a) {
 }  // namespace
 
 int main(int argc, char** argv) {
+    if (argc < 2) {
+        classic_help();
+        return 1;
+    }
+    // --names <file>, anywhere: more PS2 names
+    std::vector<char*> args;
+    for (int i = 0; i < argc; ++i) {
+        if (std::string(argv[i]) == "--names" && i + 1 < argc) {
+            try {
+                ps2rez::Names::global().load_file(argv[++i]);
+            } catch (const std::exception& e) {
+                std::fprintf(stderr, "lithrez: %s\n", e.what());
+                return 1;
+            }
+        } else {
+            args.push_back(argv[i]);
+        }
+    }
+    argc = int(args.size());
+    argv = args.data();
     if (argc < 2) {
         classic_help();
         return 1;
@@ -634,6 +779,7 @@ int main(int argc, char** argv) {
         else if (c == "mkdir") r = cmd_mkdir(A());
         else if (c == "diff") r = cmd_diff(A());
         else if (c == "roundtrip") r = cmd_roundtrip(A());
+        else if (c == "tables") r = cmd_tables(A());
         if (r == 2) { extra_help(); return 2; }
         if (r >= 0) return r;
 

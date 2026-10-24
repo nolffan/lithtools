@@ -3,6 +3,7 @@
 // and LithRez 1.10 (jupiter/src/Engine/tools/LithRez); see docs/REZ.md.
 
 #include "lithtech/rez.hpp"
+#include "lithtech/ps2rez.hpp"
 
 #include <vector>
 #include <string>
@@ -328,10 +329,10 @@ void Archive::attach(Directory& d) {
     }
 }
 
-std::vector<uint8_t> Archive::read_at(uint32_t offset, uint32_t size) const {
+std::vector<uint8_t> Archive::read_at(uint64_t offset, uint32_t size) const {
     if (!file_) throw Error("archive has no file");
     std::lock_guard<std::mutex> g(file_->lock);
-    if (uint64_t(offset) + size > file_->size)
+    if (offset + size > file_->size)
         throw Error("resource data runs past the end of the file");
     std::vector<uint8_t> v(size);
     file_->in.clear();
@@ -344,12 +345,18 @@ std::vector<uint8_t> Archive::read_at(uint32_t offset, uint32_t size) const {
 bool Archive::probe(const std::string& path) {
     std::ifstream f(fs::u8path(path), std::ios::binary);
     uint8_t h[kHeaderSize];
-    if (!f.read(reinterpret_cast<char*>(h), sizeof h)) return false;
-    return h[0] == 0x0d && h[1] == 0x0a && h[62] == 0x0d && h[63] == 0x0a && h[126] == 0x1a &&
-           std::memcmp(h + 2, "RezMgr", 6) == 0;
+    if (f.read(reinterpret_cast<char*>(h), sizeof h) && h[0] == 0x0d && h[1] == 0x0a && h[62] == 0x0d &&
+        h[63] == 0x0a && h[126] == 0x1a && std::memcmp(h + 2, "RezMgr", 6) == 0)
+        return true;
+    return ps2rez::probe(path);
 }
 
 std::unique_ptr<Archive> Archive::open(const std::string& path, OpenOptions opts) {
+    if (ps2rez::probe(path)) {
+        auto a = std::make_unique<Archive>();
+        a->open_ps2(path);
+        return a;
+    }
     auto a = std::make_unique<Archive>();
     a->path_ = path;
     a->file_ = std::make_unique<File>();
@@ -469,6 +476,7 @@ std::unique_ptr<Archive> Archive::open(const std::string& path, OpenOptions opts
 }
 
 void Archive::save(const std::string& path, const SaveOptions& opts) {
+    if (ps2) return save_ps2(path);
     // Gather every resource; data goes out in data_order.
     std::vector<Resource*> all;
     std::function<void(Directory&)> gather = [&](Directory& d) {
@@ -1046,7 +1054,7 @@ void extract(const Directory& dir, const std::string& target, Report& report, bo
 }
 
 bool looks_like_lithtech(const Archive& a) {
-    if (a.header.user_title == kLithTechUserTitle) return true;
+    if (a.is_ps2() || a.header.user_title == kLithTechUserTitle) return true;
     for (const char* f : {"cshell.dll", "cres.dll", "sres.dll", "object.lto", "patch.txt",
                           "sounds\\dirtypesounds.", "blood2.dep", "riot.dep"}) {
         std::string s = f;
@@ -1054,6 +1062,217 @@ bool looks_like_lithtech(const Archive& a) {
         if (a.root().find_path(s)) return true;
     }
     return false;
+}
+
+}  // namespace lithtech::rez
+
+// ---------------------------------------------------------------------------
+// PS2 archives as a tree
+
+namespace lithtech::rez {
+
+namespace {
+
+// _UNNAMED\<8 hex digits>.<ext> at the top: the hash it stands for.
+std::optional<uint32_t> unnamed_hash(const Resource& r) {
+    const Directory* d = r.parent();
+    if (!d || !d->parent() || d->parent()->parent()) return std::nullopt;
+    std::string dn = d->name;
+    std::transform(dn.begin(), dn.end(), dn.begin(), ::toupper);
+    if (dn != "_UNNAMED" || r.name.size() != 8 ||
+        !std::all_of(r.name.begin(), r.name.end(), [](char c) { return std::isxdigit(static_cast<unsigned char>(c)); }))
+        return std::nullopt;
+    return uint32_t(std::stoul(r.name, nullptr, 16));
+}
+
+}  // namespace
+
+void Archive::open_ps2(const std::string& path) {
+    ps2 = ps2rez::Archive::open(path);
+    // names lithrez stored in the archive when it added files
+    if (!ps2rez::Names::global().find(ps2rez::hash(ps2rez::Names::kArchiveNamesFile, ps2->header.weight), ps2->header.weight))
+        ps2rez::Names::global().add(ps2rez::Names::kArchiveNamesFile);
+    if (const ps2rez::Entry* e = ps2->find(ps2rez::hash(ps2rez::Names::kArchiveNamesFile, ps2->header.weight))) {
+        auto text = ps2->read(*e);
+        std::string line;
+        auto& names = ps2rez::Names::global();
+        for (char c : std::string(text.begin(), text.end()) + "\n") {
+            if (c == '\n' || c == '\r') {
+                if (!line.empty() && line[0] != '#' && !names.find(ps2rez::hash(line, ps2->header.weight), ps2->header.weight))
+                    names.add(line);
+                line.clear();
+            } else {
+                line.push_back(c);
+            }
+        }
+    }
+    path_ = path;
+    file_ = std::make_unique<File>();
+    file_->in.open(fs::u8path(path), std::ios::binary);
+    if (!file_->in) throw Error("can't open " + path);
+    file_->in.seekg(0, std::ios::end);
+    file_->size = uint64_t(file_->in.tellg());
+    header = Header{};
+    header.file_type = "PS2 LITH_PS2.REZ";
+    header.user_title.clear();
+    std::vector<const ps2rez::Entry*> order;
+    for (auto& e : ps2->tables[0]) order.push_back(&e);
+    std::stable_sort(order.begin(), order.end(), [](auto* x, auto* y) { return x->sector < y->sector; });
+    for (const ps2rez::Entry* e : order) {
+        std::string name = ps2->name_of(*e);
+        Directory* d = root_.get();
+        std::size_t start = 0, sep;
+        while ((sep = name.find('\\', start)) != std::string::npos) {
+            std::string part = name.substr(start, sep - start);
+            start = sep + 1;
+            if (part.empty()) continue;
+            std::transform(part.begin(), part.end(), part.begin(), ::toupper);   // folders as on the PC
+            Directory* sub = d->find_dir(part);
+            d = sub ? sub : d->add_dir(part);
+        }
+        std::string file = name.substr(start);
+        auto r = std::make_unique<Resource>();
+        auto dot = file.rfind('.');
+        if (dot != std::string::npos && file.size() - dot - 1 <= 4) {
+            r->name = file.substr(0, dot);
+            std::string ext = file.substr(dot + 1);
+            std::transform(ext.begin(), ext.end(), ext.begin(), ::toupper);
+            r->type = type_from_string(ext);
+        } else {
+            r->name = file;
+        }
+        r->id = e->hash;
+        r->size = e->size;
+        r->source.kind = DataSource::Kind::Archive;
+        r->source.offset = ps2->file_offset(*e);
+        r->data_order = next_data_order();
+        if (Resource* old = d->find(r->name, r->type)) {
+            // two names alike but for case: keep both reachable
+            r->name += "~" + std::to_string(e->hash);
+            (void)old;
+        }
+        d->add(std::move(r));
+    }
+    attach(*root_);
+}
+
+void Archive::save_ps2(const std::string& path) {
+    std::map<uint64_t, const ps2rez::Entry*> by_offset;
+    std::map<uint32_t, const ps2rez::Entry*> by_hash;
+    for (auto& e : ps2->tables[0]) {
+        by_offset.emplace(ps2->file_offset(e), &e);
+        by_hash.emplace(e.hash, &e);
+    }
+    std::vector<Resource*> all;
+    std::function<void(Directory&)> gather = [&](Directory& d) {
+        for (auto& r : d.res_) all.push_back(r.get());
+        for (auto& s : d.dirs_) gather(*s);
+    };
+    gather(*root_);
+    // Names the list doesn't know go into the archive's own names file, so
+    // they are there when it is opened again.
+    {
+        auto& names = ps2rez::Names::global();
+        std::vector<std::string> extra;
+        for (Resource* r : all) {
+            if (unnamed_hash(*r)) continue;
+            std::string p = r->path('\\');
+            if (!names.find(ps2rez::hash(p, ps2->header.weight), ps2->header.weight)) extra.push_back(p);
+        }
+        Resource* nf = root_->find_path(ps2rez::Names::kArchiveNamesFile);
+        if (!extra.empty() || nf) {
+            std::string text = "# File names lithrez added to this archive (its file list has only hashes).\n";
+            std::set<std::string> listed;
+            if (nf) {
+                auto old = nf->read();
+                std::string line;
+                for (char c : std::string(old.begin(), old.end()) + "\n") {
+                    if (c == '\n' || c == '\r') {
+                        if (!line.empty() && line[0] != '#') listed.insert(line);
+                        line.clear();
+                    } else {
+                        line.push_back(c);
+                    }
+                }
+            }
+            for (auto& x : extra) listed.insert(x);
+            for (auto& x : listed) text += x + "\n";
+            for (auto& x : extra) names.add(x);
+            if (!nf) {
+                Directory* d = root_->find_dir("LITHTOOLS");
+                if (!d) d = root_->add_dir("LITHTOOLS");
+                auto r = std::make_unique<Resource>();
+                r->name = "NAMES";
+                r->type = type_from_string("TXT");
+                nf = d->add(std::move(r));
+                all.push_back(nf);
+            }
+            nf->source = DataSource{};
+            nf->source.kind = DataSource::Kind::Memory;
+            nf->source.bytes = std::make_shared<const std::vector<uint8_t>>(text.begin(), text.end());
+            nf->size = uint32_t(text.size());
+        }
+    }
+    auto hash_of = [&](const Resource& r) {
+        if (auto h = unnamed_hash(r)) return *h;
+        std::string p = r.path('\\');
+        // "NAME~<hash>" marks the second of two names alike but for case
+        if (auto t = r.name.rfind('~'); t != std::string::npos && r.source.kind == DataSource::Kind::Archive) {
+            auto it = by_offset.find(r.source.offset);
+            if (it != by_offset.end() && r.name.substr(t + 1) == std::to_string(it->second->hash)) return it->second->hash;
+        }
+        return ps2rez::hash(p, ps2->header.weight);
+    };
+    std::map<uint32_t, ps2rez::Archive::Change> changes;
+    std::map<uint32_t, Resource*> seen;
+    for (Resource* r : all) {
+        uint32_t h = hash_of(*r);
+        if (!seen.emplace(h, r).second)
+            throw Error(r->path() + " and " + seen[h]->path() + " have the same PS2 name hash");
+        if (r->source.kind == DataSource::Kind::Archive && r->archive_ == this) {
+            auto it = by_offset.find(r->source.offset);
+            if (it != by_offset.end() && it->second->size == r->size) {
+                if (it->second->hash != h) {   // renamed, moved or copied: the same entries, a new name
+                    ps2rez::Archive::Change c;
+                    c.kind = ps2rez::Archive::Change::Kind::Copy;
+                    c.from = it->second->hash;
+                    changes[h] = c;
+                }
+                continue;
+            }
+        }
+        ps2rez::Archive::Change c;
+        auto data = std::make_shared<std::vector<uint8_t>>(r->read());
+        r->size = uint32_t(data->size());
+        c.data = data;
+        changes[h] = c;
+    }
+    for (auto& [h, e] : by_hash)
+        if (!seen.count(h)) {
+            ps2rez::Archive::Change c;
+            c.kind = ps2rez::Archive::Change::Kind::Remove;
+            changes[h] = c;
+        }
+    // Same file: release our handle while it is patched.
+    file_.reset();
+    ps2->save(path, changes);
+    path_ = path;
+    file_ = std::make_unique<File>();
+    file_->in.open(fs::u8path(path), std::ios::binary);
+    if (!file_->in) throw Error("can't open " + path);
+    file_->in.seekg(0, std::ios::end);
+    file_->size = uint64_t(file_->in.tellg());
+    // the tree now reads from the result
+    for (auto& [h, r] : seen) {
+        const ps2rez::Entry* e = ps2->find(h);
+        if (!e) continue;
+        r->id = h;
+        r->size = e->size;
+        r->source = DataSource{};
+        r->source.kind = DataSource::Kind::Archive;
+        r->source.offset = ps2->file_offset(*e);
+        r->archive_ = this;
+    }
 }
 
 }  // namespace lithtech::rez
