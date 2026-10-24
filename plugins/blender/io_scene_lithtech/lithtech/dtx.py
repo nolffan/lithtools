@@ -8,6 +8,10 @@ Contract J.A.C.K., Tron 2.0).
 
     new = dtx.from_rgba(256, 256, rgba, bpp=dtx.BPP_S3TC_DXT5, mipmaps=4)
 
+    # PS2 textures (BPP_32P): palette alpha as the PS2 draws it
+    w, h, rgba = tex.decode(0, ps2_alpha=True)
+    ps2 = dtx.from_rgba(128, 128, rgba, bpp=dtx.BPP_32P)   # quantised, 3 mips
+
 See plugins/blender/docs/DTX.md for the layout and the evidence for each
 field. Standard library only, so it runs inside Blender's Python; numpy is
 used for decoding when it is importable (Blender bundles it), and the pure
@@ -22,6 +26,12 @@ Conventions:
   * Every header and section byte is kept, padding and garbage included
     (many shipped headers have runtime memory in the command string), so
     write() gives back the input exactly.
+
+BPP_32P is the PS2's format (8-bit indices into a 256-entry PALLETE32
+section): DEdit's "Convert to 32P" made every one, PS2 or PC, storing
+alpha halved because the PS2's GS takes 0x80 as opaque. decode() gives
+the stored alpha by default, which is what the PC engine draws;
+ps2_alpha=True reads it as the PS2 draws it (ps2_palette_alpha()).
 
 Version handling is explicit: read() dispatches on the header's version
 through _READERS, and only -5 is known (every shipped file from NOLF to
@@ -302,12 +312,23 @@ class Texture:
                 return s
         return None
 
-    def palette(self):
-        """The PALLETE32 section's 256 colors as RGBA bytes, or None."""
+    def palette(self, ps2_alpha=False):
+        """The PALLETE32 section's 256 colors as RGBA bytes, or None;
+        ps2_alpha reads their alpha as the PS2 does (ps2_palette_alpha)."""
         s = self.find_section(SECTION_PALETTE32)
         if s is None:
             return None
-        return bgra_to_rgba(s.data[:1024].ljust(1024, b"\0"))
+        pal = bgra_to_rgba(s.data[:1024].ljust(1024, b"\0"))
+        return ps2_palette_alpha(pal) if ps2_alpha else pal
+
+    @property
+    def ps2_style_palette(self):
+        """BPP_32P with no palette alpha above 0x80: made by DEdit's
+        "Convert to 32P" for the PS2 (every PS2 32P texture, and the nine 32P
+        files that went out with the PC games too)."""
+        s = self.find_section(SECTION_PALETTE32)
+        return (self.bpp == BPP_32P and s is not None
+                and max(s.data[3:1024:4], default=0) <= 0x80)
 
     def face_mips(self, face):
         """The mips of a cube map face: 0 is the base image (+X), 1-5 are
@@ -327,11 +348,13 @@ class Texture:
             pos += n
         return out
 
-    def decode(self, mip=0, face=0):
-        """(width, height, RGBA bytes, top row first) of one level."""
+    def decode(self, mip=0, face=0, ps2_alpha=False):
+        """(width, height, RGBA bytes, top row first) of one level.
+        ps2_alpha reads BPP_32P palette alpha as the PS2 does."""
         w, h = self.mip_size(mip)
         data = self.face_mips(face)[mip]
-        return w, h, decode_pixels(self.bpp, w, h, data, self.palette(),
+        return w, h, decode_pixels(self.bpp, w, h, data,
+                                   self.palette(ps2_alpha and self.bpp == BPP_32P),
                                    self.iflags)
 
 
@@ -443,6 +466,26 @@ def bgra_to_rgba(b):
 
 
 rgba_to_bgra = bgra_to_rgba
+
+
+def ps2_palette_alpha(palette):
+    """A 256-entry RGBA (or BGRA) palette with its alpha read as the PS2
+    draws it, the inverse of DEdit's halving (LTTexture's
+    Convert32BitTo8BitPalletized stores a/2; the GS takes 0x80 as opaque):
+    0x7f and up is 255, below that a * 255 / 127 rounded. A palette whose
+    alpha is all zero (made from a texture with no alpha) is opaque."""
+    pal = bytearray(palette)
+    alphas = pal[3::4]
+    if not any(alphas):
+        pal[3::4] = b"\xff" * len(alphas)
+    else:
+        pal[3::4] = bytes(255 if a >= 0x7f else (a * 255 + 63) // 127 for a in alphas)
+    return bytes(pal)
+
+
+def ps2_store_alpha(a):
+    """An alpha (0-255, as drawn) as DEdit stores it in a PS2 palette: a/2."""
+    return a >> 1
 
 
 def flip_rows(rgba, width, height):
@@ -752,15 +795,143 @@ def encode_pixels(bpp, width, height, rgba):
     return bytes(out[:image_size(bpp, width, height)])
 
 
+def quantize(rgba, colors=256):
+    """(palette, indices) for RGBA pixels: palette is up to `colors` RGBA
+    entries (bytes, 4 each), indices one byte per pixel. Exact when there
+    are no more distinct colors than that (most used first, as DEdit
+    orders them); otherwise a median cut in RGBA, each pixel mapped to its
+    nearest entry. (DEdit took the 256 most used colors and, through a bug
+    in its NearestColor, gave every other pixel the last entry.)"""
+    n = len(rgba) // 4
+    if _np is not None:
+        px = _np.frombuffer(rgba, _np.uint8, n * 4).reshape(n, 4)
+        key = px.copy().view("<u4")[:, 0]
+        uniq, first, inv, counts = _np.unique(key, return_index=True,
+                                              return_inverse=True,
+                                              return_counts=True)
+        if len(uniq) <= colors:
+            order = _np.lexsort((first, -counts))       # most used, then first seen
+            rank = _np.empty(len(uniq), _np.int64)
+            rank[order] = _np.arange(len(uniq))
+            pal = px[first[order]]
+            return pal.tobytes(), rank[inv.reshape(-1)].astype(_np.uint8).tobytes()
+        boxes = [_np.arange(n)]
+        while len(boxes) < colors:
+            # split the box with the widest channel range, at its median
+            best, bi, bc = -1, 0, 0
+            for i, b in enumerate(boxes):
+                if len(b) < 2:
+                    continue
+                v = px[b]
+                rng = v.max(0).astype(int) - v.min(0).astype(int)
+                c = int(rng.argmax())
+                if rng[c] > best:
+                    best, bi, bc = int(rng[c]), i, c
+            if best <= 0:
+                break
+            b = boxes.pop(bi)
+            o = b[_np.argsort(px[b, bc], kind="stable")]
+            boxes += [o[:len(o) // 2], o[len(o) // 2:]]
+        pal = _np.array([px[b].mean(0) + 0.5 for b in boxes]).astype(_np.uint8)
+        pf = pal.astype(_np.int32)
+        idx = _np.empty(n, _np.uint8)
+        for s in range(0, n, 65536):
+            d = px[s:s + 65536].astype(_np.int32)[:, None, :] - pf[None, :, :]
+            idx[s:s + 65536] = (d * d).sum(2).argmin(1)
+        return pal.tobytes(), idx.tobytes()
+    # The plain path: same results, slowly.
+    pix = [bytes(rgba[i * 4:i * 4 + 4]) for i in range(n)]
+    counts, first = {}, {}
+    for i, p in enumerate(pix):
+        counts[p] = counts.get(p, 0) + 1
+        first.setdefault(p, i)
+    if len(counts) <= colors:
+        order = sorted(counts, key=lambda p: (-counts[p], first[p]))
+        rank = {p: i for i, p in enumerate(order)}
+        return b"".join(order), bytes(rank[p] for p in pix)
+    boxes = [list(range(n))]
+    while len(boxes) < colors:
+        best, bi, bc = -1, 0, 0
+        for i, b in enumerate(boxes):
+            if len(b) < 2:
+                continue
+            for c in range(4):
+                vals = [pix[k][c] for k in b]
+                r = max(vals) - min(vals)
+                if r > best:
+                    best, bi, bc = r, i, c
+        if best <= 0:
+            break
+        b = sorted(boxes.pop(bi), key=lambda k: pix[k][bc])
+        boxes += [b[:len(b) // 2], b[len(b) // 2:]]
+    pal = [bytes(int(sum(pix[k][c] for k in b) / len(b) + 0.5) for c in range(4)) for b in boxes]
+    cache = {}
+
+    def near(p):
+        if p not in cache:
+            cache[p] = min(range(len(pal)), key=lambda j: sum(
+                (pal[j][c] - p[c]) ** 2 for c in range(4)))
+        return cache[p]
+    return b"".join(pal), bytes(near(p) for p in pix)
+
+
+def nearest_indices(palette, rgba):
+    """Each pixel's nearest entry (squared RGBA distance) in an RGBA palette."""
+    n = len(rgba) // 4
+    if _np is not None:
+        pf = _np.frombuffer(palette, _np.uint8).reshape(-1, 4).astype(_np.int32)
+        px = _np.frombuffer(rgba, _np.uint8, n * 4).reshape(n, 4).astype(_np.int32)
+        idx = _np.empty(n, _np.uint8)
+        for s in range(0, n, 65536):
+            d = px[s:s + 65536, None, :] - pf[None, :, :]
+            idx[s:s + 65536] = (d * d).sum(2).argmin(1)
+        return idx.tobytes()
+    pal = [palette[j * 4:j * 4 + 4] for j in range(len(palette) // 4)]
+    return bytes(min(range(len(pal)), key=lambda j: sum(
+        (pal[j][c] - rgba[i * 4 + c]) ** 2 for c in range(4))) for i in range(n))
+
+
+def encode_32p(width, height, rgba, mipmaps, ps2_alpha=True, palette=None):
+    """(PALLETE32 data, [mip index levels]) for RGBA, top row first.
+
+    The palette comes from quantize() of the base level, unless one is given
+    (RGBA, as drawn): then every level is mapped onto it. Smaller levels are
+    box filtered (build_mipmaps) and mapped onto the same palette. With
+    ps2_alpha the stored alpha is halved as DEdit stores it for the PS2
+    (ps2_store_alpha); else it is stored as given."""
+    levels = build_mipmaps(width, height, rgba, mipmaps)
+    if palette is None:
+        palette, base = quantize(levels[0])
+    else:
+        base = nearest_indices(palette, levels[0])
+    palette = bytes(palette).ljust(1024, b"\0")
+    mips = [base] + [nearest_indices(palette, lv) for lv in levels[1:]]
+    store = bytearray(rgba_to_bgra(palette))
+    if ps2_alpha:
+        store[3::4] = bytes(ps2_store_alpha(a) for a in store[3::4])
+    return bytes(store), mips
+
+
 def from_rgba(width, height, rgba, bpp=BPP_S3TC_DXT5, mipmaps=None,
               iflags=DTX_SECTIONSFIXED, user_flags=0, command="",
-              texture_group=0, priority=0, detail_scale=1.0, detail_angle=0):
+              texture_group=0, priority=0, detail_scale=1.0, detail_angle=0,
+              ps2_alpha=True, palette=None):
     """A new texture from RGBA (top row first). mipmaps defaults to DEdit's
     largest count (down to 8 pixels, at most 8). The header is laid out as
-    the tools' dtx_Alloc + dtx_Save would: unused bytes zero."""
+    the tools' dtx_Alloc + dtx_Save would: unused bytes zero.
+
+    BPP_32P is written as DEdit's "Convert to 32P" writes PS2 textures:
+    three mips by default (CreateMipMaps(3)), only the FULLBRITE,
+    SECTIONSFIXED and 32BITSYSCOPY flags, and a PALLETE32 section (see
+    encode_32p for ps2_alpha and palette)."""
     if mipmaps is None:
-        mipmaps = min(MAX_DTX_MIPMAPS, max_mips_for_size(width),
-                      max_mips_for_size(height))
+        if bpp == BPP_32P:      # three, as long as the levels last
+            mipmaps = min(3, min(width, height).bit_length())
+        else:
+            mipmaps = min(MAX_DTX_MIPMAPS, max_mips_for_size(width),
+                          max_mips_for_size(height))
+    if bpp == BPP_32P:
+        iflags &= DTX_FULLBRITE | DTX_SECTIONSFIXED | DTX_32BITSYSCOPY
     t = Texture(width=width, height=height, iflags=iflags,
                 user_flags=user_flags)
     t.bpp = bpp
@@ -770,8 +941,12 @@ def from_rgba(width, height, rgba, bpp=BPP_S3TC_DXT5, mipmaps=None,
     t.detail_scale = detail_scale
     t.detail_angle = detail_angle
     t.command = command
-    for (w, h), level in zip(mip_dims(width, height, mipmaps),
-                             build_mipmaps(width, height, rgba, mipmaps)):
-        t.mips.append(encode_pixels(bpp, w, h, level))
+    if bpp == BPP_32P:
+        pal, t.mips = encode_32p(width, height, rgba, mipmaps, ps2_alpha, palette)
+        t.sections.append(Section.make(SECTION_PALETTE32, pal))
+    else:
+        for (w, h), level in zip(mip_dims(width, height, mipmaps),
+                                 build_mipmaps(width, height, rgba, mipmaps)):
+            t.mips.append(encode_pixels(bpp, w, h, level))
     sync_counts(t)
     return t
