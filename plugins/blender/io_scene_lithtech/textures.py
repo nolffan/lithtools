@@ -4,10 +4,17 @@ An imported image is packed into the .blend (Blender can't read a .dtx
 itself) and keeps the DTX header's settings as custom properties (lt_bpp,
 lt_user_flags, lt_iflags, lt_command, lt_texture_group, lt_mipmaps_to_use,
 lt_priority, lt_detail_scale, lt_detail_angle, lt_sections) so exporting it
-again writes the same settings.
+again writes the same settings. It also keeps the file itself (lt_dtx) and
+a digest of the pixels as imported (lt_pixels): exported unchanged, in its
+own format, it is written back byte for byte.
+
+PS2 textures (BPP_32P) are imported with their palette alpha as the PS2
+draws it (lt_ps2_alpha) and exported back to 32P: onto their own palette
+while every pixel's colour is still in it, else quantised again.
 """
 
 import base64
+import hashlib
 import json
 import os
 
@@ -23,6 +30,7 @@ except ImportError:  # Blender bundles numpy; this is for safety only.
 
 BPP_ITEMS = (
     ('32', "32-bit BGRA", "Uncompressed, lossless", dtx.BPP_32),
+    ('32P', "32P (PS2)", "8-bit indices into 256 colours, the PS2 version's format", dtx.BPP_32P),
     ('DXT1', "DXT1", "S3TC, 1-bit alpha", dtx.BPP_S3TC_DXT1),
     ('DXT3', "DXT3", "S3TC, sharp 4-bit alpha", dtx.BPP_S3TC_DXT3),
     ('DXT5', "DXT5", "S3TC, smooth alpha", dtx.BPP_S3TC_DXT5),
@@ -49,10 +57,22 @@ def _pixels_to_rgba(image):
     return w, h, dtx.flip_rows(data, w, h)
 
 
-def load_image(path, name=None):
-    """A DTX file as a packed Blender image."""
-    t = dtx.read_file(path)
-    w, h, rgba = t.decode(0)
+def _digest(rgba):
+    return hashlib.sha1(rgba).hexdigest()
+
+
+def load_image(path, name=None, ps2_alpha=None):
+    """A DTX file as a packed Blender image. ps2_alpha reads a 32P
+    palette's alpha as the PS2 draws it; None decides from the palette
+    (Texture.ps2_style_palette: every PS2 texture, and the nine PS2-made
+    files in the PC games, which the PC engine draws with the stored alpha)."""
+    with open(path, "rb") as f:
+        raw = f.read()
+    t = dtx.read(raw)
+    if ps2_alpha is None:
+        ps2_alpha = t.ps2_style_palette
+    ps2_alpha = bool(ps2_alpha) and t.bpp == dtx.BPP_32P
+    w, h, rgba = t.decode(0, ps2_alpha=ps2_alpha)
     name = name or os.path.basename(path)
     has_alpha = rgba[3::4] != b"\xff" * (w * h)
     img = bpy.data.images.new(name, w, h, alpha=True)
@@ -74,6 +94,9 @@ def load_image(path, name=None):
     img["lt_priority"] = t.priority
     img["lt_detail_scale"] = t.detail_scale
     img["lt_detail_angle"] = t.detail_angle
+    img["lt_ps2_alpha"] = ps2_alpha
+    img["lt_dtx"] = raw
+    img["lt_pixels"] = _digest(_pixels_to_rgba(img)[2])
     # Sections other than the palette (texture lights, cube faces) as JSON.
     keep = [s for s in t.sections if s.type != dtx.SECTION_PALETTE32
             and s.type != dtx.SECTION_CUBEMAP]
@@ -84,18 +107,49 @@ def load_image(path, name=None):
     return img
 
 
+def _imported(image):
+    """The texture the image was imported from, or None."""
+    raw = image.get("lt_dtx")
+    if not raw:
+        return None
+    try:
+        return dtx.read(bytes(raw))
+    except ValueError:
+        return None
+
+
 def save_image(image, path, bpp=None, mipmaps=None):
     """Write a Blender image as a DTX. bpp/mipmaps default to the image's
-    imported settings, else 32-bit and a full chain."""
+    imported settings, else 32-bit and a full chain. An imported image
+    written unchanged, in its own format and mip count, gives back the file
+    it came from."""
     w, h, rgba = _pixels_to_rgba(image)
+    orig = _imported(image)
+    if (orig is not None and (bpp is None or bpp == orig.bpp)
+            and (mipmaps is None or mipmaps == orig.mip_count)
+            and image.get("lt_pixels") == _digest(rgba)):
+        with open(path, "wb") as f:
+            f.write(bytes(image["lt_dtx"]))
+        return orig
     if bpp is None:
         bpp = image.get("lt_bpp", dtx.BPP_32)
-        if bpp not in ID_BY_BPP:      # palettized etc.: no encoder, keep it lossless
+        if bpp not in ID_BY_BPP:      # no encoder: keep it lossless
             bpp = dtx.BPP_32
     if mipmaps is None:
         mipmaps = image.get("lt_mip_count") or None
-    if mipmaps:
+    if mipmaps and bpp == dtx.BPP_32P:
+        mipmaps = max(1, min(int(mipmaps), min(w, h).bit_length()))
+    elif mipmaps:
         mipmaps = max(1, min(int(mipmaps), dtx.max_mips_for_size(w), dtx.max_mips_for_size(h)))
+    ps2_alpha = image.get("lt_ps2_alpha", True)
+    palette = stored = None
+    if bpp == dtx.BPP_32P and orig is not None and orig.bpp == dtx.BPP_32P:
+        # Still only the colours of its own palette: keep that palette.
+        pal = orig.palette(ps2_alpha=ps2_alpha)
+        colours = {pal[i:i + 4] for i in range(0, 1024, 4)}
+        if all(rgba[i:i + 4] in colours for i in range(0, len(rgba), 4)):
+            palette = pal
+            stored = orig.find_section(dtx.SECTION_PALETTE32).data
     t = dtx.from_rgba(
         w, h, rgba, bpp=bpp, mipmaps=mipmaps,
         # A cube map's other faces aren't in the image, so it saves as flat.
@@ -106,8 +160,14 @@ def save_image(image, path, bpp=None, mipmaps=None):
         texture_group=image.get("lt_texture_group", 0),
         priority=image.get("lt_priority", 0),
         detail_scale=image.get("lt_detail_scale", 1.0),
-        detail_angle=image.get("lt_detail_angle", 0))
-    if "lt_mipmaps_to_use" in image:
+        detail_angle=image.get("lt_detail_angle", 0),
+        ps2_alpha=ps2_alpha, palette=palette, stored_palette=stored)
+    if bpp == dtx.BPP_32P and orig is not None and orig.bpp == dtx.BPP_32P:
+        # DEdit keeps the old header's extra bytes but the format and mip count
+        t.extra[:] = orig.extra
+        t.bpp = dtx.BPP_32P
+        t.mipmaps_to_use = t.mip_count
+    elif "lt_mipmaps_to_use" in image:
         t.mipmaps_to_use = image["lt_mipmaps_to_use"]
     if "lt_sections" in image:
         for s in json.loads(image["lt_sections"]):

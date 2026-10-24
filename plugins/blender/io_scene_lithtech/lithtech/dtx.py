@@ -891,14 +891,17 @@ def nearest_indices(palette, rgba):
         (pal[j][c] - rgba[i * 4 + c]) ** 2 for c in range(4))) for i in range(n))
 
 
-def encode_32p(width, height, rgba, mipmaps, ps2_alpha=True, palette=None):
+def encode_32p(width, height, rgba, mipmaps, ps2_alpha=True, palette=None,
+               stored_palette=None):
     """(PALLETE32 data, [mip index levels]) for RGBA, top row first.
 
     The palette comes from quantize() of the base level, unless one is given
     (RGBA, as drawn): then every level is mapped onto it. Smaller levels are
     box filtered (build_mipmaps) and mapped onto the same palette. With
     ps2_alpha the stored alpha is halved as DEdit stores it for the PS2
-    (ps2_store_alpha); else it is stored as given."""
+    (ps2_store_alpha); else it is stored as given. stored_palette (the
+    PALLETE32 bytes the given palette was read from) is written as it is,
+    so that a texture mapped back onto its own palette keeps it exactly."""
     levels = build_mipmaps(width, height, rgba, mipmaps)
     if palette is None:
         palette, base = quantize(levels[0])
@@ -906,6 +909,8 @@ def encode_32p(width, height, rgba, mipmaps, ps2_alpha=True, palette=None):
         base = nearest_indices(palette, levels[0])
     palette = bytes(palette).ljust(1024, b"\0")
     mips = [base] + [nearest_indices(palette, lv) for lv in levels[1:]]
+    if stored_palette is not None:
+        return bytes(stored_palette), mips
     store = bytearray(rgba_to_bgra(palette))
     if ps2_alpha:
         store[3::4] = bytes(ps2_store_alpha(a) for a in store[3::4])
@@ -915,7 +920,7 @@ def encode_32p(width, height, rgba, mipmaps, ps2_alpha=True, palette=None):
 def from_rgba(width, height, rgba, bpp=BPP_S3TC_DXT5, mipmaps=None,
               iflags=DTX_SECTIONSFIXED, user_flags=0, command="",
               texture_group=0, priority=0, detail_scale=1.0, detail_angle=0,
-              ps2_alpha=True, palette=None):
+              ps2_alpha=True, palette=None, stored_palette=None):
     """A new texture from RGBA (top row first). mipmaps defaults to DEdit's
     largest count (down to 8 pixels, at most 8). The header is laid out as
     the tools' dtx_Alloc + dtx_Save would: unused bytes zero.
@@ -942,7 +947,8 @@ def from_rgba(width, height, rgba, bpp=BPP_S3TC_DXT5, mipmaps=None,
     t.detail_angle = detail_angle
     t.command = command
     if bpp == BPP_32P:
-        pal, t.mips = encode_32p(width, height, rgba, mipmaps, ps2_alpha, palette)
+        pal, t.mips = encode_32p(width, height, rgba, mipmaps, ps2_alpha, palette,
+                                 stored_palette)
         t.sections.append(Section.make(SECTION_PALETTE32, pal))
     else:
         for (w, h), level in zip(mip_dims(width, height, mipmaps),

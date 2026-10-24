@@ -323,15 +323,24 @@ class IMPORT_IMAGE_OT_lithtech_dtx(bpy.types.Operator, ImportHelper):
     files: CollectionProperty(type=bpy.types.OperatorFileListElement,
                               options={'HIDDEN', 'SKIP_SAVE'})
     directory: StringProperty(subtype='DIR_PATH', options={'HIDDEN', 'SKIP_SAVE'})
+    palette_alpha: EnumProperty(
+        name="Palette Alpha",
+        description="How a palettized (32P) texture's alpha is read",
+        items=[('AUTO', "Auto", "As the PS2 draws it when the palette was made for the PS2 "
+                                "(DEdit's Convert to 32P), else as stored"),
+               ('PS2', "PS2", "0x80 is opaque, and a palette with no alpha is opaque"),
+               ('STORED', "Stored", "As stored, as the PC engine draws it")],
+        default='AUTO')
 
     def execute(self, context):
         from . import textures
         paths = [os.path.join(self.directory, f.name) for f in self.files if f.name] \
             or [self.filepath]
         img = None
+        ps2 = {'AUTO': None, 'PS2': True, 'STORED': False}[self.palette_alpha]
         for path in paths:
             try:
-                img = textures.load_image(path)
+                img = textures.load_image(path, ps2_alpha=ps2)
             except (OSError, ValueError) as e:
                 self.report({'ERROR'}, "%s: %s" % (os.path.basename(path), e))
         if img is not None:
