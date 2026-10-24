@@ -171,10 +171,39 @@ everything else exact, the allocation counts the engine sizes its memory
 by included. The 31 chunked files from before the format settled (the
 games can't load them) are read and written back but not imported.
 
+## PS2 models (NOLF on the PlayStation 2)
+
+**File > Import > LithTech Model (.ltb)** reads them too (it tells them by
+their file type); **File > Export > LithTech PS2 Model (.ltb)** writes one.
+`docs/PS2LTB.md` has the format. The layout in Blender is the `.abc` one.
+What the PS2 adds:
+
+| PS2 | Blender |
+|---|---|
+| triangle strips | faces; rigid vertices told apart by position and normal (as the PC models' are) and moved from their node's space to model space; skeletal meshes from their unique vertices |
+| strip vertices' s t | the UV map |
+| names kept only as hashes | names from `lithtech/ps2ltb_names.txt`; an unknown one is `#xxxxxxxx` and exports as that hash |
+| a face on the same vertices as another (double-sided meshes) | its own copies of them (Blender's edit tools need it); `lt_ps2_unique` gives each vertex's number in the file |
+| the strips, raw positions and normals, stored weights and keys | `lt_ps2_strips`, `lt_ps2_position`, `lt_ps2_normal`, `lt_ps2_weights`, `lt_ps2_bones`, `lt_ps2_bone_map`, an action's `lt_ps2_tracks` |
+
+**Export.** Each value the import kept is written back while what Blender
+holds still matches it (positions, normals, weights, keys and socket
+transforms to within what Blender stores them as), so an unchanged model
+exports byte for byte: `tests/blender_roundtrip_ps2ltb.py` checks all 1,335
+models on both discs. An edited or new mesh is rebuilt: strips by a greedy
+walk, packed into VU buffers as the shipped files are, rigid when one bone
+deforms it all, else skeletal with the four strongest weights in 1/4096
+(`tests/blender_rebuild_ps2ltb.py` checks every model's meshes rebuild with
+the same triangles and weights). Nothing exported here has been run on a
+PS2. Skins are found as for `.abc` (SKINS beside MODELS, SKINS_PV beside
+MODELS_PV, in any letter case); PS2 skins are 8-bit palette DTX files.
+
 ## Not yet
 
 - Shogo/Blood 2-era `.abc` (its own module beside `lithtech/abc.py`).
 - Matrix-palette skeletal meshes are read and written but no shipped model
   uses them, so they're untested.
-- World files (`.dat`).
+- World files (`.dat`; the PS2's world `.ltb` files).
+- The skins NOLF's attribute files give weapon views' hands (the PC's and
+  the PS2's).
 - Reading the attribute files of NOLF and AvP2 to pick `.abc` skins (`.ltb` models already use MODELBUTES.TXT).

@@ -153,3 +153,25 @@ keys would have fitted the fine scale.
 
 Sockets: `u32 count`, 48 bytes each: quaternion, position, u32 0, u32
 node, u32 name hash (file multiplier), u32 name hash (multiplier 1), u32 0.
+
+## In Blender
+
+See `docs/BLENDER.md`. The import (`import_ps2ltb.py`) makes the usual
+armature and meshes: rigid vertices told apart by position and normal and
+moved to model space, skeletal meshes from their unique vertices, s t as
+UVs. What it keeps for export: the strips (as the file's vertex numbers,
+with each strip vertex's s t and u32, and the buffer starts), the raw
+positions and normals, the stored weights and bone map, the stored keys,
+bind matrices and socket transforms, the stored counts. The exporter
+(`export_ps2ltb.py`) writes each kept value back while what Blender holds
+still matches it (within what a float32 matrix or F-curve can hold), so
+every model imports and exports byte for byte
+(`tests/blender_roundtrip_ps2ltb.py`).
+
+An edited or new mesh is rebuilt: strips by a greedy walk, packed by the
+rules above, rigid when one bone deforms it all, else skeletal with the
+four strongest weights in 1/4096; new vertices get 0 for the unknown u32.
+`tests/blender_rebuild_ps2ltb.py` drops what the import kept from every
+model's meshes and checks the export rebuilds the same triangles and
+weights, and that a subdivided mesh exports. These files have been read
+back by this library and LithRez Studio but never run on a PS2.

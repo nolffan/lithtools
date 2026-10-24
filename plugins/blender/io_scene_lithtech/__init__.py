@@ -167,7 +167,7 @@ class EXPORT_SCENE_OT_lithtech_abc(bpy.types.Operator, ExportHelper):
 
 
 class IMPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ImportHelper):
-    """Import LithTech models (.ltb): NOLF2, Contract J.A.C.K. and Tron 2.0"""
+    """Import LithTech models (.ltb): NOLF2, Contract J.A.C.K., Tron 2.0 and NOLF on the PS2"""
     bl_idname = "import_scene.lithtech_ltb"
     bl_label = "Import LithTech Model"
     bl_options = {'REGISTER', 'UNDO', 'PRESET'}
@@ -206,12 +206,17 @@ class IMPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ImportHelper):
         description="Another directory to look for skins in")
 
     def execute(self, context):
-        from . import import_ltb
+        from . import import_ltb, import_ps2ltb
+        from .lithtech import ps2ltb
         paths = [os.path.join(self.directory, f.name) for f in self.files if f.name] \
             or [self.filepath]
         for path in paths:
             try:
-                import_ltb.load(context, path, scale=self.scale, face_front=self.face_front,
+                with open(path, "rb") as fh:
+                    head = fh.read(8)
+                # PS2 models (file type 2) share the extension
+                loader = import_ps2ltb if ps2ltb.is_ps2_model(head) else import_ltb
+                loader.load(context, path, scale=self.scale, face_front=self.face_front,
                                 import_animations=self.import_animations,
                                 child_animations=self.child_animations,
                                 import_lods=self.import_lods,
@@ -306,6 +311,56 @@ class EXPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ExportHelper):
         layout.prop(self, "use_selection")
         layout.prop(self, "export_animations")
         layout.prop(self, "version")
+
+
+class EXPORT_SCENE_OT_lithtech_ps2ltb(bpy.types.Operator, ExportHelper):
+    """Export an armature and its meshes as a PS2 NOLF model (.ltb, file type 2)"""
+    bl_idname = "export_scene.lithtech_ps2ltb"
+    bl_label = "Export LithTech PS2 Model"
+    bl_options = {'PRESET'}
+
+    filename_ext = ".ltb"
+    filter_glob: StringProperty(default="*.ltb", options={'HIDDEN'})
+
+    scale: FloatProperty(
+        name="Scale", default=1.0, min=1e-6, soft_min=0.001, soft_max=1000.0,
+        description="LithTech units per Blender unit (set from the scale the model was "
+                    "imported at)")
+    use_selection: BoolProperty(name="Selected Only", default=False,
+                                description="Only the selected meshes and sockets")
+    export_animations: BoolProperty(
+        name="Animations", default=True,
+        description="Write the armature's actions; without them the model gets one "
+                    "animation, \"base\", at the rest pose")
+
+    def invoke(self, context, event):
+        from . import export_abc
+        arm = export_abc.find_armature(context)
+        if arm is not None:
+            if "lt_scale" in arm and arm["lt_scale"]:
+                self.scale = 1.0 / arm["lt_scale"]
+            if not self.filepath or os.path.basename(self.filepath) == "untitled.ltb":
+                self.filepath = bpy.path.ensure_ext(arm.name, self.filename_ext)
+        return super().invoke(context, event)
+
+    def execute(self, context):
+        from . import export_abc, export_ps2ltb
+        try:
+            _, written = export_ps2ltb.save(
+                context, self.filepath, scale=self.scale, use_selection=self.use_selection,
+                export_animations=self.export_animations)
+        except export_abc.ExportError as e:
+            self.report({'ERROR'}, str(e))
+            return {'CANCELLED'}
+        self.report({'INFO'}, "Wrote " + ", ".join(os.path.basename(p) for p in written))
+        return {'FINISHED'}
+
+    def draw(self, context):
+        layout = self.layout
+        layout.use_property_split = True
+        layout.prop(self, "scale")
+        layout.prop(self, "use_selection")
+        layout.prop(self, "export_animations")
 
 
 # --------------------------------------------------------------------- #
@@ -455,6 +510,7 @@ def menu_import(self, context):
 def menu_export(self, context):
     self.layout.operator(EXPORT_SCENE_OT_lithtech_abc.bl_idname, text="LithTech Model (.abc)")
     self.layout.operator(EXPORT_SCENE_OT_lithtech_ltb.bl_idname, text="LithTech Model (.ltb)")
+    self.layout.operator(EXPORT_SCENE_OT_lithtech_ps2ltb.bl_idname, text="LithTech PS2 Model (.ltb)")
     self.layout.operator(EXPORT_IMAGE_OT_lithtech_dtx.bl_idname, text="LithTech Texture (.dtx)")
 
 
@@ -467,6 +523,7 @@ def menu_image(self, context):
 classes = (
     IMPORT_SCENE_OT_lithtech_ltb,
     EXPORT_SCENE_OT_lithtech_ltb,
+    EXPORT_SCENE_OT_lithtech_ps2ltb,
     IMPORT_SCENE_OT_lithtech_abc,
     EXPORT_SCENE_OT_lithtech_abc,
     IMPORT_IMAGE_OT_lithtech_dtx,
