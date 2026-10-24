@@ -75,6 +75,7 @@ jobs:
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
+          modules: qtmultimedia
           arch: linux_gcc_64
           cache: true
       # The xcb platform plugin's libraries, which linuxdeploy bundles.
@@ -113,6 +114,7 @@ jobs:
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
+          modules: qtmultimedia
           arch: win64_msvc2022_64
           cache: true
       - name: Build
@@ -149,6 +151,7 @@ jobs:
       - uses: jurplel/install-qt-action@v4
         with:
           version: ${{ env.QT_VERSION }}
+          modules: qtmultimedia
           arch: clang_64
           cache: true
       - name: Build

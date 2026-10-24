@@ -43,11 +43,11 @@ target_compile_definitions(lithrez PRIVATE LITHREZ_VERSION="${LITHTOOLS_VERSION}
 install(TARGETS lithrez RUNTIME DESTINATION bin)
 
 if(LITHREZ_BUILD_GUI)
-  find_package(Qt6 6.2 COMPONENTS Widgets OpenGL OpenGLWidgets)
+  find_package(Qt6 6.2 COMPONENTS Widgets OpenGL OpenGLWidgets Multimedia)
   if(Qt6_FOUND)
     add_subdirectory(gui)
   else()
-    message(WARNING "Qt 6 not found: LithRez Studio will not be built")
+    message(WARNING "Qt 6 (with Widgets, OpenGL and Multimedia) not found: LithRez Studio will not be built")
   endif()
 endif()
 

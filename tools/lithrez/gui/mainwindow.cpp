@@ -1,6 +1,7 @@
 #include "mainwindow.h"
 
 #include "modelview.h"
+#include "soundview.h"
 #include "stringtable.h"
 #include "textureview.h"
 #include "util.h"
@@ -81,7 +82,8 @@ QString typeLabel(const QString& ext) {
         {"DTX", "Texture"}, {"ABC", "Model"}, {"LTB", "Model"}, {"DAT", "World"}, {"WAV", "Sound"},
         {"TXT", "Text"}, {"DLL", "Library"}, {"LTO", "Object module"}, {"SPR", "Sprite"},
         {"PCX", "Image"}, {"TGA", "Image"}, {"BMP", "Image"}, {"MP3", "Sound"}, {"FXF", "Effects"},
-        {"FCF", "Effects"}, {"LTA", "LithTech text"}, {"BUT", "Attributes"}, {"CFG", "Config"}};
+        {"FCF", "Effects"}, {"LTA", "LithTech text"}, {"BUT", "Attributes"}, {"CFG", "Config"},
+        {"SGT", "Music segment"}, {"STY", "Music style"}, {"DLS", "Instruments"}, {"LIP", "Lip sync"}};
     auto it = names.find(ext.toUpper());
     return it != names.end() ? it->second + " (" + ext.toUpper() + ")" : (ext.isEmpty() ? "File" : ext.toUpper() + " file");
 }
@@ -184,6 +186,14 @@ void MainWindow::buildActions() {
         }
         v->resize(900, 700);
         v->show();
+    });
+
+    aSoundPlayer = mk(tr("S&ound Player..."), {}, none, [this] {
+        QString f = QFileDialog::getOpenFileName(this, tr("Open Sound"), {}, tr("Sounds (*.wav *.WAV)"));
+        if (f.isEmpty()) return;
+        QFile file(f);
+        if (!file.open(QIODevice::ReadOnly)) return;
+        openSound(file.readAll(), QFileInfo(f).fileName());
     });
 
     aCut = mk(tr("Cu&t"), QKeySequence::Cut, none, [this] { doCut(); });
@@ -307,6 +317,7 @@ void MainWindow::buildMenus() {
     QMenu* t = menuBar()->addMenu(tr("&Tools"));
     t->addAction(aTexViewer);
     t->addAction(aModelViewer);
+    t->addAction(aSoundPlayer);
     t->addAction(aStrings);
     t->addSeparator();
     t->addAction(aSettings);
@@ -441,6 +452,7 @@ void MainWindow::buildViews() {
     infoPreview_->setWordWrap(true);
     texPreview_ = new TextureView(previewStack_);
     modelPreview_ = new ModelView(previewStack_);
+    soundPreview_ = new SoundView(previewStack_);
     textPreview_ = new QPlainTextEdit(previewStack_);
     textPreview_->setReadOnly(true);
     textPreview_->setLineWrapMode(QPlainTextEdit::NoWrap);
@@ -448,6 +460,7 @@ void MainWindow::buildViews() {
     previewStack_->addWidget(infoPreview_);
     previewStack_->addWidget(texPreview_);
     previewStack_->addWidget(modelPreview_);
+    previewStack_->addWidget(soundPreview_);
     previewStack_->addWidget(textPreview_);
     previewDock_->setWidget(previewStack_);
     addDockWidget(Qt::RightDockWidgetArea, previewDock_);
@@ -455,6 +468,13 @@ void MainWindow::buildViews() {
     split->setSizes({260, 600});
     connect(aPreview, &QAction::toggled, previewDock_, &QDockWidget::setVisible);
     connect(previewDock_, &QDockWidget::visibilityChanged, aPreview, &QAction::setChecked);
+    // a sound stops when something else is previewed or the pane closes
+    connect(previewStack_, &QStackedWidget::currentChanged, this, [this] {
+        if (previewStack_->currentWidget() != soundPreview_) soundPreview_->stop();
+    });
+    connect(previewDock_, &QDockWidget::visibilityChanged, this, [this](bool on) {
+        if (!on) soundPreview_->stop();
+    });
     resize(1280, 800);
 }
 
@@ -845,6 +865,12 @@ void MainWindow::preview(Resource* r) {
             previewStack_->setCurrentWidget(modelPreview_);
             return;
         }
+    } else if (t == "WAV") {
+        previewStack_->setCurrentWidget(soundPreview_);   // first, so the last sound stops
+        if (soundPreview_->loadWav(readData(r), qs(r->file_name()), &err)) return;
+    } else if (t == "SGT" || t == "STY" || t == "DLS") {
+        err = tr("DirectMusic %1: LithRez Studio can't play DirectMusic yet.")
+                  .arg(t == "SGT" ? tr("segment") : t == "STY" ? tr("style") : tr("instrument collection"));
     } else if (isTextType(t) || r->size < 64 * 1024) {
         QByteArray b = readData(r).left(256 * 1024);
         bool text = !b.isEmpty() && std::count_if(b.begin(), b.end(), [](char c) {
@@ -890,6 +916,20 @@ QString MainWindow::tempExtract(const Resource* r) const {
     return dir + "/" + qs(r->file_name());
 }
 
+void MainWindow::openSound(const QByteArray& data, const QString& name) {
+    auto* v = new SoundView;
+    v->setAttribute(Qt::WA_DeleteOnClose);
+    v->setWindowTitle(name + " - LithRez Studio");
+    QString err;
+    if (!v->loadWav(data, name, &err)) {
+        QMessageBox::warning(this, tr("Sound Player"), err);
+        delete v;
+        return;
+    }
+    v->resize(700, 420);
+    v->show();
+}
+
 void MainWindow::openResource(Resource* r) {
     QString t = qs(r->type_string()).toUpper();
     if (t == "DTX") {
@@ -911,6 +951,10 @@ void MainWindow::openResource(Resource* r) {
         }
         v->resize(900, 700);
         v->show();
+        return;
+    }
+    if (t == "WAV") {
+        openSound(readData(r), qs(r->file_name()));
         return;
     }
     if (t == "DLL") {

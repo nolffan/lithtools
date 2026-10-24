@@ -1,7 +1,7 @@
 #pragma once
 // LithRez Studio's main window: an Explorer-like view of a .rez file (WinRez
 // LT's layout: folder tree on the left, contents on the right, location bar
-// with history), with a preview pane for textures, models and text.
+// with history), with a preview pane for textures, models, sounds and text.
 
 #include <QMainWindow>
 #include <QPointer>
@@ -25,6 +25,7 @@ class QPlainTextEdit;
 class QDockWidget;
 class TextureView;
 class ModelView;
+class SoundView;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -76,6 +77,7 @@ private:
     void onActivated(lithtech::rez::Directory* d, lithtech::rez::Resource* r);
     void preview(lithtech::rez::Resource* r);
     void openResource(lithtech::rez::Resource* r);
+    void openSound(const QByteArray& data, const QString& name);   // in a window of its own
     QByteArray readData(const lithtech::rez::Resource* r) const;
     QByteArray findSkin(const lithtech::rez::Resource* model, int index, int count) const;
     // The skins ATTRIBUTES/MODELBUTES.TXT gives a model (NOLF2, Contract
@@ -140,13 +142,14 @@ private:
     QStackedWidget* previewStack_ = nullptr;
     TextureView* texPreview_ = nullptr;
     ModelView* modelPreview_ = nullptr;
+    SoundView* soundPreview_ = nullptr;
     QPlainTextEdit* textPreview_ = nullptr;
     QLabel* infoPreview_ = nullptr;
     QToolBar* toolbar_ = nullptr;
     QWidget* locationBar_ = nullptr;
 
     QAction *aNew, *aProject, *aWizard, *aOpen, *aClose, *aSave, *aSaveAs, *aImport, *aMerge, *aInfo,
-        *aExit, *aTexViewer, *aStrings, *aModelViewer;
+        *aExit, *aTexViewer, *aStrings, *aModelViewer, *aSoundPlayer;
     QAction *aCut, *aCopy, *aPaste, *aSelectAll, *aDelete, *aRename;
     QAction *aExtract, *aExtractAll, *aInsert, *aInsertFolder, *aInsertEmpty;
     QAction *aToolbar, *aStatus, *aLocation, *aPreview, *aLarge, *aSmall, *aList, *aDetails, *aBack,

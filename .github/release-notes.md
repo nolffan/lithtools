@@ -12,7 +12,7 @@ No game data is included.
 ## The tools
 
 - **`lithrez`**: LithTech's resource compiler, rebuilt for Windows, Linux and macOS. The classic commands (`c`, `v`, `x`, `f`, `s`, `i`) work as LITHREZ 1.00 to 1.10 do, and the archives it creates are byte-identical to theirs. There are extra commands for debugging and build scripts, and `--time` (or `SOURCE_DATE_EPOCH`) gives reproducible archives. Run `lithrez help`.
-- **LithRez Studio**: browse, edit and create `.rez` files, with a texture viewer, a model preview and a `CRes.dll` string table editor. It succeeds WinRez LT Studio.
+- **LithRez Studio**: browse, edit and create `.rez` files, with a texture viewer, a model preview, a sound player and a `CRes.dll` string table editor. It succeeds WinRez LT Studio.
 - **Blender extension**: import and export of LithTech models, both NOLF and AvP2 `.abc` and NOLF2, Contract J.A.C.K. and Tron 2.0 `.ltb` (with skeletons, weights, LODs, sockets and animations), and of `.dtx` textures.
 
 The guide is [`tools/lithrez/README.md`](https://github.com/{{REPO}}/blob/{{TAG}}/tools/lithrez/README.md). The Blender extension's guide is [`plugins/blender/docs/BLENDER.md`](https://github.com/{{REPO}}/blob/{{TAG}}/plugins/blender/docs/BLENDER.md).

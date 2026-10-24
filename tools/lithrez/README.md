@@ -10,7 +10,8 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
 - **LithRez Studio** (`lithrez-studio`, Qt 6): a successor to WinRez LT Studio. It
   has an Explorer-style rez editor, a DTX texture viewer with thumbnails, a
   model preview for `.abc` (NOLF, AvP2) and `.ltb` (NOLF2, Contract
-  J.A.C.K., Tron 2.0) models, and a string table editor for `CRes.dll`.
+  J.A.C.K., Tron 2.0) models, a sound player, and a string table editor for
+  `CRes.dll`.
 - **`core/`**: the shared library (`lithtech::rez`, `lithtech::dtx`,
   `lithtech::abc`, `lithtech::ltb`, `lithtech::sound`, `lithtech::pe`).
 
@@ -25,13 +26,13 @@ cmake --build build
 ctest --test-dir build
 ```
 
-LithRez Studio needs Qt 6.2 or later (Widgets, OpenGL, OpenGLWidgets) and
-OpenGL 3.3. Without Qt only `lithrez` and the library are built. MP3
-decoding uses the vendored minimp3 (`third_party/minimp3`, CC0,
+LithRez Studio needs Qt 6.2 or later (Widgets, OpenGL, OpenGLWidgets,
+Multimedia) and OpenGL 3.3. Without Qt only `lithrez` and the library are
+built. MP3 decoding uses the vendored minimp3 (`third_party/minimp3`, CC0,
 with one fix described there).
 
 `docker/Dockerfile` is the Linux build environment used here (clang, CMake,
-Ninja, Qt 6, and FFmpeg for the sound tests):
+Ninja, Qt 6, and PulseAudio and FFmpeg for the sound tests):
 
 ```
 docker build -t lithtools-rez-dev tools/lithrez/docker
@@ -56,6 +57,16 @@ These read the game archives (never committed), so they aren't part of
   IMA recommendation's bitwise reference; FFmpeg uses a multiplying formula
   that rounds differently, and the script checks that is the only
   difference.
+- `sound_play_test <rez> <path>`: drives the sound preview on a real output
+  device: playback at real-time speed, pause and resume, seeking while
+  paused and while playing, looping (the sound's loop region if it has
+  one), and stopping at the end. In docker, use a PulseAudio null sink:
+
+  ```
+  pulseaudio -n --daemonize=yes --exit-idle-time=-1 \
+      --load=module-null-sink --load=module-native-protocol-unix
+  QT_QPA_PLATFORM=offscreen out/lithrez-build/tests/sound_play_test GAME.REZ CHARS/SND/X.WAV
+  ```
 
 ## lithrez
 
@@ -110,16 +121,26 @@ archive is the same as one built on Windows.
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
 - **Preview pane:** textures, models (`.abc` and `.ltb`) with their skins
-  and animations, text, and hex for everything else. For NOLF2, Contract
+  and animations, sounds, text, and hex for everything else. For NOLF2, Contract
   J.A.C.K. and Tron 2.0, skins come from the archive's own
   `ATTRIBUTES/MODELBUTES.TXT` when it has one. Double-click opens the texture viewer, the
-  model viewer, or (for a DLL) the string table editor; other files open
-  with their system program.
+  model viewer, the sound player, or (for a DLL) the string table editor;
+  other files open with their system program.
+- **Sounds:** `.wav` files in every codec the games use (PCM, IMA ADPCM,
+  MP3, float) play in the preview, with play/pause (Space), stop, a
+  waveform to click or drag through, loop, auto-play and volume. Beside it:
+  codec and MPEG details (version, stereo mode, constant or variable bit
+  rate), ADPCM block layout, duration, peak and RMS levels, compression,
+  INFO tags (title, software, copyright...), and LithTech's own data: the
+  `lith` chunk (buffer flags, random pitch range) and the loop the engine
+  plays (a cue point and its length), which is shaded on the waveform and
+  what Loop repeats. DirectMusic files (`.sgt`, `.sty`, `.dls`) don't play
+  yet.
 - **Settings:** case handling, compatibility (resource IDs), and the header
   title for new files. File > Rez File Information shows the header and lets
   you edit its title.
-- **Tools menu:** the texture viewer, model viewer and string editor, which
-  also work on loose files.
+- **Tools menu:** the texture viewer, model viewer, sound player and string
+  editor, which also work on loose files.
 
 Command line, with WinRez LT's switches:
 
