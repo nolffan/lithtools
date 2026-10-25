@@ -13,7 +13,7 @@ class QMenu;
 class TextureView : public QWidget {
     Q_OBJECT
 public:
-    enum class AlphaMode { Blend, Ignore, AlphaOnly };
+    enum class AlphaMode { Automatic, Blend, Ignore, AlphaOnly };
 
     explicit TextureView(QWidget* parent = nullptr);
     ~TextureView() override;

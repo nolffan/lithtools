@@ -118,7 +118,7 @@ struct TextureView::Impl {
     bool loaded = false;
     QString name;
     int mip = 0, face = 0;
-    AlphaMode alpha = AlphaMode::Blend;
+    AlphaMode alpha = AlphaMode::Automatic;
     bool ps2Alpha = false;
     double zoom = 0;      // 0 = fit
     QImage decoded;       // straight RGBA of the current level/face
@@ -156,6 +156,7 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     for (const char* f : {"+X", "-X", "+Y", "-Y", "+Z", "-Z"}) d->faceBox->addItem(QString::fromLatin1(f));
     d->faceBox->setToolTip(tr("Cube map face"));
     d->alphaBox = new QComboBox(this);
+    d->alphaBox->addItem(tr("Automatic"));
     d->alphaBox->addItem(tr("Alpha blended"));
     d->alphaBox->addItem(tr("Ignore alpha"));
     d->alphaBox->addItem(tr("Alpha only"));
@@ -348,7 +349,19 @@ void TextureView::refresh() {
     d->decoded = img;
     QImage shown;
     if (!img.isNull()) {
-        if (d->alpha == AlphaMode::Blend) {
+        AlphaMode alpha = d->alpha;
+        if (alpha == AlphaMode::Automatic) {
+            alpha = AlphaMode::Ignore;
+            for (int y = 0; y < img.height() && alpha == AlphaMode::Ignore; ++y) {
+                const uchar* row = img.constScanLine(y);
+                for (int x = 0; x < img.width(); ++x)
+                    if (row[x * 4 + 3]) {
+                        alpha = AlphaMode::Blend;
+                        break;
+                    }
+            }
+        }
+        if (alpha == AlphaMode::Blend) {
             shown = img;
         } else {
             shown = QImage(img.size(), QImage::Format_RGBA8888);
@@ -356,7 +369,7 @@ void TextureView::refresh() {
                 const uchar* s = img.constScanLine(y);
                 uchar* o = shown.scanLine(y);
                 for (int x = 0; x < img.width(); ++x, s += 4, o += 4) {
-                    if (d->alpha == AlphaMode::Ignore) {
+                    if (alpha == AlphaMode::Ignore) {
                         o[0] = s[0]; o[1] = s[1]; o[2] = s[2];
                     } else {
                         o[0] = o[1] = o[2] = s[3];
