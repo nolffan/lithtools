@@ -76,17 +76,22 @@ in vec3 vNormal;
 in vec2 vUV;
 uniform sampler2D uTex;
 uniform bool uUseTex;
+uniform bool uUseAlpha;
+uniform bool uTransparentPass;
 uniform bool uFlat;
 uniform vec3 uColor;
 out vec4 fragColor;
 void main() {
-    vec3 base = uUseTex ? texture(uTex, vUV).rgb : uColor;
+    vec4 texel = uUseTex ? texture(uTex, vUV) : vec4(uColor, 1.0);
+    float alpha = uUseTex && uUseAlpha ? texel.a : 1.0;
+    if (alpha <= 0.0 || uTransparentPass != (alpha < 1.0)) discard;
+    vec3 base = texel.rgb;
     if (uFlat) { fragColor = vec4(base, 1.0); return; }
     float len = length(vNormal);
     // A headlight: the light comes from the camera. Two-sided, since many
     // pieces are single sheets seen from both sides.
     float diff = len > 0.0 ? abs(normalize(vNormal).z) : 1.0;
-    fragColor = vec4(base * (0.35 + 0.65 * diff), 1.0);
+    fragColor = vec4(base * (0.35 + 0.65 * diff), alpha);
 }
 )";
 
@@ -97,6 +102,7 @@ struct GpuPiece {
     GLuint vao = 0, vbo = 0;
     GLuint texture = 0;      // shared, owned by the texture map
     int corners = 0;
+    std::vector<QVector3D> triangleCenters;
 };
 
 class GLView : public QOpenGLWidget {
@@ -119,7 +125,7 @@ public:
     const abc::Model* model = nullptr;
     std::vector<QImage> skins;           // by texture index; null for none
     int lod = 0;
-    bool wireframe = false, skeleton = false, textured = true;
+    bool wireframe = false, skeleton = false, textured = true, transparency = true;
     std::vector<abc::Mat4> matrices;     // current pose, model space
 
     QVector3D center;
@@ -232,16 +238,56 @@ protected:
         prog->setUniformValue("uMV", view);
         prog->setUniformValue("uTex", 0);
         prog->setUniformValue("uFlat", false);
+        prog->setUniformValue("uTransparentPass", false);
+        gl->glDisable(GL_BLEND);
         gl->glPolygonMode(GL_FRONT_AND_BACK, wireframe ? GL_LINE : GL_FILL);
+        struct TransparentTriangle { const GpuPiece* piece; int first; float depth; };
+        std::vector<TransparentTriangle> transparent;
         for (auto& gp : gpu) {
             if (!gp.corners) continue;
             bool useTex = textured && gp.texture;
             prog->setUniformValue("uUseTex", useTex);
+            bool useAlpha = useTex && transparency && alphaTextures.count(gp.texture) != 0;
+            prog->setUniformValue("uUseAlpha", useAlpha);
             prog->setUniformValue("uColor", QVector3D(0.7f, 0.7f, 0.7f));
             gl->glActiveTexture(GL_TEXTURE0);
             gl->glBindTexture(GL_TEXTURE_2D, useTex ? gp.texture : 0);
             gl->glBindVertexArray(gp.vao);
             gl->glDrawArrays(GL_TRIANGLES, 0, gp.corners);
+            if (useAlpha)
+                for (std::size_t i = 0; i < gp.triangleCenters.size(); ++i)
+                    transparent.push_back({&gp, int(i * 3), view.map(gp.triangleCenters[i]).z()});
+        }
+        if (!transparent.empty()) {
+            // Opaque texels already wrote depth. Blend the rest back to front,
+            // including triangles within the same piece (e.g. both sides of glass).
+            std::stable_sort(transparent.begin(), transparent.end(), [](const auto& a, const auto& b) {
+                return a.depth < b.depth;
+            });
+            prog->setUniformValue("uTransparentPass", true);
+            prog->setUniformValue("uUseTex", true);
+            prog->setUniformValue("uUseAlpha", true);
+            gl->glEnable(GL_BLEND);
+            gl->glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+            gl->glDepthMask(GL_FALSE);
+            std::vector<GLint> firsts;
+            std::vector<GLsizei> counts;
+            for (std::size_t i = 0; i < transparent.size();) {
+                const GpuPiece* gp = transparent[i].piece;
+                firsts.clear();
+                counts.clear();
+                do {
+                    firsts.push_back(transparent[i].first);
+                    counts.push_back(3);
+                    ++i;
+                } while (i < transparent.size() && transparent[i].piece == gp);
+                gl->glBindTexture(GL_TEXTURE_2D, gp->texture);
+                gl->glBindVertexArray(gp->vao);
+                gl->glMultiDrawArrays(GL_TRIANGLES, firsts.data(), counts.data(), GLsizei(firsts.size()));
+            }
+            gl->glDepthMask(GL_TRUE);
+            gl->glDisable(GL_BLEND);
+            prog->setUniformValue("uTransparentPass", false);
         }
         gl->glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
@@ -307,6 +353,7 @@ private:
     std::unique_ptr<QOpenGLShaderProgram> prog;
     std::vector<GpuPiece> gpu;
     std::map<int, GLuint> textures;
+    std::set<GLuint> alphaTextures;
     GLuint lineVao = 0, lineVbo = 0;
     bool texturesDirty = false, geometryDirty = false;
     QPointF last;
@@ -337,12 +384,22 @@ private:
         texturesDirty = false;
         for (auto& [k, t] : textures) gl->glDeleteTextures(1, &t);
         textures.clear();
+        alphaTextures.clear();
         for (std::size_t i = 0; i < skins.size(); ++i) {
             const QImage& img = skins[i];
             if (img.isNull()) continue;
             QImage rgba = img.convertToFormat(QImage::Format_RGBA8888);
             GLuint t = 0;
             gl->glGenTextures(1, &t);
+            // Some skins leave alpha entirely zero because it isn't opacity.
+            bool nonzeroAlpha = false, nonopaqueAlpha = false;
+            for (int y = 0; y < rgba.height(); ++y)
+                for (int x = 0; x < rgba.width(); ++x) {
+                    uchar a = rgba.constScanLine(y)[x * 4 + 3];
+                    nonzeroAlpha |= a != 0;
+                    nonopaqueAlpha |= a != 255;
+                }
+            if (nonzeroAlpha && nonopaqueAlpha) alphaTextures.insert(t);
             gl->glBindTexture(GL_TEXTURE_2D, t);
             gl->glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
             // Rows go up as stored, top row first (see the top of the file).
@@ -380,6 +437,7 @@ private:
             auto it = textures.find(piece.texture_index);
             g.texture = it == textures.end() ? 0 : it->second;
             g.corners = 0;
+            g.triangleCenters.clear();
             if (piece.lods.empty()) continue;
             const abc::LOD& L = piece.lods[std::size_t(std::clamp(lod, 0, int(piece.lods.size()) - 1))];
             std::vector<QVector3D> pos(L.vertices.size()), nor(L.vertices.size());
@@ -401,6 +459,7 @@ private:
                 for (int c = 0; c < 3; ++c)
                     if (t.indices[c] >= L.vertices.size()) ok = false;
                 if (!ok) continue;
+                g.triangleCenters.push_back((pos[t.indices[0]] + pos[t.indices[1]] + pos[t.indices[2]]) / 3.f);
                 for (int c : {0, 2, 1}) {
                     const QVector3D& p = pos[t.indices[c]];
                     const QVector3D& n = nor[t.indices[c]];
@@ -477,7 +536,7 @@ struct ModelView::Impl {
     QToolButton* play = nullptr;
     QSlider* slider = nullptr;
     QLabel* time = nullptr;
-    QCheckBox *loop = nullptr, *wire = nullptr, *skel = nullptr, *tex = nullptr;
+    QCheckBox *loop = nullptr, *wire = nullptr, *skel = nullptr, *tex = nullptr, *alpha = nullptr;
     QComboBox* lod = nullptr;
     QTimer timer;
     QElapsedTimer clock;
@@ -541,12 +600,16 @@ ModelView::ModelView(QWidget* parent) : QWidget(parent), d(new Impl) {
     d->lod->setToolTip(tr("Level of detail"));
     d->tex = new QCheckBox(tr("Textures"), this);
     d->tex->setChecked(true);
+    d->alpha = new QCheckBox(tr("Transparency"), this);
+    d->alpha->setChecked(true);
+    d->alpha->setToolTip(tr("Blend texture alpha; disable for skins that use alpha as a material mask"));
     d->wire = new QCheckBox(tr("Wireframe"), this);
     d->skel = new QCheckBox(tr("Skeleton"), this);
     auto* reset = new QPushButton(tr("Reset view"), this);
     bar2->addWidget(new QLabel(tr("LOD"), this));
     bar2->addWidget(d->lod);
     bar2->addWidget(d->tex);
+    bar2->addWidget(d->alpha);
     bar2->addWidget(d->wire);
     bar2->addWidget(d->skel);
     bar2->addStretch(1);
@@ -623,6 +686,10 @@ ModelView::ModelView(QWidget* parent) : QWidget(parent), d(new Impl) {
     });
     connect(d->tex, &QCheckBox::toggled, this, [this](bool on) {
         d->gl->textured = on;
+        d->gl->update();
+    });
+    connect(d->alpha, &QCheckBox::toggled, this, [this](bool on) {
+        d->gl->transparency = on;
         d->gl->update();
     });
     connect(d->wire, &QCheckBox::toggled, this, [this](bool on) {
@@ -725,7 +792,7 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
     d->applyPose();
     d->gl->frame();
     if (!d->glFailed) d->stack->setCurrentIndex(0);
-    for (QWidget* w : std::initializer_list<QWidget*>{d->anims, d->slider, d->lod, d->tex, d->wire, d->skel})
+    for (QWidget* w : std::initializer_list<QWidget*>{d->anims, d->slider, d->lod, d->tex, d->alpha, d->wire, d->skel})
         w->setEnabled(true);
     return true;
 }
@@ -747,7 +814,7 @@ void ModelView::clear() {
     }
     d->info->clear();
     d->time->clear();
-    for (QWidget* w : std::initializer_list<QWidget*>{d->anims, d->play, d->slider, d->lod, d->tex, d->wire, d->skel})
+    for (QWidget* w : std::initializer_list<QWidget*>{d->anims, d->play, d->slider, d->lod, d->tex, d->alpha, d->wire, d->skel})
         w->setEnabled(false);
     if (!d->glFailed) d->stack->setCurrentIndex(0);
 }
