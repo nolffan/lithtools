@@ -300,12 +300,14 @@ def find_skin(model_path, slot, n_slots, extra_dirs=(), explicit=(), report=None
 
 def make_material(name, image):
     mat = bpy.data.materials.new(name)
-    mat.use_nodes = True
     nt = mat.node_tree
-    bsdf = next((n for n in nt.nodes if n.type == 'BSDF_PRINCIPLED'), None)
-    if bsdf is not None:
-        bsdf.inputs["Roughness"].default_value = 0.8
-    if image is not None and bsdf is not None:
+    nt.nodes.clear()
+    bsdf = nt.nodes.new('ShaderNodeBsdfPrincipled')
+    bsdf.inputs["Roughness"].default_value = 0.8
+    output = nt.nodes.new('ShaderNodeOutputMaterial')
+    output.location = (bsdf.location.x + 320, bsdf.location.y)
+    nt.links.new(bsdf.outputs["BSDF"], output.inputs["Surface"])
+    if image is not None:
         tex = nt.nodes.new('ShaderNodeTexImage')
         tex.image = image
         tex.location = (bsdf.location.x - 320, bsdf.location.y)
