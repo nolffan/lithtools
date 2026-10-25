@@ -12,8 +12,8 @@
 class ModelView : public QWidget {
     Q_OBJECT
 public:
-    // Returns a skin's .dtx bytes for a texture slot, or an empty array.
-    using SkinLookup = std::function<QByteArray(int textureIndex, int textureCount)>;
+    // Returns a skin's .dtx bytes and sets its path, or returns an empty array.
+    using SkinLookup = std::function<QByteArray(int textureIndex, int textureCount, QString& path)>;
 
     explicit ModelView(QWidget* parent = nullptr);
     ~ModelView() override;
@@ -27,6 +27,9 @@ public:
     void setPose(int animation, float timeMs);
     void setViewAngles(float yawDegrees, float pitchDegrees);
     QImage grabFrame();
+
+signals:
+    void skinActivated(const QString& path);
 
 private:
     struct Impl;

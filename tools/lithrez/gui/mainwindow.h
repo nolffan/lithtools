@@ -78,10 +78,11 @@ private:
     void onActivated(lithtech::rez::Directory* d, lithtech::rez::Resource* r);
     void preview(lithtech::rez::Resource* r);
     void clearPreview();
+    void showResource(const QString& path);
     void openResource(lithtech::rez::Resource* r);
     void openSound(const QByteArray& data, const QString& name);   // in a window of its own (a .wav or a PS2 bank)
     QByteArray readData(const lithtech::rez::Resource* r) const;
-    QByteArray findSkin(const lithtech::rez::Resource* model, int index, int count) const;
+    QByteArray findSkin(const lithtech::rez::Resource* model, int index, int count, QString& path) const;
     // The skins ATTRIBUTES/MODELBUTES.TXT gives a model (NOLF2, Contract
     // J.A.C.K., Tron 2.0), by slot; empty if it doesn't list it.
     QStringList butesSkins(const lithtech::rez::Resource* model) const;

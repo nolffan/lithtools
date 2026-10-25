@@ -29,7 +29,8 @@
 #include <QOpenGLShaderProgram>
 #include <QOpenGLVersionFunctionsFactory>
 #include <QOpenGLWidget>
-#include <QPlainTextEdit>
+#include <QTextBrowser>
+#include <QUrl>
 #include <QPushButton>
 #include <QSlider>
 #include <QSplitter>
@@ -471,7 +472,7 @@ struct ModelView::Impl {
     QStackedWidget* stack = nullptr;
     QLabel* message = nullptr;
     GLView* gl = nullptr;
-    QPlainTextEdit* info = nullptr;
+    QTextBrowser* info = nullptr;
     QComboBox* anims = nullptr;
     QToolButton* play = nullptr;
     QSlider* slider = nullptr;
@@ -555,8 +556,11 @@ ModelView::ModelView(QWidget* parent) : QWidget(parent), d(new Impl) {
     d->stack = new QStackedWidget(this);
     auto* split = new QSplitter(Qt::Horizontal, d->stack);
     d->gl = new GLView(split);
-    d->info = new QPlainTextEdit(split);
-    d->info->setReadOnly(true);
+    d->info = new QTextBrowser(split);
+    d->info->setOpenLinks(false);
+    connect(d->info, &QTextBrowser::anchorClicked, this, [this](const QUrl& url) {
+        emit skinActivated(url.path());
+    }, Qt::QueuedConnection);
     d->info->setFont(QFont(QStringLiteral("monospace")));
     split->addWidget(d->gl);
     split->addWidget(d->info);
@@ -672,9 +676,11 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
     int maxSlot = slotSet.empty() ? -1 : *slotSet.rbegin();
     std::vector<QImage> images(std::size_t(maxSlot + 1));
     int found = 0;
+    QString skinDetails;
     if (skins)
         for (int s : slotSet) {
-            QByteArray b = skins(s, int(slotSet.size()));
+            QString path;
+            QByteArray b = skins(s, int(slotSet.size()), path);
             if (b.isEmpty()) continue;
             try {
                 auto t = dtx::read(std::vector<uint8_t>(b.begin(), b.end()));
@@ -684,6 +690,11 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
                     std::memcpy(q.scanLine(y), img.rgba.data() + std::size_t(y) * img.width * 4,
                                 std::size_t(img.width) * 4);
                 images[std::size_t(s)] = q;
+                QUrl url;
+                url.setScheme("skin");
+                url.setPath(path);
+                skinDetails += QStringLiteral("  Skin %1: <a href=\"%2\">%3</a>\n")
+                                   .arg(s).arg(url.toString(QUrl::FullyEncoded).toHtmlEscaped(), path.toHtmlEscaped());
                 ++found;
             } catch (const std::exception&) {
                 // an unreadable skin just leaves the piece grey
@@ -701,7 +712,9 @@ bool ModelView::loadAbc(const QByteArray& data, const QString& name, SkinLookup 
             d->lod->addItem(i == 0 ? tr("0 (full)")
                                    : QStringLiteral("%1 (%2)").arg(i).arg(double(d->model->lod_distances[i - 1])));
     }
-    d->info->setPlainText(infoText(*d->model, name, format, found, int(slotSet.size())));
+    QString info = infoText(*d->model, name, format, found, int(slotSet.size())).toHtmlEscaped();
+    if (!skinDetails.isEmpty()) info += QStringLiteral("\nSkin paths:\n") + skinDetails;
+    d->info->setHtml(QStringLiteral("<pre>%1</pre>").arg(info));
     d->gl->setModel(d->model.get(), std::move(images));
     // Start on the first animation's first key if there is one (often the
     // base pose), else the bind pose.

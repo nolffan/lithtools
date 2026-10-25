@@ -32,6 +32,7 @@
 #include <QHBoxLayout>
 #include <QHeaderView>
 #include <QInputDialog>
+#include <QItemSelectionModel>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QLineEdit>
@@ -168,11 +169,14 @@ void MainWindow::buildActions() {
         if (!file.open(QIODevice::ReadOnly)) return;
         auto* v = new ModelView;
         v->setAttribute(Qt::WA_DeleteOnClose);
+        connect(v, &ModelView::skinActivated, v, [](const QString& path) {
+            QDesktopServices::openUrl(QUrl::fromLocalFile(QFileInfo(path).absolutePath()));
+        });
         v->setWindowTitle(QFileInfo(f).fileName() + " - LithRez Studio");
         QString dir = QFileInfo(f).absolutePath();
         QString stem = QFileInfo(f).completeBaseName();
         QString err;
-        bool ok = v->loadAbc(file.readAll(), QFileInfo(f).fileName(), [dir, stem](int idx, int) -> QByteArray {
+        bool ok = v->loadAbc(file.readAll(), QFileInfo(f).fileName(), [dir, stem](int idx, int, QString& path) -> QByteArray {
             // SKINS beside MODELS, as NOLF and AvP2 lay them out.
             QDir d(dir);
             QStringList where = {dir};
@@ -191,7 +195,10 @@ void MainWindow::buildActions() {
             });
             if (idx < cands.size()) {
                 QFile s(cands[idx]);
-                if (s.open(QIODevice::ReadOnly)) return s.readAll();
+                if (s.open(QIODevice::ReadOnly)) {
+                    path = cands[idx];
+                    return s.readAll();
+                }
             }
             return {};
         }, &err);
@@ -468,6 +475,7 @@ void MainWindow::buildViews() {
     infoPreview_->setWordWrap(true);
     texPreview_ = new TextureView(previewStack_);
     modelPreview_ = new ModelView(previewStack_);
+    connect(modelPreview_, &ModelView::skinActivated, this, &MainWindow::showResource);
     soundPreview_ = new SoundView(previewStack_);
     bankPreview_ = new BankView(previewStack_);
     textPreview_ = new QPlainTextEdit(previewStack_);
@@ -831,11 +839,14 @@ QStringList MainWindow::butesSkins(const Resource* model) const {
     return it == butes_.end() ? QStringList() : it->second;
 }
 
-QByteArray MainWindow::findSkin(const Resource* model, int index, int count) const {
+QByteArray MainWindow::findSkin(const Resource* model, int index, int count, QString& path) const {
     // The game's own list first, where the archive carries it.
     QStringList listed = butesSkins(model);
     if (index < listed.size() && !listed[index].isEmpty())
-        if (Resource* r = archive_->root().find_path(ss(listed[index]))) return readData(r);
+        if (Resource* r = archive_->root().find_path(ss(listed[index]))) {
+            path = qs(r->path());
+            return readData(r);
+        }
     // Skins are chosen by the game's attribute files; guess as WinRez users
     // would: SKINS beside MODELS, <model>.dtx then <model>_*.dtx.
     if (!model->parent()) return {};
@@ -873,8 +884,41 @@ QByteArray MainWindow::findSkin(const Resource* model, int index, int count) con
     std::sort(others.begin(), others.end(), [](Resource* a, Resource* b) { return a->name < b->name; });
     exact.insert(exact.end(), others.begin(), others.end());
     (void)count;
-    if (index < int(exact.size())) return readData(exact[size_t(index)]);
+    if (index < int(exact.size())) {
+        Resource* r = exact[size_t(index)];
+        path = qs(r->path());
+        return readData(r);
+    }
     return {};
+}
+
+void MainWindow::showResource(const QString& path) {
+    if (!archive_) return;
+    Resource* r = archive_->root().find_path(ss(path));
+    if (!r) return;
+    {
+        // Finish navigation before selection handlers update the preview.
+        QSignalBlocker b1(details_), b2(icons_);
+        showDir(r->parent());
+        for (int i = 0; i < details_->topLevelItemCount(); ++i) {
+            auto* item = details_->topLevelItem(i);
+            if (item->data(0, PtrRole).value<quintptr>() == quintptr(r)) {
+                details_->setCurrentItem(item, 0, QItemSelectionModel::ClearAndSelect | QItemSelectionModel::Rows);
+                details_->scrollToItem(item);
+            }
+        }
+        for (int i = 0; i < icons_->count(); ++i) {
+            auto* item = icons_->item(i);
+            if (item->data(PtrRole).value<quintptr>() == quintptr(r)) {
+                icons_->setCurrentItem(item, QItemSelectionModel::ClearAndSelect);
+                icons_->scrollToItem(item);
+            }
+        }
+    }
+    preview(r);
+    stack_->currentWidget()->setFocus(Qt::OtherFocusReason);
+    updateActions();
+    status_->setText(tr("%1 selected (%2)").arg(1).arg(util::humanSize(r->size)));
 }
 
 void MainWindow::clearPreview() {
@@ -898,7 +942,7 @@ void MainWindow::preview(Resource* r) {
         }
     } else if (t == "ABC" || t == "LTB") {
         if (modelPreview_->loadAbc(readData(r), qs(r->file_name()),
-                                   [this, r](int i, int n) { return findSkin(r, i, n); }, &err)) {
+                                   [this, r](int i, int n, QString& path) { return findSkin(r, i, n, path); }, &err)) {
             previewStack_->setCurrentWidget(modelPreview_);
             return;
         }
@@ -996,9 +1040,10 @@ void MainWindow::openResource(Resource* r) {
     if (t == "ABC" || t == "LTB") {
         auto* v = new ModelView;
         v->setAttribute(Qt::WA_DeleteOnClose);
+        connect(v, &ModelView::skinActivated, this, &MainWindow::showResource);
         v->setWindowTitle(qs(r->file_name()) + " - LithRez Studio");
         QString err;
-        if (!v->loadAbc(readData(r), qs(r->file_name()), [this, r](int i, int n) { return findSkin(r, i, n); }, &err)) {
+        if (!v->loadAbc(readData(r), qs(r->file_name()), [this, r](int i, int n, QString& path) { return findSkin(r, i, n, path); }, &err)) {
             QMessageBox::warning(this, tr("Model"), err);
             delete v;
             return;

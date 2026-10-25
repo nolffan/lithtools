@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
     v.show();
     app.processEvents();
     QString err;
-    bool ok = v.loadAbc(slurp(model), model, [&](int i, int) {
+    bool ok = v.loadAbc(slurp(model), model, [&](int i, int, QString& path) {
+        if (i < skins.size()) path = skins[i];
         return i < skins.size() ? slurp(skins[i]) : QByteArray();
     }, &err);
     if (!ok) { std::printf("load failed: %s\n", qPrintable(err)); return 1; }
