@@ -553,6 +553,10 @@ void MainWindow::closeEvent(QCloseEvent* e) {
 }
 
 void MainWindow::newRez() {
+    QSignalBlocker b1(details_), b2(icons_);
+    clearPreview();
+    butesFrom_ = nullptr;
+    butes_.clear();
     archive_ = std::make_unique<Archive>();
     archive_->header.user_title = std::string(QSettings().value("userTitle", qs(std::string(rez::kLithTechUserTitle))).toString().toUtf8());
     path_.clear();
@@ -576,6 +580,10 @@ bool MainWindow::openRez(const QString& path) {
         QMessageBox::warning(this, tr("Open"), tr("Can't open %1:\n%2").arg(path, qs(e.what())));
         return false;
     }
+    QSignalBlocker b1(details_), b2(icons_);
+    clearPreview();
+    butesFrom_ = nullptr;
+    butes_.clear();
     archive_ = std::move(a);
     path_ = path;
     modified_ = false;
@@ -869,6 +877,16 @@ QByteArray MainWindow::findSkin(const Resource* model, int index, int count) con
     return {};
 }
 
+void MainWindow::clearPreview() {
+    previewStack_->setCurrentWidget(infoPreview_);
+    infoPreview_->clear();
+    texPreview_->clear();
+    modelPreview_->clear();
+    soundPreview_->clear();
+    bankPreview_->clear();
+    textPreview_->clear();
+}
+
 void MainWindow::preview(Resource* r) {
     if (!aPreview->isChecked() || !r) return;
     QString t = qs(r->type_string()).toUpper();
@@ -1095,6 +1113,10 @@ void MainWindow::doNewProject() {
     QApplication::setOverrideCursor(Qt::WaitCursor);
     auto a = rez::create_from_directory(ss(dir), createOptions(), rep);
     QApplication::restoreOverrideCursor();
+    QSignalBlocker b1(details_), b2(icons_);
+    clearPreview();
+    butesFrom_ = nullptr;
+    butes_.clear();
     archive_ = std::move(a);
     path_.clear();
     current_ = &archive_->root();
