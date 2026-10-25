@@ -26,6 +26,7 @@
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
@@ -58,6 +59,7 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <limits>
 #include <map>
 
 using namespace lithtech;
@@ -229,6 +231,7 @@ void MainWindow::buildActions() {
     aExtract = mk(tr("&Extract..."), QKeySequence(Qt::CTRL | Qt::Key_E), QStyle::SP_ArrowDown, [this] { doExtract(false); });
     aExtractAll = mk(tr("Extract &All..."), {}, none, [this] { doExtract(true); });
     aInsert = mk(tr("&Insert Files..."), QKeySequence(Qt::Key_Insert), QStyle::SP_ArrowUp, [this] { doInsertFiles(); });
+    aReplace = mk(tr("&Replace..."), {}, none, [this] { doReplace(); });
     aInsertFolder = mk(tr("Insert F&older..."), {}, none, [this] { doInsertFolder(); });
     aInsertEmpty = mk(tr("Insert Empty &Folder..."), QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_N), QStyle::SP_FileDialogNewFolder,
                       [this] { doInsertEmptyFolder(); });
@@ -317,6 +320,7 @@ void MainWindow::buildMenus() {
     o->addAction(aExtractAll);
     o->addSeparator();
     o->addAction(aInsert);
+    o->addAction(aReplace);
     o->addAction(aInsertFolder);
     o->addAction(aInsertEmpty);
 
@@ -444,6 +448,7 @@ void MainWindow::buildViews() {
     auto ctx = [this](const QPoint&) {
         QMenu m(this);
         m.addAction(aExtract);
+        if (sender() != tree_) m.addAction(aReplace);
         m.addAction(aInsert);
         m.addAction(aInsertFolder);
         m.addSeparator();
@@ -527,6 +532,7 @@ void MainWindow::updateActions() {
     aExtract->setEnabled(any || current_);
     aDelete->setEnabled(any);
     aRename->setEnabled(s.res.size() + s.dirs.size() == 1);
+    aReplace->setEnabled(s.res.size() == 1 && s.dirs.empty());
     aCut->setEnabled(any);
     aCopy->setEnabled(any);
     aPaste->setEnabled(!clipboard_.empty());
@@ -1470,6 +1476,40 @@ void MainWindow::doInsertFiles() {
     refreshContents();
     setModified();
     status_->setText(tr("Inserted %1 files").arg(n));
+}
+
+void MainWindow::doReplace() {
+    Sel s = selection();
+    if (!archive_ || s.res.size() != 1 || !s.dirs.empty()) return;
+    Resource* r = s.res[0];
+    QString path = QFileDialog::getOpenFileName(this, tr("Replace %1 with").arg(qs(r->file_name())),
+                                              QSettings().value("insertDir").toString());
+    if (path.isEmpty()) return;
+    QFile file(path);
+    if (!file.open(QIODevice::ReadOnly)) {
+        QMessageBox::warning(this, tr("Replace"), tr("Couldn't read %1:\n%2").arg(path, file.errorString()));
+        return;
+    }
+    if (file.size() > std::numeric_limits<uint32_t>::max()) {
+        QMessageBox::warning(this, tr("Replace"), tr("This file is too large for a rez resource."));
+        return;
+    }
+    QByteArray bytes = file.readAll();
+    if (file.error() != QFile::NoError) {
+        QMessageBox::warning(this, tr("Replace"), tr("Couldn't read %1:\n%2").arg(path, file.errorString()));
+        return;
+    }
+    r->source = rez::DataSource{};
+    r->source.kind = rez::DataSource::Kind::Memory;
+    r->source.bytes = std::make_shared<const std::vector<uint8_t>>(util::vb(bytes));
+    r->size = uint32_t(bytes.size());
+    r->time = rez::current_time(std::nullopt);
+    r->data_order = archive_->next_data_order();
+    if (r == butesFrom_) butesFrom_ = nullptr;
+    QSettings().setValue("insertDir", QFileInfo(path).absolutePath());
+    setModified();
+    showResource(qs(r->path()));
+    status_->setText(tr("Replaced %1; save the rez file to keep the change.").arg(qs(r->file_name())));
 }
 
 void MainWindow::doInsertFolder() {

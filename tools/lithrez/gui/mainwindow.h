@@ -99,6 +99,7 @@ private:
     void doMerge();
     void doExtract(bool all);
     void doInsertFiles();
+    void doReplace();
     void doInsertFolder();
     void doInsertEmptyFolder();
     void doDelete();
@@ -155,7 +156,7 @@ private:
     QAction *aNew, *aProject, *aWizard, *aOpen, *aClose, *aSave, *aSaveAs, *aImport, *aMerge, *aInfo,
         *aExit, *aTexViewer, *aStrings, *aModelViewer, *aSoundPlayer;
     QAction *aCut, *aCopy, *aPaste, *aSelectAll, *aDelete, *aRename;
-    QAction *aExtract, *aExtractAll, *aInsert, *aInsertFolder, *aInsertEmpty;
+    QAction *aExtract, *aExtractAll, *aInsert, *aInsertFolder, *aInsertEmpty, *aReplace;
     QAction *aToolbar, *aStatus, *aLocation, *aPreview, *aLarge, *aSmall, *aList, *aDetails, *aBack,
         *aForward, *aUp, *aRefresh;
     QAction *aSettings, *aHelp, *aAbout;
