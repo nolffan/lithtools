@@ -273,7 +273,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
     context.scene.collection.children.link(collection)
 
     skel = _Skeleton(m)
-    arm_obj, bone_names = import_abc._create_armature(context, collection, name, skel, scale)
+    arm_obj, bone_names = import_abc._create_armature(context, collection, name, skel, scale, align_bones=True)
     nodes = m.nodes
     parents = skel.node_parents()
     if face_front:
@@ -304,7 +304,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
     # were, for export while the bone stays where it was imported.
     for i, n in enumerate(nodes):
         b = arm_obj.data.bones[bone_names[i]]
-        back = convert.matrix_from_blender(b.matrix_local, 1.0 / scale)
+        back = convert.matrix_from_blender(convert.bone_matrix(b), 1.0 / scale)
         if max(abs(x - y) for x, y in zip(back, n.bind_matrix)) > 1e-5:
             b["lt_bind"] = list(n.bind_matrix)
 

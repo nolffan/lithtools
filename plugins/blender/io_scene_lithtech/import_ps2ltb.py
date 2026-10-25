@@ -211,7 +211,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
     context.scene.collection.children.link(collection)
 
     skel = _Skeleton(m)
-    arm_obj, bone_names = import_abc._create_armature(context, collection, name, skel, scale)
+    arm_obj, bone_names = import_abc._create_armature(context, collection, name, skel, scale, align_bones=True)
     parents = skel.node_parents()
     if face_front:
         arm_obj.rotation_euler = (0.0, 0.0, math.pi)

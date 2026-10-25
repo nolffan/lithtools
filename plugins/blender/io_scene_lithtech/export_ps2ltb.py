@@ -396,7 +396,8 @@ def save(context, filepath, *, armature=None, scale=1.0, use_selection=False, ex
         if use_selection and not e.select_get():
             continue
         bone = arm_obj.data.bones[e.parent_bone]
-        local_b = Matrix.Translation((0.0, bone.length, 0.0)) @ e.matrix_parent_inverse @ e.matrix_basis
+        local_b = (convert.bone_correction(bone).inverted() @
+                   Matrix.Translation((0.0, bone.length, 0.0)) @ e.matrix_parent_inverse @ e.matrix_basis)
         loc, rot, _ = local_b.decompose()
         pos, q = convert.transform_from_blender(Matrix.Translation(loc) @ rot.to_matrix().to_4x4(), scale)
         if "lt_socket_rotation" in e:

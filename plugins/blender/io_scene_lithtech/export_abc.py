@@ -90,7 +90,7 @@ def _build_skeleton(arm_obj, scale):
         node_bones.append(None)
     for b in bones:
         n = abc.Node(_lt_name(b, b.name), len(nodes), int(b.get("lt_flags", 0)),
-                     convert.matrix_from_blender(b.matrix_local, scale))
+                     convert.matrix_from_blender(convert.bone_matrix(b), scale))
         if b.parent is not None:
             by_bone[b.parent.name].children.append(n)
         elif len(roots) > 1:
@@ -407,6 +407,8 @@ def _animation_from_action(action, arm_obj, nodes, node_bones, rest_locals, scal
         else:
             c = chans.get(b.name, {})
             pb = arm_obj.pose.bones[b.name]
+            parent_axes_inv = convert.bone_correction(b.parent).inverted() if b.parent else Matrix.Identity(4)
+            axes = convert.bone_correction(b)
             for f in frames:
                 loc = Vector(_eval(c, "location", f, [0.0, 0.0, 0.0]))
                 if pb.rotation_mode == 'QUATERNION':
@@ -423,7 +425,8 @@ def _animation_from_action(action, arm_obj, nodes, node_bones, rest_locals, scal
                     rm = Euler(_eval(c, "rotation_euler", f, [0.0, 0.0, 0.0]),
                                pb.rotation_mode).to_matrix().to_4x4()
                 basis = Matrix.Translation(loc) @ rm
-                per.append(convert.transform_from_blender(rest_locals[ni] @ basis, scale))
+                local = parent_axes_inv @ rest_locals[ni] @ basis @ axes
+                per.append(convert.transform_from_blender(local, scale))
         transforms.append(per)
 
     anim = abc.Animation(action.get("lt_name", action.name),
@@ -557,7 +560,8 @@ def save(context, filepath, *, armature=None, scale=1.0, use_selection=False,
         if use_selection and not o.select_get():
             continue
         bone = arm_obj.data.bones[o.parent_bone]
-        local_b = Matrix.Translation((0.0, bone.length, 0.0)) @ o.matrix_parent_inverse @ o.matrix_basis
+        local_b = (convert.bone_correction(bone).inverted() @
+                   Matrix.Translation((0.0, bone.length, 0.0)) @ o.matrix_parent_inverse @ o.matrix_basis)
         loc, rot, _ = local_b.decompose()
         local_b = Matrix.Translation(loc) @ rot.to_matrix().to_4x4()
         pos, q = convert.transform_from_blender(local_b, scale)

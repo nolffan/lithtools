@@ -61,9 +61,19 @@ def _bone_lengths(binds, parents, default):
     return [min(max(l, default * 0.1), default * 4.0) for l in lengths]
 
 
-def _create_armature(context, collection, name, m, scale):
+def _joint_marker(name):
+    mesh = bpy.data.meshes.new(name)
+    verts = [(1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0), (0, 0, 1), (0, 0, -1)]
+    edges = [(i, j) for i in range(6) for j in range(i + 1, 6) if i // 2 != j // 2]
+    mesh.from_pydata(verts, edges, [])
+    # Referenced by the bones only; this isn't a scene mesh to render or export.
+    return bpy.data.objects.new(name, mesh)
+
+
+def _create_armature(context, collection, name, m, scale, align_bones=False):
     nodes = m.nodes
     parents = m.node_parents()
+    nonterminal = {p for p in parents if p >= 0}
     binds = [convert.matrix_to_blender(n.bind_matrix, scale) for n in nodes]
 
     arm = bpy.data.armatures.new(name)
@@ -84,6 +94,19 @@ def _create_armature(context, collection, name, m, scale):
         eb.head = (0.0, 0.0, 0.0)
         eb.tail = (0.0, lengths[i], 0.0)
         eb.matrix = binds[i]
+        if align_bones:
+            children = [j for j, p in enumerate(parents) if p == i
+                        and (binds[j].translation - eb.head).length > 1e-6]
+            if children:
+                child = min(children, key=lambda j: (binds[j].translation - eb.head).length)
+                eb.tail = binds[child].translation
+            elif parents[i] >= 0:
+                parent = ebones[parents[i]]
+                eb.tail = eb.head + (parent.tail - parent.head).normalized() * lengths[i]
+            if i not in nonterminal:
+                # Edit Mode still needs a nonzero bone, but not a long invented tail.
+                reference = ebones[parents[i]].length if parents[i] >= 0 else lengths[i]
+                eb.length = max(min(lengths[i], reference * 0.15), 1e-4 * scale)
         if parents[i] >= 0:
             eb.parent = ebones[parents[i]]
         ebones.append(eb)
@@ -91,10 +114,21 @@ def _create_armature(context, collection, name, m, scale):
     bpy.ops.object.mode_set(mode='OBJECT')
     view_layer.objects.active = prev_active
 
+    marker = None
     for i, n in enumerate(nodes):
         b = arm.bones[names[i]]
         b["lt_index"] = i
         b["lt_flags"] = n.flags
+        if align_bones:
+            correction = b.matrix_local.inverted() @ binds[i]
+            b["lt_axis_correction"] = [correction[r][c] for r in range(4) for c in range(4)]
+            if i not in nonterminal:
+                if marker is None:
+                    marker = _joint_marker(name + " joint marker")
+                pb = obj.pose.bones[names[i]]
+                pb.custom_shape = marker
+                pb.use_custom_shape_bone_size = False
+                pb.custom_shape_scale_xyz = (b.length * 0.5,) * 3
         if names[i] != n.name:
             b["lt_name"] = n.name
     return obj, names
@@ -218,6 +252,7 @@ def _create_socket(collection, arm_obj, bone_names, s, index, scale):
     # A bone child hangs off the bone's tail.
     obj.matrix_parent_inverse = Matrix.Identity(4)
     obj.matrix_basis = (Matrix.Translation((0.0, -bone.length, 0.0)) @
+                        convert.bone_correction(bone) @
                         convert.transform_to_blender(s.position, s.rotation, scale))
     obj["lt_socket"] = True
     obj["lt_index"] = index
@@ -259,6 +294,9 @@ def _create_action(arm_obj, action_name, anim, node_map, rest_inv_locals, scale,
         action["lt_key_strings_fps"] = fps
 
     for bi, (bone_name, ti) in enumerate(node_map):
+        bone = arm_obj.data.bones[bone_name]
+        parent_axes = convert.bone_correction(bone.parent) if bone.parent else Matrix.Identity(4)
+        axes_inv = convert.bone_correction(bone).inverted()
         if ti is None:
             # A node the animation's model doesn't have stays at rest (one
             # key, so it doesn't keep the pose of the action before).
@@ -269,7 +307,8 @@ def _create_action(arm_obj, action_name, anim, node_map, rest_inv_locals, scale,
             locs, rots = [], []
             prev = None
             for pos, rot in anim.node_transforms[ti]:
-                basis = rest_inv_locals[bi] @ convert.transform_to_blender(pos, rot, scale)
+                basis = (rest_inv_locals[bi] @ parent_axes @
+                         convert.transform_to_blender(pos, rot, scale) @ axes_inv)
                 loc, q, _ = basis.decompose()
                 if prev is not None and prev.dot(q) < 0.0:
                     q.negate()
@@ -305,7 +344,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
     collection = bpy.data.collections.new(name)
     context.scene.collection.children.link(collection)
 
-    arm_obj, bone_names = _create_armature(context, collection, name, m, scale)
+    arm_obj, bone_names = _create_armature(context, collection, name, m, scale, align_bones=True)
     nodes = m.nodes
     parents = m.node_parents()
 

@@ -46,6 +46,18 @@ def matrix_from_blender(m, scale=1.0):
     return tuple(r[i][j] for i in range(4) for j in range(4))
 
 
+def bone_correction(bone):
+    """From the source node's axes to the displayed Blender bone's axes."""
+    values = bone.get("lt_axis_correction")
+    return Matrix((values[0:4], values[4:8], values[8:12], values[12:16])) \
+        if values is not None else Matrix.Identity(4)
+
+
+def bone_matrix(bone):
+    """The source node's rest transform, including edits to the Blender bone."""
+    return bone.matrix_local @ bone_correction(bone)
+
+
 def transform_to_blender(position, rotation, scale=1.0):
     """A LithTech (position, (x, y, z, w)) pair as a Blender Matrix."""
     from .lithtech import abc
