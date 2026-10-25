@@ -246,6 +246,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
             explicit = found[1]
 
     images = {}
+    materials = {}
     lod_collection = None
     slot_count = len({p.texture for p in m.pieces})
     for pi, p in enumerate(m.pieces):
@@ -264,7 +265,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                         print("LithTech: skin %d of %s: %s" % (p.texture, name, e))
                         images[p.texture] = None
                 image = images[p.texture]
-            obj.data.materials.append(import_abc._material_for(name, p.texture, image))
+            obj.data.materials.append(import_abc._material_for(name, p.texture, image, materials))
             if li == 0:
                 collection.objects.link(obj)
             else:

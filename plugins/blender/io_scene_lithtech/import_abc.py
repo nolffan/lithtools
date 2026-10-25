@@ -134,12 +134,13 @@ def _create_armature(context, collection, name, m, scale, align_bones=False):
     return obj, names
 
 
-def _material_for(name, texture_index, image):
+def _material_for(name, texture_index, image, materials):
     mat_name = "%s_skin%d" % (name, texture_index)
-    mat = bpy.data.materials.get(mat_name)
+    mat = materials.get(texture_index)
     if mat is None:
         mat = textures.make_material(mat_name, image)
         mat["lt_texture_index"] = texture_index
+        materials[texture_index] = mat
     return mat
 
 
@@ -384,6 +385,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                         n.bind_matrix[12:16])).inverted_safe() for n in nodes]
     model_dir = os.path.dirname(filepath)
     images = {}
+    materials = {}
     lod_collection = None
     for pi, p in enumerate(m.pieces):
         image = None
@@ -393,7 +395,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                     filepath, p.texture_index, len({q.texture_index for q in m.pieces}),
                     texture_dirs)
             image = images[p.texture_index]
-        mat = _material_for(name, p.texture_index, image)
+        mat = _material_for(name, p.texture_index, image, materials)
         for li, lod in enumerate(p.lods):
             if li > 0 and not import_lods:
                 break

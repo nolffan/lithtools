@@ -319,6 +319,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
             explicit = found[1]
 
     images = {}
+    materials = {}
     lod_collection = None
     slot_count = len({lod.textures[0] for p in m.pieces for lod in p.lods if lod.texture_count})
     for pi, p in enumerate(m.pieces):
@@ -333,7 +334,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                 if slot not in images:
                     images[slot] = textures.find_skin(filepath, slot, slot_count, texture_dirs, explicit)
                 image = images[slot]
-            obj.data.materials.append(import_abc._material_for(name, slot, image))
+            obj.data.materials.append(import_abc._material_for(name, slot, image, materials))
             if lod.mesh.kind == ltb.VA_MESH:
                 _add_vertex_animation(obj, lod.mesh, m, scale)
             if li == 0:
