@@ -255,9 +255,8 @@ struct SoundView::Impl {
     qint64 toOut(qint64 f) const { return pcm.frames() ? qint64(double(f) * outFrames() / double(pcm.frames())) : 0; }
     qint64 fromOut(qint64 f) const { return outFrames() ? qint64(double(f) * double(pcm.frames()) / outFrames()) : 0; }
 
-    // Playback runs on the device's own clock (the time it has played since
-    // start(), which stops while suspended): position is the frame anchored
-    // at the last start or seek, plus the time played since.
+    // Position follows the sink's processed audio time. The output device
+    // may add latency before those samples reach the speakers.
     qint64 position() const {
         if (!sink || sink->state() == QAudio::StoppedState || sink->state() == QAudio::SuspendedState) return pos;
         qint64 out = anchorOut + qint64(double(sink->processedUSecs() - anchorUs) * outFormat.sampleRate() / 1e6);
@@ -265,12 +264,19 @@ struct SoundView::Impl {
         if (source.loop && b > a && out >= b) out = a + (out - a) % (b - a);
         return std::clamp<qint64>(fromOut(out), 0, qint64(pcm.frames()));
     }
-    // Reads on from a frame of the sound, without restarting the stream
-    // (which can take the device most of a second).
     void anchor(qint64 frame) {
         anchorOut = toOut(frame);
         anchorUs = sink ? sink->processedUSecs() : 0;
         source.at = anchorOut * outFormat.bytesPerFrame();
+    }
+    void restart(qint64 frame) {
+        sink->reset();
+        source.close();
+        // The PCM is already in memory; read-ahead would survive offset changes.
+        source.open(QIODevice::ReadOnly | QIODevice::Unbuffered);
+        anchor(frame);
+        anchorUs = 0;
+        sink->start(&source);
     }
 };
 
@@ -352,7 +358,11 @@ SoundView::SoundView(QWidget* parent) : QWidget(parent), d(new Impl) {
         qint64 p = d->position();
         // played to the end (the device's clock, in microseconds, can stop
         // a frame or so short of it)
-        if (!d->source.loop && qint64(d->pcm.frames()) - p <= d->pcm.sample_rate / 50) return stop();
+        if (!d->source.loop && qint64(d->pcm.frames()) - p <= d->pcm.sample_rate / 50) {
+            // Finish queued audio at natural completion; an explicit Stop discards it.
+            if (d->sink) d->sink->stop();
+            return stop();
+        }
         d->wave->playhead = p;
         d->wave->update();
         d->time->setText(timeText(double(p) / std::max(1, d->pcm.sample_rate)) + " / " + timeText(d->pcm.seconds()));
@@ -557,9 +567,9 @@ void SoundView::play() {
     d->source.loopFrom = d->loopEnd > d->loopStart && d->loopStart >= 0 ? d->toOut(d->loopStart) * bpf : 0;
     d->source.loopTo = d->loopEnd > d->loopStart && d->loopStart >= 0 ? d->toOut(d->loopEnd) * bpf : d->source.bytes.size();
     if (d->sink && d->sink->state() == QAudio::SuspendedState) {
-        if (d->seekWhilePaused) d->anchor(d->pos);
+        if (d->seekWhilePaused) d->restart(d->pos);
+        else d->sink->resume();
         d->seekWhilePaused = false;
-        d->sink->resume();
     } else {
         delete d->sink;
         d->sink = new QAudioSink(QMediaDevices::defaultAudioOutput(), d->outFormat, this);
@@ -573,11 +583,8 @@ void SoundView::play() {
                 d->status->show();
             }
         });
-        d->anchor(d->pos);
-        d->anchorUs = 0;
         d->seekWhilePaused = false;
-        if (!d->source.isOpen()) d->source.open(QIODevice::ReadOnly);
-        d->sink->start(&d->source);
+        d->restart(d->pos);
         if (d->sink->error() != QAudio::NoError) {
             d->status->setText(tr("Couldn't open the sound output device."));
             d->status->show();
@@ -600,9 +607,11 @@ void SoundView::stop() {
     if (d->sink) {
         QAudioSink* s = d->sink;
         d->sink = nullptr;
-        s->stop();
+        disconnect(s, nullptr, this, nullptr);
+        s->reset();
         s->deleteLater();
     }
+    d->source.close();
     d->timer.stop();
     d->pos = 0;
     d->play->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
@@ -629,7 +638,7 @@ bool SoundView::loopRegion(qint64& start, qint64& end) const {
 void SoundView::seek(qint64 frame) {
     frame = std::clamp<qint64>(frame, 0, qint64(d->pcm.frames()));
     d->pos = frame;
-    if (isPlaying()) d->anchor(frame);
+    if (isPlaying()) d->restart(frame);
     else d->seekWhilePaused = true;
     d->wave->playhead = frame;
     d->wave->update();
