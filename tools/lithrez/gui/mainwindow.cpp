@@ -850,7 +850,7 @@ QByteArray MainWindow::findSkin(const Resource* model, int index, int count, QSt
     // Skins are chosen by the game's attribute files; guess as WinRez users
     // would: SKINS beside MODELS, <model>.dtx then <model>_*.dtx.
     if (!model->parent()) return {};
-    std::string stem = model->name;
+    QString stem = qs(model->name);
     std::vector<Directory*> where = {model->parent()};
     for (Directory* p = model->parent(); p; p = p->parent()) {
         if (QString::compare(qs(p->name), "MODELS", Qt::CaseInsensitive) == 0 ||
@@ -870,17 +870,26 @@ QByteArray MainWindow::findSkin(const Resource* model, int index, int count, QSt
     }
     std::vector<Resource*> exact, others;
     uint32_t dtx = rez::type_from_string("DTX");
-    for (Directory* d : where)
-        for (auto& r : d->resources()) {
-            if (r->type != dtx) continue;
-            QString n = qs(r->name), st = qs(stem);
-            if (n.compare(st, Qt::CaseInsensitive) == 0) {
-                if (std::find(exact.begin(), exact.end(), r.get()) == exact.end()) exact.push_back(r.get());
-            } else if (n.startsWith(st, Qt::CaseInsensitive) && (n.size() > st.size()) &&
-                       (n[st.size()] == '_' || n[st.size()].isDigit())) {
-                if (std::find(others.begin(), others.end(), r.get()) == others.end()) others.push_back(r.get());
+    auto collect = [&](const QString& st) {
+        for (Directory* d : where)
+            for (auto& r : d->resources()) {
+                if (r->type != dtx) continue;
+                QString n = qs(r->name);
+                if (n.compare(st, Qt::CaseInsensitive) == 0) {
+                    if (std::find(exact.begin(), exact.end(), r.get()) == exact.end()) exact.push_back(r.get());
+                } else if (n.startsWith(st, Qt::CaseInsensitive) && (n.size() > st.size()) &&
+                           (n[st.size()] == '_' || n[st.size()].isDigit())) {
+                    if (std::find(others.begin(), others.end(), r.get()) == others.end()) others.push_back(r.get());
+                }
             }
-        }
+    };
+    collect(stem);
+    if (exact.empty() && others.empty() && model->type == rez::type_from_string("ABC")) {
+        // NOLF adds cinematic extensions to models, independently of skins.
+        static const QRegularExpression cinematic("[MT][0-9]+$", QRegularExpression::CaseInsensitiveOption);
+        auto m = cinematic.match(stem);
+        if (m.hasMatch() && m.capturedStart() > 0) collect(stem.left(m.capturedStart()));
+    }
     std::sort(others.begin(), others.end(), [](Resource* a, Resource* b) { return a->name < b->name; });
     exact.insert(exact.end(), others.begin(), others.end());
     (void)count;
