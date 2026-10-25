@@ -334,7 +334,7 @@ def _create_action(arm_obj, action_name, anim, node_map, rest_inv_locals, scale,
 
 def load(context, filepath, *, scale=1.0, face_front=True, import_animations=True,
          child_animations=True, import_lods=True, import_sockets=True,
-         import_textures=True, texture_dirs=()):
+         import_textures=True, texture_dirs=(), report=None):
     m = abc.read_file(filepath)
     name = os.path.splitext(os.path.basename(filepath))[0]
     fps = context.scene.render.fps / context.scene.render.fps_base
@@ -393,7 +393,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
             if p.texture_index not in images:
                 images[p.texture_index] = textures.find_skin(
                     filepath, p.texture_index, len({q.texture_index for q in m.pieces}),
-                    texture_dirs)
+                    texture_dirs, report=report)
             image = images[p.texture_index]
         mat = _material_for(name, p.texture_index, image, materials)
         for li, lod in enumerate(p.lods):

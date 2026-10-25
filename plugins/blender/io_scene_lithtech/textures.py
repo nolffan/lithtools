@@ -271,7 +271,7 @@ def skin_candidates(model_path, extra_dirs=()):
     return exact + others
 
 
-def find_skin(model_path, slot, n_slots, extra_dirs=(), explicit=()):
+def find_skin(model_path, slot, n_slots, extra_dirs=(), explicit=(), report=None):
     """A Blender image for skin slot `slot`, or None. explicit is a list of
     DTX paths by slot, from the import options."""
     path = None
@@ -282,6 +282,8 @@ def find_skin(model_path, slot, n_slots, extra_dirs=(), explicit=()):
         if slot < len(cands):
             path = cands[slot]
     if not path:
+        if report:
+            report({'WARNING'}, "%s: no DTX found for skin slot %d" % (os.path.basename(model_path), slot))
         return None
     for img in bpy.data.images:
         if img.get("lt_source") == path:
@@ -289,7 +291,10 @@ def find_skin(model_path, slot, n_slots, extra_dirs=(), explicit=()):
     try:
         return load_image(path)
     except (OSError, ValueError) as e:
-        print("LithTech: can't load skin %s: %s" % (path, e))
+        message = "Can't load skin %s: %s" % (path, e)
+        print("LithTech: " + message)
+        if report:
+            report({'WARNING'}, message)
         return None
 
 
