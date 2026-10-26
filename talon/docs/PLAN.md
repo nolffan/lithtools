@@ -136,6 +136,38 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       2001 CEditRegion is 0x128 bytes; ours still has the prefab
       manager), MakeWorldPVS, AddWorldModels, SaveDATFile; not written:
       GenerateSurfaces (needs the 2001 CEditPoly).
+    - [~] The six modules after Processing (2026-10-26, six agents in
+      parallel, one file each; 56.4% -> 62.4%): ProcessorOptions.cpp
+      (the Processing Options dialog, 0x442e30..0x4445fa, 34/36),
+      RaySelecter.cpp (ray selection, replacetextures, terrain surface
+      merging, 7/9), Terrain.cpp (5/8), TJunctions.cpp (6/8),
+      VisLeaves.cpp (unseen poly removal and the PVS's helpers, 20/22),
+      WorldApprox.cpp (FastApprox and MakePVS, 16/18). Left to fold in,
+      from their reports (all needed before the link, none changes a
+      score today):
+      - FixTJunctions returns void (0x4488c9); Processing.cpp says BOOL.
+      - Stand-ins to move into the shared headers: CTJPrePoly::CalcExtents
+        into CPrePoly, CTJPreSurface's subdivision test into CPreSurface,
+        WA_LeafList (CPreLeafList has no declared constructor: it is
+        built inline at 0x44b69f), CPrePortal::m_Unknown_3c is a PVector
+        centre, CPreSurface::m_pBrush is a CEditPoly*, PreLeaf.h's
+        m_Unknown_9c is a float.
+      - VisLeaves names its functions by role, WorldApprox_decl.h by
+        address; PVSInfo, PVSZone and LEAFF_FASTAPPROX are defined in
+        both headers; g_Unknown_485adc is the flooded CPrePortal*.
+      - CTJunctionFixer's arrays at 0x04 and 0x18 aren't the types
+        Processing.cpp gives them (their element vtable is 0x47575c).
+      - Function-table rows to split or drop: 0x444444 (inside
+        0x4443d0), 0x445a3f (half of 0x445a30), 0x44626b (inside
+        0x4461f0), 0x44a11c (half of 0x44a0f0), 0x44a200 (two functions,
+        0x44a200 and 0x44a400).
+      - streamsim.cpp (0x445910..0x445b75) doesn't compile only because
+        genltstream.h declares WriteString(const char*) where the LT2
+        SDK's ILTStream has a pure WriteString(char*).
+      - Unwritten neighbours: Processing's template code at
+        0x441ea0..0x442e10, MakePhysicsBlocks at 0x425d20 (Terrain.cpp
+        calls it as MakePhysicsBlocks_425d20), CPreWorld::
+        InitPolyVertexIndices (0x434170).
     - [ ] The MFC application (0x42f580..0x430a40).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
