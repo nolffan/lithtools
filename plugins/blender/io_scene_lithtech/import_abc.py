@@ -130,7 +130,13 @@ def _create_armature(context, collection, name, m, scale, align_bones=False):
         b["lt_bind_source"] = [binds[i][r][c] for r in range(4) for c in range(4)]
         b["lt_bind_baseline"] = [b.matrix_local[r][c] for r in range(4) for c in range(4)]
         if align_bones:
-            correction = b.matrix_local.inverted() @ binds[i]
+            # A pure rotation: some files' bind matrices are a little off
+            # orthonormal (NOLF's COSMONAUT_ACTION, by 6e-5), and a skewed
+            # correction multiplied into every animation key would make
+            # decomposing the keys drift. Unedited bones export their bind
+            # matrices from lt_bind_source, so nothing is lost.
+            raw = b.matrix_local.inverted() @ binds[i]
+            correction = Matrix.Translation(raw.translation) @ raw.to_quaternion().to_matrix().to_4x4()
             b["lt_axis_correction"] = [correction[r][c] for r in range(4) for c in range(4)]
             if i not in nonterminal:
                 if marker is None:
