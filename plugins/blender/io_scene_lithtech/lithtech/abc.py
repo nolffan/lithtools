@@ -82,6 +82,7 @@ class Triangle:
 class LOD:
     triangles: List[Triangle] = field(default_factory=list)
     vertices: List[Vertex] = field(default_factory=list)
+    texture_index: Optional[int] = None  # per-LOD material in imported DHNP models
 
 
 @dataclass
@@ -182,6 +183,8 @@ class Model:
     sockets: List[Socket] = field(default_factory=list)
     # One list per child model, in ChildModels order.
     anim_bindings: List[List[AnimBinding]] = field(default_factory=list)
+    source_format: str = ""
+    source_version: Optional[int] = None
 
     @property
     def nodes(self) -> List[Node]:
@@ -308,18 +311,20 @@ def compute_header_counts(m: Model) -> List[int]:
 #  Reading
 # --------------------------------------------------------------------- #
 
-def read_chunks(data) -> List[Tuple[str, int, int]]:
+def read_chunks(data, start=0) -> List[Tuple[str, int, int]]:
     """(name, start of body, end of body) for each chunk, in file order.
 
     A chunk is its name (uint16 + bytes), the offset of the next chunk
     (uint32, 0xFFFFFFFF for the last), then the body (mod_FindChunk)."""
     out = []
-    pos = 0
+    pos = start
     for _ in range(0x200):            # the engine's cap on the walk
         r = Reader(data, pos)
         name = r.string()
         nxt = r.u32()
         end = len(data) if nxt == END_OF_CHUNKS else nxt
+        if not r.pos <= end <= len(data):
+            raise ABCError("chunk %r has an invalid next offset" % name)
         out.append((name, r.pos, end))
         if nxt == END_OF_CHUNKS:
             return out

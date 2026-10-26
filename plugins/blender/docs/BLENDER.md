@@ -5,6 +5,14 @@ to 12: NOLF, AvP2; `.ltb` model file versions 18 to 25: NOLF2, Contract
 J.A.C.K., Tron 2.0) and textures (`.dtx`, version -5) in Blender 5.2 LTS
 and later.
 
+Die Hard: Nakatomi Plaza's wrapped `.ltb` files can also be imported through
+the LTB importer (wrapper version 3, model versions 9–13, ABC or D3D body).
+Rigid meshes and the two documented skeletal vertex layouts are supported.
+These imports use the shared skeleton, texture and animation handling.
+Export converts them to normal ABC 12 or PC LTB; the DHNP wrapper and its
+version 13 track extensions are not round-tripped. The layout reference is
+[StenApp's DHNP research](https://github.com/StenApp/io_scene_lithtech/blob/0969529990ea8620ad525d8fd89e2aeaeff76eef/research/LTB_D3D_MODEL_FILE_DHNP.bt).
+
 ## Installing
 
 Build the package and install it (or drag the zip onto Blender):

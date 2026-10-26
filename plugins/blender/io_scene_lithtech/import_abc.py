@@ -25,6 +25,7 @@ import bpy
 from mathutils import Matrix, Vector
 
 from .lithtech import abc
+from .lithtech import dhnp
 from . import convert
 from . import textures
 from . import animation
@@ -47,6 +48,12 @@ def _find_file_nocase(directory, name):
             return None
         cur = os.path.join(cur, match)
     return cur
+
+
+def _read_model(path):
+    with open(path, "rb") as f:
+        data = f.read()
+    return dhnp.read(data) if dhnp.is_model(data) else abc.read(data)
 
 
 def _bone_lengths(binds, parents, default):
@@ -340,7 +347,7 @@ def _create_action(arm_obj, action_name, anim, node_map, rest_inv_locals, scale,
 def load(context, filepath, *, scale=1.0, face_front=True, import_animations=True,
          child_animations=True, import_lods=True, import_sockets=True,
          import_textures=True, texture_dirs=(), report=None):
-    m = abc.read_file(filepath)
+    m = _read_model(filepath)
     name = os.path.splitext(os.path.basename(filepath))[0]
     fps = context.scene.render.fps / context.scene.render.fps_base
 
@@ -360,6 +367,13 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
         # works in the armature's own space, so this doesn't change the file.
         arm_obj.rotation_euler = (0.0, 0.0, math.pi)
     arm_obj["lt_version"] = m.version
+    if m.source_format:
+        arm_obj["lt_format"] = "dhnp"
+        arm_obj["lt_source_format"] = m.source_format
+        arm_obj["lt_source_version"] = m.source_version
+        if report:
+            report({'INFO'}, "%s: imported %s version %d; export converts to ABC or PC LTB" %
+                   (name, m.source_format, m.source_version))
     arm_obj["lt_command_string"] = m.command_string
     arm_obj["lt_internal_radius"] = m.internal_radius
     if m.lod_distances:
@@ -392,18 +406,19 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
     images = {}
     materials = {}
     lod_collection = None
+    slots = {p.texture_index if lod.texture_index is None else lod.texture_index
+             for p in m.pieces for lod in p.lods}
     for pi, p in enumerate(m.pieces):
-        image = None
-        if import_textures:
-            if p.texture_index not in images:
-                images[p.texture_index] = textures.find_skin(
-                    filepath, p.texture_index, len({q.texture_index for q in m.pieces}),
-                    texture_dirs, report=report)
-            image = images[p.texture_index]
-        mat = _material_for(name, p.texture_index, image, materials)
         for li, lod in enumerate(p.lods):
             if li > 0 and not import_lods:
                 break
+            slot = p.texture_index if lod.texture_index is None else lod.texture_index
+            image = None
+            if import_textures:
+                if slot not in images:
+                    images[slot] = textures.find_skin(filepath, slot, len(slots), texture_dirs, report=report)
+                image = images[slot]
+            mat = _material_for(name, slot, image, materials)
             obj_name = p.name if li == 0 else "%s_LOD%d" % (p.name, li)
             obj = _create_mesh_object(bind_inv, obj_name, lod, scale, bone_names)
             obj.data.materials.append(mat)
@@ -422,8 +437,11 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
             obj["lt_piece"] = p.name
             obj["lt_piece_index"] = pi
             obj["lt_lod"] = li
+            if m.source_format:
+                obj["lt_textures"] = [slot, 0, 0, 0]
+                obj["lt_texture_count"] = 1
             if li == 0:
-                obj["lt_texture_index"] = p.texture_index
+                obj["lt_texture_index"] = slot
                 obj["lt_specular_power"] = p.specular_power
                 obj["lt_specular_scale"] = p.specular_scale
                 obj["lt_lod_weight"] = p.lod_weight
@@ -456,7 +474,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                     print("LithTech: child model %r not found next to %s" % (c.name, filepath))
                     continue
                 try:
-                    cm = abc.read_file(path)
+                    cm = _read_model(path)
                 except abc.ABCError as e:
                     print("LithTech: can't read child model %s: %s" % (path, e))
                     continue

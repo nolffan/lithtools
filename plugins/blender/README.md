@@ -8,6 +8,7 @@ later):
 | No One Lives Forever, Aliens versus Predator 2 (and Primal Hunt) | `.abc`, versions 9 to 12 | DTX version -5 |
 | No One Lives Forever 2, Contract J.A.C.K., Tron 2.0 | `.ltb`, model file versions 18 to 25 | DTX version -5 |
 | No One Lives Forever (PS2) | `.ltb`, file type 2, version 16 | DTX version -5, 32P (palette alpha as the PS2 draws it) |
+| Die Hard: Nakatomi Plaza | wrapped `.ltb`, ABC or D3D body, import and conversion | DTX version -5 |
 
 meant to grow to every LithTech-era game.
 

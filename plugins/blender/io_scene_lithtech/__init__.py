@@ -207,16 +207,16 @@ class IMPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ImportHelper):
         description="Another directory to look for skins in")
 
     def execute(self, context):
-        from . import import_ltb, import_ps2ltb
-        from .lithtech import ps2ltb
+        from . import import_abc, import_ltb, import_ps2ltb
+        from .lithtech import dhnp, ps2ltb
         paths = [os.path.join(self.directory, f.name) for f in self.files if f.name] \
             or [self.filepath]
         for path in paths:
             try:
                 with open(path, "rb") as fh:
-                    head = fh.read(8)
+                    head = fh.read(20)
                 # PS2 models (file type 2) share the extension
-                loader = import_ps2ltb if ps2ltb.is_ps2_model(head) else import_ltb
+                loader = import_abc if dhnp.is_model(head) else (import_ps2ltb if ps2ltb.is_ps2_model(head) else import_ltb)
                 loader.load(context, path, scale=self.scale, face_front=self.face_front,
                                 import_animations=self.import_animations,
                                 child_animations=self.child_animations,
