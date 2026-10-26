@@ -59,8 +59,12 @@ TARGETS = [
          # build, so inside the range) and from 0x0045680f static MFC
          # (progress/Processor-avp2-map.md)
          built="src/LT2/built/Release/tools/Processor/Processor.exe", optional=True,
-         # until it links, its compiled objects are scored on their own
-         partial_objs=["src/LT2/built/Release/tools/Processor/*.obj"],
+         # until it links, its compiled objects are scored on their own,
+         # with the LT2 libraries its link will read
+         partial_objs=["src/LT2/built/Release/tools/Processor/*.obj",
+                       "src/LT2/lithshared/built/Release/Lib_StdLith/Lib_StdLith.lib",
+                       "src/LT2/lithshared/built/Release/Lib_ZLib/Lib_ZLib.lib",
+                       "src/LT2/lithshared/built/Release/RegMgr/regmgr.lib"],
          app=[(0x00401000, 0x0045680f)]),
     dict(label="Processor.exe (NOLF)", what="world processor, NOLF (Tools 001)", kind="image",
          shipped=NOLF + "/Processor.exe", stem="Processor-nolf", built=None, optional=True,

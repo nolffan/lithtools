@@ -28,7 +28,7 @@ in what order, `../INVENTORY.md` where every shipped binary comes from.
 |---|---|--:|--:|---|--:|--:|
 | `DEdit.exe` | world editor (Talon, Update 1/2) | 0 / 4,537 | 0 / 572,875 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 4,537 | 0 |
 | `ModelEdit.exe` | model editor (Talon, Update 1/2) | 0 / 1,908 | 0 / 221,282 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,908 | 0 |
-| `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 938 / 1,556 | 161,660 / 339,668 bytes | `█████████░░░░░░░░░░░` 47.5% | 494 | 151 |
+| `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 1,058 / 1,545 | 191,597 / 339,676 bytes | `███████████░░░░░░░░░` 56.4% | 348 | 198 |
 | `Processor.exe (NOLF)` | world processor, NOLF (Tools 001) | 0 / 2,739 | 0 / 415,152 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 2,739 | 0 |
 | `lithrez.exe` | resource (.rez) packer, LithRez 1.00 | 108 / 119 | 21,596 / 22,309 bytes | `███████████████████░` 96.8% | 0 | 3 |
 | `TProcessor.exe` | DirectEngine world processor (1998, NOLF Tools 001) | 0 / 1,313 | 0 / 236,426 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,313 | 0 |
@@ -50,7 +50,7 @@ in what order, `../INVENTORY.md` where every shipped binary comes from.
 | `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 0 / 426 | 0 / 50,246 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 426 | 0 |
 | `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 0 / 747 | 0 / 116,377 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 747 | 0 |
 | `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 0 / 747 | 0 / 116,377 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 747 | 0 |
-| **All** | | **1,151 / 24,701** | **202,363 / 3,120,908 bytes** | `█░░░░░░░░░░░░░░░░░░░` **6.4%** | **23,334** | **154** |
+| **All** | | **1,271 / 24,690** | **232,300 / 3,120,916 bytes** | `█░░░░░░░░░░░░░░░░░░░` **7.4%** | **23,188** | **201** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte
