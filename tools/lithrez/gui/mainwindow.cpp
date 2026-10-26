@@ -769,7 +769,7 @@ void MainWindow::startThumbnails() {
             if (li->data(KindRole).toInt() != KindRes) continue;
             auto* r = reinterpret_cast<Resource*>(li->data(PtrRole).value<quintptr>());
             if (r->type_string() != "DTX") continue;
-            QImage img = dtxThumbnail(readData(r), size);
+            QImage img = dtxThumbnail(readData(r), size, archive_->is_ps2());   // PS2 palettes: alpha as the PS2 draws it
             if (!img.isNull()) li->setIcon(QIcon(QPixmap::fromImage(img)));
             ++done;
         }
@@ -961,6 +961,7 @@ void MainWindow::preview(Resource* r) {
     QString t = qs(r->type_string()).toUpper();
     QString err;
     if (t == "DTX") {
+        texPreview_->setPs2Alpha(archive_ && archive_->is_ps2());
         if (texPreview_->loadDtx(readData(r), qs(r->file_name()), &err)) {
             previewStack_->setCurrentWidget(texPreview_);
             return;
@@ -1068,6 +1069,7 @@ void MainWindow::openResource(Resource* r) {
     if (t == "DTX") {
         auto* w = new TextureWindow;
         w->setAttribute(Qt::WA_DeleteOnClose);
+        w->view()->setPs2Alpha(archive_ && archive_->is_ps2());
         w->openData(readData(r), qs(r->file_name()));
         w->show();
         return;
