@@ -265,6 +265,30 @@ SOURCE=.\ProblemBrushes.cpp
 
 SOURCE=.\Processing.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\ProcessorOptions.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\RaySelecter.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Terrain.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\TJunctions.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\VisLeaves.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\WorldApprox.cpp
+# End Source File
 # End Group
 # End Target
 # End Project
