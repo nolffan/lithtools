@@ -119,6 +119,8 @@ def _create_armature(context, collection, name, m, scale, align_bones=False):
         b = arm.bones[names[i]]
         b["lt_index"] = i
         b["lt_flags"] = n.flags
+        b["lt_bind_source"] = [binds[i][r][c] for r in range(4) for c in range(4)]
+        b["lt_bind_baseline"] = [b.matrix_local[r][c] for r in range(4) for c in range(4)]
         if align_bones:
             correction = b.matrix_local.inverted() @ binds[i]
             b["lt_axis_correction"] = [correction[r][c] for r in range(4) for c in range(4)]

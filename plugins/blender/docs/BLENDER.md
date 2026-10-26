@@ -46,6 +46,12 @@ armature's own space, so the object's transform never reaches the file.
 gives a 1.8 m character); export *Scale* is the inverse and defaults to
 undo whatever the model was imported at.
 
+**Skeletons.** Bone heads retain the source joints, bone tails point toward
+child joints, and terminal nodes use small joint markers (short bones in
+Edit Mode). The original bind matrix and Blender's initial rest matrix are
+kept on each bone. Export uses the original matrix while the bone is
+unchanged; edited bones use their current matrix with the axis correction.
+
 **Skins.** The file names no textures: the game's attribute files pick
 them. The importer looks for `SKINS/<model>.dtx` beside the `MODELS`
 directory (NOLF and AvP2 keep `CHARS/MODELS/X.abc` with
@@ -65,7 +71,8 @@ named `lt_*`:
   string: shadows, `NormalRef` and so on), `lt_internal_radius`,
   `lt_lod_distances`, `lt_scale`, `lt_save_index`, and JSON for the weight
   sets, the child models and their animation bindings;
-- bones: `lt_index` (the order nodes are written in) and `lt_flags`;
+- bones: `lt_index` (the order nodes are written in), `lt_flags`,
+  `lt_bind_source`, `lt_bind_baseline` and `lt_axis_correction`;
 - piece objects: `lt_piece`, `lt_piece_index`, `lt_lod`,
   `lt_texture_index`, `lt_specular_power`, `lt_specular_scale`,
   `lt_lod_weight`;

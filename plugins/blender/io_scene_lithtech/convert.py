@@ -55,6 +55,11 @@ def bone_correction(bone):
 
 def bone_matrix(bone):
     """The source node's rest transform, including edits to the Blender bone."""
+    source, baseline = bone.get("lt_bind_source"), bone.get("lt_bind_baseline")
+    if source is not None and baseline is not None:
+        if all(abs(bone.matrix_local[r][c] - baseline[r * 4 + c]) <= 1e-6
+               for r in range(4) for c in range(4)):
+            return Matrix((source[0:4], source[4:8], source[8:12], source[12:16]))
     return bone.matrix_local @ bone_correction(bone)
 
 
