@@ -259,7 +259,7 @@ def _add_vertex_animation(obj, mesh, m, scale):
 
 def load(context, filepath, *, scale=1.0, face_front=True, import_animations=True,
          child_animations=True, import_lods=True, import_sockets=True,
-         import_textures=True, texture_dirs=()):
+         import_textures=True, texture_dirs=(), report=None):
     m = ltb.read_file(filepath)
     if isinstance(m, ltb.ChunkedModel):
         raise ltb.LTBError("%s is a chunked .ltb from before the format settled; the games can't "
@@ -332,7 +332,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
             image = None
             if import_textures and lod.texture_count:
                 if slot not in images:
-                    images[slot] = textures.find_skin(filepath, slot, slot_count, texture_dirs, explicit)
+                    images[slot] = textures.find_skin(filepath, slot, slot_count, texture_dirs, explicit, report=report)
                 image = images[slot]
             obj.data.materials.append(import_abc._material_for(name, slot, image, materials))
             if lod.mesh.kind == ltb.VA_MESH:

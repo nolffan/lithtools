@@ -201,7 +201,7 @@ def _create_lod_object(name, m, lod, scale, bone_names):
 
 def load(context, filepath, *, scale=1.0, face_front=True, import_animations=True,
          child_animations=True, import_lods=True, import_sockets=True,
-         import_textures=True, texture_dirs=()):
+         import_textures=True, texture_dirs=(), report=None):
     m = ps2ltb.read_file(filepath)
     name = os.path.splitext(os.path.basename(filepath))[0]
     fps = context.scene.render.fps / context.scene.render.fps_base
@@ -260,7 +260,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
             if import_textures:
                 if p.texture not in images:
                     try:
-                        images[p.texture] = textures.find_skin(filepath, p.texture, slot_count, texture_dirs, explicit)
+                        images[p.texture] = textures.find_skin(filepath, p.texture, slot_count, texture_dirs, explicit, report=report)
                     except Exception as e:   # a PS2 skin dtx.py can't decode yet
                         print("LithTech: skin %d of %s: %s" % (p.texture, name, e))
                         images[p.texture] = None

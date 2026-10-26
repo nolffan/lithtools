@@ -223,6 +223,7 @@ class IMPORT_SCENE_OT_lithtech_ltb(bpy.types.Operator, ImportHelper):
                                 import_lods=self.import_lods,
                                 import_sockets=self.import_sockets,
                                 import_textures=self.import_textures,
+                                report=self.report,
                                 texture_dirs=(bpy.path.abspath(self.texture_dir),)
                                 if self.texture_dir else ())
             except Exception as e:  # report every failure, keep going
