@@ -451,7 +451,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                     act["lt_dims"] = list(a.dims)
                     first = first or act
         if first is not None:
-            arm_obj.animation_data.action = first
+            import_abc.animation.activate(context, arm_obj, first)
 
     for o in context.view_layer.objects:
         o.select_set(False)

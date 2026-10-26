@@ -522,7 +522,10 @@ def menu_image(self, context):
     self.layout.operator(EXPORT_IMAGE_OT_lithtech_dtx.bl_idname, text="Save as LithTech Texture (.dtx)")
 
 
-classes = (
+from . import animation
+
+
+classes = animation.classes + (
     IMPORT_SCENE_OT_lithtech_ltb,
     EXPORT_SCENE_OT_lithtech_ltb,
     EXPORT_SCENE_OT_lithtech_ps2ltb,
@@ -539,12 +542,14 @@ classes = (
 def register():
     for c in classes:
         bpy.utils.register_class(c)
+    animation.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_export)
     bpy.types.IMAGE_MT_image.append(menu_image)
 
 
 def unregister():
+    animation.unregister()
     bpy.types.IMAGE_MT_image.remove(menu_image)
     bpy.types.TOPBAR_MT_file_export.remove(menu_export)
     bpy.types.TOPBAR_MT_file_import.remove(menu_import)

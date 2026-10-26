@@ -322,12 +322,15 @@ def _action_fcurves(action, arm_obj):
 
 def _actions_for(arm_obj, node_bones):
     name = arm_obj.name
-    own = [a for a in bpy.data.actions if a.get("lt_model") == name and "lt_child" not in a]
+    own = [a for a in bpy.data.actions if "lt_child" not in a and
+           (a.get("lt_rig") == name or ("lt_rig" not in a and a.get("lt_model") == name))]
     if not own:
         paths = {'pose.bones["%s"]' % bpy.utils.escape_identifier(b.name)
                  for b in node_bones if b is not None}
         for a in bpy.data.actions:
             if "lt_child" in a:
+                continue
+            if "lt_rig" in a and a["lt_rig"] != name:
                 continue
             if any(fc.data_path.split(".")[0] + "." + fc.data_path.split(".")[1]
                    in paths for fc in _action_fcurves(a, arm_obj)

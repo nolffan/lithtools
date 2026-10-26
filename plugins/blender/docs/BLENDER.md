@@ -46,6 +46,17 @@ armature's own space, so the object's transform never reaches the file.
 gives a 1.8 m character); export *Scale* is the inverse and defaults to
 undo whatever the model was imported at.
 
+**Animations.** Select the armature or one of its meshes and open
+**Object Properties > LithTech Animations**. Select an animation in the
+list to bind its Action and object slot, set the playback range and move
+to its first frame. **Play / Pause** and **Stop** control playback;
+**Rest Pose** clears the active Action and mutes NLA tracks. Child-model
+animations are labelled with their source file. **Register Active Action**
+adds an authored Action to this model's list and exports.
+Selecting an animation mutes existing NLA tracks so only the selected
+Action drives the rig. Switching Actions in Blender's Action Editor remains
+available.
+
 **Skeletons.** Bone heads retain the source joints, bone tails point toward
 child joints, and terminal nodes use small joint markers (short bones in
 Edit Mode). The original bind matrix and Blender's initial rest matrix are

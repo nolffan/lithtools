@@ -27,6 +27,7 @@ from mathutils import Matrix, Vector
 from .lithtech import abc
 from . import convert
 from . import textures
+from . import animation
 
 
 def _find_file_nocase(directory, name):
@@ -280,8 +281,9 @@ def _create_action(arm_obj, action_name, anim, node_map, rest_inv_locals, scale,
     """node_map: (bone name, index into anim.node_transforms) per bone."""
     action = bpy.data.actions.new(action_name)
     action.use_fake_user = True
-    ad = arm_obj.animation_data or arm_obj.animation_data_create()
-    ad.action = action
+    action["lt_rig"] = arm_obj.name
+    action.slots.new(id_type='OBJECT', name=arm_obj.name)
+    animation.assign(arm_obj, action)
 
     frames = [k.time * fps / 1000.0 for k in anim.keyframes]
     strings = []
@@ -297,6 +299,7 @@ def _create_action(arm_obj, action_name, anim, node_map, rest_inv_locals, scale,
         action["lt_key_strings_fps"] = fps
 
     for bi, (bone_name, ti) in enumerate(node_map):
+        arm_obj.pose.bones[bone_name].rotation_mode = 'QUATERNION'
         bone = arm_obj.data.bones[bone_name]
         parent_axes = convert.bone_correction(bone.parent) if bone.parent else Matrix.Identity(4)
         axes_inv = convert.bone_correction(bone).inverted()
@@ -468,7 +471,7 @@ def load(context, filepath, *, scale=1.0, face_front=True, import_animations=Tru
                     first = first or act
 
         if first is not None:
-            arm_obj.animation_data.action = first
+            animation.activate(context, arm_obj, first)
 
     for o in context.view_layer.objects:
         o.select_set(False)
