@@ -17,7 +17,9 @@ The same project's other half, `../jupiter/`, builds the next engine
 generation's tools (NOLF2, Contract J.A.C.K., Tron 2.0) from Build 69's
 source. The reconstruction method and tools are nolfsrc's, nolf2src's and
 cjacksrc's (`tools/`, `tools/guides/`); `docs/PLAN.md` says what is done
-in what order, `../INVENTORY.md` where every shipped binary comes from.
+in what order, `../INVENTORY.md` where every shipped binary comes from, and
+`RETAIL_BUGS.md` lists the bugs found in the retail tools, for fixing when
+they are re-implemented.
 
 ## Progress
 
