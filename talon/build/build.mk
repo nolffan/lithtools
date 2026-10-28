@@ -89,7 +89,9 @@ VC6PP   := $(TC)/msvc-6.00-9044
 CL      := $(VC6)/BIN/cl.exe
 LINK    := $(VC6)/BIN/link.exe
 LIBEXE  := $(VC6)/BIN/lib.exe
-RC      := $(VC6)/BIN/rc.exe
+# VC6's resource compiler is Developer Studio's (Common/MSDev98/Bin, with
+# RCDLL.DLL): the processor-pack toolchains have none, so SP6's
+RC      := $(TC)/msvc-6.00-9782/Common/MSDev98/Bin/RC.EXE
 
 # Windows paths: src/ is S:, toolchains/ T:, the rest Z:
 wz = z:$(subst /,\,$(1))
