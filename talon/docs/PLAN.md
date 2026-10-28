@@ -281,6 +281,29 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         0x423880 (BaseDelete<CMoArray<uint32>>, LightMapMaker's),
         0x4420b0/0x4420c0 (DefaultCache's Get/SetCacheSize), and
         0x441ea0..0x442ce0 are Processing.obj's template instances.
+      - Round 2 (2026-10-28, five agents, plus one on the threshold):
+        1376 -> 1390. Stand-ins (marked `talon: stand-in`, no behaviour
+        change): MakeHulls' three dead GetSize calls, MakeLeafLists' two
+        dead inline calls, Processing.cpp's closing `#pragma
+        inline_depth(7)`, CheckLeaves' dead `if(0)` use. Measured: the
+        number of `return`s (each one's destructor cleanup) and helper
+        depth decide the inline budget more than call-site position; a
+        VEC_* macro in place of an operator changes what inlines later;
+        `#pragma inline_depth` only affects template instances compiled at
+        the end of the TU.
+      - Empty functions: ours folds every empty `ret` function into one
+        (thd_Term, dsi_OnReturnError, CheckRegion, CPrePoly::Term, ...);
+        the shipped link has at least two, CheckRegion's (0x40a0a0, with
+        an empty function of BuildHulls', called at 0x40a018) apart from
+        the rest (0x42dd40). Why the shipped linker kept them apart is not
+        known yet. The scorer's verification of the 1-byte 0x42dd40 flips
+        with it (accepted as lost in round 2).
+      - Behaviour: processing AvP2 v1.0's Sample_DM.ed with default options
+        (out/runtest/, not in git), the shipped exe's .dat is deterministic
+        and ours (round 1) differs: the PhysicsBSP world model has 11169
+        nodes against 11126 (same points, planes, polies), and the VisBSP
+        model's bytes differ at equal counts. MakePhysicsBlocks (0x425d20,
+        84 bytes short) and the node-building code are the first suspects.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
