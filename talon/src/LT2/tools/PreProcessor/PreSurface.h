@@ -23,7 +23,8 @@
 
 	// The 2001 class, laid out from its constructor (0x4306e0),
 	// SetupLMVectors (0x430790) and the code that reads it. m_Unknown_*
-	// are members whose use is not known yet.
+	// are members whose use is not known yet. Its methods are
+	// ProcessorApp.cpp's (0x4306e0..0x430950), but the destructor.
 	class CPreSurface : public CGLLNode
 	{
 		public:
@@ -32,6 +33,10 @@
 							// talon (W2): out of line in 2001 (0x438a50, in PreWorld.cpp).
 							~CPreSurface();
 
+			// talon: 0x430740 (the name ours): FALSE for SURF_SKY or
+			// SURF_HULLMAKER surfaces, otherwise !(m_Flags & SURF_NOSUBDIV):
+			// whether the T-junction fixer may split its polies.
+			BOOL			ShouldSubdivide() const;
 			BOOL			ShouldLightmap() const;
 			void			SetupLMVectors();
 
@@ -44,8 +49,10 @@
 
 		public:
 
-			// The brush it came from (hull making reports it as a problem brush).
-			CEditBrush		*m_pBrush;
+			// The brush poly it came from (hull making reports it as a problem
+			// brush). talon: in 2001 a CEditPoly (GenerateSurfaces, 0x43fa90;
+			// RaySelect selects its m_pBrush, 0x4452c7).
+			CEditPoly		*m_pEditPoly;
 			// List of polies on this surface (BuildSurfacePolyLists).
 			CMultiLinkList<CPrePoly*> m_PolyList;
 

@@ -17,6 +17,7 @@
 #include "conparse.h"
 #include "splitpoly.h"
 #include "node.h"
+#include "TJunctions.h"
 
 
 // talon: other modules' interfaces, provisional until those modules are
@@ -31,23 +32,6 @@ void MergeSurfaces_RS(CPreWorld *pWorld);
 
 // The physics module (0x425d20): the physics blocks of a BSP.
 void MakePhysicsBlocks_425d20(CPreWorld *pWorld, BOOL bUnknown, char *pInfoString, BOOL bUnknown2);
-
-// The T-junction fixer (0x4479c0), as TJunctions_decl.h has it (its
-// FixTJunctions returns nothing) but for m_Unknown_18, which is not a
-// CMoArray<CPrePoly*>: its vtable (0x47575c, stored at 0x446d53) is not
-// that one's (0x4746b8: CPreSubBsp::m_Polies's, 0x433b02), and only as
-// another type does its inline destructor here share the failure paths'
-// tail as the shipped code does (0x446d46).
-class CTJunctionFixer
-{
-public:
-	void					FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys);
-
-	uint32							m_Unknown_00;
-	CMoArray< CMoArray<uint32> >	m_Unknown_04;
-	CMoArray<uint32>				m_Unknown_18;
-};
-
 
 // talon: the terrain section size (0x48577c), and the BSP being made of
 // how many (0x485780, 0x485784), for the progress bar.
@@ -144,8 +128,8 @@ void TerrainBspProgressFn(CBspGen *pBspGen, CReal fPercent)
 // (0x446b13..0x446c04): the header's Clear is PreWorld.cpp's (0x433b80).
 inline void TakePBlocks(PBlockTable &dest, PBlockTable &src)
 {
+	dest.m_vBlockSize	= src.m_vBlockSize;
 	dest.m_vMin			= src.m_vMin;
-	dest.m_Unknown_0c	= src.m_Unknown_0c;
 	dest.m_nBlocks[0]	= src.m_nBlocks[0];
 	dest.m_nBlocks[1]	= src.m_nBlocks[1];
 	dest.m_nBlocks[2]	= src.m_nBlocks[2];
@@ -153,8 +137,8 @@ inline void TakePBlocks(PBlockTable &dest, PBlockTable &src)
 	dest.m_nBlocksTotal	= src.m_nBlocksTotal;
 	dest.m_pBlocks		= src.m_pBlocks;
 
+	src.m_vBlockSize.Init();
 	src.m_vMin.Init();
-	src.m_Unknown_0c.Init();
 	src.m_nBlocks[0] = src.m_nBlocks[1] = src.m_nBlocks[2] = 0;
 	src.m_nBlocksXY = 0;
 	src.m_nBlocksTotal = 0;
@@ -165,7 +149,7 @@ inline void TakePBlocks(PBlockTable &dest, PBlockTable &src)
 // A terrain world model (0x446530): its polies split into sections on the
 // world tree, a BSP for each, then the world's T-junctions fixed.
 // Near (2703 bytes against 2634), the calls in the shipped order but for
-// the inline budget: the shipped code calls m_Unknown_0c.Init (0x446bce)
+// the inline budget: the shipped code calls m_vMin.Init (0x446bce)
 // and, at the end, ObjectBank::Free, AddHead (0x446de3), allPolies' SetSize2
 // and polies' and the fixer's _DeleteAndDestroyArray, where ours expands
 // them; and it places the allPolies.SetSize failure path (0x44696f) after

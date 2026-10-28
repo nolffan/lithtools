@@ -13,7 +13,26 @@
 #include "preworld.h"
 #include "processing.h"
 #include "splitpoly.h"
-#include "TJunctions_decl.h"
+#include "TJunctions.h"
+#include "Terrain.h"
+
+
+// CPrePoly::CalcExtents (0x449200; Build 69's): the poly's bounding box,
+// grown by fExpand.
+inline void CPrePoly::CalcExtents(PReal fExpand) const
+{
+	m_vExtentsMin = Pt(0);
+	m_vExtentsMax = m_vExtentsMin;
+
+	for (uint32 nVertLoop = 1; nVertLoop < NumVerts(); ++nVertLoop)
+	{
+		VEC_MIN(m_vExtentsMin, m_vExtentsMin, Pt(nVertLoop));
+		VEC_MAX(m_vExtentsMax, m_vExtentsMax, Pt(nVertLoop));
+	}
+
+	m_vExtentsMin -= fExpand;
+	m_vExtentsMax += fExpand;
+}
 
 
 // TRUE if the world's node list, or a sub-BSP's, is past what a WORD
@@ -118,8 +137,8 @@ static BOOL TJ_SplitPoly(CPreWorld *pWorld, CPrePoly **ppPoly, LTPlane *pPlane, 
 
 	sides[0]->FindTextureOrigin(NULL, TRUE, pWorld->m_pMainWorld->GetLMGridSize());
 	sides[1]->FindTextureOrigin(NULL, TRUE, pWorld->m_pMainWorld->GetLMGridSize());
-	((CTJPrePoly*)sides[0])->CalcExtents(0.01f);
-	((CTJPrePoly*)sides[1])->CalcExtents(0.01f);
+	sides[0]->CalcExtents(0.01f);
+	sides[1]->CalcExtents(0.01f);
 
 	sub_447940(pWorld, pWorld->m_Nodes, *ppPoly, sides[0], sides[1]);
 	for(i=0; i < pWorld->m_PolyArray; i++)
@@ -187,7 +206,7 @@ void CTJunctionFixer::FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys)
 
 	nVertsAdded = 0;
 	for(pos=pWorld->m_Polies; pos; )
-		((CTJPrePoly*)pWorld->m_Polies.GetNext(pos))->CalcExtents(0.01f);
+		pWorld->m_Polies.GetNext(pos)->CalcExtents(0.01f);
 
 	CMoArray<CPrePoly*> touching;
 	touching.SetCacheSize(512);
@@ -219,7 +238,7 @@ void CTJunctionFixer::FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys)
 		}
 
 		pPoly = pWorld->m_Polies.GetAt(pos);
-		if(bSplitPolys && ((CTJPreSurface*)pPoly->GetSurface())->sub_430740())
+		if(bSplitPolys && pPoly->GetSurface()->ShouldSubdivide())
 		{
 			bSplit = TRUE;
 		}

@@ -153,6 +153,10 @@
 			mutable PVector		m_vExtentsMin;
 			mutable PVector		m_vExtentsMax;
 
+			// talon: Build 69's (0x449200, in the T-junction module, which
+			// defines it).
+			void				CalcExtents(PReal = 0.0f) const;
+
 		protected:
 			
 			// Combination of PP_ flags.
