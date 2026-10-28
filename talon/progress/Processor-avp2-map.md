@@ -3,7 +3,9 @@
 Built 2001-10-03 with cl 12.00.8966; MFC 4.2 (nafxcw.lib, build 8569) and
 the C runtime (libcmt.lib, libcimt.lib) linked statically; STLport (its
 `_STL` exceptions are the only RTTI besides StdLith's CLithException
-family: no /GR). 1,534 functions in its own code, 0x00401000..0x0045680f.
+family: no /GR). 1,534 functions in its own code, 0x00401000..0x00456750, as the
+enumeration counts them: 17 of them are interior blocks of others
+(progress/Processor-avp2-screen-exclude.csv).
 
 ## Layout (libscan.py)
 
@@ -13,6 +15,7 @@ family: no /GR). 1,534 functions in its own code, 0x00401000..0x0045680f.
 | 0x0044eab0..0x00450ad0 | StdLith | src/LT2/lithshared/stdlith: identical to the AvP2 release's StdLith.lib |
 | 0x00450ad0..0x004564d2 | zlib 1.0.4 | src/LT2/lithshared/zlib: identical |
 | 0x004564e0..0x00456742 | RegMgr | src/LT2/lithshared/regmgr: identical |
+| 0x00456750..0x0045680f | MFC's inline functions (CMemoryException's and CNotSupportedException's constructors and destructors, AfxGetMainWnd, `??_9` vcall thunks) | the toolchain's |
 | 0x0045680f.. | MFC (nafxcw.lib), then the C runtime | the toolchain's |
 
 ## Build 69's code in it
