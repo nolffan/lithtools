@@ -25,11 +25,15 @@ CFG=Processor - Win32 Release
 # application linked with MFC and the C runtime statically (the shipped
 # image imports neither; its Rich header names nafxcw.lib's build 8569
 # objects and libcmt.lib's), VC6 SP5's compiler (8966) and linker, the LT2
-# libraries StdLith, zlib and RegMgr (lithshared.dsw). Its sources so far
-# are the shared engine and world code taken from Build 69.
+# libraries StdLith, zlib and RegMgr (lithshared.dsw). Its sources are the
+# 2001 processor's, written from the image, and the shared engine and world
+# code taken from Build 69 and brought back to 2001.
 #
-# talon: /FORCE:UNRESOLVED links the image while functions are still
-# missing, so that it has a map; it goes when nothing is.
+# talon: the sources are listed in the shipped image's module order
+# (progress/Processor-avp2-map.md), which the link keeps: nearly the file
+# names' order (Threads comes after the T-junctions; bdefs.cpp's
+# g_ReturnErrString is the first thing in .data, 0x47e100). The libraries' #pragma comment(lib) names
+# (\proj\libs\...) are not linked: the project links the LT2 ones.
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -62,8 +66,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 winmm.lib /nologo /subsystem:windows /machine:I386 /out:"..\..\built\Release\tools\Processor\Processor.exe" /FORCE:UNRESOLVED
-# ADD LINK32 winmm.lib /nologo /subsystem:windows /machine:I386 /out:"..\..\built\Release\tools\Processor\Processor.exe" /FORCE:UNRESOLVED
+# ADD BASE LINK32 winmm.lib /nologo /subsystem:windows /machine:I386 /out:"..\..\built\Release\tools\Processor\Processor.exe" /nodefaultlib:"\proj\libs\release\StdLithMFC.lib" /nodefaultlib:"\proj\libs\release\StdLith.lib" /nodefaultlib:"\proj\libs\release\zlib.lib" /nodefaultlib:"\Proj\Libs\Release\lith.lib" /nodefaultlib:"\proj\libs\release\regmgr.lib"
+# ADD LINK32 winmm.lib /nologo /subsystem:windows /machine:I386 /out:"..\..\built\Release\tools\Processor\Processor.exe" /nodefaultlib:"\proj\libs\release\StdLithMFC.lib" /nodefaultlib:"\proj\libs\release\StdLith.lib" /nodefaultlib:"\proj\libs\release\zlib.lib" /nodefaultlib:"\Proj\Libs\Release\lith.lib" /nodefaultlib:"\proj\libs\release\regmgr.lib"
 
 !ENDIF 
 
@@ -73,6 +77,18 @@ LINK32=link.exe
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
+# Begin Source File
+
+SOURCE=..\shared\world\BasePoly.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\bdefs.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\bindmgr.cpp
+# End Source File
 # Begin Source File
 
 SOURCE=.\BrushToWorld.cpp
@@ -103,19 +119,39 @@ SOURCE=.\MakeBsps.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\EditBrush2001.cpp
+SOURCE=..\shared\engine\dtxmgr.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\EditObjects2001.cpp
+SOURCE=..\shared\world\EditBrush.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\EditRegion2001.cpp
+SOURCE=..\shared\world\EditObjects.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\world\EditPoly.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\world\EditRegion.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=.\FindWorldModel.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\genericprop_setup.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\genltstream.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\geomroutines.cpp
 # End Source File
 # Begin Source File
 
@@ -135,30 +171,6 @@ SOURCE=.\LeakFile.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\shared\engine\pixelformat.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\streamsim.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\genltstream.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\dtxmgr.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\geomroutines.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\bindmgr.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\shared\engine\light_table.cpp
 # End Source File
 # Begin Source File
@@ -175,75 +187,11 @@ SOURCE=.\LightMapMaker.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\LightMapMaker_r1.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LightMapMaker_r2.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LightMapMaker_r3.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\..\sdk\inc\ltquatbase.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=..\shared\engine\mathlt_impl.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\world_tree.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\engine\genericprop_setup.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\PropList.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\WorldNode.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\BasePoly.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\EditBrush.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\EditPoly.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\EditPlane.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\EditObjects.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\PrefabMgr.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\PrefabRef.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\EditRegion.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Win\Threads.cpp
 # End Source File
 # Begin Source File
 
@@ -264,6 +212,10 @@ SOURCE=..\shared\engine\parse_world_info.cpp
 # Begin Source File
 
 SOURCE=.\PhysicsBlocks.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\pixelformat.cpp
 # End Source File
 # Begin Source File
 
@@ -303,7 +255,15 @@ SOURCE=.\ProcessorOptions.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\shared\world\PropList.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\RaySelecter.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\streamsim.cpp
 # End Source File
 # Begin Source File
 
@@ -315,6 +275,10 @@ SOURCE=.\TJunctions.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\Win\Threads.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\VisLeaves.cpp
 # End Source File
 # Begin Source File
@@ -323,7 +287,11 @@ SOURCE=.\WorldApprox.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\ProcessorTail.cpp
+SOURCE=..\shared\engine\world_tree.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\world\WorldNode.cpp
 # End Source File
 # End Group
 # End Target

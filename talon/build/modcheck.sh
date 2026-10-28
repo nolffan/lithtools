@@ -5,8 +5,8 @@
 #   build/modcheck.sh <target stem> <object stem> <lo> <hi>
 #   build/modcheck.sh Processor-avp2 BasePoly 0x401000 0x4029f0
 #
-# The object is built through build/build.mk (in the build container, with
-# WITH_PROCESSOR=1); the target's image and function table come from
+# The object is built through build/build.mk (in the build container); the
+# target's image and function table come from
 # progress/targets.py and out/reference/<stem>-functions.csv. Shipped rows
 # of the range that no function of the object matches are listed, then the
 # object's functions that match nothing (templates and initializers left out).
@@ -17,7 +17,7 @@ img=$(python3 -I -c "import sys; sys.path.insert(0,'progress'); import targets; 
 dir=$(python3 -I -c "import sys,os; sys.path.insert(0,'progress'); import targets; print(os.path.dirname(next(t['built'] for t in targets.TARGETS if t['stem']=='$tgt')))")
 O=$dir/$obj.obj
 docker run --rm --init -u "$(id -u):$(id -g)" -e HOME=/tmp/home -v "$PWD:/repo" -w /repo cjacksrc-build \
-    make -s -f build/build.mk WITH_PROCESSOR=1 ${PFX:+PFX=$PFX} "$O" 2>&1 | grep -E "error" | head -20
+    make -s -f build/build.mk ${PFX:+PFX=$PFX} "$O" 2>&1 | grep -E "error" | head -20
 [ -f "$O" ] || exit 1
 out=$(python3 -I tools/exematch.py "$img" "$O" 2>&1)
 echo "$out" | tail -1

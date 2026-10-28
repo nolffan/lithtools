@@ -33,8 +33,8 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     libraries (153/153, 82/82, 14/14): /MT, no /Ob2 for StdLith and zlib.
   - [x] The project (`src/LT2/tools/PreProcessor/Processor.dsw`), with the
     shared engine and world code taken from Build 69 (about 130 of its
-    functions match as Build 69 has them). Not in the default build until
-    it compiles: `make -f build/build.mk WITH_PROCESSOR=1`.
+    functions match as Build 69 has them). In the default build since it
+    links (2026-10-28).
   - [ ] Bring the shared classes back to 2001. Their class layouts come from
     the shipped vtables (tools/guides/07, `vtabaudit.py`, `vtabmap.py`): the
     LTA load/save methods Build 69 has are not in the 2001 classes, and
@@ -235,6 +235,23 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         VisQueryRequest and the two DoVisQuery virtuals; SaveNode belongs
         in a shared header; PBlockTable's first fields are the block
         size and the grid origin.
+    - [x] The link (2026-10-28): Processor.exe links with nothing
+      unresolved and nothing defined twice (no /FORCE), its sources in the
+      image's module order. The 2001 files are folded into the shared ones
+      (dtxmgr, EditBrush, EditObjects, EditPoly, EditRegion: the 2001 code
+      and classes; EditPlane, PrefabMgr and PrefabRef are not in the image
+      and left out of the project), LightMapMaker_r1/r2/r3 into
+      LightMapMaker.cpp, LeafPortals.cpp and lightmap_planes.cpp in place
+      of the drafts, the T-junction, PVS and vis-query stand-ins into
+      TJunctions.h, VisLeaves.h and world_tree.h; bdefs.cpp (Build 69's) is
+      the link's first object. Linked, the scorer verifies 47 more
+      functions identical (most of them small ones, by relocation) and
+      places all but 5 of ours. Left: the
+      header declaration-count threshold (tools/guides/09) keeps SaveNode
+      and PreSurfaceUser local to PreWorld.cpp, MakeBsps.cpp's
+      declarations of Processing's functions local, and cost some Build 69
+      declarations nothing links (dtx_Resize, dtx_Save, ..., EditBrush's
+      IsOpen, ...); the image has no resources yet (no .rc).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),

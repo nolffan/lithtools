@@ -52,15 +52,15 @@ TARGETS = [
     # (FORMATS.md). Static MFC; provisional ranges as the editors'.
     dict(label="Processor.exe (AvP2)", what="world processor, AvP2 (v1.0)", kind="image",
          shipped=AVP2 + "/Processor.exe", stem="Processor-avp2",
-         # src/LT2/tools/PreProcessor/Processor.dsw, built with
-         # WITH_PROCESSOR=1 while its sources do not all compile. Its own
-         # code is followed by the LT2 libraries (StdLith 0x0044eab0, zlib
+         # src/LT2/tools/PreProcessor/Processor.dsw (it links, with nothing
+         # unresolved, since 2026-10-28). Its own code is followed by the LT2 libraries (StdLith 0x0044eab0, zlib
          # 0x00450ad0, RegMgr 0x004564e0..0x00456742: Monolith's, ours to
          # build, so inside the range) and from 0x0045680f static MFC
          # (progress/Processor-avp2-map.md)
          built="src/LT2/built/Release/tools/Processor/Processor.exe", optional=True,
-         # until it links, its compiled objects are scored on their own,
-         # with the LT2 libraries its link will read
+         # without the image (a build stopped before the link), its
+         # compiled objects are scored on their own, with the LT2 libraries
+         # its link reads
          partial_objs=["src/LT2/built/Release/tools/Processor/*.obj",
                        "src/LT2/lithshared/built/Release/Lib_StdLith/Lib_StdLith.lib",
                        "src/LT2/lithshared/built/Release/Lib_ZLib/Lib_ZLib.lib",
