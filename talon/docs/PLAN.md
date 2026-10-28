@@ -266,16 +266,23 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         any second one (TestNode's 0x44dda0 can't be emitted that way).
       - CheckLeaves (0x4085a0) matches with a dead `if(0) free(&pLeaf)`
         that makes the leaf's stack store happen: a stand-in.
-      - Header changes measured whole-link and NOT applied (net zero or
-        worse, through the declaration-count threshold): CPrePolyRef as a
-        POD (PreWorld.obj -4 unmatched, but the link 1372 and 4 recorded
-        lost); CPreLeaf's 0x6c as a class of its own, CLeafListArray
-        {CMoArray<CPreLeafList*> m_Lists; uint16 m_iSameAs;}, with an
-        inline constructor (m_iSameAs = 0xFFFF) and destructor
-        (DeleteAndClearArray): CPreLeaf's constructor and destructor and
-        the wrapper's destructor (0x42d370) identical, but PreWorld's
-        static destructor 0x430a90 and 0x43f170 lost. Both are right about
-        the classes and want the threshold worked out first.
+      - The declaration-count threshold, worked out (2026-10-28,
+        tools/guides/09, "The declaration count is a symbol count, mod
+        64"): what decides those functions is the number of symbols the
+        front end has made before the point where the inlined function is
+        first needed, modulo 64. With it both header changes are in:
+        CPrePolyRef as a POD (-7 units, paid for with 57 units of Build 69
+        declarations nothing uses: the light groups, CheckNodes,
+        FindPolyByIndex, RemoveAllUnusedGeometry, GetWorldIndex, the two
+        Collect*BlockerPolys), and CPreLeaf's 0x6c as CLeafListArray (+21,
+        paid for by moving the portal functions to LeafPortals.h and the
+        leaf searches to PreGeometry.h, and dropping CalcPortalPlane,
+        which nothing defines). 0x42d060, 0x42d1c0, 0x42d370 and 0x43dad0
+        identical, nothing lost (1390 -> 1394). Left: 0x423880 is
+        unwritten again (unwritten 2 -> 3): it was paired with PreLeaf's
+        BaseDelete<CPreLeafList*>, which the new class no longer emits
+        out of line, as shipped doesn't; what belongs there is
+        LightMapMaker's BaseDelete<CMoArray<uint32>>.
       - Pairings the scorer gets wrong: 0x42d370 (that destructor, not
         DeleteAndClearArray2, which shipped expands in CalculateLightFrame),
         0x423880 (BaseDelete<CMoArray<uint32>>, LightMapMaker's),
@@ -297,7 +304,13 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         an empty function of BuildHulls', called at 0x40a018) apart from
         the rest (0x42dd40). Why the shipped linker kept them apart is not
         known yet. The scorer's verification of the 1-byte 0x42dd40 flips
-        with it (accepted as lost in round 2).
+        with it (accepted as lost in round 2): /OPT:ICF keeps the copy of
+        a different object whenever the link's functions change (one
+        unreferenced function added to Terrain.cpp moves it), the map
+        names the group under that object, and the scorer can place by
+        shape a copy the link dropped, which then can't be verified. With
+        progress.py trying the copies our map names first, 0x42dd40 and
+        0x40a0a0 are identical (1396).
       - Behaviour (2026-10-28): our exe processes all seven AvP2 v1.0
         sample worlds (Sample_DM, _Evac, _Evac_Events, _OverRun, _Marine,
         _Pred, _Alien; `Processor.exe <world.ed> -skipdialog`) to .dat
