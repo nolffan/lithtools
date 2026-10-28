@@ -38,13 +38,17 @@ add_executable(ps2ltb_verify ps2ltb_verify.cpp)
 target_link_libraries(ps2ltb_verify PRIVATE lithtech)
 # Sound decoding over whole archives; tests/compare_sound.py checks samples
 # against FFmpeg.
-# PCX: images made here, layout by layout; and every PCX of whole archives,
-# dumped for compare_pcx.py to check against ImageMagick.
+# PCX, TGA and BMP: images made here, layout by layout; and every image of
+# whole archives or folders, dumped for compare_images.py to check against
+# ImageMagick.
 add_executable(pcx_test pcx_test.cpp)
 target_link_libraries(pcx_test PRIVATE lithtech)
 add_test(NAME pcx_test COMMAND pcx_test)
-add_executable(pcx_decode_all pcx_decode_all.cpp)
-target_link_libraries(pcx_decode_all PRIVATE lithtech)
+add_executable(image_test image_test.cpp)
+target_link_libraries(image_test PRIVATE lithtech)
+add_test(NAME image_test COMMAND image_test)
+add_executable(image_decode_all image_decode_all.cpp)
+target_link_libraries(image_decode_all PRIVATE lithtech)
 add_executable(sound_decode_all sound_decode_all.cpp)
 target_link_libraries(sound_decode_all PRIVATE lithtech)
 add_executable(sound_test sound_test.cpp)
