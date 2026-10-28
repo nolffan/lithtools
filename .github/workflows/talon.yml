@@ -1,0 +1,168 @@
+# talon's reconstruction, built and checked against the shipped tools:
+#   make reference  the shipped tools, from the AvP2: Primal Hunt (Europe)
+#                   disc (the AvP2 Editing Tools and their sample data) and
+#                   the NOLF Game of the Year disc 2 (NOLF Tools 001)
+#   make            every reconstructed tool
+#   make progress   byte regressions: fails if a function recorded in
+#                   talon/progress/identical.txt is no longer byte-identical
+#   make test       behaviour: the shipped tools and ours run on the same
+#                   inputs must write the same files (talon/tests/README.md)
+#
+# The disc images come from archive.org through talon/rez/fetch-isos.sh
+# (the releases avp2-ph-eu and nolf-eu-goty: about 1.1 GB, checked against
+# talon/rez/isos/SHA256SUMS). The job "prepare" fetches them once, into a
+# cache keyed on that file, and builds the docker image -- cjacksrc's, the
+# one the Makefile runs every step in, from nolffan/cjacksrc at the commit
+# pinned below -- into a layer cache; "check" restores both.
+name: Talon
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    paths: ['talon/**', '.github/workflows/talon.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: talon-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  # nolffan/cjacksrc's docker/ (Ubuntu 24.04, its Wine 9.0, Xvfb)
+  CJACKSRC_REF: ab4f8377650590a9e088051c121dd68f470268cd
+  RELEASES: avp2-ph-eu nolf-eu-goty
+
+jobs:
+  prepare:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    outputs:
+      discs-key: ${{ steps.key.outputs.key }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # .gitmodules names the submodules by SSH; all of them are public, so
+      # fetch them over HTTPS instead. Only rez/ (the disc list and
+      # fetch-isos.sh) is needed here.
+      - name: Submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync
+          git submodule update --init --depth 1 talon/rez
+
+      - name: Cache key
+        id: key
+        run: echo "key=redump-talon-$(echo "$RELEASES" | tr ' ' -)-$(sha256sum talon/rez/isos/SHA256SUMS | cut -c1-64)" >> "$GITHUB_OUTPUT"
+
+      - name: Look for the disc images
+        id: discs
+        uses: actions/cache/restore@v4
+        with:
+          path: talon/rez/isos/*.zip
+          key: ${{ steps.key.outputs.key }}
+          lookup-only: true
+
+      # Checked against SHA256SUMS before it is saved.
+      - name: Fetch the disc images
+        if: steps.discs.outputs.cache-hit != 'true'
+        run: talon/rez/fetch-isos.sh $RELEASES
+
+      - name: Save the disc images
+        if: steps.discs.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: talon/rez/isos/*.zip
+          key: ${{ steps.key.outputs.key }}
+
+      - uses: actions/checkout@v4
+        with:
+          repository: nolffan/cjacksrc
+          ref: ${{ env.CJACKSRC_REF }}
+          path: cjacksrc
+          sparse-checkout: docker
+
+      # Written to the layer cache here, once; "check" only reads it.
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: cjacksrc/docker
+          tags: cjacksrc-build
+          cache-from: type=gha,scope=cjacksrc-build
+          cache-to: type=gha,mode=max,scope=cjacksrc-build
+
+  check:
+    needs: prepare
+    runs-on: ubuntu-24.04
+    timeout-minutes: 240
+    steps:
+      # The runner's preinstalled SDKs we never use: about 30 GB.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc \
+            /opt/hostedtoolcache/CodeQL /usr/local/share/boost
+          df -h /
+
+      - uses: actions/checkout@v4
+
+      # toolchains/ (the compilers), rez/ (the disc readers), tools/ (the
+      # reconstruction tools and the scorer).
+      - name: Submodules
+        run: |
+          git config --global url."https://github.com/".insteadOf "git@github.com:"
+          git submodule sync
+          git submodule update --init --depth 1 --jobs 3 talon/toolchains talon/rez talon/tools
+
+      - name: Restore the disc images
+        uses: actions/cache/restore@v4
+        with:
+          path: talon/rez/isos/*.zip
+          key: ${{ needs.prepare.outputs.discs-key }}
+          fail-on-cache-miss: true
+
+      # Downloads nothing (the zips are there): checks them and makes the .isos.
+      - name: Verify and convert the disc images
+        run: talon/rez/fetch-isos.sh $RELEASES
+
+      - uses: actions/checkout@v4
+        with:
+          repository: nolffan/cjacksrc
+          ref: ${{ env.CJACKSRC_REF }}
+          path: cjacksrc
+          sparse-checkout: docker
+
+      # Loaded as cjacksrc-build, which talon/Makefile runs every step in.
+      - uses: docker/setup-buildx-action@v3
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: cjacksrc/docker
+          tags: cjacksrc-build
+          load: true
+          cache-from: type=gha,scope=cjacksrc-build
+
+      - name: The shipped tools (make reference)
+        run: make -C talon reference
+
+      - name: Build (make)
+        run: make -C talon
+
+      - name: Byte regressions (make progress)
+        run: make -C talon progress
+
+      - name: Behaviour (make test)
+        run: make -C talon test
+
+      # What the tests wrote, both sides, for diffing a failure.
+      - name: Keep the test outputs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: talon-tests
+          path: |
+            talon/out/tests/
+            !talon/out/tests/wine/
+          if-no-files-found: ignore
