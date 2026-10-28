@@ -445,7 +445,7 @@ BOOL CProcessingOptionsDlg::OnInitDialog()
 		fclose(fp);
 	}
 
-	if(m_pGlobs->m_Unknown_4dc)
+	if(m_pGlobs->m_bSkipDialog)
 	{
 		EndDialog(IDOK);
 	}

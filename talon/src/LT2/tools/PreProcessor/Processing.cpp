@@ -26,8 +26,9 @@
 #include <errno.h>
 #include "lightmapmaker.h"
 #include "threads.h"
-#include "EditRegion2001_decl.h"
-#include "WorldApprox_decl.h"
+#include "editpoly.h"
+#include "VisLeaves.h"
+#include "TJunctions.h"
 
 // talon: the application's clock (ProcessorApp.cpp, 0x430210: winmm's
 // timeGetTime through its thunk).
@@ -37,28 +38,11 @@ DWORD ProcessorApp_GetTime();
 // talon: other modules' interfaces, provisional until those modules are
 // written (the names are ours).
 
-// The PVS maker (0x44b270; PVSInfo is WorldApprox_decl.h's).
+// The PVS maker (0x44b270; PVSInfo is VisLeaves.h's).
 uint32 MakePVS(PVSInfo *pInfo);
 
 // Finds the vis BSP's leaves (0x40c640).
 BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP);
-
-// What CTJunctionFixer's lists hold (FixTJunctions never touches them, so
-// the type is not known; the name is ours). Their vtable (0x47575c) is not
-// CMoArray<CPrePoly*>'s (0x4746b8), though its entries are the same code.
-class CTJUnknown;
-
-// The T-junction fixer (0x4479c0, its destructor 0x43f960). FixTJunctions
-// returns nothing (0x4488c9; TJunctions_decl.h).
-class CTJunctionFixer
-{
-public:
-	void					FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys);
-
-	uint32							m_Unknown_00;
-	CMoArray< CMoArray<CTJUnknown*> >	m_Unknown_04;	// vtable 0x47578c
-	CMoArray<CTJUnknown*>				m_Unknown_18;	// vtable 0x47575c
-};
 
 // talon: not matched yet: the template code this module emits for
 // m_Unknown_04 (0x441d30..0x442e10) expands less than ours, and than
@@ -114,9 +98,7 @@ CMoArray<CEditBrush*>		g_ProblemBrushes, g_OutOfBoundsBrushes;
 
 CStringHolder				g_StringHolder;
 
-// talon: the 2001 region (EditRegion2001_decl.h). The other modules still
-// take the Build 69 CEditRegion, so it is passed to them as one.
-CEditRegion2001				*g_InputRegion = NULL;
+CEditRegion					*g_InputRegion = NULL;
 FILE						*g_pLogFile = NULL;
 static char					g_InputFileTitle[MAX_PATH];
 CProcessorGlobs				*g_pGlobs = NULL;
@@ -126,7 +108,7 @@ BOOL						g_bMinimizeTCoords = TRUE;
 
 
 //---------------------Memory Allocation----------------------------//
-void* dalloc(unsigned int size)
+void* dalloc(uint32 size)
 {
 	void *pRet;
 
@@ -142,7 +124,7 @@ void dfree(void *ptr)
 	free(ptr);
 }
 
-void* dalloc_z(unsigned int size)
+void* dalloc_z(uint32 size)
 {
 	void *pRet;
 
@@ -509,7 +491,7 @@ void PVSProgressFn(float fPercent)
 }
 
 
-CEditBrush* FindBrushWithPoly(CEditRegion2001 *pRegion, CEditPoly *pPoly);
+CEditBrush* FindBrushWithPoly(CEditRegion *pRegion, CEditPoly *pPoly);
 
 // Makes the hulls; with SelectHullProblemBrushes, selects the brushes they
 // failed on and saves the ED file instead (0x43f5f0; the name is ours).
@@ -525,9 +507,9 @@ BOOL MakeHullsAndRemoveUnseen(CPreWorld *pWorld)
 	if(g_pGlobs->m_bSelectHullProblemBrushes && g_InputRegion)
 	{
 		nSelected = 0;
-		for(i=0; i < info.m_ProblemBrushes; i++)
+		for(i=0; i < info.m_ProblemPolies; i++)
 		{
-			pBrush = FindBrushWithPoly(g_InputRegion, (CEditPoly*)info.m_ProblemBrushes[i]);
+			pBrush = FindBrushWithPoly(g_InputRegion, info.m_ProblemPolies[i]);
 			if(pBrush)
 			{
 				g_InputRegion->SelectNode(pBrush);
@@ -550,7 +532,7 @@ BOOL MakeHullsAndRemoveUnseen(CPreWorld *pWorld)
 
 
 // The brush pPoly is in (0x43f7c0).
-CEditBrush* FindBrushWithPoly(CEditRegion2001 *pRegion, CEditPoly *pPoly)
+CEditBrush* FindBrushWithPoly(CEditRegion *pRegion, CEditPoly *pPoly)
 {
 	LPOS		pos;
 	CEditBrush	*pBrush;
@@ -604,30 +586,6 @@ CPrePlane* FindPlaneExact(CLinkedList<CPrePlane*> *pList, PVector &normal, PReal
 }
 
 
-// talon: the 2001 CEditPoly (0x88 bytes; EditObjects2001.cpp has the class
-// as CEditPoly2001): what GenerateSurfaces reads of it, on
-// EditRegion2001_decl.h's stand-in (the names of the unknown members by
-// offset).
-class CEditPoly2001_PR : public CEditPoly2001_ER
-{
-	public:
-
-		uint32						m_Unknown_2c[2];
-		PVector						O, P, Q;			// 0x34: the texture vectors
-		uint8						m_Ambient[3];		// 0x58: the surface's ambient light
-		// talon: m_Triangles (0x5c, a CMoArray<CBasePoly*>) and a dword
-		// (0x70) as padding: with them declared, DoProcessing's inline
-		// CMoArray destructor adds its two counts the other way round (the
-		// declaration-count threshold, tools/guides/09).
-		uint8						m_Unknown_5b[0x19];
-		char						*m_pTextureName;	// 0x74
-		uint32						m_Unknown_78;
-		void						*m_pUser1;			// 0x7c: the surface made for it
-		uint32						m_Unknown_80;
-		uint32						m_SurfaceFlags;		// 0x84: the poly's own surface flags
-};
-
-
 // (Build 69's.)
 #define NUM_PLANE_LISTS		128
 
@@ -647,7 +605,7 @@ void GenerateSurfaces(GenList<CEditBrush*> &brushes, CPreWorld *pWorld)
 {
 	uint32				j;
 	CEditBrush			*pBrush;
-	CEditPoly2001_PR	*pPoly;
+	CEditPoly			*pPoly;
 	CPreSurface			*pSurface;
 	CStringProp			*pProp;
 	PreSurfaceUser		*pUser;
@@ -666,7 +624,7 @@ void GenerateSurfaces(GenList<CEditBrush*> &brushes, CPreWorld *pWorld)
 
 		for(j=0; j < pBrush->m_Polies; j++)
 		{
-			pPoly = (CEditPoly2001_PR*)pBrush->m_Polies[j];
+			pPoly = pBrush->m_Polies[j];
 
 			// Setup the surface.
 			pSurface = new CPreSurface;
@@ -723,8 +681,7 @@ void GenerateSurfaces(GenList<CEditBrush*> &brushes, CPreWorld *pWorld)
 			pSurface->m_Ambient[2] = pPoly->m_Ambient[2];
 
 			pPoly->m_pUser1 = pSurface;
-			// talon: CPreSurface::m_pBrush is the poly it came from.
-			pSurface->m_pBrush = (CEditBrush*)pPoly;
+			pSurface->m_pEditPoly = pPoly;
 
 			pWorld->m_Surfaces.AddTail(pSurface);
 
@@ -1007,7 +964,7 @@ void WriteLeafIndex(CNode *pNode, FILE *fp)
 void OpenLogFile();
 void CloseLogFile();
 BOOL LoadEDFile();
-void RemoveDetailBrushes(CEditRegion2001 *pRegion);
+void RemoveDetailBrushes(CEditRegion *pRegion);
 BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded, BOOL bLoadObjects);
 BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly);
 void ShowStatusText(DWORD startTime, DWORD endTime);
@@ -1030,7 +987,7 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 	pGlobs->m_bMakingWorldModel = FALSE;
 	startTime = ProcessorApp_GetTime();
 
-	g_InputRegion = new CEditRegion2001;
+	g_InputRegion = new CEditRegion;
 
 	CHelpers::ExtractNames(g_pGlobs->m_InputFile, NULL, NULL, g_InputFileTitle, NULL);
 	OpenLogFile();
@@ -1280,7 +1237,7 @@ BOOL LoadEDFile()
 
 // Removes the brushes with a detail level above MaxDetail (0x441370; the
 // name is ours). Their children go to the root.
-void RemoveDetailBrushes(CEditRegion2001 *pRegion)
+void RemoveDetailBrushes(CEditRegion *pRegion)
 {
 	LPOS		pos, curPos;
 	CEditBrush	*pBrush;
@@ -1556,4 +1513,12 @@ void WriteVisibleLeaves(CPreLeafList *pList, uint32 *pBit, CNode *pNode, FILE *f
 
 	if(IsValidNode(pBack) && ReadVisBit(pList, pBit))
 		WriteVisibleLeaves(pList, pBit, pBack, fp);
+}
+
+
+// talon: CheckRegion (the name ours) does nothing: LoadEDFile's call
+// (0x4412f4) goes to 0x40a0a0, a `ret` the shipped link folded with
+// classbind's cb_CheckClassDefs (whose call is 0x40a018).
+void CheckRegion(CEditRegion *pRegion)
+{
 }

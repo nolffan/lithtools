@@ -1,5 +1,3 @@
-// n
-// add=1 SetSize2(0, &g_DefAlloc) ov=0
 // talon: 0x00425b10..0x004282c0, after parse_world_info: the physics
 // blocks ('%d bytes for physics, %d blocks'). Written from the image (no
 // source of any version survives: Build 69 has no physics blocks). The
@@ -29,21 +27,19 @@
 #include "parse_world_info.h"
 
 
-// talon: a node of a physics block's BSP as the DAT file saves it (PreWorld.cpp
-// has the same struct, local to it: CPreWorld::SavePBlockTable writes
-// PBlock::m_pData as an array of them). The first member is the node's
-// index in the world's node list (CNode::m_Index, 0x425ba0; PreWorld.cpp
-// calls it m_iPlane); the sides are other SaveNodes of the block or
-// SAVENODE_IN / SAVENODE_OUT.
-#ifndef SAVENODE_IN
-	#define SAVENODE_IN		0xFFFF
-	#define SAVENODE_OUT	0xFFFE
-#endif
+// talon: a node of a physics block's BSP as the DAT file saves it
+// (PreWorld.cpp has it too: CPreWorld::SavePBlockTable writes PBlock::m_pData
+// as an array of them). The first member is the node's index in the world's
+// node list (CNode::m_Index, 0x425ba0; PreWorld.cpp calls it m_iPlane); the
+// sides are other SaveNodes of the block or SAVENODE_IN / SAVENODE_OUT.
+#define SAVENODE_IN		0xFFFF
+#define SAVENODE_OUT	0xFFFE
 struct SaveNode
 {
 	uint16	m_iPlane;
 	uint16	m_Sides[2];
 };
+
 
 // talon: a BSP node's box, the box of its poly (0x426008..0x4261e2): 24
 // bytes, BaseNew<PBNodeBox> (0x428290) runs no constructor.
@@ -216,8 +212,8 @@ void MakePhysicsBlocks_425d20(CPreWorld *pWorld, BOOL bOneBlock, char *pInfoStri
 		pWorld->m_PBlocks.m_nBlocks[2] = (int)((vMax.z - vMin.z) / fBlockSize) + 1;
 	}
 
-	VEC_COPY(pWorld->m_PBlocks.m_vMin, vBlockSize);
-	VEC_COPY(pWorld->m_PBlocks.m_Unknown_0c, vMin);
+	VEC_COPY(pWorld->m_PBlocks.m_vBlockSize, vBlockSize);
+	VEC_COPY(pWorld->m_PBlocks.m_vMin, vMin);
 	pWorld->m_PBlocks.m_nBlocksXY = pWorld->m_PBlocks.m_nBlocks[0] * pWorld->m_PBlocks.m_nBlocks[1];
 	pWorld->m_PBlocks.m_nBlocksTotal = pWorld->m_PBlocks.m_nBlocks[2] * pWorld->m_PBlocks.m_nBlocks[0] * pWorld->m_PBlocks.m_nBlocks[1];
 	pWorld->m_PBlocks.m_pBlocks = (PBlock*)dalloc_z(pWorld->m_PBlocks.m_nBlocksTotal * sizeof(PBlock));

@@ -198,8 +198,8 @@ struct PBlock
 
 struct PBlockTable
 {
-	PVector		m_vMin;
-	PVector		m_Unknown_0c;
+	PVector		m_vBlockSize;	// talon: the block size (MakePhysicsBlocks, 0x425d20)
+	PVector		m_vMin;			// talon: the grid's origin
 	uint32		m_nBlocks[3];
 	uint32		m_nBlocksXY;
 	uint32		m_nBlocksTotal;

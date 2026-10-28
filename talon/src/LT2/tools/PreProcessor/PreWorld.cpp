@@ -1083,8 +1083,8 @@ BOOL CPreMainWorld::SetupLeafPolies()
 
 void PBlockTable::Clear()
 {
+	m_vBlockSize.Init();
 	m_vMin.Init();
-	m_Unknown_0c.Init();
 	m_nBlocks[0] = m_nBlocks[1] = m_nBlocks[2] = 0;
 	m_nBlocksXY = 0;
 	m_nBlocksTotal = 0;
@@ -1170,7 +1170,10 @@ class PointElement
 // Surfaces closer than this save as one.
 #define SURFACE_EQUAL_EPSILON	0.01f
 
-// talon: a node of the BSP as it is saved (the names are ours).
+// talon: a node of the BSP as it is saved (the names are ours;
+// PhysicsBlocks.cpp has it too: in PreWorld.h it would cost PreWorld.cpp's
+// static CMoArray destructor, 0x430a90, and MakeWorldPVS, 0x43f170, the
+// header declaration-count threshold, tools/guides/09).
 #define SAVENODE_IN		0xFFFF
 #define SAVENODE_OUT	0xFFFE
 struct SaveNode
@@ -1522,7 +1525,8 @@ bool AreSurfacesEqual(CPreSurface *pSurface1, CPreSurface *pSurface2)
 // ----------------------------------------------------------------------- //
 
 
-// What m_Unknown_04 holds, as LoadFile fills it (the names are ours).
+// What m_Unknown_04 holds, as LoadFile fills it (the names are ours; VisLeaves.h
+// has it too).
 struct PreSurfaceUser : public CGLLNode
 {
 	CPreSurface		*m_pSurface;
@@ -3194,8 +3198,8 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 	pTable->m_pBlocks = (PBlock*)dalloc_z(pTable->m_nBlocksTotal * sizeof(PBlock));
 	if(!pTable->m_pBlocks && (int)pTable->m_nBlocksTotal > 0)
 	{
+		pTable->m_vBlockSize.Init();
 		pTable->m_vMin.Init();
-		pTable->m_Unknown_0c.Init();
 		pTable->m_nBlocks[2] = 0;
 		pTable->m_nBlocksXY = 0;
 		pTable->m_nBlocksTotal = 0;
@@ -3205,12 +3209,12 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 		return FALSE;
 	}
 
+	file >> pTable->m_vBlockSize.x;
+	file >> pTable->m_vBlockSize.y;
+	file >> pTable->m_vBlockSize.z;
 	file >> pTable->m_vMin.x;
 	file >> pTable->m_vMin.y;
 	file >> pTable->m_vMin.z;
-	file >> pTable->m_Unknown_0c.x;
-	file >> pTable->m_Unknown_0c.y;
-	file >> pTable->m_Unknown_0c.z;
 
 	// 0x4387b9: the block is indexed afresh for each use.
 	for(i=0; i < (int)pTable->m_nBlocksTotal; i++)
@@ -3233,8 +3237,8 @@ void CPreWorld::SavePBlockTable(CAbstractIO &file, PBlockTable *pTable)
 	pTable->m_nBlocksXY = pTable->m_nBlocks[0] * pTable->m_nBlocks[1];
 	pTable->m_nBlocksTotal = pTable->m_nBlocks[2] * pTable->m_nBlocks[0] * pTable->m_nBlocks[1];
 
+	file << pTable->m_vBlockSize.x << pTable->m_vBlockSize.y << pTable->m_vBlockSize.z;
 	file << pTable->m_vMin.x << pTable->m_vMin.y << pTable->m_vMin.z;
-	file << pTable->m_Unknown_0c.x << pTable->m_Unknown_0c.y << pTable->m_Unknown_0c.z;
 
 	// 0x43891b: the block is indexed afresh for each use.
 	for(i=0; i < (int)pTable->m_nBlocksTotal; i++)

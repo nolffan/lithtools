@@ -68,7 +68,7 @@
 		uint32	m_MaxDetail;
 		BOOL	m_bLogFile;
 		uint32	m_nThreads;
-		uint32	m_Unknown_4dc;
+		uint32	m_bSkipDialog;			// talon: 0x4dc, Build 69's m_bSkipDialog ("skipdialog")
 		BOOL	m_bFixTJunc;
 		BOOL	m_bNoSnapNoCSG;			// NoSnap and hull maker brushes take no part in CSG
 		BOOL	m_bBalanceBSPs;			// cleared by -NoBalanceBSPs

@@ -22,7 +22,6 @@
 #include "node.h"
 #include "lightmap_planes.h"
 #include "bspgen.h"
-#include "TJunctions_decl.h"
 
 
 // ------------------------------------------------------------------------ //
@@ -166,9 +165,9 @@ BOOL CPreProcessorDlg::OnInitDialog()
 
 	sprintf(g_AppGlobs.m_OutputFile, "%s.dat", g_AppGlobs.m_InputFile);
 
-	// m_Unknown_4dc (0x4855b4) is Build 69's m_bSkipDialog.
+	// m_bSkipDialog: 0x4855b4.
 	if(__argc > 2 && strlen(__argv[2]) > 1 && stricmp(&__argv[2][1], "skipdialog") == 0)
-		g_AppGlobs.m_Unknown_4dc = TRUE;
+		g_AppGlobs.m_bSkipDialog = TRUE;
 
 	optionsDlg.m_pGlobs = &g_AppGlobs;
 	if(optionsDlg.DoModal() != IDOK)
@@ -283,8 +282,7 @@ void CPreProcessorDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar
 // The functions Processing calls (Processing.h).
 // ------------------------------------------------------------------------ //
 
-// 0x430210: DoProcessing's clock (0x440980, 0x440eec). The name is ours;
-// Processing.cpp still calls timeGetTime itself.
+// 0x430210: DoProcessing's clock (0x440980, 0x440eec). The name is ours.
 DWORD ProcessorApp_GetTime()
 {
 	return timeGetTime();
@@ -422,7 +420,7 @@ uint32 AskQuestion(const char *pQuestion, uint32 type)
 	UINT mbType = MB_YESNO;
 	int ret;
 
-	if(g_AppGlobs.m_Unknown_4dc)
+	if(g_AppGlobs.m_bSkipDialog)
 		return QUES_NO;
 
 	if((type & QUES_YES) && (type & QUES_NO) && (type & QUES_CANCEL))
@@ -471,7 +469,7 @@ BOOL CPreProcessorThread::InitInstance()
 	DoProcessing(&g_AppGlobs);
 	g_pAppThread = NULL;
 
-	if(!g_AppGlobs.m_Unknown_4dc && (pOK = g_pAppDlg->GetDlgItem(IDOK)) != NULL)
+	if(!g_AppGlobs.m_bSkipDialog && (pOK = g_pAppDlg->GetDlgItem(IDOK)) != NULL)
 	{
 		pOK->ShowWindow(SW_SHOW);
 		pOK->SetFocus();
@@ -520,8 +518,8 @@ CPreSurface::CPreSurface()
 }
 
 
-// 0x430740 (TJunctions_decl.h): whether the poly may be split.
-BOOL CTJPreSurface::sub_430740() const
+// 0x430740: whether the poly may be split.
+BOOL CPreSurface::ShouldSubdivide() const
 {
 	if(!(m_Flags & SURF_SKY) && !(m_Flags & SURF_HULLMAKER))
 		return !(m_Flags & SURF_NOSUBDIV);
