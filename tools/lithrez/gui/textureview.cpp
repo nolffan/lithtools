@@ -1,6 +1,7 @@
 #include "textureview.h"
 
 #include <lithtech/dtx.hpp>
+#include <lithtech/pcx.hpp>
 
 #include <QAction>
 #include <QActionGroup>
@@ -111,10 +112,25 @@ private:
     QString message_;
 };
 
+// An image scaled to fit size px, over a checkerboard.
+QImage thumbnail(const QImage& img, int size) {
+    if (img.isNull()) return {};
+    QImage scaled = img.scaled(size, size, Qt::KeepAspectRatio,
+                               std::max(img.width(), img.height()) > size ? Qt::SmoothTransformation : Qt::FastTransformation);
+    QImage out(scaled.size(), QImage::Format_ARGB32_Premultiplied);
+    QPainter p(&out);
+    paintChecker(p, out.rect(), std::max(4, size / 16), QColor(235, 235, 235), QColor(255, 255, 255));
+    p.drawImage(0, 0, scaled);
+    p.end();
+    return out;
+}
+
 }  // namespace
 
 struct TextureView::Impl {
     Texture tex;
+    lithtech::pcx::Image pcx;   // shown instead of tex when isPcx
+    bool isPcx = false;
     bool loaded = false;
     QString name;
     int mip = 0, face = 0;
@@ -129,6 +145,7 @@ struct TextureView::Impl {
     QComboBox* alphaBox = nullptr;
     QCheckBox* ps2Box = nullptr;
     QLabel* faceLabel = nullptr;
+    QLabel* mipLabel = nullptr;
     QToolButton* exportBtn = nullptr;
     QToolButton* copyBtn = nullptr;
     QToolButton* infoBtn = nullptr;
@@ -174,7 +191,8 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
 
     top->addWidget(new QLabel(tr("Zoom"), this));
     top->addWidget(d->zoomBox);
-    top->addWidget(new QLabel(tr("Mip"), this));
+    d->mipLabel = new QLabel(tr("Mip"), this);
+    top->addWidget(d->mipLabel);
     top->addWidget(d->mipBox);
     top->addWidget(d->faceLabel);
     top->addWidget(d->faceBox);
@@ -246,7 +264,9 @@ double TextureView::zoom() const { return d->zoom; }
 
 void TextureView::clear() {
     d->loaded = false;
+    d->isPcx = false;
     d->tex = Texture{};
+    d->pcx = lithtech::pcx::Image{};
     d->name.clear();
     d->decoded = QImage();
     d->canvas->setImage(QImage());
@@ -256,6 +276,8 @@ void TextureView::clear() {
     d->updating = false;
     d->faceBox->setVisible(false);
     d->faceLabel->setVisible(false);
+    d->mipBox->setVisible(true);
+    d->mipLabel->setVisible(true);
     d->ps2Box->setVisible(false);
     d->exportBtn->setEnabled(false);
     d->copyBtn->setEnabled(false);
@@ -290,6 +312,30 @@ bool TextureView::loadDtx(const QByteArray& data, const QString& name, QString* 
     d->faceBox->setVisible(cube);
     d->faceLabel->setVisible(cube);
     d->ps2Box->setVisible(d->tex.bpp() == lithtech::dtx::BPP_32P);
+    refresh();
+    emit textureChanged();
+    return true;
+}
+
+bool TextureView::loadPcx(const QByteArray& data, const QString& name, QString* error) {
+    clear();
+    d->name = name;
+    try {
+        d->pcx = lithtech::pcx::read(reinterpret_cast<const uint8_t*>(data.constData()), std::size_t(data.size()));
+    } catch (const std::exception& e) {
+        QString msg = tr("Can't read %1: %2").arg(name, QString::fromUtf8(e.what()));
+        if (error) *error = msg;
+        d->scroll->hide();
+        d->message->setText(msg);
+        d->message->show();
+        d->info->setPlainText(msg);
+        return false;
+    }
+    d->isPcx = true;
+    d->loaded = true;
+    d->mip = d->face = 0;
+    d->mipBox->setVisible(false);
+    d->mipLabel->setVisible(false);
     refresh();
     emit textureChanged();
     return true;
@@ -340,11 +386,17 @@ void TextureView::refresh() {
     if (!d->loaded) return;
     QString err;
     QImage img;
-    try {
-        img = toQImage(d->tex.decode(d->mip, d->face,
-                                     d->ps2Alpha ? lithtech::dtx::PaletteAlpha::Ps2 : lithtech::dtx::PaletteAlpha::Stored));
-    } catch (const std::exception& e) {
-        err = QString::fromUtf8(e.what());
+    if (d->isPcx) {
+        lithtech::dtx::Image im;
+        im.width = d->pcx.width, im.height = d->pcx.height, im.rgba = d->pcx.rgba;
+        img = toQImage(im);
+    } else {
+        try {
+            img = toQImage(d->tex.decode(d->mip, d->face,
+                                         d->ps2Alpha ? lithtech::dtx::PaletteAlpha::Ps2 : lithtech::dtx::PaletteAlpha::Stored));
+        } catch (const std::exception& e) {
+            err = QString::fromUtf8(e.what());
+        }
     }
     d->decoded = img;
     QImage shown;
@@ -398,6 +450,24 @@ void TextureView::refresh() {
         return QStringLiteral("<tr><td style='color:gray;padding-right:8px'>%1</td><td>%2</td></tr>").arg(k, v);
     };
     QString h = QStringLiteral("<b>%1</b><table>").arg(d->name.toHtmlEscaped());
+    if (d->isPcx) {
+        const auto& x = d->pcx;
+        const auto& hd = x.header;
+        h += row(tr("Size"), QStringLiteral("%1 × %2").arg(x.width).arg(x.height));
+        h += row(tr("Format"), tr("PCX, %1").arg(QString::fromStdString(lithtech::pcx::layout_name(hd))));
+        if (x.colours)
+            h += row(tr("Palette"), tr("%1 colours (%2)").arg(x.colours).arg(QString::fromStdString(x.palette)));
+        h += row(tr("Version"), QString::number(hd.version));
+        h += row(tr("Encoding"), hd.encoding ? tr("RLE") : tr("none"));
+        h += row(tr("Bits per pixel"), tr("%1 × %2 planes").arg(hd.bits_per_pixel).arg(hd.planes));
+        h += row(tr("Bytes per line"), QString::number(hd.bytes_per_line));
+        h += row(tr("Window"), QStringLiteral("(%1, %2) – (%3, %4)").arg(hd.xmin).arg(hd.ymin).arg(hd.xmax).arg(hd.ymax));
+        h += row(tr("Resolution"), tr("%1 × %2 dpi").arg(hd.hdpi).arg(hd.vdpi));
+        if (x.truncated) h += row(tr("Warning"), tr("the file ends inside its pixel data"));
+        h += QStringLiteral("</table>");
+        d->info->setHtml(h);
+        return;
+    }
     h += row(tr("Size"), QStringLiteral("%1 × %2").arg(t.width).arg(t.height));
     h += row(tr("Format"), QString::fromLatin1(lithtech::dtx::bpp_name(t.bpp())));
     h += row(tr("Mips"), QString::number(t.mip_count));
@@ -535,16 +605,20 @@ QImage dtxThumbnail(const QByteArray& data, int size, bool ps2Alpha) {
                 break;
             }
         }
-        QImage img = toQImage(t.decode(mip, 0, ps2Alpha ? lithtech::dtx::PaletteAlpha::Ps2 : lithtech::dtx::PaletteAlpha::Stored));
-        if (img.isNull()) return {};
-        QImage scaled = img.scaled(size, size, Qt::KeepAspectRatio,
-                                   std::max(img.width(), img.height()) > size ? Qt::SmoothTransformation : Qt::FastTransformation);
-        QImage out(scaled.size(), QImage::Format_ARGB32_Premultiplied);
-        QPainter p(&out);
-        paintChecker(p, out.rect(), std::max(4, size / 16), QColor(235, 235, 235), QColor(255, 255, 255));
-        p.drawImage(0, 0, scaled);
-        p.end();
-        return out;
+        return thumbnail(toQImage(t.decode(mip, 0, ps2Alpha ? lithtech::dtx::PaletteAlpha::Ps2 : lithtech::dtx::PaletteAlpha::Stored)),
+                         size);
+    } catch (...) {
+        return {};
+    }
+}
+
+QImage pcxThumbnail(const QByteArray& data, int size) {
+    if (size <= 0) return {};
+    try {
+        auto x = lithtech::pcx::read(reinterpret_cast<const uint8_t*>(data.constData()), std::size_t(data.size()));
+        lithtech::dtx::Image im;
+        im.width = x.width, im.height = x.height, im.rgba = std::move(x.rgba);
+        return thumbnail(toQImage(im), size);
     } catch (...) {
         return {};
     }

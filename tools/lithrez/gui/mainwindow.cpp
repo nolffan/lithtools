@@ -768,8 +768,13 @@ void MainWindow::startThumbnails() {
             QListWidgetItem* li = icons_->item(thumbRow_++);
             if (li->data(KindRole).toInt() != KindRes) continue;
             auto* r = reinterpret_cast<Resource*>(li->data(PtrRole).value<quintptr>());
-            if (r->type_string() != "DTX") continue;
-            QImage img = dtxThumbnail(readData(r), size, archive_->is_ps2());   // PS2 palettes: alpha as the PS2 draws it
+            QImage img;
+            if (r->type_string() == "DTX")
+                img = dtxThumbnail(readData(r), size, archive_->is_ps2());   // PS2 palettes: alpha as the PS2 draws it
+            else if (r->type_string() == "PCX")
+                img = pcxThumbnail(readData(r), size);
+            else
+                continue;
             if (!img.isNull()) li->setIcon(QIcon(QPixmap::fromImage(img)));
             ++done;
         }
@@ -963,6 +968,11 @@ void MainWindow::preview(Resource* r) {
     if (t == "DTX") {
         texPreview_->setPs2Alpha(archive_ && archive_->is_ps2());
         if (texPreview_->loadDtx(readData(r), qs(r->file_name()), &err)) {
+            previewStack_->setCurrentWidget(texPreview_);
+            return;
+        }
+    } else if (t == "PCX") {
+        if (texPreview_->loadPcx(readData(r), qs(r->file_name()), &err)) {
             previewStack_->setCurrentWidget(texPreview_);
             return;
         }

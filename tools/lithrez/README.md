@@ -8,12 +8,13 @@ they build with clang, gcc or MSVC on Linux, macOS and Windows.
   are byte-identical to theirs. Extra commands cover debugging and build
   scripts.
 - **LithRez Studio** (`lithrez-studio`, Qt 6): a successor to WinRez LT Studio. It
-  has an Explorer-style rez editor, a DTX texture viewer with thumbnails, a
+  has an Explorer-style rez editor, a DTX texture viewer with thumbnails
+  (PCX images preview and thumbnail too), a
   model preview for `.abc` (NOLF, AvP2) and `.ltb` (NOLF2, Contract
   J.A.C.K., Tron 2.0, and NOLF on the PS2) models, a sound player, and a string table editor for
   `CRes.dll`.
 - **`core/`**: the shared library (`lithtech::rez`, `lithtech::dtx`,
-  `lithtech::abc`, `lithtech::ltb`, `lithtech::ps2ltb`, `lithtech::sound`,
+  `lithtech::pcx`, `lithtech::abc`, `lithtech::ltb`, `lithtech::ps2ltb`, `lithtech::sound`,
   `lithtech::pe`).
 
 `docs/REZ.md` describes the format and how these tools were checked against
@@ -59,6 +60,11 @@ These read the game archives (never committed), so they aren't part of
   `tests/ps2ltb_dump.py` compares the C++ and Python PS2 readers).
   `dtx_decode_all --ps2-alpha <folder>` decodes loose files, such as the
   PS2 discs' 8,930 textures, reading palette alpha as the PS2 does.
+- `pcx_test` (in ctest): PCX images made in the test, one per layout.
+  `pcx_decode_all [--dump <dir>] <rez | pcx | folder>...` decodes every
+  `.pcx` (916 in AvP2, NOLF GOTY and NOLF Mac's archives: 752 8-bit with a
+  VGA palette, 163 24-bit, one 16-colour EGA), and `tests/compare_pcx.py
+  <dir>` checks the dump against ImageMagick: all 916 identical.
 - `sound_decode_all <rez>...`: decodes every `.wav` (80,845 in the shipped
   games: 59,794 MP3, 17,867 PCM, 3,177 IMA ADPCM, one float, six empty).
 - The same tool over folders of loose files decodes the PS2 discs' sound
@@ -164,7 +170,8 @@ lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt fro
 - **Make:** a new empty rez, a "Rez Project" from a folder (the same bytes
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
-- **Preview pane:** textures, models (`.abc`, `.ltb` and the PS2's `.ltb`)
+- **Preview pane:** textures (`.dtx`, and `.pcx` images: 8-bit, 24-bit,
+  EGA and the rest of the format), models (`.abc`, `.ltb` and the PS2's `.ltb`)
   with their skins and animations, sounds, text (PS2 `.but` attribute files
   decoded), and hex for everything else. For NOLF2, Contract
   J.A.C.K. and Tron 2.0, skins come from the archive's own
