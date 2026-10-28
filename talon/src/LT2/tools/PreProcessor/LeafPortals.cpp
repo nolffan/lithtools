@@ -57,12 +57,12 @@ BOOL ClipPortalToPlane(CPrePlane *pPlane, PortalBuffer *pBuf)
 // which returns TRUE (0x414027).
 // -------------------------------------------------------------------------------- //
 
-// Near, 968 bytes against 929: the inline budget. The shipped code calls
-// CPreBasePoly::SetVert (0x414040) for the two loops and the first ten side
-// vertices and expands the last six (0x413eae..); ours expands the last
-// seven (portals[4]'s second vertex too). Nothing else differs. Building the
-// corners as temporaries, an extra CreatePoly wrapper and the three-argument
-// SetVert each make it worse or leave it.
+// The shipped code calls CPreBasePoly::SetVert (0x414040) for the two loops
+// and the first ten side vertices and expands the last six (0x413eae..).
+// That budget comes out only when the plane call below goes to a function
+// template (a plain function left the seventh expanded too, 968 bytes).
+template<class P> void PortalGenerateNormal(P *pPoly);
+
 BOOL MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax)
 {
 	PVector	pts[8];
@@ -110,7 +110,7 @@ BOOL MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax
 	portals[5]->SetVert(3, pts[1]);
 
 	for(i=0; i < 6; i++)
-		CalcPortalPlane(portals[i]);
+		PortalGenerateNormal(portals[i]);
 
 	return TRUE;
 }
@@ -133,22 +133,33 @@ void CPrePortal::Flip()
 }
 
 
-// The plane of the portal's vertices (Newell's method).
-void CalcPortalPlane(CPrePortal *pPortal)
+// The plane of the portal's vertices, Newell's method (0x4143d0). The
+// shipped code is Build 69's g_GenerateNormal (geomroutines.h) for
+// CPrePortal, whose Normal() then returned a reference: the reference is
+// what lets the loop address the current vertex first. The name is ours.
+template<class P>
+void PortalGenerateNormal(P *pPoly)
 {
-	uint32	i, iPrev;
+	uint32		prev, cur;
 
-	pPortal->m_Plane.m_Normal.Init();
-	iPrev = pPortal->NumVerts() - 1;
-	for(i=0; i < pPortal->NumVerts(); i++)
+	pPoly->m_Plane.m_Normal.Init();
+	prev = pPoly->NumVerts()-1;
+	for( cur=0; cur < pPoly->NumVerts(); cur++ )
 	{
-		pPortal->m_Plane.m_Normal.x += (pPortal->Pt(iPrev).y - pPortal->Pt(i).y) * (pPortal->Pt(i).z + pPortal->Pt(iPrev).z);
-		pPortal->m_Plane.m_Normal.y += (pPortal->Pt(i).x + pPortal->Pt(iPrev).x) * (pPortal->Pt(iPrev).z - pPortal->Pt(i).z);
-		pPortal->m_Plane.m_Normal.z += (pPortal->Pt(iPrev).x - pPortal->Pt(i).x) * (pPortal->Pt(i).y + pPortal->Pt(iPrev).y);
+		PVector &vN = pPoly->m_Plane.m_Normal;
 
-		iPrev = i;
+		vN.x +=	(pPoly->Pt(prev).y - pPoly->Pt(cur).y) * 
+				(pPoly->Pt(prev).z + pPoly->Pt(cur).z);
+		
+		vN.y +=	(pPoly->Pt(prev).z - pPoly->Pt(cur).z) * 
+				(pPoly->Pt(prev).x + pPoly->Pt(cur).x);
+		
+		vN.z +=	(pPoly->Pt(prev).x - pPoly->Pt(cur).x) * 
+				(pPoly->Pt(prev).y + pPoly->Pt(cur).y);
+
+		prev = cur;
 	}
 
-	pPortal->m_Plane.m_Normal.Norm();
-	pPortal->m_Plane.m_Dist = pPortal->m_Plane.m_Normal.Dot(pPortal->Pt(0));
+	pPoly->m_Plane.m_Normal.Norm();
+	pPoly->m_Plane.m_Dist = pPoly->m_Plane.m_Normal.Dot( pPoly->Pt(0) );
 }
