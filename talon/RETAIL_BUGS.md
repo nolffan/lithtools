@@ -333,3 +333,22 @@ dropping everything after the 30th token, including any later
 ;-separated commands.
 
 Not fixed yet.
+
+### The physics BSP's T-junction splits keep uninitialised vertex colours
+
+AvP2's Processor.exe 0x4475a0 (sub_4475a0, the T-junction split,
+src/LT2/tools/PreProcessor/Terrain.cpp; identical). MakeBsp (0x43eea0)
+sets every vertex colour of the BSP's polies to 255 (lighting does not
+need them), and only then does MakeWorldModelBSP fix T-junctions
+(0x43f810, FixTJunctions 0x4479c0). With -FixTJunc (on by default) a poly
+split there gets two new polies from CreatePoly (malloc, nothing cleared)
+that AddVert gives positions and normals but no colours, and the .dat
+saves the colours as they are (CPreWorld::SaveFile, 0x436ad0, truncated
+to bytes). So the physics BSP's split polies carry whatever the heap held:
+the shipped exe's own output changes with nothing but the length of the
+exe's name (Sample_DM.dat: 848 polies' colours), and a run slowed down
+(by logging every allocation) differs the same way, so the timing of the
+dialog thread's allocations counts too. Harmless as far as is known (the physics BSP
+is not drawn), but it makes the .dat depend on the run.
+
+Not fixed yet.
