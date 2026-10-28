@@ -40,6 +40,10 @@
 	};
 
 	// EditBrush stuff.
+	// talon: the 2001 class. Its vtable (0x4747c8): the scalar deleting
+	// destructor (0x40d870), Term (0x40d960), AllocateSameKind (0x40d810),
+	// DoCopy (0x40da00), GetUpperLeftCornerPos (0x40df80): Rotate is not
+	// virtual.
 	class CEditBrush : public CWorldNode
 	{
 		public:
@@ -50,26 +54,34 @@
 			virtual void			Term();
 			virtual CWorldNode*		AllocateSameKind()	{return new CEditBrush;}
 			virtual void			DoCopy(CWorldNode *pOther);			
-			void					DoCopy(CWorldNode *pOther, CStringHolder *pStringHolder);
 
 		// Loading/saving.
 		public:
 
 
-			bool					LoadTBW( CAbstractIO& InFile, CStringHolder *pStringHolder );
-			void					SaveTBW( CAbstractIO& OutFile );
+			// talon: in 2001 the third argument is handed to each poly's
+			// loader (0x40dbb2), and with bUnknown, SaveTBW saves each poly as
+			// its texture (0x40fcf0) and the CBasePolys of its triangle array
+			// (0x40dcfb).
+			BOOL					LoadTBW( CAbstractIO& InFile, CStringHolder *pStringHolder, uint32 dwUnknown );
+			void					SaveTBW( CAbstractIO& OutFile, BOOL bUnknown );
 
 
 		// Geometry stuff.
+		// talon: none of these but CopyEditBrush, UpdateBSphere and
+		// GetUpperLeftCornerPos is in the image. Build 69's IsOpen,
+		// FindClosestVert, RemoveUnusedVerts, FlipNormals, UpdatePlanes,
+		// CalcBoundingBox, DoCopy(pOther, pStringHolder) and FindPolyWithEdge
+		// are left out: with them declared, the inline CMoArray destructors
+		// of WorldNode.cpp's static initializer (0x44e350) and of
+		// MakeWorldPVS (0x43f170) add their two counts the other way round
+		// (the header declaration-count threshold, tools/guides/09).
 		public:
 
-			BOOL					IsOpen();
 			void					CopyEditBrush( CEditBrush *pOther, CStringHolder *pStringHolder=NULL );
 			
-			uint32					FindPolyWithEdge( uint32 iStart, uint32 v1, uint32 v2 );
 			uint32					FindPolyWithPoints( uint32 index1, uint32 index2 );
 			BOOL					FindPoliesWithEdge( uint32 v1, uint32 v2, CEditPoly*&pPoly1, CEditPoly*&pPoly2, uint32 &nContaining );
-			uint32					FindClosestVert( const LTVector &vec );
 
 			//this will add a vertex to the list, unless it can find one that is within
 			//fThreshold distance of the one trying to be added, in which case it will use that
@@ -78,13 +90,10 @@
 			
 			void					RemovePolyVerts( CMoDWordArray &indices, CMoArray<CEditPoly*> &exclude, CMoArray<CEditPoly*> &changedPolies );
 			void					RemoveVertex( uint32 iVert );
-			void					RemoveUnusedVerts();
 			void					RemoveExtraEdges( CReal normalThresh, CReal distThresh );
 			void					RemoveDuplicatePoints( CReal distThresh );
 			void					ChangeVertexReferences( uint32 from, uint32 to );
 
-			void					FlipNormals();			// Flips all of the polygons
-			void					UpdatePlanes();		
 
 		public:
 			
@@ -97,7 +106,6 @@
 			void					UpdateBSphere();
 
 			//calculates a bounding box for this brush
-			CBoundingBox			CalcBoundingBox();
 		
 			// Returns the upper left corner of the brush as it would appear in DEdit
 			CVector					GetUpperLeftCornerPos();
@@ -106,7 +114,7 @@
 			void					MoveBrush(const LTVector& vPos);
 			void					OffsetBrush(const LTVector& vDelta);
 
-			virtual	void			Rotate(LTMatrix &mMatrix, LTVector &vCenter);
+			void					Rotate(LTMatrix &mMatrix, LTVector &vCenter);
 
 		// Accessors.
 		public:

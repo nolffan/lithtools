@@ -175,7 +175,9 @@ TempBrush* MakeTempBrush(CEditBrush *pBrush)
 		return pRet;
 	}
 
-	pBrush->UpdatePlanes();
+	// talon: the bounding box, not the planes (0x42c1be calls
+	// CEditBrush::UpdateBSphere, 0x40e030).
+	pBrush->UpdateBSphere();
 
 	// Big enough to cross the brush.
 	polySize = (pBrush->m_BoundingBox.m_Max - pBrush->m_BoundingBox.m_Min).Mag();

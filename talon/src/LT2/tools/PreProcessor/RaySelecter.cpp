@@ -26,22 +26,6 @@
 #include "geomroutines.h"
 
 
-// talon: the 2001 CEditPoly has one texture; what this module reads of it
-// (the class is laid out nowhere yet). Its texture name is at 0x74
-// (ReplaceTexturesInWorld compares it with the surface's and adds it to the
-// world's string holder, 0x445625, 0x445677); 0x84 is OR'd into the
-// surface's flags with the brush type, and compared with them (0x445663,
-// 0x4456ab): what it is is not known.
-class CEditPoly2001_RS : public CBasePoly
-{
-public:
-	uint8			m_Unknown_2c[0x74 - 0x2c];
-	const char		*m_pTextureName;
-	uint8			m_Unknown_78[0x84 - 0x78];
-	uint32			m_Unknown_84;
-};
-
-#define EDITPOLY2001(pPoly)	((CEditPoly2001_RS*)(pPoly))
 
 
 // ------------------------------------------------------------------------ //
@@ -52,9 +36,8 @@ public:
 // Rotation's forward vector at every world model's polies; the brush of
 // the last poly it hits (0.1 to 1000000 along it) is selected. Returns
 // how many were selected -- of the last world model only: the count is
-// cleared for each one (0x4450e7), a retail bug kept. In 2001 a
-// CPreSurface's m_pBrush is the CEditPoly it came from (CEditPoly::m_pBrush,
-// 0x28, at 0x4452c7).
+// cleared for each one (0x4450e7), a retail bug kept. The brush is the
+// surface's CEditPoly's (CEditPoly::m_pBrush, 0x28, at 0x4452c7).
 //
 // Near: size-exact; the three products of dir * t come out as dir.x * t
 // where the shipped code has t * dir.x (0x44524f..0x445267), the operand
@@ -110,7 +93,7 @@ uint32 DoRaySelect(CPreMainWorld *pMainWorld, CEditRegion *pRegion)
 
 					if(pSelPoly)
 					{
-						pRegion->SelectNode(((CEditPoly*)pSelPoly->m_pSurface->m_pBrush)->m_pBrush);
+						pRegion->SelectNode(pSelPoly->m_pSurface->m_pEditPoly->m_pBrush);
 						nSelected++;
 					}
 				}
@@ -227,11 +210,11 @@ int ReplaceTexturesInWorld(CMoArray<CTempSurface*> &surfaces, CPreWorld *pWorld)
 		pTempSurface = MatchSurface(surfaces, pPoly);
 		if(pTempSurface)
 		{
-			if(strcmp(EDITPOLY2001(pTempSurface->m_pPoly)->m_pTextureName, pPoly->m_pSurface->m_pTextureName) != 0 ||
-				EDITPOLY2001(pTempSurface->m_pPoly)->m_Unknown_84 != pPoly->m_pSurface->m_Flags)
+			if(strcmp(pTempSurface->m_pPoly->m_pTextureName, pPoly->m_pSurface->m_pTextureName) != 0 ||
+				pTempSurface->m_pPoly->m_SurfaceFlags != pPoly->m_pSurface->m_Flags)
 			{
-				pPoly->m_pSurface->m_pTextureName = pWorld->m_StringHolder.AddString(EDITPOLY2001(pTempSurface->m_pPoly)->m_pTextureName);
-				pPoly->m_pSurface->m_Flags = (WORD)GetBrushType(pTempSurface->m_pBrush) | EDITPOLY2001(pTempSurface->m_pPoly)->m_Unknown_84;
+				pPoly->m_pSurface->m_pTextureName = pWorld->m_StringHolder.AddString(pTempSurface->m_pPoly->m_pTextureName);
+				pPoly->m_pSurface->m_Flags = (WORD)GetBrushType(pTempSurface->m_pBrush) | pTempSurface->m_pPoly->m_SurfaceFlags;
 
 				if(stricmp(pPoly->m_pSurface->m_pTextureName, "textures\\invisible.dtx") == 0)
 					pPoly->m_pSurface->m_Flags |= SURF_INVISIBLE;

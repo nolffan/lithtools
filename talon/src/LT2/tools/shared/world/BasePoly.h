@@ -41,7 +41,10 @@
 								CBasePoly( CEditBrush *pBrush );
 								CBasePoly( CEditBrush *pBrush, CMoWordArray &indices );
 								CBasePoly( CEditBrush *pBrush, WORD i0, WORD i1, WORD i2, BOOL bUpdatePlane=FALSE );
-			virtual				~CBasePoly()		{}
+			// talon: no virtual destructor in 2001: the vtable (0x474470) is
+			// CopyAttributes alone (0x44d400), the compiler's destructor
+			// (0x40f8a0) stores no vtable, and CEditPoly::UpdateTriangles
+			// frees its temporary with a plain operator delete (0x40fec0).
 
 			void				Term();
 

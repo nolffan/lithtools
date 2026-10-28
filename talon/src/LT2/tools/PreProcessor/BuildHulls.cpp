@@ -40,7 +40,7 @@ uint32 MakeHulls(CHullInfo *pInfo, CPreWorld *pWorld, void (*ProgressFn)(float f
 	GPOS pos;
 	uint32 i;
 
-	pInfo->m_ProblemBrushes.Term();
+	pInfo->m_ProblemPolies.Term();
 
 	// Portals big enough to cross the whole world.
 	pWorld->GetBoundingBox(&vMin, &vMax);
@@ -310,7 +310,7 @@ static CPrePortal* ClipPortal(CPreLeaf *pLeaf, CPrePortal *pPortal, CPrePoly *pP
 		if(side == Intersect)
 		{
 			if(!SplitPoly(&pClip->m_Plane, pPortal, portalSides, &splitStruct))
-				g_pHullInfo->m_ProblemBrushes.Append(pPoly->m_pSurface->m_pBrush);
+				g_pHullInfo->m_ProblemPolies.Append(pPoly->m_pSurface->m_pEditPoly);
 
 			DeletePoly(portalSides[BackSide]);
 			DeletePoly(pPortal);

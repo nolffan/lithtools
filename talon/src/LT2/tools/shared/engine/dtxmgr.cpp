@@ -16,6 +16,8 @@ TextureMipData::TextureMipData()
 	m_Height = 0;
 	m_Pitch = 0;
 	m_Data = LTNULL;
+	m_pPlane2 = LTNULL;
+	m_Plane2Pitch = 0;
 }
 
 
@@ -107,8 +109,13 @@ LTBOOL dtx_IsTextureSizeValid(uint32 size)
 }
 
 
+// talon: the 2001 one (0x40d100): Build 69's with a seventh argument: when it is set, each mip
+// gets a second plane of one byte a pixel after its pixels (its pointer and
+// pitch at 0x10 and 0x14). dtx_Create passes 0 (0x40d3a3). The stores are
+// in nolfsrc's order for the engine's copy (m_AllocSize after m_pSections),
+// and the second loop's pitch is an if-chain.
 TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32 nMipmaps,
-	uint32 *pAllocSize, uint32 *pTextureDataSize)
+	uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2)
 {
 	TextureData *pRet;
 	TextureMipData *pMip;
@@ -116,13 +123,14 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 	uint32 textureDataSize;
 	uint8 *pOutData;
 
-	textureDataSize = 0;
 	width = baseWidth;
 	height = baseHeight;
-
+	textureDataSize = 0;
 	for(i=0; i < nMipmaps; i++)
 	{
 		size = CalcImageSize(bpp, width, height);
+		if(bPlane2)
+			size += width * height;
 		textureDataSize += size;
 
 		width >>= 1;
@@ -149,22 +157,21 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 	pRet->m_Header.m_BaseHeight = (uint16)baseHeight;
 	pRet->m_Header.m_Version = CURRENT_DTX_VERSION;
 	pRet->m_Header.m_CommandString[0] = 0;
-
-	pRet->m_AllocSize = sizeof(TextureData) + textureDataSize;
 	pRet->m_Link.m_pData = pRet;
 	pRet->m_pSections = LTNULL;
+	pRet->m_AllocSize = sizeof(TextureData) + textureDataSize;
 	pRet->m_Header.m_nSections = 0;
-	pRet->m_Header.m_ExtraLong[0] = pRet->m_Header.m_ExtraLong[1] = pRet->m_Header.m_ExtraLong[2] = 0;
-	pRet->m_Header.SetBPPIdent(bpp);	//! moved here by jyl, this line used to be located
-										//  before the line that set's m_ExtraLong[...] to 0
-										//  which nulls out the call to SetBPPIdent.
+	pRet->m_Header.m_ExtraLong[2] = 0;
+	pRet->m_Header.m_ExtraLong[1] = 0;
+	pRet->m_Header.m_ExtraLong[0] = 0;
+	pRet->m_Header.SetBPPIdent(bpp);
 	pRet->m_pSharedTexture = LTNULL;
+	pRet->m_Unknown_c4 = 0;
 
 	// Setup the mipmap structures.
-	pOutData = pRet->m_pDataBuffer;
-
 	width = baseWidth;
 	height = baseHeight;
+	pOutData = pRet->m_pDataBuffer;
 	for(i=0; i < nMipmaps; i++)
 	{
 		pMip = &pRet->m_Mips[i];
@@ -175,92 +182,33 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 
 		if(bpp == BPP_32)
 			pMip->m_Pitch = (int32)width * sizeof(uint32);
-		else if(bpp == BPP_32P)		//! we now have a new type of texture that dtx understands...
-			pMip->m_Pitch = width;	//  BPP_32P is a texture that has a true color pallete
+		else if(bpp == BPP_32P)
+			pMip->m_Pitch = width;
 		else
 			pMip->m_Pitch = 0;
 
-		size = CalcImageSize(bpp, width, height);
-		pOutData += size;
+		pOutData += CalcImageSize(bpp, width, height);
+
+		if(bPlane2)
+		{
+			pMip->m_pPlane2 = pOutData;
+			pMip->m_Plane2Pitch = width;
+			pOutData += width * height;
+		}
 
 		width >>= 1;
 		height >>= 1;
 	}
-	
+
 	if(pAllocSize) *pAllocSize = pRet->m_AllocSize;
 	if(pTextureDataSize) *pTextureDataSize = textureDataSize;
 
 	return pRet;
 }
 
-LTRESULT dtx_Resize( TextureData* data, BPPIdent bpp, uint32 baseWidth, uint32 baseHeight )
-{
-	uint32 i;
 
-	// free the old image data
-	if( data->m_Header.m_IFlags & DTX_MIPSALLOCED )
-	{
-		for( uint32 i = 0; i < data->m_Header.m_nMipmaps; i++ )
-		{
-			if( data->m_Mips[i].m_Data )
-				dfree( data->m_Mips[i].m_Data );
-		}
-	}
-
-	if( data->m_pDataBuffer )
-		delete data->m_pDataBuffer;
-
-	uint32 width = baseWidth;
-	uint32 height = baseHeight;
-	uint32 textureDataSize = 0;
-
-	for( i = 0; i < data->m_Header.m_nMipmaps; i++ )
-	{
-		uint32 size = CalcImageSize( bpp, width, height );
-		textureDataSize += size;
-		width >>= 1;
-		height >>= 1;
-	}
-
-	data->m_pDataBuffer = new uint8[textureDataSize];
-	if( !data->m_pDataBuffer )
-	{
-		return LTFALSE;
-	}
-
-	data->m_Header.m_BaseWidth = (uint16)baseWidth;
-	data->m_Header.m_BaseHeight = (uint16)baseHeight;
-	data->m_AllocSize = sizeof(TextureData) + textureDataSize;
-	data->m_Header.SetBPPIdent( bpp );
-
-	uint8* pOutData = data->m_pDataBuffer;
-	TextureMipData* pMip;
-
-	width = baseWidth;
-	height = baseHeight;
-	for( i = 0; i < data->m_Header.m_nMipmaps; i++ )
-	{
-		pMip = &data->m_Mips[i];
-
-		pMip->m_Width = width;
-		pMip->m_Height = height;
-		pMip->m_Data = pOutData;
-
-		if( bpp == BPP_32 )
-			pMip->m_Pitch = (int32)width * sizeof(uint32);
-		else if( bpp == BPP_32P )
-			pMip->m_Pitch = width;
-		else
-			pMip->m_Pitch = 0;
-
-		pOutData += CalcImageSize( bpp, width, height );
-
-		width >>= 1;
-		height >>= 1;
-	}
-
-	return LTTRUE;
-}
+// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection, dtx_SetupDTXFormat or
+// dtx_BuildMipmaps (dtxmgr.h).
 
 void
 dtx_RevRGBOrder (uint32 *pData, uint32 nElems) {
@@ -281,9 +229,13 @@ dtx_RevRGBOrder (uint32 *pData, uint32 nElems) {
 }
 
 
-LTRESULT dtx_Create(ILTStream *pStream, 
-	TextureData **ppOut, 
-	LTBOOL bLoadSections, 
+// talon: the 2001 one, 0x40d2d0..0x40d5e2 (786 bytes: the function table's 0x40d417 row is its
+// own tail, the target of the allocation test's jne at 0x40d3d6, not a
+// function). Build 69's, with the 2001 mip records and dtx_Alloc's seventh
+// argument; m_pSharedTexture is cleared before the header is copied.
+LTRESULT dtx_Create(ILTStream *pStream,
+	TextureData **ppOut,
+	LTBOOL bLoadSections,
 	LTBOOL bSkipImageData)
 {
 	DtxHeader hdr;
@@ -300,18 +252,21 @@ LTRESULT dtx_Create(ILTStream *pStream,
 	STREAM_READ(hdr);
 	if(hdr.m_ResType != LT_RESTYPE_DTX)
 		RETURN_ERROR(1, dtx_Create, LT_INVALIDDATA);
-	
+
 	// Correct version and valid data?
 	if(hdr.m_Version != CURRENT_DTX_VERSION)
 		RETURN_ERROR(1, dtx_Create, LT_INVALIDVERSION);
 
+	// talon: retail bug (0x40d380): up to 15 mipmaps pass, but a texture has
+	// eight mip records (MAX_DTX_MIPMAPS), so a header with 9..15 makes
+	// dtx_Alloc and the reads below write past the 0x18c-byte TextureData.
 	if(hdr.m_nMipmaps == 0 || hdr.m_nMipmaps > 15)
 		RETURN_ERROR(1, dtx_Create, LT_INVALIDDATA);
 
 	// Allocate it.
 	pRet = dtx_Alloc(hdr.GetBPPIdent(), hdr.m_BaseWidth, hdr.m_BaseHeight, hdr.m_nMipmaps,
-		&allocSize, &textureDataSize);
-	
+		&allocSize, &textureDataSize, LTFALSE);
+
 	if(!pRet)
 		RETURN_ERROR(1, dtx_Create, LT_OUTOFMEMORY);
 
@@ -322,7 +277,7 @@ LTRESULT dtx_Create(ILTStream *pStream,
 	for(iMipmap=0; iMipmap < hdr.m_nMipmaps; iMipmap++)
 	{
 		pMip = &pRet->m_Mips[iMipmap];
-	
+
 		if(hdr.GetBPPIdent() == BPP_32)
 		{
 			for(y=0; y < pMip->m_Height; y++)
@@ -331,12 +286,8 @@ LTRESULT dtx_Create(ILTStream *pStream,
 				dtx_ReadOrSkip(
 					bSkipImageData,
 					pStream,
-					&pMip->m_Data[y*pMip->m_Pitch], 
+					&pMip->m_Data[y*pMip->m_Pitch],
 					pMip->m_Width * sizeof(uint32));
-				#ifdef __PS2
-				dtx_RevRGBOrder((uint32 *)&pMip->m_Data[y*pMip->m_Pitch], 
-								 pMip->m_Width);
-				#endif
 			}
 		}
 		else
@@ -372,7 +323,7 @@ LTRESULT dtx_Create(ILTStream *pStream,
 		pRet->m_Header.m_IFlags |= DTX_SECTIONSFIXED;
 		pRet->m_Header.m_nSections = 0;
 	}
-	
+
 	// Check the error status.
 	if(pStream->ErrorStatus() != LT_OK)
 	{
@@ -394,77 +345,6 @@ void dtx_Destroy(TextureData *pData)
 	}
 }
 
-// Make sure you fill in pData with the relevant data :)
-LTRESULT dtx_Save(TextureData *pData, ILTStream *pStream)
-{
-	DtxSection *pSection;
-	DtxHeader hdr;
-	TextureMipData *pMip;
-	uint32 iMipmap;
-	uint32 y, size;
-	uint8 *pIn;
-
-	if(!dtx_IsTextureSizeValid(pData->m_Header.m_BaseWidth) || 
-		!dtx_IsTextureSizeValid(pData->m_Header.m_BaseHeight))
-	{
-		RETURN_ERROR_PARAM(1, dtx_Save, LT_UNSUPPORTED, "Invalid size");
-	}
-
-	
-	// Count the sections.
-	pData->m_Header.m_nSections = 0;
-	pSection = pData->m_pSections;
-	while(pSection)
-	{
-		++pData->m_Header.m_nSections;
-		pSection = pSection->m_pNext;
-	}
-
-	pData->m_Header.m_ResType = LT_RESTYPE_DTX;
-	
-	// Save out a header with the IFlags masked correctly.
-	memcpy(&hdr, &pData->m_Header, sizeof(hdr));
-	hdr.m_IFlags &= DTX_FLAGSAVEMASK;
-	STREAM_WRITE(hdr);
-
-
-	// Write the color data.
-	for(iMipmap=0; iMipmap < pData->m_Header.m_nMipmaps; iMipmap++)
-	{
-		pMip = &pData->m_Mips[iMipmap];
-
-		if(pData->m_Header.GetBPPIdent() == BPP_32)
-		{
-			for(y=0; y < pMip->m_Height; y++)
-			{
-				pIn = &pMip->m_Data[y * pMip->m_Pitch];
-				pStream->Write(pIn, pMip->m_Width * sizeof(uint32));
-			}
-		}
-		else
-		{
-			// Write it all in one chunk.
-			size = CalcImageSize(pData->m_Header.GetBPPIdent(), pMip->m_Width, pMip->m_Height);
-			pStream->Write(pMip->m_Data, size);
-		}
-	}
-
-	
-	// Write the sections.
-	pSection = pData->m_pSections;
-	while(pSection)
-	{
-		pStream->Write(&pSection->m_Header, sizeof(pSection->m_Header));
-		pStream->Write(pSection->m_Data, pSection->m_Header.m_DataLen);
-		pSection = pSection->m_pNext;
-	}
-
-	// Check the error status.
-	if(pStream->ErrorStatus() != LT_OK)
-		RETURN_ERROR(1, dtx_Save, LT_ERROR);
-
-	return LT_OK;
-}
 
 
 DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType)
@@ -483,33 +363,8 @@ DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType)
 }
 
 
-LTRESULT dtx_RemoveSection(TextureData *pData, DtxSection *pSection)
-{
-	DtxSection **ppPrev, *pCur;
-
-	ppPrev = &pData->m_pSections;
-	pCur = pData->m_pSections;
-	while(pCur)
-	{
-		if(pCur == pSection)
-		{
-			*ppPrev = pCur->m_pNext;
-			dfree(pSection);
-			return LT_OK;
-		}
-
-		ppPrev = &pCur->m_pNext;
-		pCur = pCur->m_pNext;
-	}
-
-	return LT_ERROR;
-}
 
 
-void dtx_SetupDTXFormat(TextureData *pData, PFormat *pFormat)
-{
-	dtx_SetupDTXFormat2(pData->m_Header.GetBPPIdent(), pFormat);
-}
 
 
 void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat)
@@ -525,53 +380,6 @@ void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat)
 }
 
 
-void dtx_BuildMipmaps(TextureData *pData)
-{
-	uint32 i, x, y, plane, sum;
-	uint8 *pSrcLine1, *pSrcLine2, *pDestLine;
-	uint8 *pSrcPos1, *pSrcPos2, *pDestPos;
-	TextureMipData *pSrcMip, *pDestMip;
-
-
-	for(i=1; i < pData->m_Header.m_nMipmaps; i++)
-	{
-		pSrcMip = &pData->m_Mips[i-1];
-		pDestMip = &pData->m_Mips[i];
-
-		pSrcLine1 = pSrcMip->m_Data;
-		pSrcLine2 = &pSrcMip->m_Data[pSrcMip->m_Pitch];
-		pDestLine = pDestMip->m_Data;
-
-		for(y=0; y < pDestMip->m_Height; y++)
-		{
-			pSrcPos1 = pSrcLine1;
-			pSrcPos2 = pSrcLine2;
-			pDestPos = pDestLine;
-			
-			for(x=0; x < pDestMip->m_Width; x++)
-			{
-				for(plane=0; plane < 4; plane++)
-				{
-					sum = (uint32)pSrcPos1[0] + (uint32)pSrcPos1[sizeof(uint32)] +
-						(uint32)pSrcPos2[0] + (uint32)pSrcPos2[sizeof(uint32)];
-					*pDestPos = (uint8)(sum >> 2);
-					
-					pSrcPos1++;
-					pSrcPos2++;
-					pDestPos++;
-				}
-
-				// Move up 1 more pixel.
-				pSrcPos1 += sizeof(uint32);
-				pSrcPos2 += sizeof(uint32);
-			}
-
-			pSrcLine1 += pSrcMip->m_Pitch * 2;
-			pSrcLine2 += pSrcMip->m_Pitch * 2;
-			pDestLine += pDestMip->m_Pitch;
-		}
-	}
-}
 
 
 

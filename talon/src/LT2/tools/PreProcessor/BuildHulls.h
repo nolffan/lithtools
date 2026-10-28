@@ -7,7 +7,7 @@
 #define __BUILDHULLS_H__
 
 	class CPreWorld;
-	class CEditBrush;
+	class CEditPoly;
 
 	class CHullInfo
 	{
@@ -18,8 +18,10 @@
 			uint32					m_nNodesDone;
 			uint32					m_nNodes;
 
-			// Brushes whose polies could not be split cleanly.
-			CMoArray<CEditBrush*>	m_ProblemBrushes;
+			// Brush polies that could not be split cleanly (talon: their
+			// surfaces' polies: the array's vtable is CMoArray<CEditPoly*>'s,
+			// 0x47480c, 0x43f616).
+			CMoArray<CEditPoly*>	m_ProblemPolies;
 	};
 
 	// Returns 0, or nonzero on an error.

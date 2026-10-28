@@ -24,7 +24,6 @@
 #include "editobjects.h"
 #include "worldnode.h"
 #include "navigator.h"
-#include "prefabmgr.h"
 
 #ifdef DIRECTEDITOR_BUILD
 #	include "editprojectmgr.h"
@@ -72,9 +71,14 @@ public:
 	void					SaveTBW( CAbstractIO& OutFile );
 
 	// talon: the 2001 ED file, read from and written to a stream (0x410570,
-	// 0x410af0; the names and the flags' meanings are ours).
-	RegionLoadStatus		LoadFile( CAbstractIO& InFile, uint32& nVersion, BOOL bUnknown );
-	void					SaveFile( CAbstractIO& OutFile, BOOL bUnknown );
+	// 0x410af0), its header (0x4109e0) and its node tree (0x410d50,
+	// 0x4110a0; the names ours).
+	RegionLoadStatus		LoadFile( CAbstractIO &InFile, uint32 *pVersion, CEditProjectMgr *pProject );
+	void					SaveFile( CAbstractIO &OutFile, BOOL bCompress );
+
+	void					SaveHeader( CAbstractIO &OutFile, uint32 version, BOOL bCompressed );
+	BOOL					RecurseAndLoadNode( CAbstractIO &InFile, CWorldNode *pNode, CEditProjectMgr *pProject );
+	void					RecurseAndSaveNode( CAbstractIO &OutFile, CWorldNode *pNode );
 
 	void					SaveHeaderLTA(CLTAFile* pFile, uint32 level, DWORD versionCode );
 	BOOL					RecurseAndLoadNodeLTA( CLTANode* pParseNode, CWorldNode *pNode, CEditProjectMgr* pProject );
@@ -95,6 +99,10 @@ public:
 
 	uint32					GetTotalNumPolies();
 	uint32					GetTotalNumPoints();
+
+	// talon: 2001 (0x4111f0; the name ours): remakes every brush poly's
+	// triangles (CEditPoly::UpdateTriangles).
+	void					UpdatePolyTriangles();
 	uint32					NumBrushSelections();
 
 	
@@ -282,7 +290,6 @@ public:
 	CWorldNode*				m_pActiveParentNode;
 #endif
 
-	CPrefabMgr*				GetPrefabMgr()		{return &m_PrefabMgr;}
 
 // World node (and CWorldNodeView) information.
 public:
@@ -331,10 +338,9 @@ public:
 
 	// Helper for debugging file problems..
 	int							m_LoadErrorCode;	
-	
-private:
 
-	CPrefabMgr				m_PrefabMgr;
+	// talon: no prefab manager in 2001: the class is 0x128 bytes, laid out
+	// from its constructor (0x410110), m_LoadErrorCode at 0x124.
 };
 
 

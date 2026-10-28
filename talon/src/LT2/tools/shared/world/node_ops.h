@@ -19,13 +19,7 @@
 	// Detach the node.
 	void no_DetachNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bAttachToRoot);
 
-	// Initializes a node you've allocated (adds it to the region's lists and
-	// to the node tree).
-	void no_InitializeNewNode(CEditRegion *pRegion, CWorldNode *pNode, CWorldNode *pParent);
 
-	// Create a brush and parent it up to the given parent node (the
-	// root node if no parent is specified).
-	CEditBrush* no_CreateNewBrush(CEditRegion *pRegion, CWorldNode *pParent=NULL);
 
 	// Removes all traces of the node's existance and burns its papers.
 	// If bDeleteChildren is TRUE, then it calls no_DestroyNode for each child.
@@ -33,8 +27,6 @@
 	void no_DestroyNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bDeleteChildren);
 
 
-	// Sets up brush properties
-	void SetupBrushProperties(CEditBrush *pBrush, CEditRegion *pRegion);
 
 #endif  // __NODEOPS_H__
 

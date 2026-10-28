@@ -34,6 +34,13 @@
 
 						CEditVert( const CVector &vec ) : LTVector(vec) {}
 
+			// talon: a CEditVert assigned from a CEditVert is taken whole by
+			// value and only its position copied: every CEditVert assigned in
+			// CMoArray<CEditVert>'s code is first copied into a 40-byte
+			// temporary, then x, y and z stored from it (0x40e1e4, 0x40e271,
+			// 0x40e5d5, 0x40ded8). From an LTVector, by reference
+			// (CBaseEditObj::DoCopy, 0x40f540).
+			void		operator = ( CEditVert other )			{ x=other.x; y=other.y; z=other.z; }
 			void		operator = ( const LTVector& other )	{ x=other.x; y=other.y; z=other.z; }
 
 	public:

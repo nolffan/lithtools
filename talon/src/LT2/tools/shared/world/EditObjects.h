@@ -73,7 +73,9 @@ uint32	GetObjectListSize(CMoArray<CBaseEditObj*> &theList);
 void	SaveNodeProperties(CAbstractIO &file, CWorldNode *pNode);
 uint32	GetNodePropertiesSize(CWorldNode* pNode);
 
-void	CopyObjectList( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out );
+// talon: the 2001 CopyObjectList (0x40f2e0; Processing.cpp's name for it,
+// called at 0x440baa): it leaves out the hidden objects with bIgnoreHidden.
+void	CopyRegionObjects( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out, BOOL bIgnoreHidden );
 // Duplicates the node heirarchy between two lists of objects.  
 // Note that the objects must be in exactly the same order in the list.
 // Returns false on failure
@@ -81,6 +83,12 @@ bool	DuplicateObjectHeirarchy( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditOb
 
 
 // The base class for all edit objects.
+// talon: the 2001 class, 0x88 bytes (new at 0x40ef93, 0x40f36d): a
+// CWorldNode (0x60 bytes) and its CEditVert at 0x60 (DoCopy, 0x40f540); no
+// m_pRegion. Its vtable (0x47486c) has CWorldNode's five slots: the scalar
+// deleting destructor (0x40f4d0), Term (CWorldNode's, 0x44e750),
+// AllocateSameKind (0x40f440), DoCopy (0x40f540) and GetUpperLeftCornerPos
+// (0x40f4a0).
 class CBaseEditObj : public CWorldNode 
 #ifdef DIRECTEDITOR_BUILD
 	, public ILTPreInterface	// [10/04/01 ARP] Only derive from this when building DEdit!
@@ -101,17 +109,14 @@ public:
 	// Overloaded operators...
 	CBaseEditObj&			operator=( const CBaseEditObj& src );
 
-	virtual void			SetPos(const LTVector &v);		// Sets the position
-	virtual void			SetOr(const LTVector &v);		// Sets the rotation
+	void					SetPos(const LTVector &v);		// Sets the position
+	void					SetOr(const LTVector &v);		// Sets the rotation
 
 	CVector					GetUpperLeftCornerPos()		{ return GetPos(); }
 
 // Member data...
 
 public:
-
-	//the region that this object belongs to
-	CEditRegion*	m_pRegion;
 
 	// Misc. data for the editor stuff to use.
 	CEditVert		m_Vert;

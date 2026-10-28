@@ -156,6 +156,13 @@
 
 		uint8	*m_Data;
 		int32	m_Pitch; // Pitch in bytes.
+
+		// talon: 2001 (0x18 bytes: TextureData's eight mips run 0xcc..0x18c,
+		// `push $0x18c` at 0x40d154, and its destructor steps through them
+		// by 0x18, 0x40d086): a second plane's pointer and pitch, which
+		// dtx_Alloc sets when its seventh argument is (0x40d27a..0x40d286).
+		uint8	*m_pPlane2;
+		uint32	m_Plane2Pitch;
 	};
 
 
@@ -199,6 +206,10 @@
 		// Stuff the DTX loader doesn't touch (doesn't even intialize).
 		SharedTexture		*m_pSharedTexture;	// From whence it came..
 
+		// talon: 2001: a dword at 0xc4, which dtx_Alloc clears (0x40d219) and
+		// nothing in Processor reads; the pixel buffer is at 0xc8 (0x40d185).
+		uint32				m_Unknown_c4;
+
 		// This is where the pixels go.
 		uint8				*m_pDataBuffer;
 		
@@ -223,30 +234,29 @@
 
 	// Allocates the texture and initializes the mipmap data pointers.
 	TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32 nMipmaps,
-		uint32 *pAllocSize, uint32 *pTextureDataSize);
+		uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2);	// talon: 2001's seventh argument (0x40d100)
 
-	// resize the texture data, but retain all other information
-	LTRESULT dtx_Resize( TextureData* data, BPPIdent bpp, uint32 baseWidth, uint32 baseHeight );
+	// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection, dtx_SetupDTXFormat
+	// or dtx_BuildMipmaps: none is in the image, and with them declared
+	// PreWorld.cpp's static CMoArray destructor (0x430a90) adds its two
+	// counts the other way round (the header declaration-count threshold,
+	// tools/guides/09).
 
 	void dtx_Destroy(TextureData *pData);
 
 	// Save it into a file.
 	// Returns LT_UNSUPPORTED if the size is invalid.
-	LTRESULT dtx_Save(TextureData *pData, ILTStream *pStream);
 
 	
 	// Look for a section in the texture (it's case sensitive).
 	DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType);
 
 	// Returns DE_ERROR if the section isn't in the texture.
-	LTRESULT dtx_RemoveSection(TextureData *pData, DtxSection *pSection);
 
 	// Fill in the DTX format.
-	void dtx_SetupDTXFormat(TextureData *pData, PFormat *pFormat);
 	void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat);
 
 	// Build all the mipmaps.
-	void dtx_BuildMipmaps(TextureData *pData);
 
 
 #endif  // __DTXMGR_H__

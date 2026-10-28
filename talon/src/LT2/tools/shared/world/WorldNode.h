@@ -91,20 +91,24 @@ class CWorldNode : public CGLLNode
 
 		// talon: not virtual in 2001, and by reference (0x44e8e0).
 		LTVector&				GetPos();						// Returns the position
-		virtual void			SetPos(const LTVector &v);		// Sets the position
-		virtual LTVector		GetOr();						// Returns the rotation
-		virtual void			SetOr(const LTVector &v);		// Sets the rotation
+		// talon: SetPos, GetOr, SetOr, Rotate and UpdateClassName are not
+		// virtual in 2001: the vtable (0x475d00) has five slots, the scalar
+		// deleting destructor, Term, AllocateSameKind, DoCopy and
+		// GetUpperLeftCornerPos (0x44e870).
+		void					SetPos(const LTVector &v);		// Sets the position
+		LTVector				GetOr();						// Returns the rotation
+		void					SetOr(const LTVector &v);		// Sets the rotation
 
 		// Rotate this node about a point using a rotation matrix
 		// Note : Both of these parameters should be const, but LTMatrix is non-const friendly
-		virtual	void			Rotate(LTMatrix &mMatrix, LTVector &vCenter);
+		void					Rotate(LTMatrix &mMatrix, LTVector &vCenter);
 
 		// Returns the class type
 		const char*				GetClassName() const				{ return m_TypeName; }
 		void					SetClassName(const char* pszName);
 
 		//this function must be called whenever the class name is updated
-		virtual void			UpdateClassName()					{}
+		void					UpdateClassName()					{}
 		
 		//gets the whole flag variable
 		uint32					GetFlags( )					const	{ return m_Flags; }
