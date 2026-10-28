@@ -168,7 +168,42 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         0x441ea0..0x442e10, MakePhysicsBlocks at 0x425d20 (Terrain.cpp
         calls it as MakePhysicsBlocks_425d20), CPreWorld::
         InitPolyVertexIndices (0x434170).
-    - [ ] The MFC application (0x42f580..0x430a40).
+    - [~] Five more ranges (2026-10-28, five agents in parallel; 62.4% ->
+      69.2%, unwritten 239 -> 115): MakeBsps.cpp (0x40b540.., 9/13),
+      EditBrush2001.cpp (the 2001 dtxmgr and CEditBrush, all identical),
+      EditObjects2001.cpp (the 2001 EditObjects and EditPoly, all
+      identical), EditRegion2001.cpp (the 2001 CEditRegion, 0x128 bytes,
+      and the .ed file, all identical), ProcessorApp.cpp (the MFC
+      application and CPreSurface, all identical). To fold in, from
+      their reports:
+      - The 2001 classes into the shared files: dtxmgr (TextureData
+        0x18c with an extra dword at 0xc4, 7-argument dtx_Alloc),
+        EditVert.h (operator= by value, copying x, y, z), BasePoly.h (no
+        virtual destructor; CopyAttributes the one virtual), EditPoly.h
+        (CEditPoly 0x88 bytes, one texture), EditBrush (LoadTBW with
+        three arguments), EditObjects.h (CBaseEditObj 0x88, five
+        virtuals), WorldNode.h (the five-slot vtable), EditRegion (no
+        m_PrefabMgr; LoadFile(CAbstractIO&, uint32*, CEditProjectMgr*)),
+        PreSurface.h (its methods are in ProcessorApp.cpp now).
+      - The stand-ins of the three 2001 files name the same things
+        differently (CEditPoly2001, CEditBrush2001_ER, LoadEditPolyTBW
+        and others; EditRegion2001_decl.h lists the pairs); g_DummyPos's
+        initializer is written twice (EditBrush2001.cpp and
+        EditObjects2001.cpp).
+      - Processing.cpp should call ProcessorApp_GetTime (0x430210), not
+        timeGetTime; CProcessorGlobs is 0x520 bytes, m_Unknown_4dc is
+        m_bSkipDialog; PreWorld.cpp must not define the surface poly
+        list functions now in ProcessorApp.cpp.
+      - The application is probably three files (PreProcessor.cpp,
+        PreProcessorDlg.cpp, PreSurface.cpp); MakeBsps.cpp declares
+        BuildWorldHulls, MakeHullsAndRemoveUnseen, FixWorldTJunctions,
+        SaveEDFile and MakeLeakFile locally, for a shared header.
+      - Function-table rows that are not functions: 0x40d417, 0x40ddc2,
+        0x40eefe, 0x40ef24, 0x40f489, 0x41096b, 0x410991, 0x430001,
+        0x430046, 0x430080, 0x430082, 0x4305b6; 0x4317fa is inside a
+        PreWorld function; 0x40e790 is two functions (0x40e790,
+        0x40e7c0).
+    - [x] The MFC application (0x42f580..0x430a40): ProcessorApp.cpp, above.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
