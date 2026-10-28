@@ -71,7 +71,9 @@
 			// The same portal seen from the leaf on its other side.
 			CPrePortal			*m_pPartner;
 
-			uint32				m_Unknown_3c[3];
+			// talon: the portal's center, the average of its vertices (the PVS
+			// sets it, 0x44c66c; the name ours).
+			PVector				m_vCenter;
 			CMoArray<uint8>		m_Unknown_48;
 
 			//this must come last
@@ -104,7 +106,7 @@
 	BOOL ClipPortalToPlane(CPrePlane *pPlane, PortalBuffer *pBuf);
 
 	// The six portals of a box (0x413c90).
-	void MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax);
+	BOOL MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax);
 
 	// Sets the portal's plane from its vertices (0x4143d0, the name is ours).
 	void CalcPortalPlane(CPrePortal *pPortal);
@@ -119,13 +121,13 @@
 	};
 
 	// talon (W2): what CPreLeaf::m_Unknown_6c holds: 0x18 bytes, a byte array
-	// and a word after it (CPreWorld::LoadFile; the constructor is out of
-	// line at 0x43afb0, in PreWorld.cpp). The names are ours.
+	// and a word after it (CPreWorld::LoadFile). The names are ours. No
+	// constructor of its own: `new CPreLeafList` constructs the byte array
+	// in place, inline (0x44b69f, 0x44b8c7) or, where the inline budget is
+	// spent, by a call to CMoArray<uint8>'s (0x43afb0, from 0x434bd7).
 	class CPreLeafList
 	{
 		public:
-
-							CPreLeafList();
 
 			// talon: so the parts that used m_Unknown_6c[i]->GetSize() compile.
 			uint32			GetSize() const		{ return m_Data.GetSize(); }

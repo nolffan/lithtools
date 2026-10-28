@@ -11,12 +11,10 @@
 	{
 		public:
 
-					LMPlane(PVector vRight, PVector vUp, PVector vNormal)
-					{
-						m_Right		= vRight;
-						m_Up		= vUp;
-						m_Normal	= vNormal;
-					}
+					// talon: out of line (0x4155d0), defined after the table:
+					// the table's initializer (0x415210) builds each argument
+					// in a temporary and copies it.
+					LMPlane(PVector vRight, PVector vUp, PVector vNormal);
 
 			PVector	m_Right;
 			PVector	m_Up;

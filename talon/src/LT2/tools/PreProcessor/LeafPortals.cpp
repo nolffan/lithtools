@@ -51,7 +51,19 @@ BOOL ClipPortalToPlane(CPrePlane *pPlane, PortalBuffer *pBuf)
 }
 
 
-void MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax)
+// -------------------------------------------------------------------------------- //
+// 0x00413c90 (929 bytes; the rows 0x413fcc and its tail are inside it: 0x413fcc
+// cuts the instruction at 0x413fca in half). MakeBoxPortals,
+// which returns TRUE (0x414027).
+// -------------------------------------------------------------------------------- //
+
+// Near, 968 bytes against 929: the inline budget. The shipped code calls
+// CPreBasePoly::SetVert (0x414040) for the two loops and the first ten side
+// vertices and expands the last six (0x413eae..); ours expands the last
+// seven (portals[4]'s second vertex too). Nothing else differs. Building the
+// corners as temporaries, an extra CreatePoly wrapper and the three-argument
+// SetVert each make it worse or leave it.
+BOOL MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax)
 {
 	PVector	pts[8];
 	uint32	i;
@@ -99,6 +111,8 @@ void MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax
 
 	for(i=0; i < 6; i++)
 		CalcPortalPlane(portals[i]);
+
+	return TRUE;
 }
 
 
