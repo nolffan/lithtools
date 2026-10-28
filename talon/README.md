@@ -67,13 +67,16 @@ make reference                   # the shipped binaries -> out/reference/ (build
 make                             # build everything reconstructed so far
 make progress                    # score it; fails if an identical function stops matching
 make progress-update             # record the score here and in progress/
+make test                        # behaviour: shipped tools vs ours on the same inputs (tests/)
 ```
 
 Needs docker, the `cjacksrc-build` image, and the compilers
 `toolchains/msvc-6.00-8966` and `msvc-6.00-9044` (`toolchains/README.md`).
 `make reference` needs the *AvP2: Primal Hunt* (Europe) disc image
-(redump.org 35760) and `NOLFTools001.exe` from the NOLF Game of the Year
-disc 2; `build/reference.sh` says where it looks for them and checks both.
+(redump.org 35760) and the NOLF Game of the Year disc 2:
+`rez/fetch-isos.sh avp2-ph-eu nolf-eu-goty` fetches both from archive.org,
+and `build/reference.sh` says where else it looks and checks them. CI
+(`../.github/workflows/talon.yml`) runs all of the above.
 
 ## Where the source comes from
 
