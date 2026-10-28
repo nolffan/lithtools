@@ -204,13 +204,8 @@ static inline BOOL ShouldLightmap(CPrePoly *pPoly)
 
 
 // 0x00416270 (789 bytes; the rows 0x416567 and 0x41656c are inside its
-// min/max loop). Near, 785 bytes against 789: register colouring only. The
-// shipped code keeps the surface in eax and its flags in ecx after SetSize
-// (0x4162ef), ours the other way round, so in the else arm ours copies
-// m_AmbientLight through an `add $0xc8,%ebp` where the shipped code reads
-// 0xc8(%ebp).. directly (0x416430). Neither a surface local, the accessor
-// spellings (GetSurfaceFlags, GetPlane, m_pSurface), nor the order of the
-// plane and ambient statements moves it.
+// min/max loop). The else arm's ambient copy is VEC_COPY: it reads
+// 0xc8(%ebp).. directly (0x416430), where operator= goes through a pointer.
 BOOL CLightMapMaker::InitPolyLightmapFill(CPrePoly *pPoly, CFullLightMap *pMap)
 {
 	uint32 width, height, i;
@@ -254,7 +249,7 @@ BOOL CLightMapMaker::InitPolyLightmapFill(CPrePoly *pPoly, CFullLightMap *pMap)
 	}
 	else
 	{
-		fillColor = m_AmbientLight;
+		VEC_COPY(fillColor, m_AmbientLight);
 		if(pPoly->GetSurface()->m_Flags & SURF_BRIGHT)
 			fillColor.Init(255.0f, 255.0f, 255.0f);
 		else
@@ -612,18 +607,42 @@ static CPrePoly* FindSegmentHit(NODEREF pNode, PVector *pStart, PVector *pEnd, P
 static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly);
 
 
-// 0x417180..0x417829. Near, by the inline budget: the shipped code expands
-// the query's stack construction to a loop calling the empty constructor
-// (0x417190; ours calls ??_H, the vector constructor iterator) and leaves
-// the directional shadow-map test's helpers as calls (the FVec of the
-// position expanded but its _CVector constructor called, 0x41753b; FVec of
-// the direction 0x41e090, operator- 0x402200, Norm 0x4044b0, Dot 0x4021e0),
-// all of which ours expands; its frame is 0x1c bytes bigger for their
-// temporaries, and this, pLight and pPoly are in edi, esi and ebx (ours
-// esi, ebx, edi). The statements, calls and branches are the shipped ones.
-// The other levers tried (the query's and the entry's constructors implicit,
-// inline or out of line; the shadow test as locals, temporaries or
-// assignments) don't move it.
+// Whether a sample is inside a directional light's cone, for shadow maps
+// (expanded into ApplyLightToPoly at 0x417528; the name is ours).
+static inline BOOL IsInShadowCone(const CLightDef *pLight, const PVector &samplePos)
+{
+	PVector lightPos, lightDir, rayDir;
+	PReal dot, fovDotLimit;
+
+	lightPos = pLight->m_Pos.FVec();
+	lightDir = pLight->m_Direction.FVec();
+	rayDir = samplePos - lightPos;
+	rayDir.Norm();
+	dot = rayDir.Dot(lightDir);
+	fovDotLimit = (PReal)sin(MATH_HALFPI - pLight->m_FOV * 0.5f);
+	return dot > fovDotLimit;
+}
+
+
+// 0x417180..0x417829. Near, size-exact (1705): the m_vStart/m_vEnd copies
+// into the query are scheduled differently (0x417488: shipped loads all
+// three of the position first), and the shadow-map test's 255 arm is the
+// fall-through (jne to the zero arm at 0x417602) where ours puts it second;
+// this, pLight and pPoly are in edi, esi and ebx in both now. Measured
+// (round 2): the shadow-map cone test is an inline helper of its own
+// (IsInShadowCone, the name ours): its FVecs, operator-, Norm and Dot are
+// decided on the helper's budget, so shipped's pattern (the position's FVec
+// expanded with its constructor called, 0x41753b; FVec of the direction
+// 0x41e090, operator- 0x402200, Norm 0x4044b0, Dot 0x4021e0 called) comes
+// out only that way; written inline here, ours expands them all. The 255
+// colour is one block (the non-directional test jumps into it, 0x417522),
+// hence the one `||`. VEC_ADD for the two steps and VEC_COPY for lightPos
+// are what leave the budget for the query's stack construction to expand
+// ??_H into the shipped loop of constructor calls (0x417190; with += ours
+// calls ??_H). Tried for the two residuals: the two copies the other way
+// round (1715), VEC_COPY for either or both (1733..1763), GetArray()[i],
+// the arms as `&& !` or nested (1732), the helper's compare as if/return,
+// `!(<=)`, or the helper returning the colour (1749).
 BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArray<PVector> *pPositions)
 {
 	LMMSegQuery		query;
@@ -636,7 +655,7 @@ BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArr
 
 
 	pMap = m_FullLightMaps[pPoly->m_nName];
-	lightPos = pLight->m_Pos;
+	VEC_COPY(lightPos, pLight->m_Pos);
 
 	vQStep = pPoly->GetSurface()->InverseQ * m_pWorld->m_LMGridSize;
 	vPStep = pPoly->GetSurface()->InverseP * m_pWorld->m_LMGridSize;
@@ -677,24 +696,10 @@ BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArr
 					{
 						if(m_pCurAnim->m_bShadowMap)
 						{
-							if(pLight->m_bDirectional)
-							{
-								// 0x417528: FVec of the position expanded
-								// (its constructor called, 0x4021c0), of the
-								// direction called (0x41e090).
-								PVector vLightPos = pLight->m_Pos.FVec();
-								PVector vLightDir = pLight->m_Direction.FVec();
-								rayDir = pos - vLightPos;
-								rayDir.Norm();
-								if(rayDir.Dot(vLightDir) > (PReal)sin(MATH_HALFPI - pLight->m_FOV * 0.5f))
-									color.Init(255.0f, 255.0f, 255.0f);
-								else
-									color.Init(0.0f, 0.0f, 0.0f);
-							}
-							else
-							{
+							if(!pLight->m_bDirectional || IsInShadowCone(pLight, pos))
 								color.Init(255.0f, 255.0f, 255.0f);
-							}
+							else
+								color.Init(0.0f, 0.0f, 0.0f);
 						}
 						else if(g_pGlobs->m_bLambertian)
 						{
@@ -725,11 +730,11 @@ BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArr
 				}
 			}
 
-			pos += vPStep;
+			VEC_ADD(pos, pos, vPStep);
 			pColor++;
 		}
 
-		rowPos += vQStep;
+		VEC_ADD(rowPos, rowPos, vQStep);
 	}
 
 	return TRUE;
@@ -964,26 +969,33 @@ static BOOL TraceSegment(LMMStackEntry *pStack, CPreWorld *pWorld, NODEREF pNode
 }
 
 
-static inline void CalcPolyExtents(const CPrePoly *pPoly, PReal fExpand = 0.0f)
+// CPrePoly::CalcExtents, word for word as TJunctions.cpp defines it (0x449200
+// is its out-of-line copy there): the 2001 header had it inline, and
+// ApplySunLightToPoly expands it (0x41834b..0x418450, the += out of line).
+inline void CPrePoly::CalcExtents(PReal fExpand) const
 {
-	pPoly->m_vExtentsMin = pPoly->Pt(0);
-	pPoly->m_vExtentsMax = pPoly->m_vExtentsMin;
+	m_vExtentsMin = Pt(0);
+	m_vExtentsMax = m_vExtentsMin;
 
-	for (uint32 nVertLoop = 1; nVertLoop < pPoly->NumVerts(); ++nVertLoop)
+	for (uint32 nVertLoop = 1; nVertLoop < NumVerts(); ++nVertLoop)
 	{
-		const PVector& vPt = pPoly->Pt(nVertLoop);
-		VEC_MIN(pPoly->m_vExtentsMin, pPoly->m_vExtentsMin, vPt);
-		VEC_MAX(pPoly->m_vExtentsMax, pPoly->m_vExtentsMax, vPt);
+		VEC_MIN(m_vExtentsMin, m_vExtentsMin, Pt(nVertLoop));
+		VEC_MAX(m_vExtentsMax, m_vExtentsMax, Pt(nVertLoop));
 	}
 
-	pPoly->m_vExtentsMin -= fExpand;
-	pPoly->m_vExtentsMax += fExpand;
+	m_vExtentsMin -= fExpand;
+	m_vExtentsMax += fExpand;
 }
 
 
+// 0x418260..0x41860c. The center is built straight into its own local ((max
+// - min) * 0.5 + min, min copied again as operator+'s argument at
+// 0x41845a); the macros in the shadowed branch are what leave the inline
+// budget for the center (with sample.Init and += there, two of its
+// constructors are called out of line).
 BOOL CLightMapMaker::ApplySunLightToPoly(CPrePoly *pPoly, CMoArray<PVector> *pPositions)
 {
-	PVector			color, center, pos, sample;
+	PVector			color, pos, sample;
 	CFullLightMap	*pMap;
 	PVector			*pColor;
 	uint32			x, y, i;
@@ -1004,9 +1016,9 @@ BOOL CLightMapMaker::ApplySunLightToPoly(CPrePoly *pPoly, CMoArray<PVector> *pPo
 
 		if(!m_bClipLight)
 		{
-			CalcPolyExtents(pPoly);
-			center = pPoly->m_vExtentsMin + (pPoly->m_vExtentsMax - pPoly->m_vExtentsMin) * 0.5f;
-			if(DoesSunLightHit(center))
+			pPoly->CalcExtents();
+			PVector vCenter = (pPoly->m_vExtentsMax - pPoly->m_vExtentsMin) * 0.5f + pPoly->m_vExtentsMin;
+			if(DoesSunLightHit(vCenter))
 			{
 				for(i=pMap->m_Width*pMap->m_Height; i; i--)
 				{
@@ -1025,11 +1037,15 @@ BOOL CLightMapMaker::ApplySunLightToPoly(CPrePoly *pPoly, CMoArray<PVector> *pPo
 					if(DoesSunLightHit(pos))
 					{
 						if(m_pCurAnim->m_bShadowMap)
-							sample.Init(255.0f, 255.0f, 255.0f);
+						{
+							VEC_SET(sample, 255.0f, 255.0f, 255.0f);
+						}
 						else
+						{
 							sample = color;
+						}
 
-						*pColor += sample;
+						VEC_ADD(*pColor, *pColor, sample);
 					}
 
 					pColor++;
@@ -1145,31 +1161,25 @@ static CPrePoly* FindSegmentHit(NODEREF pNode, PVector *pStart, PVector *pEnd, P
 
 // Whether a point on a poly's plane is inside its edges (0x4189e0..0x418b6b).
 //
-// Near: 381 bytes against 396. The shipped frame is 0x10 bytes bigger (an
-// unused 16 bytes above edgeNormal, 0x30..0x3f), the count is kept in
-// pPoly's dead slot for the loop test with the divisor zero-extended again
-// into ebp (0x4189f8, 0x418a0a) where ours keeps one copy in ebx, and the
-// shipped code computes the vertex's Dot first and leaves it and
-// edgeNormal.z on the FPU stack (two fstp at 0x418b3d, 0x418b42). Tried: an
-// int count, the loop bound or the divisor as NumVerts() or the local, the
-// edge and its normal initialized in the loop, the vertex's Dot in a local.
+// The edge plane is a CPrePlane: its 28 bytes are the frame's (0x40, with
+// the normal at 0x34 and the rest never stored). NextPt's `% m_nVerts` is
+// what zero-extends the count a second time (0x418a0a) where NumVerts()
+// shares the loop bound's, and the plane's Dot of the point (the point as
+// the copied argument) evaluates x, y, z in order (0x418b19).
 static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly)
 {
-	PVector	edge, edgeNormal;
-	uint32	i, nVerts;
+	CPrePlane edgePlane;
+	uint32	i;
 
-	// 0x4189eb: the count is kept (in pPoly's slot) for the loop test; the
-	// modulus takes NumVerts() again (0x418a0a, zero-extended once more).
-	nVerts = pPoly->NumVerts();
-	for(i=0; i < nVerts; i++)
+	for(i=0; i < pPoly->NumVerts(); i++)
 	{
 		PVector &vCur = pPoly->Pt(i);
-		edge = vCur - pPoly->Pt((i+1) % pPoly->NumVerts());
-		edgeNormal = pPoly->Normal().Cross(edge);
-		edgeNormal.Norm();
+		PVector edge = vCur - pPoly->NextPt(i);
+		edgePlane.m_Normal = pPoly->Normal().Cross(edge);
+		edgePlane.m_Normal.Norm();
+		edgePlane.m_Dist = edgePlane.m_Normal.Dot(vCur);
 
-		// 0x418ae9: the vertex is Dot's (copied) argument, the point its this.
-		if(vPt.Dot(edgeNormal) - edgeNormal.Dot(vCur) < 0.0f)
+		if(edgePlane.m_Normal.Dot(vPt) - edgePlane.m_Dist < 0.0f)
 			return FALSE;
 	}
 
@@ -1187,6 +1197,19 @@ static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly)
 static BOOL CalcVertNormals(CPreWorld *pWorld, CMoArray<PVector> &normals);
 
 
+// 0x418b70..0x418e98. talon: near (inline budget), 781 bytes against 809.
+// Shipped expands the third failure-path DeleteAndClearArray (m_Unknown_14:
+// a loop calling BaseDelete<CMoArray<uint32>>, 0x423880, then SetSize2) and
+// calls BaseDelete (0x422fa0) in the final ~CMoArray of threads; ours calls
+// DeleteAndClearArray2 for all three and expands that BaseDelete. Measured
+// (round 2): the DeleteAndClearArray wrapper is what keeps DeleteAndClearArray2
+// out of line. Calling DeleteAndClearArray2(..., &g_DefAlloc) for the third
+// gives the shipped final dtor and expands the third, but then expands its
+// BaseDelete too (??_G(0) for the element, 837 bytes); for the second and
+// third, BaseDelete is called as shipped but the second is expanded as well
+// (879); for all three, all three are expanded (916). A goto to one failure
+// block at the end expands everything (935). GetSize()/GetArray()[i]/
+// &threads[0]/SetSize2 spellings in the thread code don't move it.
 BOOL CLightMapMaker::CalculateLightFrame()
 {
 	CMoArray<THREAD_ID> threads;
@@ -1299,7 +1322,12 @@ BOOL CLightMapMaker::SetupVertNormals()
 }
 
 
-// Each point's normal: the average of the normals of the polies on it.
+// Each point's normal: the average of the normals of the polies on it
+// (0x419080). talon: near, 705 bytes against 699: shipped forms &normals[i]
+// as m_pArray + i*12 (mov 0x4(%ebp),%eax; add %edi,%eax at 0x4191f0,
+// 0x419231, 0x419258), ours as i*12 + m_pArray through another register.
+// Tried without effect: Get(i), GetArray()[i] and GetArray() + i (both
+// worse, 734), VEC_INIT, GetSize() for the conversions, the i/j order.
 static BOOL CalcVertNormals(CPreWorld *pWorld, CMoArray<PVector> &normals)
 {
 	CMoArray< CMoArray<CPrePoly*> > pointPolies;
@@ -1598,7 +1626,14 @@ void CLightMapMaker::GetTextureLights()
 
 
 
-
+// 0x41a870..0x41aee4. talon: near (inline budget), 1629 bytes against 1677.
+// The light's name is a named std::string, destroyed after the Append or
+// the map store (0x41ae6a), not a temporary of the find. Left: shipped
+// expands the string's __node_alloc::deallocate (its lock call 0x420a40 and
+// the free-list push, 0x41ae97) where ours calls it, and its frame is 4
+// bytes bigger (0xb8). Tried without effect: iter->second, the arms the
+// other way round, GetPropertyList() for &m_PropList, iter assigned apart.
+// m_LightDefs.Insert2 for Append expands Insert2 (1840).
 void CLightMapMaker::GetLightDefs()
 {
 	uint32			i;
@@ -1686,7 +1721,8 @@ void CLightMapMaker::GetLightDefs()
 
 			// A light named in the lights by name goes there instead.
 			pStringProp = (CStringProp*)pPropList->GetProp("Name");
-			TLightNameMap::iterator iter = g_LightsByName.find(std::string(pStringProp->m_String));
+			std::string sName(pStringProp->m_String);
+			TLightNameMap::iterator iter = g_LightsByName.find(sName);
 			if(iter == g_LightsByName.end())
 				m_LightDefs.Append(pLight);
 			else
@@ -2019,8 +2055,8 @@ void CLightMapMaker::DownSample(CFullLightMap *pIn, CFullLightMap *pOut)
 	if(!pIn->m_Width || !pIn->m_Height)
 		return;
 
-	width = pIn->m_Width - 1;
 	height = pIn->m_Height - 1;
+	width = pIn->m_Width - 1;
 	if(width * height > pOut->m_Map.GetSize())
 		pOut->m_Map.SetSize(width * height);
 
@@ -2035,7 +2071,7 @@ void CLightMapMaker::DownSample(CFullLightMap *pIn, CFullLightMap *pOut)
 
 		for(x=0; x < pOut->m_Width; x++)
 		{
-			*pDest = (pNextRow[0] + pRow[0] + pRow[1] + pNextRow[1]) * 0.25f;
+			*pDest = (pRow[0] + pNextRow[0] + pRow[1] + pNextRow[1]) * 0.25f;
 			pDest++;
 			pRow++;
 			pNextRow++;
@@ -2672,6 +2708,28 @@ void SetupLightGroups(CWorldNode *pNode, CPreMainWorld *pWorld)
 // std::string. Tried without effect: the declaration order (num[8]
 // anywhere among the locals), pos assigned before pObj, a local for the
 // child's or the object's property list, pChild declared in the loop.
+// The index of the object named pName in pWorld, or 0xFFFFFFFF (0x41dfa0).
+// talon: defined ahead of ProcessLightGroup, its only caller: VC6 holds the
+// static back until its first use is compiled, so it is emitted after
+// ProcessLightGroup and ahead of ProcessLightGroup's five static-string
+// destructor thunks (0x41e020..0x41e060), the shipped order. Defined after
+// ProcessLightGroup, it lands after the thunks.
+static uint32 FindObjectByName(const char *pName, CPreMainWorld *pWorld)
+{
+	uint32 i;
+
+	for(i=0; i < pWorld->m_Objects; i++)
+	{
+		CBaseEditObj *pObj = pWorld->m_Objects[i];
+		CStringProp *pProp = (CStringProp*)pObj->GetPropertyList()->GetProp("Name");
+		if(strcmp(pName, pProp->m_String) == 0)
+			return i;
+	}
+
+	return 0xFFFFFFFF;
+}
+
+
 static void ProcessLightGroup(CWorldNode *pGroup, CPreMainWorld *pWorld)
 {
 	GPOS pos;
@@ -2742,21 +2800,4 @@ static void ProcessLightGroup(CWorldNode *pGroup, CPreMainWorld *pWorld)
 
 		iLight++;
 	}
-}
-
-
-// The index of the object named pName in pWorld, or 0xFFFFFFFF.
-static uint32 FindObjectByName(const char *pName, CPreMainWorld *pWorld)
-{
-	uint32 i;
-
-	for(i=0; i < pWorld->m_Objects; i++)
-	{
-		CBaseEditObj *pObj = pWorld->m_Objects[i];
-		CStringProp *pProp = (CStringProp*)pObj->GetPropertyList()->GetProp("Name");
-		if(strcmp(pName, pProp->m_String) == 0)
-			return i;
-	}
-
-	return 0xFFFFFFFF;
 }
