@@ -209,6 +209,15 @@ static PReal CalcBalance(CNode *pRoot)
 
 
 
+// 0x404e20. talon: near (637 against 636): `this` in ebp where shipped
+// has ebx (the zero in ebx, shipped ebp); the byte is m_Options.m_pWorld's
+// disp8 off ebp. Reading m_pCustomPolyList once
+// (`pPolies = pOptions->m_pCustomPolyList; if(!pPolies) ...`) gives the
+// shipped registers but stores pPolies before the test where shipped has
+// the if/else (634, 8 blocks). Not it either: m_Options for the custom
+// list or m_bHullMakers (registers right, the read wrong), the ternary,
+// a pCustom local, int type, the stats' order, while(m_nThreadsBeingUsed),
+// the hull test reversed or without continue.
 BOOL CBspGen::GenerateBspTree(CBspGenOptions *pOptions)
 {
 	CPolyList				polyList;
@@ -909,6 +918,13 @@ void CBspGen::SplitPolyArray(CPolyList &polies, CPrePoly *pSplitOn, CPolyList *s
 //                      Returns FALSE if there is no more memory.
 // ----------------------------------------------------------------------- //
 
+// 0x4067e0. talon: near (1120 against 1154), the inline budget: shipped
+// expands the second FlushCenter's operator* (calling the _CVector
+// constructor, 0x406ba8); ours calls it. Dead expansions at the top (up
+// to 28) change nothing, one at the end takes 150 bytes off; the plane
+// read directly in ::SplitPoly's call expands GetPolyType in the trivial
+// cases instead; the replacement as if/else, sides[] set separately: no
+// change.
 void CBspGen::SplitPoly(CPrePoly *pSplitOn, CPrePoly *pToSplit, CPolyList *sideArrays[2])
 {
 	CPrePoly *sides[2], *pReplacement;
@@ -1174,6 +1190,10 @@ void FilterPolyIntoBSP(
 
 
 
+// 0x407330. talon: near, size-exact: shipped schedules the loop test's
+// `xor eax,eax` above the SetNumVerts(0) store (0x407449); ours below.
+// uint32/int i, the index spelled -1-i or -(i+1), i set before the
+// surface store: no change.
 CPrePoly* AddReversedPoly(
 	CPreWorld *pWorld,
 	const CPrePoly *pPoly)

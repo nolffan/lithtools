@@ -298,7 +298,10 @@ BOOL AddTerrainBlockers(CPreWorld *pWorld)
 // Near, size-exact (324 bytes): the scratch registers at the three
 // recursive calls and the array destructor (shipped puts the side list's
 // address in eax/edx and the child in ecx, 0x40c3a8..0x40c3eb; ours
-// ecx/edx and edx/eax). The parameter as a CLinkedList& doesn't move it.
+// ecx/edx and edx/eax). The parameter as a CLinkedList& doesn't move it,
+// nor (round 2) GetSize() without `> 0`, GetCount, an assignment in the
+// if, the pSides initialiser, the declaration order, CNode* or const
+// NODEREF for pNode, or an explicit `| 1`.
 void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> &polies)
 {
 	CLinkedList<CPrePoly*>	sides[2];
@@ -372,7 +375,13 @@ void AddPoliesToLeaves(CPreWorld *pWorld, GenList<CPrePoly*> &polies);
 // expands ~ObjectBank at the failure return (0x40c6eb) where ours calls it,
 // and calls sb_Free in the final RemoveAll (0x40c851) where ours expands
 // it. The model poly position is block-scoped: it shares GenBegin's
-// temporary's slot (0x10) as shipped.
+// temporary's slot (0x10) as shipped. Round 2: shipped's 0x40c8b0 is
+// sb_Free (cdecl), called in both RemoveAll loops. One dead
+// `polies.GetSize();` before the return makes it size-exact (618) and
+// fixes the final destructor and Allocate; the failure path then still
+// calls ObjectBank::Free where shipped expands it to the sb_Free call
+// (not kept: not identical). Append for AddTail, dead calls at the top or
+// in the loop: no better.
 BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP)
 {
 	CLinkedList<CPrePoly*>	polies;
@@ -442,7 +451,10 @@ void AddPoliesToLeaves(CPreWorld *pWorld, GenList<CPrePoly*> &polies)
 // expansion that compiles to nothing anywhere after GetPolySide calls that
 // Dot and makes it size-exact (530); what is left is pPoly in ebp where
 // shipped has ebx (and the vertex pointer the other way), the same with
-// the dead expansion placed or spelled several ways.
+// the dead expansion placed or spelled several ways (round 2: a dead
+// IsValidNode(pNode)/pPoly->NumVerts()/pOriginal->NumVerts() after
+// GetPolySide, at the loop's end, in the else, in the leaf test; int i,
+// uint32 side: all the same swap).
 // talon, retail bug: when SplitPoly gives up (0x40cb61) it returns without
 // freeing the two pieces SplitPoly made.
 void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode)

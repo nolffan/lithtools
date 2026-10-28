@@ -32,13 +32,13 @@ static CPrePortal* MakeNodePortal(CPreLeaf *pLeaf, CPrePoly *pPoly);
 static CPrePortal* ClipPortal(CPreLeaf *pLeaf, CPrePortal *pPortal, CPrePoly *pPoly);
 
 
-// 0x408370. talon: near (570 against 556 bytes), the inline budget: the
-// shipped code calls CMoArray::Clear in unused's constructor (0x408397)
-// where ours expands it. Measured: three more expansions that compile to
-// nothing, anywhere after it (three `pLeaf->m_Portals.GetSize();` after
-// CheckLeaves), make it byte-identical; what the 2001 source spent them on
-// is unknown. vMax.Dist(vMin), `i < pLeaf->m_Portals` and GetNode on the
-// root don't do it (they move other code).
+// 0x408370. The shipped code calls CMoArray::Clear in unused's constructor
+// (0x408397) where a plain body expands it: the inline budget. Three more
+// expansions that compile to nothing make it byte-identical (the stand-in
+// below); what the 2001 source spent them on is unknown. Tried as real
+// spellings and not it: vMax.Dist(vMin), `i < pLeaf->m_Portals`, GetNode
+// on the root, RemoveAll for Term, PVector temporaries for the -= 10 and
+// the Inits (they move other code or overspend).
 uint32 MakeHulls(CHullInfo *pInfo, CPreWorld *pWorld, void (*ProgressFn)(float fPercent))
 {
 	CMoArray<CNode*> unused;
@@ -81,6 +81,15 @@ uint32 MakeHulls(CHullInfo *pInfo, CPreWorld *pWorld, void (*ProgressFn)(float f
 	MakeHulls_R(pWorld->m_RootNode, pLeaf);
 
 	CheckLeaves(pWorld);
+
+	// talon: stand-in: three inline calls whose values are dropped (they
+	// compile to nothing). They only spend the inline budget the shipped
+	// code spent here on something unknown, so that unused's constructor
+	// calls Clear out of line (0x408397) as shipped does. A dead
+	// `TRACE("%d %d %d\n", ...)` of the same three works too.
+	pLeaf->m_Portals.GetSize();
+	pLeaf->m_Portals.GetSize();
+	pLeaf->m_Portals.GetSize();
 	return 0;
 }
 

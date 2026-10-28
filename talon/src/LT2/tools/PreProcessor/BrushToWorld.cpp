@@ -193,6 +193,15 @@ static CPrePoly* TempPolyToPrePoly(TempPoly *pPoly)
 
 // Moves what's left of each brush into the world, giving each original
 // poly's vertices the average normal of the brush's planes that touch them.
+// 0x403200. talon: near (840 against 882 bytes), the inline budget. The
+// touching test is DistSqr: with it AddTail comes out as shipped (expanded
+// to InsertAfter/AddHead, 0x4034a2) and Norm/Mag are expanded; written as
+// (vPt - Pt(k)).MagSqr() it was 805 bytes with AddTail called. Left:
+// shipped expands DistSqr's operator- and calls its _CVector constructor
+// (0x40337b) and MagSqr (0x403384); ours calls operator- and expands
+// MagSqr, and expands DeletePoly's ~TempPoly where shipped has
+// `push 0; call ??_G` (0x4034e2). Dead expansions at the top, after
+// vNormal.Norm() or at the end (1..24) don't give the shipped split.
 static void TransferInsideFragments(CMoArray<TempBrush*> &brushes, CPreWorld *pWorld)
 {
 	CMoArray<PVector> unused;
@@ -228,7 +237,7 @@ static void TransferInsideFragments(CMoArray<TempBrush*> &brushes, CPreWorld *pW
 					pTest = pBrush->m_Polies.GetNext(testPos);
 					for(k=0; k < pTest->NumVerts(); k++)
 					{
-						if((vPt - pTest->Pt(k)).MagSqr() < 0.1f)
+						if(vPt.DistSqr(pTest->Pt(k)) < 0.1f)
 						{
 							vNormal += pTest->Normal();
 							break;
@@ -339,11 +348,15 @@ static void FindIntersecters(CMoArray<TempBrush*> &brushes, CMoArray<TempBrush*>
 }
 
 
-// 0x403720. talon: near (868 against 748 bytes), the inline budget: the
+// 0x403720. talon: near (826 against 748 bytes), the inline budget: the
 // shipped code calls the _CVector constructor in the edge loop's
 // operator- and Cross (0x4021c0), Norm (0x4044b0) and both Dots
-// (0x4021e0), where ours expands them all. The rest (the touching test,
-// IsDetail on pPoly2 first, the final DistTo loop) is the shipped shape.
+// (0x4021e0), where ours expands all but Norm's Mag. The final loop is
+// DIST_TO_PLANE: shipped multiplies straight from the vertex (0x40399e),
+// where DistTo's by-value Dot copies it (and DistTo was 868 bytes). Tried
+// and not it: Normal()/Dist()/GetPlane() spellings of the touching test,
+// no vEdge local, operator^, Norm(1.0f), dead expansions before the edge
+// loop (they make it expand more).
 static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 {
 	GPOS pos1, pos2;
@@ -394,7 +407,7 @@ NotInside:;
 
 			for(i=0; i < pPoly2->NumVerts(); i++)
 			{
-				if(pPlane1->DistTo(pPoly2->Pt(i)) <= 0.1)
+				if(DIST_TO_PLANE(pPoly2->Pt(i), *pPlane1) <= 0.1)
 				{
 					bOutside = FALSE;
 					break;
