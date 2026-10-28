@@ -99,6 +99,22 @@ SOURCE=.\create_world_tree.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\MakeBsps.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\EditBrush2001.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\EditObjects2001.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\EditRegion2001.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\FindWorldModel.cpp
 # End Source File
 # Begin Source File
@@ -252,6 +268,10 @@ SOURCE=.\PreLightMap.cpp
 # Begin Source File
 
 SOURCE=.\PrePoly.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ProcessorApp.cpp
 # End Source File
 # Begin Source File
 
