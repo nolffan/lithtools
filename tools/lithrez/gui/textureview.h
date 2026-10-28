@@ -1,7 +1,7 @@
 #pragma once
 // DTX texture viewing: the preview pane widget, thumbnails for the icon
 // views, and the standalone viewer window (WinRez LT Studio's DTXView).
-// The preview pane shows PCX images in it too.
+// The preview pane shows PCX, TGA and BMP images in it too.
 
 #include <QImage>
 #include <QMainWindow>
@@ -20,8 +20,10 @@ public:
     ~TextureView() override;
     // Shows a .dtx; false (and *error) if it can't be read.
     bool loadDtx(const QByteArray& data, const QString& name, QString* error = nullptr);
-    // Shows a .pcx (no mips or faces); false (and *error) if it can't be read.
-    bool loadPcx(const QByteArray& data, const QString& name, QString* error = nullptr);
+    // Shows a .pcx, .tga or .bmp (by name's extension; no mips or faces);
+    // false (and *error) if it can't be read.
+    bool loadImage(const QByteArray& data, const QString& name, QString* error = nullptr);
+
     void clear();
 
     bool hasTexture() const;
@@ -64,8 +66,8 @@ private:
 
 // A thumbnail of a .dtx (null image if it can't be read), at most size px.
 QImage dtxThumbnail(const QByteArray& data, int size, bool ps2Alpha = false);
-// The same for a .pcx.
-QImage pcxThumbnail(const QByteArray& data, int size);
+// The same for a .pcx, .tga or .bmp (type: its extension).
+QImage imageThumbnail(const QByteArray& data, const QString& type, int size);
 
 // The standalone viewer: File > Open, zoom, mip/face, alpha, export PNG.
 class TextureWindow : public QMainWindow {

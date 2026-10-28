@@ -1,7 +1,9 @@
 #include "textureview.h"
 
 #include <lithtech/dtx.hpp>
+#include <lithtech/bmp.hpp>
 #include <lithtech/pcx.hpp>
+#include <lithtech/tga.hpp>
 
 #include <QAction>
 #include <QActionGroup>
@@ -9,6 +11,7 @@
 #include <QClipboard>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QCoreApplication>
 #include <QDragEnterEvent>
 #include <QDropEvent>
 #include <QFile>
@@ -112,6 +115,73 @@ private:
     QString message_;
 };
 
+using InfoRows = QList<QPair<QString, QString>>;
+
+QString tr_(const char* s) { return QCoreApplication::translate("TextureView", s); }
+
+// A .pcx, .tga or .bmp (by `type`, the extension), decoded, with the rows of
+// its info panel. Throws on a file that can't be read.
+lithtech::dtx::Image decodeImage(const QString& type, const QByteArray& data, InfoRows* info) {
+    const auto* p = reinterpret_cast<const uint8_t*>(data.constData());
+    const std::size_t n = std::size_t(data.size());
+    auto s = [](const std::string& x) { return QString::fromStdString(x); };
+    auto size = [](int w, int h) { return QStringLiteral("%1 × %2").arg(w).arg(h); };
+    lithtech::dtx::Image out;
+    InfoRows rows;
+    QString t = type.toUpper();
+    if (t == "PCX") {
+        auto x = lithtech::pcx::read(p, n);
+        const auto& hd = x.header;
+        rows << qMakePair(tr_("Size"), size(x.width, x.height))
+             << qMakePair(tr_("Format"), tr_("PCX, %1").arg(s(lithtech::pcx::layout_name(hd))));
+        if (x.colours) rows << qMakePair(tr_("Palette"), tr_("%1 colours (%2)").arg(x.colours).arg(s(x.palette)));
+        rows << qMakePair(tr_("Version"), QString::number(hd.version))
+             << qMakePair(tr_("Encoding"), hd.encoding ? tr_("RLE") : tr_("none"))
+             << qMakePair(tr_("Bits per pixel"), tr_("%1 × %2 planes").arg(hd.bits_per_pixel).arg(hd.planes))
+             << qMakePair(tr_("Bytes per line"), QString::number(hd.bytes_per_line))
+             << qMakePair(tr_("Window"), QStringLiteral("(%1, %2) – (%3, %4)").arg(hd.xmin).arg(hd.ymin).arg(hd.xmax).arg(hd.ymax))
+             << qMakePair(tr_("Resolution"), tr_("%1 × %2 dpi").arg(hd.hdpi).arg(hd.vdpi));
+        if (x.truncated) rows << qMakePair(tr_("Warning"), tr_("the file ends inside its pixel data"));
+        out.width = x.width, out.height = x.height, out.rgba = std::move(x.rgba);
+    } else if (t == "TGA") {
+        auto x = lithtech::tga::read(p, n);
+        const auto& hd = x.header;
+        rows << qMakePair(tr_("Size"), size(x.width, x.height))
+             << qMakePair(tr_("Format"), tr_("TGA, %1").arg(s(lithtech::tga::layout_name(hd))))
+             << qMakePair(tr_("Alpha"), s(x.alpha))
+             << qMakePair(tr_("Origin"), QStringLiteral("%1, %2").arg(hd.top_down() ? tr_("top-down") : tr_("bottom-up"),
+                                                                     hd.right_to_left() ? tr_("right to left") : tr_("left to right")));
+        if (hd.colour_map_type)
+            rows << qMakePair(tr_("Colour map"), tr_("%1 entries of %2 bits from %3").arg(hd.map_length).arg(hd.map_entry_bits).arg(hd.map_first));
+        if (hd.x_origin || hd.y_origin) rows << qMakePair(tr_("Position"), QStringLiteral("(%1, %2)").arg(hd.x_origin).arg(hd.y_origin));
+        rows << qMakePair(tr_("Version"), x.tga2 ? tr_("TGA 2.0") : tr_("TGA 1"));
+        if (!x.id.empty()) rows << qMakePair(tr_("ID"), QString::fromLatin1(x.id.c_str()));
+        if (x.truncated) rows << qMakePair(tr_("Warning"), tr_("the file ends inside its pixel data"));
+        out.width = x.width, out.height = x.height, out.rgba = std::move(x.rgba);
+    } else if (t == "BMP") {
+        auto x = lithtech::bmp::read(p, n);
+        const auto& hd = x.header;
+        rows << qMakePair(tr_("Size"), size(x.width, x.height))
+             << qMakePair(tr_("Format"), tr_("BMP, %1").arg(s(lithtech::bmp::layout_name(hd))))
+             << qMakePair(tr_("Header"), s(lithtech::bmp::header_name(hd.header_size)))
+             << qMakePair(tr_("Rows"), hd.height < 0 ? tr_("top-down") : tr_("bottom-up"));
+        if (hd.compression == 3 || hd.compression == 6)
+            rows << qMakePair(tr_("Masks"), QStringLiteral("R %1  G %2  B %3  A %4")
+                                                 .arg(hd.masks[0], 8, 16, QLatin1Char('0')).arg(hd.masks[1], 8, 16, QLatin1Char('0'))
+                                                 .arg(hd.masks[2], 8, 16, QLatin1Char('0')).arg(hd.masks[3], 8, 16, QLatin1Char('0')));
+        if (x.has_alpha) rows << qMakePair(tr_("Alpha"), tr_("from the alpha mask"));
+        else if (x.unused_alpha) rows << qMakePair(tr_("Alpha"), tr_("none (the fourth byte holds data, but BI_RGB leaves it unused)"));
+        if (hd.xppm || hd.yppm)
+            rows << qMakePair(tr_("Resolution"), tr_("%1 × %2 dpi").arg(qRound(hd.xppm * 0.0254)).arg(qRound(hd.yppm * 0.0254)));
+        if (x.truncated) rows << qMakePair(tr_("Warning"), tr_("the file ends inside its pixel data"));
+        out.width = x.width, out.height = x.height, out.rgba = std::move(x.rgba);
+    } else {
+        throw std::runtime_error("not an image type LithRez Studio reads");
+    }
+    if (info) *info = rows;
+    return out;
+}
+
 // An image scaled to fit size px, over a checkerboard.
 QImage thumbnail(const QImage& img, int size) {
     if (img.isNull()) return {};
@@ -129,8 +199,10 @@ QImage thumbnail(const QImage& img, int size) {
 
 struct TextureView::Impl {
     Texture tex;
-    lithtech::pcx::Image pcx;   // shown instead of tex when isPcx
-    bool isPcx = false;
+    // A .pcx, .tga or .bmp, shown instead of tex when isImage.
+    bool isImage = false;
+    lithtech::dtx::Image image;
+    InfoRows imageInfo;
     bool loaded = false;
     QString name;
     int mip = 0, face = 0;
@@ -264,9 +336,10 @@ double TextureView::zoom() const { return d->zoom; }
 
 void TextureView::clear() {
     d->loaded = false;
-    d->isPcx = false;
+    d->isImage = false;
     d->tex = Texture{};
-    d->pcx = lithtech::pcx::Image{};
+    d->image = lithtech::dtx::Image{};
+    d->imageInfo.clear();
     d->name.clear();
     d->decoded = QImage();
     d->canvas->setImage(QImage());
@@ -317,11 +390,11 @@ bool TextureView::loadDtx(const QByteArray& data, const QString& name, QString* 
     return true;
 }
 
-bool TextureView::loadPcx(const QByteArray& data, const QString& name, QString* error) {
+bool TextureView::loadImage(const QByteArray& data, const QString& name, QString* error) {
     clear();
     d->name = name;
     try {
-        d->pcx = lithtech::pcx::read(reinterpret_cast<const uint8_t*>(data.constData()), std::size_t(data.size()));
+        d->image = decodeImage(QFileInfo(name).suffix(), data, &d->imageInfo);
     } catch (const std::exception& e) {
         QString msg = tr("Can't read %1: %2").arg(name, QString::fromUtf8(e.what()));
         if (error) *error = msg;
@@ -331,7 +404,7 @@ bool TextureView::loadPcx(const QByteArray& data, const QString& name, QString* 
         d->info->setPlainText(msg);
         return false;
     }
-    d->isPcx = true;
+    d->isImage = true;
     d->loaded = true;
     d->mip = d->face = 0;
     d->mipBox->setVisible(false);
@@ -386,10 +459,8 @@ void TextureView::refresh() {
     if (!d->loaded) return;
     QString err;
     QImage img;
-    if (d->isPcx) {
-        lithtech::dtx::Image im;
-        im.width = d->pcx.width, im.height = d->pcx.height, im.rgba = d->pcx.rgba;
-        img = toQImage(im);
+    if (d->isImage) {
+        img = toQImage(d->image);
     } else {
         try {
             img = toQImage(d->tex.decode(d->mip, d->face,
@@ -450,20 +521,8 @@ void TextureView::refresh() {
         return QStringLiteral("<tr><td style='color:gray;padding-right:8px'>%1</td><td>%2</td></tr>").arg(k, v);
     };
     QString h = QStringLiteral("<b>%1</b><table>").arg(d->name.toHtmlEscaped());
-    if (d->isPcx) {
-        const auto& x = d->pcx;
-        const auto& hd = x.header;
-        h += row(tr("Size"), QStringLiteral("%1 × %2").arg(x.width).arg(x.height));
-        h += row(tr("Format"), tr("PCX, %1").arg(QString::fromStdString(lithtech::pcx::layout_name(hd))));
-        if (x.colours)
-            h += row(tr("Palette"), tr("%1 colours (%2)").arg(x.colours).arg(QString::fromStdString(x.palette)));
-        h += row(tr("Version"), QString::number(hd.version));
-        h += row(tr("Encoding"), hd.encoding ? tr("RLE") : tr("none"));
-        h += row(tr("Bits per pixel"), tr("%1 × %2 planes").arg(hd.bits_per_pixel).arg(hd.planes));
-        h += row(tr("Bytes per line"), QString::number(hd.bytes_per_line));
-        h += row(tr("Window"), QStringLiteral("(%1, %2) – (%3, %4)").arg(hd.xmin).arg(hd.ymin).arg(hd.xmax).arg(hd.ymax));
-        h += row(tr("Resolution"), tr("%1 × %2 dpi").arg(hd.hdpi).arg(hd.vdpi));
-        if (x.truncated) h += row(tr("Warning"), tr("the file ends inside its pixel data"));
+    if (d->isImage) {
+        for (const auto& [k, v] : d->imageInfo) h += row(k, v.toHtmlEscaped());
         h += QStringLiteral("</table>");
         d->info->setHtml(h);
         return;
@@ -612,13 +671,10 @@ QImage dtxThumbnail(const QByteArray& data, int size, bool ps2Alpha) {
     }
 }
 
-QImage pcxThumbnail(const QByteArray& data, int size) {
+QImage imageThumbnail(const QByteArray& data, const QString& type, int size) {
     if (size <= 0) return {};
     try {
-        auto x = lithtech::pcx::read(reinterpret_cast<const uint8_t*>(data.constData()), std::size_t(data.size()));
-        lithtech::dtx::Image im;
-        im.width = x.width, im.height = x.height, im.rgba = std::move(x.rgba);
-        return thumbnail(toQImage(im), size);
+        return thumbnail(toQImage(decodeImage(type, data, nullptr)), size);
     } catch (...) {
         return {};
     }

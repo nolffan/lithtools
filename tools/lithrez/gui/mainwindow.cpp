@@ -771,8 +771,8 @@ void MainWindow::startThumbnails() {
             QImage img;
             if (r->type_string() == "DTX")
                 img = dtxThumbnail(readData(r), size, archive_->is_ps2());   // PS2 palettes: alpha as the PS2 draws it
-            else if (r->type_string() == "PCX")
-                img = pcxThumbnail(readData(r), size);
+            else if (r->type_string() == "PCX" || r->type_string() == "TGA" || r->type_string() == "BMP")
+                img = imageThumbnail(readData(r), qs(r->type_string()), size);
             else
                 continue;
             if (!img.isNull()) li->setIcon(QIcon(QPixmap::fromImage(img)));
@@ -971,8 +971,8 @@ void MainWindow::preview(Resource* r) {
             previewStack_->setCurrentWidget(texPreview_);
             return;
         }
-    } else if (t == "PCX") {
-        if (texPreview_->loadPcx(readData(r), qs(r->file_name()), &err)) {
+    } else if (t == "PCX" || t == "TGA" || t == "BMP") {
+        if (texPreview_->loadImage(readData(r), qs(r->file_name()), &err)) {
             previewStack_->setCurrentWidget(texPreview_);
             return;
         }
