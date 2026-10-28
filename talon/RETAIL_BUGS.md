@@ -198,3 +198,138 @@ calls g_pAppDlg->GetDlgItem without checking g_pAppDlg (its other branch
 does). Latent: both are always there when these run.
 
 Not fixed yet.
+
+### Saving the DAT file can go on with an unset result after "No"
+
+AvP2's Processor.exe 0x44170d (SaveDATFile,
+src/LT2/tools/PreProcessor/Processing.cpp; identical). Answering No to
+"Error opening output file. Try again?" leaves the result variable
+unset, so the function returns whatever was on the stack; when that is
+nonzero, it goes on to remove the existing DAT file and rename a temp
+file that was never created.
+
+Not fixed yet.
+
+### SaveDATFile's rename error messages are garbled
+
+AvP2's Processor.exe 0x4415a0 and 0x4417c5 (SaveDATFile, Processing.cpp;
+identical). The message buffer is filled only when the remove fails, so a
+failed rename after a successful remove shows stack garbage at the start
+of its message; and the message is formatted into itself, so each retry
+prepends the previous one.
+
+Not fixed yet.
+
+### Surfaces made invisible by invisible.dtx still get lightmaps
+
+AvP2's Processor.exe 0x43fa90 (GenerateSurfaces, Processing.cpp;
+identical). Surfaces forced invisible because their texture is
+textures\invisible.dtx keep SURF_LIGHTMAP, so lightmaps are made for
+surfaces nobody sees (Build 69 clears the flag): wasted lightmap space in
+the DAT.
+
+Not fixed yet.
+
+### The AI-volumes path takes the maximum lightmap size from the grid size
+
+AvP2's Processor.exe 0x440e80 (DoProcessing, Processing.cpp; identical).
+On the -aivolumes path, m_MaxLMSize is set from the DAT file's lightmap
+grid size rather than its maximum lightmap size. Read from the code, not
+confirmed by a run.
+
+Not fixed yet.
+
+### Light animations with too many frames, polies or vertices corrupt the DAT
+
+AvP2's Processor.exe 0x432a40 (CPreMainWorld::SaveLightAnims,
+src/LT2/tools/PreProcessor/PreWorld.cpp; near: two scheduling
+differences). Each animation's frame count is written as a byte, its poly
+count as a WORD and each poly's vertex count as a byte, while the data
+behind them is written in full. Over 255 frames or 65535 polies makes the
+file unreadable for LoadLightAnims; over 255 vertices loses colours.
+Latent with normal levels.
+
+Not fixed yet.
+
+### The lightmap compression ratio divides by zero without light animations
+
+AvP2's Processor.exe 0x433520 (CPreMainWorld::CalcLMCompressionRatio,
+PreWorld.cpp; near, size-exact). The compressed size isn't checked for
+zero, so a world with no light-animation data gets 0/0 (NaN) as
+m_LMCompressionRatio in the statistics it prints.
+
+Not fixed yet.
+
+### Texture lights leak on failure, and divide by zero on a perpendicular plane
+
+AvP2's Processor.exe 0x419e8d and 0x41a60b (CLightMapMaker::
+GetTextureLights, src/LT2/tools/PreProcessor/LightMapMaker_r3.cpp; near).
+When GetTextureInfo fails, the function returns without freeing what it
+already put in its texture info list (a leak, only on the "Unable to get
+texture lights" path). And if a texture's plane is perpendicular to its
+poly, the tiling divides by zero (N . vNormal); the point then fails
+InsideConvex, so no light is made for that texture there.
+
+Not fixed yet.
+
+### Moving a lightmap sample out of a wall never tests one corner
+
+AvP2's Processor.exe 0x41ca1a..0x41ca9f (CLightMapMaker::
+CalcSamplePositions, LightMapMaker_r3.cpp; near). The ring search for a
+clear supersample stops both row searches before x = gx + r and both
+column searches before y = gy + r, so the corner (gx + r, gy + r) is never
+tried: a sample in a wall can move to a slightly farther clear point than
+the nearest.
+
+Not fixed yet.
+
+### Tracing a light ray has a dead test and no stack bound
+
+AvP2's Processor.exe 0x4181f8 (TraceSegment,
+src/LT2/tools/PreProcessor/LightMapMaker_r2.cpp; near: an unused frame
+slot). It compares the low WORD of the split node's CPrePoly* with
+0xFFFF, a leftover of a WORD poly index: a pointer never has that low
+word, so the test is always true (a node with no poly would crash). And
+it pushes onto its 1024-entry stack without a bound, so a BSP deeper than
+1024 splits along one ray would write past it. Both latent.
+
+Not fixed yet.
+
+### Unclipped lights give shadow-map animations colour instead of a mask
+
+AvP2's Processor.exe 0x417180 (CLightMapMaker::ApplyLightToPoly,
+LightMapMaker_r2.cpp; near). With clipping off, globally or for the
+light, shadow-map animations get the light's normal colour from
+CalcLightSample instead of the 255/0 mask, and the directional cone test
+is skipped, so those shadow maps show graded colour where every other
+light gives a full on/off mask. Read from the code, not confirmed by a
+run.
+
+Not fixed yet.
+
+### Labelled world nodes leak their labels
+
+AvP2's Processor.exe 0x44e750 (CWorldNode::Term,
+src/LT2/tools/shared/world/WorldNode.cpp; identical) and 0x44e5c0 (its
+destructor, which only calls Term). The 2001 Term never frees the node's
+label, so every labelled node leaks its label string.
+
+Not fixed yet.
+
+### Opening a stream leaks the file handle when the stream can't be made
+
+AvP2's Processor.exe 0x445910 (streamsim_Open,
+src/LT2/tools/shared/engine/streamsim.cpp; identical). If `new SSFile`
+fails, it returns NULL without closing the file it has just opened.
+
+Not fixed yet.
+
+### Console commands past the 30th argument are dropped
+
+AvP2's Processor.exe 0x40a230 (cp_Parse,
+src/LT2/tools/shared/engine/conparse.cpp; identical; Build 69 does the
+same). At 30 arguments it stops and reports no more commands, silently
+dropping everything after the 30th token, including any later
+;-separated commands.
+
+Not fixed yet.
