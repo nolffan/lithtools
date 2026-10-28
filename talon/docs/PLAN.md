@@ -251,7 +251,36 @@ version 85). `progress/Processor-avp2-map.md` is the map.
       and PreSurfaceUser local to PreWorld.cpp, MakeBsps.cpp's
       declarations of Processing's functions local, and cost some Build 69
       declarations nothing links (dtx_Resize, dtx_Save, ..., EditBrush's
-      IsOpen, ...); the image has no resources yet (no .rc).
+      IsOpen, ...).
+    - [x] The resources (2026-10-28): PreProcessor.rc, resource.h and
+      Res/PreProcessor.ico, decompiled with tools/rsrc2rc.py; all seven
+      byte-identical in the linked exe (tools/rsrcdiff.py). RC is
+      Developer Studio's (msvc-6.00-9782), VC6's own.
+    - [ ] The near functions. A first parallel round (2026-10-28, five
+      agents by source file) took 1357 -> 1376. What it found:
+      - The inline budget is spent from the LAST call site backwards: the
+        earliest sites are the ones refused. Inline calls that compile to
+        nothing, added late, push early sites out of line (MakeHulls is
+        identical with three; not kept, the real spelling is unknown).
+        Among nested sites, each instance's first call is accepted before
+        any second one (TestNode's 0x44dda0 can't be emitted that way).
+      - CheckLeaves (0x4085a0) matches with a dead `if(0) free(&pLeaf)`
+        that makes the leaf's stack store happen: a stand-in.
+      - Header changes measured whole-link and NOT applied (net zero or
+        worse, through the declaration-count threshold): CPrePolyRef as a
+        POD (PreWorld.obj -4 unmatched, but the link 1372 and 4 recorded
+        lost); CPreLeaf's 0x6c as a class of its own, CLeafListArray
+        {CMoArray<CPreLeafList*> m_Lists; uint16 m_iSameAs;}, with an
+        inline constructor (m_iSameAs = 0xFFFF) and destructor
+        (DeleteAndClearArray): CPreLeaf's constructor and destructor and
+        the wrapper's destructor (0x42d370) identical, but PreWorld's
+        static destructor 0x430a90 and 0x43f170 lost. Both are right about
+        the classes and want the threshold worked out first.
+      - Pairings the scorer gets wrong: 0x42d370 (that destructor, not
+        DeleteAndClearArray2, which shipped expands in CalculateLightFrame),
+        0x423880 (BaseDelete<CMoArray<uint32>>, LightMapMaker's),
+        0x4420b0/0x4420c0 (DefaultCache's Get/SetCacheSize), and
+        0x441ea0..0x442ce0 are Processing.obj's template instances.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
