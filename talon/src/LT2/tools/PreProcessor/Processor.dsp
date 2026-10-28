@@ -295,10 +295,6 @@ SOURCE=.\PreWorld.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\ProblemBrushes.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Processing.cpp
 # End Source File
 # Begin Source File

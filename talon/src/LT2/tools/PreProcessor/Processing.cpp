@@ -26,44 +26,54 @@
 #include <errno.h>
 #include "lightmapmaker.h"
 #include "threads.h"
-// Called through its thunk, not the import (winmm).
-extern "C" DWORD WINAPI timeGetTime(void);
+#include "EditRegion2001_decl.h"
+#include "WorldApprox_decl.h"
+
+// talon: the application's clock (ProcessorApp.cpp, 0x430210: winmm's
+// timeGetTime through its thunk).
+DWORD ProcessorApp_GetTime();
 
 
 // talon: other modules' interfaces, provisional until those modules are
 // written (the names are ours).
 
-// The PVS maker's options (0x44b270 takes them).
-struct PVSInfo
-{
-	uint32					m_Unknown_00[3];
-	BOOL					m_bFast;
-	void					(*m_FullOptimizationFn)(float fPercent);
-	void					(*m_ProgressFn)(float fPercent);
-	uint32					m_Unknown_18[2];
-	CPreWorld				*m_pWorld;
-	uint32					m_nThreads;
-	uint32					m_Unknown_28[4];
-	CMoArray<CPreLeaf*>		m_Unknown_38;
-	uint32					m_Unknown_4c[4];
-	CMoArray<CPrePortal*>	m_Unknown_5c;
-	CMoArray<uint32*>		m_Unknown_70;
-};
-uint32 MakePVS(PVSInfo *pInfo);							// 0x44b270
+// The PVS maker (0x44b270; PVSInfo is WorldApprox_decl.h's).
+uint32 MakePVS(PVSInfo *pInfo);
 
 // Finds the vis BSP's leaves (0x40c640).
 BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP);
 
-// The T-junction fixer (0x4479c0, its destructor 0x43f960).
+// What CTJunctionFixer's lists hold (FixTJunctions never touches them, so
+// the type is not known; the name is ours). Their vtable (0x47575c) is not
+// CMoArray<CPrePoly*>'s (0x4746b8), though its entries are the same code.
+class CTJUnknown;
+
+// The T-junction fixer (0x4479c0, its destructor 0x43f960). FixTJunctions
+// returns nothing (0x4488c9; TJunctions_decl.h).
 class CTJunctionFixer
 {
 public:
-	BOOL					FixTJunctions(CPreWorld *pWorld, BOOL bFix);
+	void					FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys);
 
 	uint32							m_Unknown_00;
-	CMoArray< CMoArray<uint32> >	m_Unknown_04;
-	CMoArray<CPrePoly*>				m_Unknown_18;
+	CMoArray< CMoArray<CTJUnknown*> >	m_Unknown_04;	// vtable 0x47578c
+	CMoArray<CTJUnknown*>				m_Unknown_18;	// vtable 0x47575c
 };
+
+// talon: not matched yet: the template code this module emits for
+// m_Unknown_04 (0x441d30..0x442e10) expands less than ours, and than
+// LightMapMaker's CMoArray< CMoArray<uint32> > (0x41fb50..) whose code ours
+// is: GenAppend (0x441ea0) leaves DefaultCache's GetCacheSize and
+// SetCacheSize (0x4420b0, 0x4420c0) out of line in its deepest inline
+// (measured: an inline depth of 7 instead of 8 for the template
+// instantiations reproduces it and the two accessors exactly), and
+// InternalNiceSetSize (0x442a80), _DeleteAndDestroyArray (0x442c20) and
+// BaseDelete (0x442ce0) call the element's destructor (0x4429a0) where ours
+// expands it (measured: an element class derived from CMoArray<X*>
+// reproduces those three exactly, but then its constructor is a call in
+// FixWorldTJunctions and BaseNew, and GenAppend expands less than
+// shipped). The element type (a pointer, a 4-byte struct) and where the
+// class is declared do not move it.
 
 // The problem brush module: a world model's BSP (0x40b540; bPhysicsBSP
 // for the physics BSP) and the vis BSP (0x40cbd0).
@@ -95,9 +105,18 @@ public:
 };
 
 
+// talon: the brushes the brush checks found, for SelectProblemBrushes and
+// SelectOutOfBoundsBrushes (the names are ours; MakeBsps.cpp and
+// PreBrush.cpp fill and use them). One declaration: one initializer
+// (0x43e5b0) constructs both, g_ProblemBrushes (0x485758) first, and one
+// (0x43e660) destroys both.
+CMoArray<CEditBrush*>		g_ProblemBrushes, g_OutOfBoundsBrushes;
+
 CStringHolder				g_StringHolder;
 
-CEditRegion					*g_InputRegion = NULL;
+// talon: the 2001 region (EditRegion2001_decl.h). The other modules still
+// take the Build 69 CEditRegion, so it is passed to them as one.
+CEditRegion2001				*g_InputRegion = NULL;
 FILE						*g_pLogFile = NULL;
 static char					g_InputFileTitle[MAX_PATH];
 CProcessorGlobs				*g_pGlobs = NULL;
@@ -442,6 +461,7 @@ BOOL MakeWorldPVS(CPreMainWorld *pMainWorld)
 	PVSInfo					info;
 	CHullInfo				hullInfo;
 	CPreWorld				*pVisBSP;
+	uint32					status;
 
 	pVisBSP = pMainWorld->GetVisBSP();
 	if(!pVisBSP)
@@ -458,12 +478,15 @@ BOOL MakeWorldPVS(CPreMainWorld *pMainWorld)
 	memset(&info, 0, sizeof(info));
 	info.m_pWorld = pVisBSP;
 	info.m_ProgressFn = ProgressFn;
-	info.m_FullOptimizationFn = PVSProgressFn;
+	info.m_LeafDoneFn = PVSProgressFn;
 	info.m_bFast = g_pGlobs->m_bFast;
 	info.m_nThreads = g_pGlobs->m_nThreads;
 
 	g_bFullOptimization = FALSE;
-	if(MakePVS(&info) != 0)
+	// talon: the result is named: compared with the zero register
+	// (0x43f363), not tested.
+	status = MakePVS(&info);
+	if(status != 0)
 	{
 		DrawStatusText("Error making PVS.");
 		return FALSE;
@@ -486,7 +509,7 @@ void PVSProgressFn(float fPercent)
 }
 
 
-CEditBrush* FindBrushWithPoly(CEditRegion *pRegion, CEditPoly *pPoly);
+CEditBrush* FindBrushWithPoly(CEditRegion2001 *pRegion, CEditPoly *pPoly);
 
 // Makes the hulls; with SelectHullProblemBrushes, selects the brushes they
 // failed on and saves the ED file instead (0x43f5f0; the name is ours).
@@ -527,7 +550,7 @@ BOOL MakeHullsAndRemoveUnseen(CPreWorld *pWorld)
 
 
 // The brush pPoly is in (0x43f7c0).
-CEditBrush* FindBrushWithPoly(CEditRegion *pRegion, CEditPoly *pPoly)
+CEditBrush* FindBrushWithPoly(CEditRegion2001 *pRegion, CEditPoly *pPoly)
 {
 	LPOS		pos;
 	CEditBrush	*pBrush;
@@ -578,6 +601,152 @@ CPrePlane* FindPlaneExact(CLinkedList<CPrePlane*> *pList, PVector &normal, PReal
 	}
 
 	return NULL;
+}
+
+
+// talon: the 2001 CEditPoly (0x88 bytes; EditObjects2001.cpp has the class
+// as CEditPoly2001): what GenerateSurfaces reads of it, on
+// EditRegion2001_decl.h's stand-in (the names of the unknown members by
+// offset).
+class CEditPoly2001_PR : public CEditPoly2001_ER
+{
+	public:
+
+		uint32						m_Unknown_2c[2];
+		PVector						O, P, Q;			// 0x34: the texture vectors
+		uint8						m_Ambient[3];		// 0x58: the surface's ambient light
+		// talon: m_Triangles (0x5c, a CMoArray<CBasePoly*>) and a dword
+		// (0x70) as padding: with them declared, DoProcessing's inline
+		// CMoArray destructor adds its two counts the other way round (the
+		// declaration-count threshold, tools/guides/09).
+		uint8						m_Unknown_5b[0x19];
+		char						*m_pTextureName;	// 0x74
+		uint32						m_Unknown_78;
+		void						*m_pUser1;			// 0x7c: the surface made for it
+		uint32						m_Unknown_80;
+		uint32						m_SurfaceFlags;		// 0x84: the poly's own surface flags
+};
+
+
+// (Build 69's.)
+#define NUM_PLANE_LISTS		128
+
+inline uint32 GetHashCode(PVector &normal, PReal &dist)
+{
+	return	(uint32)((double)normal.x * 10000.0f) +
+			(uint32)((double)normal.y * 10000.0f) +
+			(uint32)((double)normal.z * 10000.0f) +
+			(uint32)((double)dist * 10000.0f);
+}
+
+
+// Makes a surface in pWorld for each brush poly (0x43fa90): Build 69's,
+// with the 2001 poly's one texture, the Effect properties and the portals'
+// surface users.
+void GenerateSurfaces(GenList<CEditBrush*> &brushes, CPreWorld *pWorld)
+{
+	uint32				j;
+	CEditBrush			*pBrush;
+	CEditPoly2001_PR	*pPoly;
+	CPreSurface			*pSurface;
+	CStringProp			*pProp;
+	PreSurfaceUser		*pUser;
+	char				baseTextureName[512];
+	PVector				normal;
+	uint32				iList;
+	PReal				dist;
+	GenListPos			pos;
+
+	CLinkedList<CPrePlane*> planeLists[NUM_PLANE_LISTS];
+
+
+	for(pos=brushes.GenBegin(); brushes.GenIsValid(pos); )
+	{
+		pBrush = brushes.GenGetNext(pos);
+
+		for(j=0; j < pBrush->m_Polies; j++)
+		{
+			pPoly = (CEditPoly2001_PR*)pBrush->m_Polies[j];
+
+			// Setup the surface.
+			pSurface = new CPreSurface;
+
+			// talon: each vector through a temporary, by FVec (0x43fb73).
+			pSurface->m_TextureO = pPoly->O.FVec();
+			pSurface->m_TextureP = pPoly->P.FVec();
+			pSurface->m_TextureQ = pPoly->Q.FVec();
+			pSurface->m_pTextureName = pPoly->m_pTextureName;
+
+			normal = pPoly->m_Plane.m_Normal.FVec();
+			dist = (PReal)pPoly->m_Plane.m_Dist;
+
+			// (Using the hash table makes this about 40 times faster for large levels).
+			// NOTE: it still only accepts EXACT duplicate planes so it doesn't lose 
+			// precision here.. the hash table is only for speed (at one point, it didn't
+			// always use exact duplicates and some levels with rotated brushes had tons
+			// of problems).
+			iList = GetHashCode(normal, dist) % NUM_PLANE_LISTS;
+			pSurface->m_pPlane = FindPlaneExact(&planeLists[iList], normal, dist);
+			if(!pSurface->m_pPlane)
+			{
+				pSurface->m_pPlane = pWorld->AddPlane(
+					pPoly->m_Plane.m_Normal.FVec(), pPoly->m_Plane.m_Dist);
+				
+				planeLists[iList].AddTail(pSurface->m_pPlane);
+			}
+
+			pSurface->m_Flags = GetBrushType(pBrush) | (pPoly->m_SurfaceFlags & ~SURF_TERRAINOCCLUDER);
+			
+			// Hack Mc. Hackelson.. force SURF_INVISIBLE if using a certain texture name..
+			if(pPoly->m_pTextureName)
+			{
+				CHelpers::ExtractNames(pPoly->m_pTextureName, NULL, baseTextureName, NULL, NULL);
+				if(stricmp(baseTextureName, "invisible.dtx") == 0)
+				{
+					pSurface->m_Flags |= SURF_INVISIBLE;
+				}
+			}
+			
+			if((pProp = (CStringProp*)pBrush->m_PropList.GetProp("Effect")) && (pProp->m_Type == PT_STRING) && (pProp->m_String[0] != 0))
+			{
+				pSurface->m_Unknown_a0 = (uint32)pWorld->m_StringHolder.AddString(pProp->m_String);
+
+				if((pProp = (CStringProp*)pBrush->m_PropList.GetProp("EffectParam")) && (pProp->m_Type == PT_STRING))
+					pSurface->m_Unknown_a4 = (uint32)pWorld->m_StringHolder.AddString(pProp->m_String);
+				else
+					pSurface->m_Unknown_a4 = (uint32)"";
+			}
+
+			pSurface->m_bDetail = (uint8)GetDetailLevel(pBrush);
+			pSurface->m_Ambient[0] = pPoly->m_Ambient[0];
+			pSurface->m_Ambient[1] = pPoly->m_Ambient[1];
+			pSurface->m_Ambient[2] = pPoly->m_Ambient[2];
+
+			pPoly->m_pUser1 = pSurface;
+			// talon: CPreSurface::m_pBrush is the poly it came from.
+			pSurface->m_pBrush = (CEditBrush*)pPoly;
+
+			pWorld->m_Surfaces.AddTail(pSurface);
+
+			// A portal's surface goes on the world's list of surface users,
+			// by its brush's name.
+			if((pSurface->m_Flags & SURF_PORTAL) && g_pGlobs->m_bPortals)
+			{
+				if((pProp = (CStringProp*)pBrush->m_PropList.GetProp("Name")) && (pProp->m_Type == PT_STRING))
+				{
+					pUser = new PreSurfaceUser;
+					pUser->m_Index = pWorld->m_Unknown_04.GetSize();
+					pUser->m_pName = pWorld->m_StringHolder.AddString(pProp->m_String);
+					pWorld->m_Unknown_04.AddTail(pUser);
+
+					pSurface->m_Unknown_80 = (uint32)pUser;
+					pUser->m_pSurface = pSurface;
+				}
+			}
+		}
+	}
+
+	pWorld->SetupSurfaceTextureVectors();
 }
 
 
@@ -657,7 +826,9 @@ BOOL CreatePhysicsBSPs(CEditRegion *pRegion, CPreMainWorld *pMainWorld, CWorldMo
 BOOL AddWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels, CPreMainWorld *pMainWorld)
 {
 	uint32			i, iModel, iFirst;
-	CPreWorld		*pWorld;
+	// talon: the second loop's world is a variable of its own (in a
+	// register there; the first loop's lives on the stack, 0x44028e).
+	CPreWorld		*pWorld, *pModelWorld;
 	CWorldModelDef	*pDef;
 
 	if(worldModels.GetSize() == 0)
@@ -675,11 +846,11 @@ BOOL AddWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels
 	for(iModel=0; iModel < worldModels; iModel++)
 	{
 		pDef = worldModels[iModel];
-		pWorld = pMainWorld->m_WorldModels[iFirst + iModel];
+		pModelWorld = pMainWorld->m_WorldModels[iFirst + iModel];
 
-		pWorld->m_WorldInfoFlags = pDef->m_WorldInfoFlags;
-		SAFE_STRCPY(pWorld->m_WorldName, pDef->m_WorldName);
-		if(!MakeWorldModelBSP(pRegion, pDef, pWorld, FALSE))
+		pModelWorld->m_WorldInfoFlags = pDef->m_WorldInfoFlags;
+		SAFE_STRCPY(pModelWorld->m_WorldName, pDef->m_WorldName);
+		if(!MakeWorldModelBSP(pRegion, pDef, pModelWorld, FALSE))
 		{
 			g_pGlobs->m_bMakingWorldModel = FALSE;
 			return FALSE;
@@ -707,7 +878,7 @@ BOOL ImportGeometry(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels
 
 	if(g_pGlobs->m_bRaySelect)
 	{
-		nSelected = DoRaySelect(pMainWorld, g_InputRegion);
+		nSelected = DoRaySelect(pMainWorld, (CEditRegion*)g_InputRegion);
 
 		DrawStatusText("");
 		DrawStatusText("---------------");
@@ -836,7 +1007,7 @@ void WriteLeafIndex(CNode *pNode, FILE *fp)
 void OpenLogFile();
 void CloseLogFile();
 BOOL LoadEDFile();
-void RemoveDetailBrushes(CEditRegion *pRegion);
+void RemoveDetailBrushes(CEditRegion2001 *pRegion);
 BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded, BOOL bLoadObjects);
 BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly);
 void ShowStatusText(DWORD startTime, DWORD endTime);
@@ -844,6 +1015,7 @@ BOOL SavePortalFile(CPreMainWorld *pMainWorld, const char *pFilename);
 void WriteVisibleLeaves(CPreLeafList *pList, uint32 *pBit, CNode *pNode, FILE *fp);
 
 
+// (0x440900; its two catch blocks are 0x440f16 and 0x440f3c.)
 void DoProcessing(CProcessorGlobs *pGlobs)
 {
 	CPreMainWorld				mainWorld;
@@ -856,9 +1028,9 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 
 	g_pGlobs = pGlobs;
 	pGlobs->m_bMakingWorldModel = FALSE;
-	startTime = timeGetTime();
+	startTime = ProcessorApp_GetTime();
 
-	g_InputRegion = new CEditRegion;
+	g_InputRegion = new CEditRegion2001;
 
 	CHelpers::ExtractNames(g_pGlobs->m_InputFile, NULL, NULL, g_InputFileTitle, NULL);
 	OpenLogFile();
@@ -911,7 +1083,7 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 			if(pGlobs->m_bReplaceTextures)
 			{
 				DrawStatusText("Replacing textures...");
-				DrawStatusText("Replaced %d textures", ReplaceTextures(g_InputRegion, &mainWorld));
+				DrawStatusText("Replaced %d textures", ReplaceTextures((CEditRegion*)g_InputRegion, &mainWorld));
 
 				if(pGlobs->m_bTextureFlags)
 					GetTextureFlags(&mainWorld);
@@ -930,8 +1102,8 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 				DrawStatusText("Max Lightmap Size: %.2f", g_pGlobs->m_MaxLMSize);
 				DrawStatusText("Lightmap Grid Size: %.2f", mainWorld.m_LMGridSize);
 
-				FindWorldModels(g_InputRegion, worldModels);
-				if(!ImportGeometry(g_InputRegion, worldModels, &mainWorld))
+				FindWorldModels((CEditRegion*)g_InputRegion, worldModels);
+				if(!ImportGeometry((CEditRegion*)g_InputRegion, worldModels, &mainWorld))
 					goto Done;
 
 				bLoaded = TRUE;
@@ -943,8 +1115,8 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 
 				g_pGlobs->m_MaxLMSize = mainWorld.m_LMGridSize;
 				mainWorld.RemoveAIVolumes();
-				FindAIVolumes(g_InputRegion, worldModels);
-				if(!AddWorldModels(g_InputRegion, worldModels, &mainWorld))
+				FindAIVolumes((CEditRegion*)g_InputRegion, worldModels);
+				if(!AddWorldModels((CEditRegion*)g_InputRegion, worldModels, &mainWorld))
 					goto Done;
 			}
 
@@ -999,7 +1171,7 @@ SaveIt:
 		goto Done;
 	}
 
-	endTime = timeGetTime();
+	endTime = ProcessorApp_GetTime();
 	DrawStatusText("");
 	DrawStatusText("-------------------");
 	ShowStatusText(startTime, endTime);
@@ -1057,7 +1229,7 @@ BOOL LoadEDFile()
 	sprintf(fileName, "%s.ed", g_pGlobs->m_InputFile);
 	if(file.Open(fileName, "rb"))
 	{
-		status = g_InputRegion->LoadFile(file, version, FALSE);
+		status = g_InputRegion->LoadFile(file, &version, NULL);
 		file.Close();
 
 		// Objects outside the world break things.
@@ -1075,7 +1247,7 @@ BOOL LoadEDFile()
 				{
 					DrawStatusText("* Object '%s' (class '%s') has an invalid position (%.2f %.2f %.2f).",
 						pObj->GetName(), pObj->GetClassName(), pPos->x, pPos->y, pPos->z);
-					no_DestroyNode(g_InputRegion, pObj, FALSE);
+					no_DestroyNode((CEditRegion*)g_InputRegion, pObj, FALSE);
 				}
 			}
 		}
@@ -1097,7 +1269,7 @@ BOOL LoadEDFile()
 
 		g_InputRegion->ClearSelections();
 		RemoveDetailBrushes(g_InputRegion);
-		CheckRegion(g_InputRegion);
+		CheckRegion((CEditRegion*)g_InputRegion);
 		return TRUE;
 	}
 
@@ -1108,7 +1280,7 @@ BOOL LoadEDFile()
 
 // Removes the brushes with a detail level above MaxDetail (0x441370; the
 // name is ours). Their children go to the root.
-void RemoveDetailBrushes(CEditRegion *pRegion)
+void RemoveDetailBrushes(CEditRegion2001 *pRegion)
 {
 	LPOS		pos, curPos;
 	CEditBrush	*pBrush;
@@ -1185,7 +1357,9 @@ BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly)
 		len = 5;
 	strcpy(&tempFileName[len-4], ".tmp");
 
-	for(;;)
+	// talon: while(TRUE), not for(;;): the loop is not rotated, the retry
+	// jumps back to the Open (0x44166a).
+	while(TRUE)
 	{
 		if(outFile.Open(tempFileName, "wb"))
 		{
@@ -1208,7 +1382,6 @@ BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly)
 
 			if(!bRet)
 				DrawStatusText("ERROR IN CPreWorld::SaveFile!");
-
 			break;
 		}
 
@@ -1220,6 +1393,9 @@ BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly)
 		}
 		else if(response == QUES_NO)
 		{
+			// RETAIL BUG: bRet is not set on this path (0x44170d loads its
+			// stack slot, never written), so whether the rename below is
+			// tried and what the caller is told is whatever was there.
 			break;
 		}
 	}
@@ -1241,6 +1417,10 @@ Done:
 			if(rename(tempFileName, g_pGlobs->m_OutputFile) == 0)
 				break;
 
+			// RETAIL BUG: msg is only set if the remove failed, so a failed
+			// rename after a good remove prints the stack's garbage first;
+			// and each retry puts the last message in front of the new one
+			// (msg is formatted into itself, 0x4417c5).
 			_snprintf(msg, sizeof(msg), "%s\nCould not rename \"%s\" to \"%s\", %s.\nTry again?\n(If you answer no, output file left as \"%s\".)",
 				msg, tempFileName, g_pGlobs->m_OutputFile, _sys_errlist[errno], tempFileName);
 			msg[sizeof(msg)-1] = 0;
