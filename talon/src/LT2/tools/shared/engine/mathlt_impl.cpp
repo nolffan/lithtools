@@ -150,14 +150,14 @@ LTRESULT ILTMath::GetEulerAngles(LTRotation &rRot, float *pitch, float *yaw, flo
 
 	vLevelRight = vForward.Cross(LTVector(0.0f, 1.0f, 0.0f));
 	vLevelRight.Norm();
-	vLevelUp = vForward.Cross(vLevelRight);
+	vLevelUp = vLevelRight.Cross(vForward);
 
 	if(roll)
 	{
 		fCos = vRight.Dot(vLevelRight);
 		fSin = vRight.Dot(vLevelUp);
-		fCos = LTCLAMP(fCos, -1.0f, 1.0f);
-		fSin = LTCLAMP(fSin, -1.0f, 1.0f);
+		if(fCos > 1.0f) fCos = 1.0f; else if(fCos < -1.0f) fCos = -1.0f;
+		if(fSin > 1.0f) fSin = 1.0f; else if(fSin < -1.0f) fSin = -1.0f;
 
 		*roll = (float)acos(fCos);
 		if(fSin < 0.0f)
@@ -174,9 +174,9 @@ LTRESULT ILTMath::GetEulerAngles(LTRotation &rRot, float *pitch, float *yaw, flo
 	if(pitch)
 	{
 		fCos = vLevelForward.Dot(vForward);
-		fSin = vForward.y;
-		fCos = LTCLAMP(fCos, -1.0f, 1.0f);
-		fSin = LTCLAMP(fSin, -1.0f, 1.0f);
+		fSin = vForward.Dot(vLevelUp);
+		if(fCos > 1.0f) fCos = 1.0f; else if(fCos < -1.0f) fCos = -1.0f;
+		if(fSin > 1.0f) fSin = 1.0f; else if(fSin < -1.0f) fSin = -1.0f;
 
 		*pitch = (float)acos(fCos);
 		if(fSin > 0.0f)
@@ -190,8 +190,8 @@ LTRESULT ILTMath::GetEulerAngles(LTRotation &rRot, float *pitch, float *yaw, flo
 	{
 		fCos = vForward.Dot(LTVector(0.0f, 0.0f, 1.0f));
 		fSin = vForward.Dot(LTVector(1.0f, 0.0f, 0.0f));
-		fCos = LTCLAMP(fCos, -1.0f, 1.0f);
-		fSin = LTCLAMP(fSin, -1.0f, 1.0f);
+		if(fCos > 1.0f) fCos = 1.0f; else if(fCos < -1.0f) fCos = -1.0f;
+		if(fSin > 1.0f) fSin = 1.0f; else if(fSin < -1.0f) fSin = -1.0f;
 
 		*yaw = (float)acos(fCos);
 		if(fSin < 0.0f)
