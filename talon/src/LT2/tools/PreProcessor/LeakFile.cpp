@@ -5,14 +5,17 @@
 #include "editobjects.h"
 
 // talon: written from the image (0x4144f0..0x414e40); Build 69 makes no
-// leak files. The file's name is ours.
+// leak files. The file's name is ours. The paths are PVertexArrays: the
+// shipped code's are CMoArray<PVertex>'s (MakeLeakFile stores its vtable,
+// 0x4749f8, whose GenAppend is 0x43b6f0, and FindLeakPath calls its
+// CopyArray2, 0x414d70, and Insert2, 0x43ddb0).
 
 
 // Looks for a way through the portals from pLeaf to pTarget. path holds
 // the portal centers on the way to pLeaf, and gets the ones on to pTarget.
-static BOOL FindLeakPath(CPreLeaf *pLeaf, CPreLeaf *pTarget, CMoArray<PVector> &path)
+static BOOL FindLeakPath(CPreLeaf *pLeaf, CPreLeaf *pTarget, PVertexArray &path)
 {
-	CMoArray<PVector> testPath;
+	PVertexArray testPath;
 	CPrePortal *pPortal;
 	uint32 i;
 
@@ -29,7 +32,8 @@ static BOOL FindLeakPath(CPreLeaf *pLeaf, CPreLeaf *pTarget, CMoArray<PVector> &
 
 		if(pPortal->m_pPartner && pPortal->m_pPartner->m_pLeaf)
 		{
-			PVector vCenter(pPortal->m_BasePoly.GetCenter());
+			PVertex vCenter;
+			(PVector&)vCenter = pPortal->m_BasePoly.GetCenter();
 			testPath.CopyArray(path);
 			testPath.Append(vCenter);
 
@@ -49,10 +53,10 @@ static BOOL FindLeakPath(CPreLeaf *pLeaf, CPreLeaf *pTarget, CMoArray<PVector> &
 // segments, to pFilename.
 BOOL MakeLeakFile(CPreWorld *pWorld, const char *pFilename)
 {
-	CMoArray<PVector> path;
+	PVertexArray path;
 	CBaseEditObj *pInsideObj, *pOutsideObj;
 	CPreLeaf *pInside, *pOutside;
-	PVector vPos;
+	PVertex vPos;
 	FILE *fp;
 	uint32 i;
 
