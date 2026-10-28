@@ -62,11 +62,16 @@ PReal GetTerrainSubDivSize(char *pInfoString)
 // Makes a terrain section (a CPreSubBsp in pWorld->m_PolyArray) for each
 // world tree node under pNode no smaller than g_TerrainSubDivSize, with the
 // polies that touch it (0x4461f0; the image's 0x44626b row is its interior).
-// Near, 826 bytes against 824: register allocation in childPolies.Append's
-// inline Insert2 (0x4462f1: j*4 in edi, &polies[j] in esi, newSize in ebx;
-// ours j*4 in esi and one more mov). The leaf case is written first: with
-// the recursion first, Insert2 stays a call and CopyArray2 is expanded,
-// the shipped code's opposite.
+// Near, size-exact (824 bytes) with no mnemonic difference: the poly
+// argument through GetArray() (with polies[j] there, j*4 went to esi and
+// the Append's inline Insert2 took one more mov, 826 bytes) leaves only
+// the order of the call's two argument loads (0x4462d6: the shipped code
+// loads the child first, ours the poly) and j's register at the loop head
+// (eax shipped, ecx ours). polies[j] or Get(j) for the Append, a local
+// pPoly or pChild, GetSize(), an int j and the declaration order don't
+// move it. The leaf case is written first: with the recursion first,
+// Insert2 stays a call and CopyArray2 is expanded, the shipped code's
+// opposite.
 void MakeTerrainSections_R(WorldTree *pTree, CPreWorld *pWorld, WorldTreeNode *pNode,
 	CMoArray<CPrePoly*> &polies, uint32 depth, uint32 *pMaxDepth)
 {
@@ -107,7 +112,7 @@ void MakeTerrainSections_R(WorldTree *pTree, CPreWorld *pWorld, WorldTreeNode *p
 
 			for(j=0; j < polies; j++)
 			{
-				if(DoesPolyIntersectNode(polies[j], pNode->m_ChildrenA[i]))
+				if(DoesPolyIntersectNode(polies.GetArray()[j], pNode->m_ChildrenA[i]))
 					childPolies.Append(polies[j]);
 			}
 
