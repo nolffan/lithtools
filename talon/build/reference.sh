@@ -5,15 +5,21 @@
 #
 #   build/reference.sh
 #
-# Inputs, each checked before use (override the paths in the environment):
-#   AVP2_PH_BIN  the Aliens versus Predator 2: Primal Hunt (Europe) disc image,
-#                redump.org disc 35760 (archive.org Redump.org35760): its .bin,
-#                SHA-1 b47b0750...747d. Its Tools folder has the AvP2 Editing
-#                Tools v1.0 (2001-12-14) and Updates 1 and 2 (2002-01-31,
-#                2002-05-06), InstallShield 6 self-extractors.
-#   NOLF_TOOLS   NOLFTools001.exe from the NOLF Game of the Year disc 2 (the
-#                rez/ release nolf-usa-goty), SHA-256 b2a13a39...71d1: the NOLF
-#                Tools 001 (January 2001), a zip self-extractor.
+# Inputs, each checked before use. By default rez/'s disc images, as
+# rez/fetch-isos.sh avp2-ph-eu nolf-eu-goty leaves them in rez/isos/ (it
+# checks the zips against rez/isos/SHA256SUMS); failing those, the raw
+# images under ../extracted/. Override in the environment:
+#   AVP2_PH_ISO  the Aliens versus Predator 2: Primal Hunt (Europe) disc
+#                (redump.org disc 35760) as a 2048-byte-sector .iso, or
+#   AVP2_PH_BIN  the same disc's raw .bin (SHA-1 b47b0750...747d). Its Tools
+#                folder has the AvP2 Editing Tools v1.0 (2001-12-14) and
+#                Updates 1 and 2 (2002-01-31, 2002-05-06), InstallShield 6
+#                self-extractors, each checked by SHA-256 whichever image
+#                they come from.
+#   NOLF_TOOLS   NOLFTools001.exe (SHA-256 b2a13a39...71d1: the NOLF Tools 001,
+#                January 2001, a zip self-extractor), or
+#   NOLF_DISC2   the NOLF Game of the Year disc 2 .iso (the rez/ releases
+#                nolf-eu-goty and nolf-usa-goty) it is taken from.
 #
 # Writes out/reference/<release>/ for avp2tools, avp2tools_update,
 # avp2tools_update2 and nolftools001, each the release's files as its
@@ -21,10 +27,24 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 TALON="$PWD"
-AVP2_PH_BIN="${AVP2_PH_BIN:-$TALON/../extracted/avp2-ph-eu/Aliens Versus Predator 2 - Primal Hunt (Europe).bin}"
-NOLF_TOOLS="${NOLF_TOOLS:-$TALON/../extracted/nolf-tools-001/iso/Game/NOLFTools001.exe}"
+ISOS="$TALON/rez/isos"
+PH_NAME="Aliens Versus Predator 2 - Primal Hunt (Europe)"
+DISC2_NAME="Operative, The - No One Lives Forever (USA, Europe) (Disc 2) (Game of the Year Edition)"
+if [ -z "${AVP2_PH_ISO:-}${AVP2_PH_BIN:-}" ]; then
+    if [ -f "$ISOS/$PH_NAME.iso" ]; then AVP2_PH_ISO="$ISOS/$PH_NAME.iso"
+    else AVP2_PH_BIN="$TALON/../extracted/avp2-ph-eu/$PH_NAME.bin"; fi
+fi
+if [ -z "${NOLF_TOOLS:-}${NOLF_DISC2:-}" ]; then
+    if [ -f "$ISOS/$DISC2_NAME.iso" ]; then NOLF_DISC2="$ISOS/$DISC2_NAME.iso"
+    else NOLF_TOOLS="$TALON/../extracted/nolf-tools-001/iso/Game/NOLFTools001.exe"; fi
+fi
 PH_SHA1=b47b07507ad6a511958b8544498d4b9399c2747d
 NOLF_SHA256=b2a13a39a12642b8de66b541dea999c5315c6764f0b6897bcaf7a01e832071d1
+declare -A TOOLS_SHA256=(
+    [avp2tools]=828bc1c9e70b5fe1901e45c7b42b9948c4212990bc04910339057d72dcf4669e
+    [avp2tools_update]=7c3fd1f389ed9833331ca6b2200f40f409ff64200c20ccf800c04a17707775ab
+    [avp2tools_update2]=485a8ea0b8f5055ccbd40c1bdb2d2a100d54d0476d2c692955407b3398ba5662
+)
 REZ="$TALON/rez/tools"
 OUT="$TALON/out/reference"
 TMP="$TALON/out/reference.tmp"
@@ -34,11 +54,15 @@ check() {   # check <file> <sha1|sha256> <digest>
     local got; got=$("$2sum" "$1" | cut -d' ' -f1)
     [ "$got" = "$3" ] || { echo "error: $1: $2 $got, expected $3" >&2; exit 1; }
 }
-check "$AVP2_PH_BIN" sha1 "$PH_SHA1"
-check "$NOLF_TOOLS" sha256 "$NOLF_SHA256"
+present() { [ -f "$1" ] || { echo "error: missing $1 (see build/reference.sh)" >&2; exit 1; }; }
+if [ -n "${AVP2_PH_ISO:-}" ]; then present "$AVP2_PH_ISO"; else check "$AVP2_PH_BIN" sha1 "$PH_SHA1"; fi
+if [ -n "${NOLF_DISC2:-}" ]; then present "$NOLF_DISC2"; else check "$NOLF_TOOLS" sha256 "$NOLF_SHA256"; fi
 
 make -s -C "$REZ/unshield" >/dev/null
 rm -rf "$TMP"; mkdir -p "$TMP"
+if [ -n "${AVP2_PH_ISO:-}" ]; then
+    ln -s "$AVP2_PH_ISO" "$TMP/ph.iso"
+else
 
 # The Primal Hunt disc: one Mode 1 (XA Form 1) data track of raw sectors; the
 # ISO is each sector's 2048 bytes of user data.
@@ -52,7 +76,9 @@ with open(src, 'rb') as f, open(dst, 'wb') as o:
             break
         o.write(s[16:2064] if s[15] == 1 else s[24:2072])
 EOF
+fi
 python3 -I "$REZ/isoextract.py" x "$TMP/ph.iso" "$TMP/ph" Tools >/dev/null
+for n in "${!TOOLS_SHA256[@]}"; do check "$TMP/ph/Tools/$n.exe" sha256 "${TOOLS_SHA256[$n]}"; done
 for n in avp2tools avp2tools_update avp2tools_update2; do
     python3 -I "$REZ/sfxcab.py" "$TMP/ph/Tools/$n.exe" "$TMP/sfx-$n" >/dev/null
     hdr=$(find "$TMP/sfx-$n" -iname data1.hdr | head -1)
@@ -66,6 +92,11 @@ done
 
 # NOLF Tools 001: a zip self-extractor around an InstallShield 5 setup whose
 # files are stored plain in the zip.
+if [ -n "${NOLF_DISC2:-}" ]; then
+    python3 -I "$REZ/isoextract.py" x "$NOLF_DISC2" "$TMP/disc2" Game/NOLFTools001.exe >/dev/null
+    NOLF_TOOLS="$TMP/disc2/Game/NOLFTools001.exe"
+    check "$NOLF_TOOLS" sha256 "$NOLF_SHA256"
+fi
 python3 -I -c "import zipfile,sys; zipfile.ZipFile(sys.argv[1]).extractall(sys.argv[2])" \
     "$NOLF_TOOLS" "$TMP/nolftools001"
 
