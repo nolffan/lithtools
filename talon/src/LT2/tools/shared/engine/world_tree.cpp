@@ -233,22 +233,26 @@ static inline LTBOOL TestBoxPlane(
 }
 
 
-// Intersects the line segment with the 2 sides of the box on one dimension, then sees if the
-// intersection point is inside the box on the other.
+// Intersects the line segment with the 2 sides of the box on dimension iDim, then sees if the
+// intersection point is inside the box on iOtherDim.
+// talon: the 2001 one is half way to Build 69's: the vectors and the
+// dimensions come in, and it hands TestBoxPlane the coordinates by value
+// through _CVector::operator[]. With this shape TestNode's budget expands
+// the X side's two TestBoxPlanes and leaves the Z side's two as calls to the
+// out-of-line copy (0x44dda0), as shipped; TestBoxPlane spelt out four times,
+// or this one taking the floats, never gives that split.
 static inline LTBOOL TestBoxBothSides(
-	float pt1, 
-	float pt2, 
-	float boxMin, 
-	float boxMax, 
-	float boxMinOther, 
-	float boxMaxOther, 
-	float pt1Other, 
-	float pt2Other)
+	LTVector &pt1, 
+	LTVector &pt2, 
+	LTVector &boxMin, 
+	LTVector &boxMax, 
+	uint32 iDim, 
+	uint32 iOtherDim)
 {
-	if(TestBoxPlane(pt1, pt2, boxMin, boxMinOther, boxMaxOther, pt1Other, pt2Other))
+	if(TestBoxPlane(pt1[iDim], pt2[iDim], boxMin[iDim], boxMin[iOtherDim], boxMax[iOtherDim], pt1[iOtherDim], pt2[iOtherDim]))
 		return LTTRUE;
 
-	if(TestBoxPlane(pt1, pt2, boxMax, boxMinOther, boxMaxOther, pt1Other, pt2Other))
+	if(TestBoxPlane(pt1[iDim], pt2[iDim], boxMax[iDim], boxMin[iOtherDim], boxMax[iOtherDim], pt1[iOtherDim], pt2[iOtherDim]))
 		return LTTRUE;
 
 	return LTFALSE;
@@ -256,11 +260,9 @@ static inline LTBOOL TestBoxBothSides(
 
 // Does tests to see if the segment intersects the node.  If so, calls IntersectSegment_R
 // on it and returns the value.
-// talon: 0x44dac0, the 2001 one (X and Z spelt out). Near (957 against 716
-// bytes), the inline budget: shipped expands the first two TestBoxPlanes and
-// calls the last two (0x44dda0, which matches); ours expands all four. Two
-// dead statements at the top are enough to push them out, so the 2001
-// source spent a little more before them; the rest matches once they are.
+// talon: 0x44dac0, the 2001 one. GetDimBoxStatus takes the coordinates by
+// value (X and Z spelt out); TestBoxBothSides takes the vectors and the
+// dimensions, as in Build 69.
 static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 {
 	PolySide outStatus;
@@ -286,10 +288,8 @@ static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 		}
 		
 		// Allllllllllll-righty, we'll do the extensive test!
-		if(TestBoxBothSides(pInfo->m_Pts[0].x, pInfo->m_Pts[1].x, pNode->m_BBoxMin.x, pNode->m_BBoxMax.x,
-				pNode->m_BBoxMin.z, pNode->m_BBoxMax.z, pInfo->m_Pts[0].z, pInfo->m_Pts[1].z) ||
-			TestBoxBothSides(pInfo->m_Pts[0].z, pInfo->m_Pts[1].z, pNode->m_BBoxMin.z, pNode->m_BBoxMax.z,
-				pNode->m_BBoxMin.x, pNode->m_BBoxMax.x, pInfo->m_Pts[0].x, pInfo->m_Pts[1].x))
+		if(TestBoxBothSides(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 0, 2) ||
+			TestBoxBothSides(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 2, 0))
 		{
 			return IntersectSegment_R(pNode, pInfo);
 		}
