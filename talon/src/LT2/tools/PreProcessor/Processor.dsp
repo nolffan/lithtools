@@ -294,5 +294,21 @@ SOURCE=..\shared\engine\world_tree.cpp
 SOURCE=..\shared\world\WorldNode.cpp
 # End Source File
 # End Group
+# Begin Group "Resource Files"
+
+# PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\PreProcessor.rc
+# End Source File
+# Begin Source File
+
+SOURCE=.\Res\PreProcessor.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\resource.h
+# End Source File
+# End Group
 # End Target
 # End Project

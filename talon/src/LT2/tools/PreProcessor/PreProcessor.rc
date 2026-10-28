@@ -1,0 +1,132 @@
+// Microsoft Visual C++ generated resource script.
+//
+// talon: the shipped Processor.exe's (AvP2 v1.0) resources, decompiled by
+// tools/rsrc2rc.py: each compiles back to the shipped bytes
+// (tools/rsrcdiff.py). An AppWizard dialog application's, unedited since
+// 1996 but for the main window and the options dialog; Res\PreProcessor.ico
+// is the shipped icon (one 32x32 16-colour image).
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+IDR_MAINFRAME           ICON DISCARDABLE     "Res\\PreProcessor.ico"
+
+IDD_ABOUTBOX DIALOG 0, 0, 217, 55
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "About PreProcessor"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            IDR_MAINFRAME, IDC_STATIC, 11, 17, 18, 20
+    LTEXT           "DEdit PreProcessor Version 1.0", IDC_STATIC, 40, 10, 119, 8, SS_NOPREFIX
+    LTEXT           "Copyright © 1996", IDC_STATIC, 40, 25, 119, 8
+    DEFPUSHBUTTON   "OK", IDOK, 178, 7, 32, 14, WS_GROUP
+END
+
+IDD_PREPROCESSOR_DIALOG DIALOGEX 0, 0, 500, 226
+STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | DS_SETFONT | DS_MODALFRAME
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "LithTech World Processor"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    RTEXT           "Generating BSP", IDC_TEXT_BSP, 203, 50, 55, 10, NOT WS_VISIBLE
+    CONTROL         "Progress1", IDC_PROGRESS_HULLS, "msctls_progress32", WS_BORDER | NOT WS_VISIBLE, 263, 140, 230, 10
+    RTEXT           "Generating Hulls", IDC_TEXT_HULLS, 203, 140, 55, 10, NOT WS_VISIBLE
+    CONTROL         "Progress1", IDC_PROGRESS_PVS, "msctls_progress32", WS_BORDER | NOT WS_VISIBLE, 263, 185, 230, 10
+    RTEXT           "Full Optimization", IDC_TEXT_PVS, 203, 186, 55, 10, NOT WS_VISIBLE
+    CONTROL         "Progress1", IDC_PROGRESS_BSP, "msctls_progress32", WS_BORDER | NOT WS_VISIBLE, 263, 50, 230, 10
+    RTEXT           "Setting Up", IDC_TEXT_SETUP, 223, 5, 35, 10, NOT WS_VISIBLE
+    CONTROL         "Progress1", IDC_PROGRESS_SETUP, "msctls_progress32", WS_BORDER | NOT WS_VISIBLE, 263, 5, 230, 10
+    RTEXT           "Lighting", IDC_TEXT_LIGHTING, 223, 95, 35, 10, NOT WS_VISIBLE
+    CONTROL         "Progress1", IDC_PROGRESS_LIGHTING, "msctls_progress32", WS_BORDER | NOT WS_VISIBLE, 263, 95, 230, 10
+    EDITTEXT        IDC_STATUS, 5, 5, 193, 190, WS_VSCROLL | ES_MULTILINE | ES_READONLY, WS_EX_DLGMODALFRAME
+    DEFPUSHBUTTON   "&OK", IDOK, 50, 205, 100, 15, NOT WS_VISIBLE
+    CONTROL         "Slider1", IDC_PRIORITY, "msctls_trackbar32", WS_TABSTOP | TBS_BOTH | TBS_NOTICKS, 393, 204, 100, 15
+    LTEXT           "Process Priority", IDC_STATIC, 337, 208, 49, 8
+END
+
+IDD_PROCESSINGOPTIONS DIALOG 0, 0, 338, 223
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Processing Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    AUTOCHECKBOX    "Replace Textures", IDC_PO_REPLACETEXTURES, 13, 20, 83, 10
+    AUTOCHECKBOX    "Import Geometry", IDC_PO_IMPORTGEOMETRY, 13, 31, 70, 10
+    AUTOCHECKBOX    "Import Texture Flags", IDC_PO_TEXTUREFLAGS, 13, 42, 84, 10, WS_DISABLED
+    AUTOCHECKBOX    "Ignore Hidden", IDC_PO_IGNOREHIDDEN, 13, 53, 70, 10
+    AUTOCHECKBOX    "Fix T Junctions", IDC_PO_FIXTJUNC, 13, 64, 70, 10
+    AUTOCHECKBOX    "Apply Lighting", IDC_PO_LIGHT, 122, 20, 89, 10
+    AUTOCHECKBOX    "Light Animations", IDC_PO_LIGHTANIMS, 122, 31, 89, 10, WS_DISABLED
+    AUTOCHECKBOX    "Shadows", IDC_PO_SHADOWS, 122, 42, 89, 10, WS_DISABLED
+    AUTOCHECKBOX    "Vertex Lighting Only", IDC_PO_VERTICESONLY, 122, 53, 89, 10, WS_DISABLED
+    AUTOCHECKBOX    "Full Optimization", IDC_PO_OPTIMIZE, 232, 20, 70, 10
+    AUTOCHECKBOX    "Fast Approximation", IDC_PO_FAST, 232, 31, 75, 10
+    CONTROL         "Slider1", IDC_PO_SPLITWEIGHT, "msctls_trackbar32", WS_TABSTOP | TBS_AUTOTICKS | TBS_LEFT, 50, 170, 240, 20
+    EDITTEXT        IDC_PO_PROJECTDIR, 80, 112, 190, 15, ES_AUTOHSCROLL
+    EDITTEXT        IDC_PO_EXTRAPARAMS, 80, 132, 190, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Log File", IDC_PO_LOGFILE, 285, 124, 40, 10
+    DEFPUSHBUTTON   "OK", IDOK, 96, 202, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 191, 202, 50, 14
+    CTEXT           "Balanced Tree", IDC_STATIC, 295, 170, 30, 15
+    CTEXT           "Less Polies", IDC_STATIC, 13, 170, 30, 15
+    LTEXT           "Extra Parameters:", IDC_STATIC, 13, 132, 60, 15, SS_CENTERIMAGE
+    LTEXT           "Project Directory:", IDC_STATIC, 13, 112, 60, 15, SS_CENTERIMAGE
+    GROUPBOX        "Visibility", IDC_STATIC, 226, 7, 105, 85
+    GROUPBOX        "Geometry", IDC_STATIC, 7, 7, 104, 85
+    GROUPBOX        "Lighting", IDC_STATIC, 116, 7, 104, 85
+    GROUPBOX        "Options", IDC_STATIC, 7, 98, 324, 98
+    AUTOCHECKBOX    "Lambertian Lightmaps", IDC_PO_LAMBERTIAN, 122, 64, 89, 10, WS_DISABLED
+    AUTOCHECKBOX    "Import AI and Music Vol.", IDC_PO_AIVOLUMES, 13, 75, 95, 10
+    CTEXT           "", IDC_PO_SLIDERREF, 180, 158, 40, 10, SS_SUNKEN
+    CTEXT           "Slider Reference:", IDC_STATIC, 120, 158, 60, 10
+    PUSHBUTTON      "<", IDC_PO_SLIDERLEFT, 90, 158, 16, 10
+    PUSHBUTTON      ">", IDC_PO_SLIDERRIGHT, 240, 158, 16, 10
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", ""
+            VALUE "FileDescription", "PREPROCESSOR MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "PREPROCESSOR\0"
+            VALUE "LegalCopyright", "Copyright © 1996\0"
+            VALUE "LegalTrademarks", ""
+            VALUE "OriginalFilename", "PREPROCESSOR.EXE\0"
+            VALUE "ProductName", "PREPROCESSOR Application\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 0x4b0
+    END
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    IDS_ABOUTBOX                    "&About PreProcessor..."
+    IDS_PO_ADVANCEDLESS             "Advanced <<"
+    IDS_PO_ADVANCEDMORE             "Advanced >> "
+    IDS_PO_TITLE                    "Processing Options for %1!s!.ed"
+END
+
+#endif
