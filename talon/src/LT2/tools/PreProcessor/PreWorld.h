@@ -14,6 +14,16 @@
 #ifndef __PREWORLD_H__
 #define __PREWORLD_H__
 
+// talon: Build 69's header, less what 2001 cannot have had and nothing
+// uses: the light groups (CPreLightGroup, CPreLightGroup_PolyData),
+// CheckNodes, CPreWorld::FindPolyByIndex and CPreMainWorld's
+// RemoveAllUnusedGeometry, GetWorldIndex, CollectBlockerPolys and
+// CollectParticleBlockerPolys. What this header declares moves code in
+// the files that include it (tools/guides/09, "The declaration count is
+// a symbol count, mod 64"): those went with CPrePolyRef's constructors,
+// 57 units with their 7. CPreBlindData (23 units) is as unused but
+// stays: removing it as well would need 41 more.
+
 
 // Includes....
 #include "bdefs.h"
@@ -41,7 +51,6 @@ class CPreLightMap;
 
 // Functions in this module.
 void SetNodeIndices(CNodeList &theList);
-void CheckNodes(CNode *pRoot);
 
 class CPreLightFrame
 {
@@ -58,11 +67,12 @@ public:
 };
 
 
+// talon: a POD in 2001, with no constructors: CMoArray<CPrePolyRef>'s
+// Remove2 (0x43dad0), GenAppend, GenRemoveAt and InternalNiceSetSize
+// construct nothing.
 class CPrePolyRef
 {
 public:
-	CPrePolyRef() {}
-	CPrePolyRef(const CPrePoly *pPoly) : m_iWorld(pPoly->m_WorldIndex), m_iPoly(pPoly->m_Index) {}
 	bool operator==(const CPrePolyRef &cOther) const { return (m_iWorld == cOther.m_iWorld) && (m_iPoly == cOther.m_iPoly); }
 	bool operator!=(const CPrePolyRef &cOther) const { return !(*this == cOther); }
 	uint32		m_iWorld;
@@ -98,84 +108,6 @@ public:
 
 	// talon: CreateLightAnim's bShadowMap.
 	LTBOOL						m_bShadowMap;
-};
-
-
-struct CPreLightGroup_PolyData
-{
-	CPreLightGroup_PolyData();
-	~CPreLightGroup_PolyData();
-	CPreLightGroup_PolyData(const CPreLightGroup_PolyData &cOther);
-	CPreLightGroup_PolyData &operator=(const CPreLightGroup_PolyData &cOther);
-
-	CPrePolyRef	m_hPoly;
-	typedef std::vector<uint8> TVertexData;
-	TVertexData m_aVertexIntensities;
-	CPreLightMap *m_pLightmap;
-};
-
-class CPreLightGroup
-{
-public:
-	typedef std::vector<CPreLightGroup_PolyData> TPolyDataList;
-
-public:
-	const char *GetName() const { return m_sName.c_str(); }
-	void SetName(const char *pName) { m_sName = pName; }
-
-	// Normalized color of this light group [0-1]
-	const LTVector &GetColor() const { return m_vColor; }
-	void SetColor(const LTVector &vColor) { m_vColor = vColor; }
-
-	// The lighting data for each poly affected by this group
-	TPolyDataList &GetPolyData() { return m_aPolyData; }
-	const TPolyDataList &GetPolyData() const { return m_aPolyData; }
-
-	// The ambient lighting grid data
-	struct SLightGrid
-	{
-		SLightGrid() : m_pSamples(0) {}
-		~SLightGrid() { delete[] m_pSamples; }
-		SLightGrid(const SLightGrid &cOther) { InternalCopy(cOther); }
-		SLightGrid &operator=(const SLightGrid &cOther) 
-		{
-			if (this == &cOther)
-				return *this;
-			delete[] m_pSamples;
-			InternalCopy(cOther);
-			return *this;
-		}
-
-		uint32 GetTotalSampleCount() const { return m_vSize.x * m_vSize.y * m_vSize.z; }
-
-		// Offset and size, relative to the main world's light grid
-		_CVector<uint32> m_vOffset, m_vSize;
-		// Sample data
-		uint8 *m_pSamples;
-
-	private:
-		void InternalCopy(const SLightGrid &cOther)
-		{
-			m_vOffset = cOther.m_vOffset;
-			m_vSize = cOther.m_vSize;
-			if (cOther.m_pSamples)
-			{
-				m_pSamples = new uint8[GetTotalSampleCount()];
-				memcpy(m_pSamples, cOther.m_pSamples, GetTotalSampleCount());
-			}
-			else
-				m_pSamples = 0;
-		}
-	};
-	SLightGrid &GetLightGrid() { return m_cLightGrid; }
-	const SLightGrid &GetLightGrid() const { return m_cLightGrid; }
-
-private:
-	std::string		m_sName;
-	LTVector		m_vColor;
-
-	TPolyDataList	m_aPolyData;
-	SLightGrid		m_cLightGrid;
 };
 
 
@@ -386,8 +318,6 @@ public:
 
 	void				SetPolyWorldIndices();
 
-	CPrePoly *			FindPolyByIndex(uint32 nIndex);
-
 public:
 
 	// Parent world...
@@ -497,29 +427,13 @@ public:
 	const CPreWorld*		GetPhysicsBSP() const;
 	CPreWorld*				GetVisBSP();							// talon, W1: 0x433810
 
-	//goes through all world models, and removes all unused geometry
-	//associated with the world model. This will also update the bounding
-	//boxes of the world models if bUpdateBoundingBoxes is true;
-	void					RemoveAllUnusedGeometry(bool bUpdateBoundingBoxes = true);
-
-
 	//updates the bounding box for the main world model. This assumes that all the 
 	//preworlds have up to date bounding boxes.
 	void					UpdateBoundingBox();
 
-	// Find the index for a world
-	uint32					GetWorldIndex(const CPreWorld *pWorld) const;
-
 	// Get a world by index
 	CPreWorld*				GetWorld(uint32 nIndex) { ASSERT(nIndex < m_WorldModels.GetSize()); return m_WorldModels[nIndex]; }
 	const CPreWorld*		GetWorld(uint32 nIndex) const { ASSERT(nIndex < m_WorldModels.GetSize()); return m_WorldModels[nIndex]; }
-
-	// Collect the blocker polys from the world
-	// Returns the number of polys found
-	uint32					CollectBlockerPolys();
-
-	// collect the particle blocker polys from the world and return the number found
-	uint32					CollectParticleBlockerPolys();
 
 	// talon: the lightmap grid size (the lighting reads it through this).
 	PReal					GetLMGridSize() const	{return m_LMGridSize;}
