@@ -348,7 +348,7 @@ static void FindIntersecters(CMoArray<TempBrush*> &brushes, CMoArray<TempBrush*>
 }
 
 
-// 0x403720. talon: near (826 against 748 bytes), the inline budget: the
+// 0x403720. talon: near (787 against 748 bytes), the inline budget: the
 // shipped code calls the _CVector constructor in the edge loop's
 // operator- and Cross (0x4021c0), Norm (0x4044b0) and both Dots
 // (0x4021e0), where ours expands all but Norm's Mag. The final loop is
@@ -356,7 +356,11 @@ static void FindIntersecters(CMoArray<TempBrush*> &brushes, CMoArray<TempBrush*>
 // where DistTo's by-value Dot copies it (and DistTo was 868 bytes). Tried
 // and not it: Normal()/Dist()/GetPlane() spellings of the touching test,
 // no vEdge local, operator^, Norm(1.0f), dead expansions before the edge
-// loop (they make it expand more).
+// loop (they make it expand more). The touching test's edge normal is
+// the face normal's Cross with the edge, and a vertex is inside by more
+// than 0.1 (-0.1, 0x4744b0): with the edge's Cross and 0.1 (as written
+// before 2026-10-28) seven of Sample_DM's brush pairs intersected that
+// the shipped code keeps apart, and the physics BSP came out different.
 static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 {
 	GPOS pos1, pos2;
@@ -388,13 +392,16 @@ static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 					for(i=0; i < pPoly2->NumVerts(); i++)
 					{
 						vEdge = pPoly2->NextPt(i) - pPoly2->Pt(i);
-						vEdgeNormal = vEdge.Cross(pPoly2->Normal());
+						// The normal's Cross, not the edge's (0x403880..0x4038c4: the
+						// shipped x is edge.y*N.z - edge.z*N.y).
+						vEdgeNormal = pPoly2->Normal().Cross(vEdge);
 						vEdgeNormal.Norm();
 						dist = vEdgeNormal.Dot(pPoly2->Pt(i));
 
 						for(k=0; k < pPoly1->NumVerts(); k++)
 						{
-							if(vEdgeNormal.Dot(pPoly1->Pt(k)) - dist > 0.1)
+							// -0.1, not 0.1 (0x40394c, 0x4744b0).
+							if(vEdgeNormal.Dot(pPoly1->Pt(k)) - dist > -0.1)
 								goto NotInside;
 						}
 					}
