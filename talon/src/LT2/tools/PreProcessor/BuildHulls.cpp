@@ -32,6 +32,13 @@ static CPrePortal* MakeNodePortal(CPreLeaf *pLeaf, CPrePoly *pPoly);
 static CPrePortal* ClipPortal(CPreLeaf *pLeaf, CPrePortal *pPortal, CPrePoly *pPoly);
 
 
+// 0x408370. talon: near (570 against 556 bytes), the inline budget: the
+// shipped code calls CMoArray::Clear in unused's constructor (0x408397)
+// where ours expands it. Measured: three more expansions that compile to
+// nothing, anywhere after it (three `pLeaf->m_Portals.GetSize();` after
+// CheckLeaves), make it byte-identical; what the 2001 source spent them on
+// is unknown. vMax.Dist(vMin), `i < pLeaf->m_Portals` and GetNode on the
+// root don't do it (they move other code).
 uint32 MakeHulls(CHullInfo *pInfo, CPreWorld *pWorld, void (*ProgressFn)(float fPercent))
 {
 	CMoArray<CNode*> unused;
@@ -78,19 +85,22 @@ uint32 MakeHulls(CHullInfo *pInfo, CPreWorld *pWorld, void (*ProgressFn)(float f
 }
 
 
-// 0x4085a0. talon: near. The shipped loop keeps storing each leaf into
-// the dead parameter slot (0x4085b4), so pLeaf is in memory; volatile is
-// the only spelling found that keeps the store, and it schedules it right
-// after the load where shipped puts it after the add and the dec (same
-// size). What the 2001 body did with the leaf compiled to nothing.
+// 0x4085a0. The shipped loop keeps storing each leaf into the dead
+// parameter slot (0x4085b4) after the add and the dec: the leaf is a local
+// whose address escapes into code that compiled to nothing. Any dead call
+// taking &pLeaf gives exactly that (an inline or intrinsic one, or a plain
+// `&pLeaf`, is dropped with the store; volatile keeps the store but pins it
+// right after the load). What the 2001 body did with the leaf is unknown;
+// the free() is a stand-in for that dead use, not a recovered statement.
 static void CheckLeaves(CPreWorld *pWorld)
 {
-	CPreLeaf * volatile pLeaf;
+	CPreLeaf *pLeaf;
 	uint32 i;
 
 	for(i=0; i < pWorld->m_Leaves.GetSize(); i++)
 	{
 		pLeaf = pWorld->m_Leaves[i];
+		if(0) free(&pLeaf);
 	}
 }
 

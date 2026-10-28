@@ -102,7 +102,6 @@ static PReal SnapNormalComponent(PReal val)
 static BOOL CalcSnappedPlane(CEditPoly *pPoly, PVector *pPts, CPrePlane *pPlane)
 {
 	uint32 i, j;
-	PReal mag;
 
 	for(i=0; i < 3; i++)
 	{
@@ -115,8 +114,9 @@ static BOOL CalcSnappedPlane(CEditPoly *pPoly, PVector *pPts, CPrePlane *pPlane)
 	pPlane->m_Normal = (pPts[2] - pPts[0]).Cross(pPts[1] - pPts[0]);
 	pPlane->m_Normal.Norm();
 
-	mag = pPlane->m_Normal.Mag();
-	if(mag >= 0.5f && mag <= 1.5f)
+	// Mag() twice (0x42bf6f): the shipped code loads x afresh for the snap
+	// after the test, which a local magnitude doesn't give.
+	if(pPlane->m_Normal.Mag() >= 0.5f && pPlane->m_Normal.Mag() <= 1.5f)
 	{
 		pPlane->m_Normal.x = SnapNormalComponent(pPlane->m_Normal.x);
 		pPlane->m_Normal.y = SnapNormalComponent(pPlane->m_Normal.y);

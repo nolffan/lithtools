@@ -438,7 +438,11 @@ void AddPoliesToLeaves(CPreWorld *pWorld, GenList<CPrePoly*> &polies)
 // Near (525 bytes against 530): the inline budget. Shipped calls
 // _CVector::Dot (0x40ca27, the point copied to the stack, the plane kept in
 // a slot) in GetPolySide's DistTo, where ours expands it; the second Dot
-// (the poly's normal, 0x40cac1) is expanded in both.
+// (the poly's normal, 0x40cac1) is expanded in both. Measured: one more
+// expansion that compiles to nothing anywhere after GetPolySide calls that
+// Dot and makes it size-exact (530); what is left is pPoly in ebp where
+// shipped has ebx (and the vertex pointer the other way), the same with
+// the dead expansion placed or spelled several ways.
 // talon, retail bug: when SplitPoly gives up (0x40cb61) it returns without
 // freeing the two pieces SplitPoly made.
 void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode)

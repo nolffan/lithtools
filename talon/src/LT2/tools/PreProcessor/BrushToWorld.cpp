@@ -514,6 +514,17 @@ static void ClipBrush(TempBrush *pBrush, TempNode *pTree)
 }
 
 
+// talon: the name is ours. ClipPoly's front test goes through an inline
+// helper: one more expansion after the split's DeletePoly spends the
+// inline budget (spent last site first) so that DeletePoly stays
+// `push 0; call ??_GTempPoly` (0x403ed3) as shipped, while the later
+// one expands to ~TempPoly. The back test is written out: through the
+// helper it compiles 8 bytes short.
+inline BOOL IsTempLeaf(TempNode *pNode)
+{
+	return pNode == TEMPNODE_IN || pNode == TEMPNODE_OUT;
+}
+
 static void ClipPoly(TempBrush *pBrush, TempPoly *pPoly, TempNode *pNode)
 {
 	TempPoly *sides[2];
@@ -571,7 +582,7 @@ static void ClipPoly(TempBrush *pBrush, TempPoly *pPoly, TempNode *pNode)
 			}
 		}
 
-		if(!sides[FrontSide] || pNode->m_Sides[FrontSide] == TEMPNODE_IN || pNode->m_Sides[FrontSide] == TEMPNODE_OUT)
+		if(!sides[FrontSide] || IsTempLeaf(pNode->m_Sides[FrontSide]))
 			return;
 
 		pPoly = sides[FrontSide];
