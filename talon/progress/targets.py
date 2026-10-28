@@ -55,7 +55,11 @@ TARGETS = [
          # src/LT2/tools/PreProcessor/Processor.dsw (it links, with nothing
          # unresolved, since 2026-10-28). Its own code is followed by the LT2 libraries (StdLith 0x0044eab0, zlib
          # 0x00450ad0, RegMgr 0x004564e0..0x00456742: Monolith's, ours to
-         # build, so inside the range) and from 0x0045680f static MFC
+         # build, so inside the range) and from 0x00456750 static MFC: its
+         # inline functions first (CMemoryException's and
+         # CNotSupportedException's constructors and destructors,
+         # AfxGetMainWnd, ??_9 vcall thunks, as nafxcw places them in our
+         # link), its library code from 0x0045680f
          # (progress/Processor-avp2-map.md)
          built="src/LT2/built/Release/tools/Processor/Processor.exe", optional=True,
          # without the image (a build stopped before the link), its
@@ -65,7 +69,7 @@ TARGETS = [
                        "src/LT2/lithshared/built/Release/Lib_StdLith/Lib_StdLith.lib",
                        "src/LT2/lithshared/built/Release/Lib_ZLib/Lib_ZLib.lib",
                        "src/LT2/lithshared/built/Release/RegMgr/regmgr.lib"],
-         app=[(0x00401000, 0x0045680f)]),
+         app=[(0x00401000, 0x00456750)]),
     dict(label="Processor.exe (NOLF)", what="world processor, NOLF (Tools 001)", kind="image",
          shipped=NOLF + "/Processor.exe", stem="Processor-nolf", built=None, optional=True,
          app=[(0x00401000, 0x00469103)]),
