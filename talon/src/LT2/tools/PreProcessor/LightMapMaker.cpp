@@ -80,9 +80,9 @@ BOOL CLightMapMaker::Init(CPreMainWorld *pWorld, BOOL bClipLight,
 	if(!m_ThreadCS)
 		return FALSE;
 
-	m_bClipLight = bClipLight;
 	m_pWorld = pWorld;
 	m_ProgressFn = ProgressFn;
+	m_bClipLight = bClipLight;
 
 	pWorld->SetupPolyArrays();
 
@@ -736,10 +736,15 @@ BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArr
 }
 
 
+// 0x4178b0. Each arm scales a colour local in place (`color *= s`: the copy
+// and three in-place products at 0x417a5b and 0x417b6f), and the arms' last
+// FVec is a call (0x417bb7) where the first is expanded; with the products
+// as one expression the budget runs the other way round.
 static PVector CalcLightSample(const CLightDef *pLight, const PVector &lightPos,
 	const PVector &lightDir, const PVector &samplePos, PReal distSqr, float fSurfaceDot)
 {
 	PVector rayDir;
+	PVector color;
 	PReal distPercent, anglePercent, dot, fovDotLimit;
 
 	if(pLight->m_bDirectional)
@@ -752,8 +757,10 @@ static PVector CalcLightSample(const CLightDef *pLight, const PVector &lightPos,
 		{
 			anglePercent = (dot - fovDotLimit) / (1.0f - fovDotLimit);
 			distPercent = 1.0f - ((PReal)sqrt(distSqr) / pLight->m_MaxDist);
-			return ((pLight->m_InnerColor * anglePercent + pLight->m_OuterColor * (1.0f - anglePercent)) *
-				(distPercent * pLight->m_BrightScale) * fSurfaceDot).FVec();
+			color = (pLight->m_InnerColor * anglePercent + pLight->m_OuterColor * (1.0f - anglePercent)) *
+				(distPercent * pLight->m_BrightScale);
+			color *= fSurfaceDot;
+			return color.FVec();
 		}
 		else
 		{
@@ -763,8 +770,9 @@ static PVector CalcLightSample(const CLightDef *pLight, const PVector &lightPos,
 	else
 	{
 		distPercent = 1.0f - ((PReal)sqrt(distSqr) / pLight->m_MaxDist);
-		return ((pLight->m_InnerColor * distPercent + pLight->m_OuterColor * (1.0f - distPercent)) *
-			(fSurfaceDot * pLight->m_BrightScale)).FVec();
+		color = pLight->m_InnerColor * distPercent + pLight->m_OuterColor * (1.0f - distPercent);
+		color *= fSurfaceDot * pLight->m_BrightScale;
+		return color.FVec();
 	}
 }
 
@@ -1807,10 +1815,11 @@ static PreWorldModelInfo* FindWorldModelInfo(const char *pName, PreWorldModelInf
 {
 	uint32 i;
 
-	for(i=0; i < nInfos; i++, pInfos++)
+	for(i=0; i < nInfos; i++)
 	{
-		if(stricmp(pInfos->m_WorldModelName, pName) == 0)
-			return pInfos;
+		PreWorldModelInfo *pInfo = &pInfos[i];
+		if(stricmp(pInfo->m_WorldModelName, pName) == 0)
+			return pInfo;
 	}
 
 	return NULL;
@@ -2132,32 +2141,37 @@ static void PointInsideCB(WorldTreeObj *pObj, void *pUser)
 }
 
 
-// TRUE if the point is in empty space (0x41ce30).
+// TRUE if the point is in empty space (0x41ce30). A hand-written `while(TRUE)`
+// loop: written recursive (VC6's tail-recursion elimination), or as for(;;),
+// the loop rotates and the two back arms share one block.
 static BOOL IsPointInBSP(NODEREF pNode, PVector &vPos, PReal fEpsilon)
 {
 	PReal dist;
 
-	if(pNode == NODE_IN)
-		return TRUE;
-
-	if(pNode == NODE_OUT)
-		return FALSE;
-
-	dist = VEC_DOT(pNode->m_pPlane->m_Normal, vPos) - pNode->m_pPlane->m_Dist;
-	if(dist > fEpsilon)
+	while(TRUE)
 	{
-		return IsPointInBSP(pNode->m_Sides[FrontSide], vPos, fEpsilon);
-	}
-	else if(dist >= -fEpsilon)
-	{
-		if(IsPointInBSP(pNode->m_Sides[FrontSide], vPos, fEpsilon))
+		if(pNode == NODE_IN)
 			return TRUE;
 
-		return IsPointInBSP(pNode->m_Sides[BackSide], vPos, fEpsilon);
-	}
-	else
-	{
-		return IsPointInBSP(pNode->m_Sides[BackSide], vPos, fEpsilon);
+		if(pNode == NODE_OUT)
+			return FALSE;
+
+		dist = VEC_DOT(pNode->m_pPlane->m_Normal, vPos) - pNode->m_pPlane->m_Dist;
+		if(dist > fEpsilon)
+		{
+			pNode = pNode->m_Sides[FrontSide];
+		}
+		else if(dist < -fEpsilon)
+		{
+			pNode = pNode->m_Sides[BackSide];
+		}
+		else
+		{
+			if(IsPointInBSP(pNode->m_Sides[FrontSide], vPos, fEpsilon))
+				return TRUE;
+
+			pNode = pNode->m_Sides[BackSide];
+		}
 	}
 }
 
@@ -2550,7 +2564,8 @@ LTRESULT CLightMapMaker::GetPropGeneric(HPREOBJECT hObject, const char *pName, G
 		gp_Init(pProp);
 		if(m_pWorld && hObject < m_pWorld->m_Objects.GetSize())
 		{
-			CBaseProp *pBaseProp = m_pWorld->m_Objects[hObject]->m_PropList.GetProp(pName);
+			CBaseEditObj *pObj = m_pWorld->m_Objects[hObject];
+			CBaseProp *pBaseProp = pObj->m_PropList.GetProp(pName);
 			if(pBaseProp)
 			{
 				pBaseProp->SetupGenericProp(pProp);
@@ -2647,15 +2662,16 @@ void SetupLightGroups(CWorldNode *pNode, CPreMainWorld *pWorld)
 // table's 0x41de17 is not a function: inside this one, a call target read
 // out of 0x47082a's bytes). Called by SetupLightGroups (0x41d790).
 //
-// talon: near (register allocation), 2 bytes short: shipped keeps
-// pos and then the child's name in ebp and the object and then the child in
-// esi, ours the other way round, and four scalars in other frame slots
-// (shipped: &pObj->m_PropList 0x28, pos 0x2c, pPos 0x34, name 0x38,
-// pRadius 0x44). The child's name is copied into Object<n> from the
-// property's own string (0x41de3d: ebp, from 0x41dc00), not the std::string.
-// Tried without effect: the declaration order, pos assigned before pObj,
-// a local for the child's or the object's property list, pChild declared
-// in the loop.
+// talon: near, size-exact (1677 bytes) since the child's name property got
+// its own local (that put the registers right: the name in ebp from a lea at
+// 0x41dc00). Left: the scalars sit 8 bytes higher in the shipped frame
+// (&pObj->m_PropList 0x28, pos 0x2c, pPos 0x34, name 0x38, pRadius 0x44;
+// ours 0x20..), with the 8 bytes of aggregate (0x20) below them, and one
+// push/lea pair at 0x41dc07 the other way round. The child's name is copied
+// into Object<n> from the property's own string (0x41de3d), not the
+// std::string. Tried without effect: the declaration order (num[8]
+// anywhere among the locals), pos assigned before pObj, a local for the
+// child's or the object's property list, pChild declared in the loop.
 static void ProcessLightGroup(CWorldNode *pGroup, CPreMainWorld *pWorld)
 {
 	GPOS pos;
@@ -2685,7 +2701,8 @@ static void ProcessLightGroup(CWorldNode *pGroup, CPreMainWorld *pWorld)
 	{
 		pChild = pGroup->m_Children.GetNext(pos);
 
-		pChildName = ((CStringProp*)pChild->m_PropList.GetProp("Name"))->m_String;
+		CStringProp *pChildNameProp = (CStringProp*)pChild->m_PropList.GetProp("Name");
+		pChildName = pChildNameProp->m_String;
 		std::string name(pChildName);
 
 		pPos = pChild->m_PropList.GetProp("Pos");
@@ -2735,7 +2752,9 @@ static uint32 FindObjectByName(const char *pName, CPreMainWorld *pWorld)
 
 	for(i=0; i < pWorld->m_Objects; i++)
 	{
-		if(strcmp(pName, ((CStringProp*)pWorld->m_Objects[i]->GetPropertyList()->GetProp("Name"))->m_String) == 0)
+		CBaseEditObj *pObj = pWorld->m_Objects[i];
+		CStringProp *pProp = (CStringProp*)pObj->GetPropertyList()->GetProp("Name");
+		if(strcmp(pName, pProp->m_String) == 0)
 			return i;
 	}
 
