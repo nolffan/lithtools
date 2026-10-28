@@ -175,7 +175,8 @@ lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt fro
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
 - **Preview pane:** textures and images (`.dtx`, `.pcx`, `.tga`, `.bmp`,
-  every layout of each format), models (`.abc`, `.ltb` and the PS2's `.ltb`)
+  every layout of each format; "Magenta transparent" shows the colour key
+  the games' interface art uses), models (`.abc`, `.ltb` and the PS2's `.ltb`)
   with their skins and animations, sounds, text (PS2 `.but` attribute files
   decoded), and hex for everything else. For NOLF2, Contract
   J.A.C.K. and Tron 2.0, skins come from the archive's own

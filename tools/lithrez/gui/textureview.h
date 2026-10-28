@@ -23,7 +23,9 @@ public:
     // Shows a .pcx, .tga or .bmp (by name's extension; no mips or faces);
     // false (and *error) if it can't be read.
     bool loadImage(const QByteArray& data, const QString& name, QString* error = nullptr);
-
+    // Whether pure magenta (255, 0, 255) shows as transparent: the colour
+    // key the games' interface art uses. Display only; remembered.
+    bool magentaTransparent() const;
     void clear();
 
     bool hasTexture() const;
@@ -44,6 +46,7 @@ public slots:
     // PaletteAlpha) rather than as stored. For textures from a PS2 archive.
     void setPs2Alpha(bool on);
     bool ps2Alpha() const;
+    void setMagentaTransparent(bool on);
     void showInfo(bool show);
     // Asks for a file name (unless path is given) and writes the current
     // level/face; false on failure or cancel.

@@ -203,6 +203,7 @@ struct TextureView::Impl {
     bool isImage = false;
     lithtech::dtx::Image image;
     InfoRows imageInfo;
+    bool magenta = false;     // show pure magenta (255, 0, 255) as transparent
     bool loaded = false;
     QString name;
     int mip = 0, face = 0;
@@ -216,6 +217,7 @@ struct TextureView::Impl {
     QComboBox* faceBox = nullptr;
     QComboBox* alphaBox = nullptr;
     QCheckBox* ps2Box = nullptr;
+    QCheckBox* magentaBox = nullptr;
     QLabel* faceLabel = nullptr;
     QLabel* mipLabel = nullptr;
     QToolButton* exportBtn = nullptr;
@@ -252,6 +254,11 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     d->ps2Box = new QCheckBox(tr("PS2 alpha"), this);
     d->ps2Box->setToolTip(tr("Show palette alpha as the PS2 draws it: 0x80 is opaque, and a palette with no alpha "
                              "is opaque. The PC engine uses the stored values."));
+    d->magentaBox = new QCheckBox(tr("Magenta transparent"), this);
+    d->magentaBox->setToolTip(tr("Show pure magenta (#FF00FF) as transparent, as the games draw their interface art. "
+                                 "Copy and Export PNG keep the image as stored."));
+    d->magenta = QSettings().value(QStringLiteral("textureView/magentaTransparent"), false).toBool();
+    d->magentaBox->setChecked(d->magenta);
     d->exportBtn = new QToolButton(this);
     d->exportBtn->setText(tr("Export PNG…"));
     d->copyBtn = new QToolButton(this);
@@ -270,6 +277,7 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     top->addWidget(d->faceBox);
     top->addWidget(d->alphaBox);
     top->addWidget(d->ps2Box);
+    top->addWidget(d->magentaBox);
     top->addStretch(1);
     top->addWidget(d->copyBtn);
     top->addWidget(d->exportBtn);
@@ -321,6 +329,7 @@ TextureView::TextureView(QWidget* parent) : QWidget(parent), d(new Impl) {
     connect(d->alphaBox, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             [this](int i) { setAlphaMode(AlphaMode(i)); });
     connect(d->ps2Box, &QCheckBox::toggled, this, &TextureView::setPs2Alpha);
+    connect(d->magentaBox, &QCheckBox::toggled, this, &TextureView::setMagentaTransparent);
     connect(d->exportBtn, &QToolButton::clicked, this, [this] { exportPng(); });
     connect(d->copyBtn, &QToolButton::clicked, this, &TextureView::copyImage);
     connect(d->infoBtn, &QToolButton::toggled, this, &TextureView::showInfo);
@@ -414,6 +423,16 @@ bool TextureView::loadImage(const QByteArray& data, const QString& name, QString
     return true;
 }
 
+void TextureView::setMagentaTransparent(bool on) {
+    if (d->magentaBox->isChecked() != on) d->magentaBox->setChecked(on);   // re-enters through toggled
+    if (d->magenta == on) return;
+    d->magenta = on;
+    QSettings().setValue(QStringLiteral("textureView/magentaTransparent"), on);
+    refresh();
+}
+
+bool TextureView::magentaTransparent() const { return d->magenta; }
+
 void TextureView::setMip(int mip) {
     if (!d->loaded || mip < 0 || mip >= int(d->tex.mips.size())) return;
     d->mip = mip;
@@ -471,6 +490,16 @@ void TextureView::refresh() {
     }
     d->decoded = img;
     QImage shown;
+    if (!img.isNull() && d->magenta) {
+        // the colour key: magenta transparent, for display only (decoded,
+        // which Copy and Export PNG use, keeps it)
+        img = img.copy();
+        for (int y = 0; y < img.height(); ++y) {
+            uchar* row = img.scanLine(y);
+            for (int x = 0; x < img.width(); ++x)
+                if (row[4 * x] == 255 && row[4 * x + 1] == 0 && row[4 * x + 2] == 255) row[4 * x + 3] = 0;
+        }
+    }
     if (!img.isNull()) {
         AlphaMode alpha = d->alpha;
         if (alpha == AlphaMode::Automatic) {

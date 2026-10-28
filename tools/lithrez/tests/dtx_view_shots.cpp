@@ -1,7 +1,7 @@
 // Renders TextureView, TextureWindow and thumbnails for textures taken from
 // a rez to PNGs, for looking at (run with QT_QPA_PLATFORM=offscreen). A
 // .pcx, .tga or .bmp path is shown as the preview pane shows it (no window,
-// mips or faces).
+// mips or faces), with magenta transparent too (<stem>_view_magenta.png).
 //   dtx_view_shots <out dir> <file.rez> <path in rez>...
 //   dtx_view_shots <out dir> --ps2 <file.dtx>...   loose PS2 textures, shown
 //       with PS2 palette alpha (<stem>_ps2.png) and as stored (_stored.png)
@@ -67,10 +67,15 @@ int main(int argc, char** argv) {
         QString err;
         QString ext = QFileInfo(name).suffix().toLower();
         if (ext == "pcx" || ext == "tga" || ext == "bmp") {
+            view.setMagentaTransparent(false);
             if (!view.loadImage(data, name, &err)) std::fprintf(stderr, "%s: %s\n", argv[i], qPrintable(err));
             view.show();
             app.processEvents();
             view.grab().save(out.filePath(stem + QStringLiteral("_view.png")));
+            view.setMagentaTransparent(true);
+            app.processEvents();
+            view.grab().save(out.filePath(stem + QStringLiteral("_view_magenta.png")));
+            view.setMagentaTransparent(false);
             thumbs << imageThumbnail(data, ext, 96);
             continue;
         }
