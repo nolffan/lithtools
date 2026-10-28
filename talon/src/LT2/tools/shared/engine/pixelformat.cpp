@@ -272,10 +272,12 @@ public:
 
 	uint32 DoConvert(uint8 *pSrc)
 	{
-		return	((uint32)m_pSrcPalette[*pSrc].rgb.b << 24) | 
-				((uint32)m_pSrcPalette[*pSrc].rgb.g << 16) | 
-				((uint32)m_pSrcPalette[*pSrc].rgb.r << 8)  |
-				((uint32)m_pSrcPalette[*pSrc].rgb.a);
+		// The shipped code (0x00429d50) reads the palette entry's bytes in
+		// memory order, a r g b, with a in the top byte.
+		return	((uint32)m_pSrcPalette[*pSrc].rgb.a << 24) | 
+				((uint32)m_pSrcPalette[*pSrc].rgb.r << 16) | 
+				((uint32)m_pSrcPalette[*pSrc].rgb.g << 8)  |
+				((uint32)m_pSrcPalette[*pSrc].rgb.b);
 	}
 		
 	void Convert(uint8 *pSrc, uint8 *pDest)
