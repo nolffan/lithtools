@@ -129,14 +129,11 @@ CWorldNode::~CWorldNode()
 }
 
 
+// 0x44e750. talon: the 2001 Term leaves the label alone, and nothing else
+// frees it either (the destructor, 0x44e5c0, only calls Term): a retail
+// leak of every labelled node's label.
 void CWorldNode::Term()
 {
-	if (m_lpszLabel)
-	{
-		delete m_lpszLabel;
-		m_lpszLabel=NULL;
-	}	
-
 	GDeleteAndRemoveElements(m_Children);
 
 	m_pParent = NULL;

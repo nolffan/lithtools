@@ -142,12 +142,13 @@ static inline LTBOOL IsSegmentDimOutsideBox(LTVector &pt0, LTVector &pt1,
 
 // Returns BackSide if segment is behind boxMin, FrontSide if the segment
 // is in front of boxMax, and Intersect otherwise.
-static inline PolySide GetDimBoxStatus(LTVector &pt0, LTVector &pt1, 
-	LTVector &boxMin, LTVector &boxMax, uint32 iDim)
+// talon: the 2001 one takes the one dimension's coordinates by value
+// (inlined into TestNode, 0x44db3d, its arguments in dead parameter slots).
+static inline PolySide GetDimBoxStatus(float pt0, float pt1, float boxMin, float boxMax)
 {
-	if(pt0[iDim] < boxMin[iDim] && pt1[iDim] < boxMin[iDim])
+	if(pt0 < boxMin && pt1 < boxMin)
 		return BackSide;
-	else if (pt0[iDim] > boxMax[iDim] && pt1[iDim] > boxMax[iDim])
+	else if (pt0 > boxMax && pt1 > boxMax)
 		return FrontSide;
 	else
 		return Intersect;
@@ -156,12 +157,16 @@ static inline PolySide GetDimBoxStatus(LTVector &pt0, LTVector &pt1,
 
 // Filters the box down the tree and calls the callback for any objects
 // that the box touches.
+// 0x44d7b0. talon: the 2001 one reads the frame code once, up front.
 static void FindObjectsInBox_R(WorldTreeNode *pNode, FindObjInfo *pInfo)
 {
 	LTLink *pCur, *pListHead;
 	LTVector vMin, vMax;
 	WorldTreeObj *pObj;
+	uint32 frameCode;
 
+
+	frameCode = pInfo->m_pTree->m_TempFrameCode;
 
 	// Check objects sitting on this node.	
 	if(pNode->m_nObjectsOnOrBelow == 0)
@@ -176,10 +181,10 @@ static void FindObjectsInBox_R(WorldTreeNode *pNode, FindObjInfo *pInfo)
 		pCur = pCur->m_pNext;
 	
 		// Check the frame code.
-		if(pObj->m_WTFrameCode == pInfo->m_pTree->m_TempFrameCode)
+		if(pObj->m_WTFrameCode == frameCode)
 			continue;
 
-		pObj->m_WTFrameCode = pInfo->m_pTree->m_TempFrameCode;
+		pObj->m_WTFrameCode = frameCode;
 
 		// Do the boxes intersect?
 		pObj->GetBBox(&vMin, &vMax);
@@ -197,51 +202,53 @@ static void FindObjectsInBox_R(WorldTreeNode *pNode, FindObjInfo *pInfo)
 }
 
 // Intersects the line segment in the specified dimension on fPlane's plane, 
-// then sees if the intersection point is inside the box on iOtherDim1 and iOtherDim2.
+// then sees if the intersection point is inside the box on the other dimension.
+// talon: the 2001 one (0x44dda0) takes the coordinates by value and works out
+// only the other dimension's coordinate of the intersection.
 static inline LTBOOL TestBoxPlane(
-	LTVector &pt1, 
-	LTVector &pt2, 
+	float pt1, 
+	float pt2, 
 	float fPlane,
-	LTVector &boxMin, 
-	LTVector &boxMax, 
-	uint32 iDim, 
-	uint32 iOtherDim1)
+	float boxMinOther, 
+	float boxMaxOther, 
+	float pt1Other, 
+	float pt2Other)
 {
-	float t;
-	LTVector vTest;
+	float fTest;
 	
-	// Does it cross the minimum line?
-	if((pt1[iDim] < fPlane) != (pt2[iDim] <= fPlane))
+	// Does it cross the plane?
+	if((pt1 < fPlane) != (pt2 <= fPlane))
 	{
-		if(fabs(pt2[iDim] - pt1[iDim]) < 0.001f)
-			t = 0.0f;
+		if(fabs(pt2 - pt1) < 0.001)
+			fTest = pt1Other;
 		else
-			t = (fPlane - pt1[iDim]) / (pt2[iDim] - pt1[iDim]);
+			fTest = (fPlane - pt1) * (pt2Other - pt1Other) / (pt2 - pt1) + pt1Other;
 	}
 	else
 	{
 		return LTFALSE;
 	}
 
-	vTest = pt1 + (pt2 - pt1) * t;
-	return vTest[iOtherDim1] >= boxMin[iOtherDim1] && vTest[iOtherDim1] <= boxMax[iOtherDim1];
+	return fTest >= boxMinOther && fTest <= boxMaxOther;
 }
 
 
-// Intersects the line segment with the 2 sides of the box on dimension iDim, then sees if the
-// intersection point is inside the box on iOtherDim1 and iOtherDim2.
-static LTBOOL TestBoxBothSides(
-	LTVector &pt1, 
-	LTVector &pt2, 
-	LTVector &boxMin, 
-	LTVector &boxMax, 
-	uint32 iDim, 
-	uint32 iOtherDim1)
+// Intersects the line segment with the 2 sides of the box on one dimension, then sees if the
+// intersection point is inside the box on the other.
+static inline LTBOOL TestBoxBothSides(
+	float pt1, 
+	float pt2, 
+	float boxMin, 
+	float boxMax, 
+	float boxMinOther, 
+	float boxMaxOther, 
+	float pt1Other, 
+	float pt2Other)
 {
-	if(TestBoxPlane(pt1, pt2, boxMin[iDim], boxMin, boxMax, iDim, iOtherDim1))
+	if(TestBoxPlane(pt1, pt2, boxMin, boxMinOther, boxMaxOther, pt1Other, pt2Other))
 		return LTTRUE;
 
-	if(TestBoxPlane(pt1, pt2, boxMax[iDim], boxMin, boxMax, iDim, iOtherDim1))
+	if(TestBoxPlane(pt1, pt2, boxMax, boxMinOther, boxMaxOther, pt1Other, pt2Other))
 		return LTTRUE;
 
 	return LTFALSE;
@@ -249,6 +256,11 @@ static LTBOOL TestBoxBothSides(
 
 // Does tests to see if the segment intersects the node.  If so, calls IntersectSegment_R
 // on it and returns the value.
+// talon: 0x44dac0, the 2001 one (X and Z spelt out). Near (957 against 716
+// bytes), the inline budget: shipped expands the first two TestBoxPlanes and
+// calls the last two (0x44dda0, which matches); ours expands all four. Two
+// dead statements at the top are enough to push them out, so the 2001
+// source spent a little more before them; the rest matches once they are.
 static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 {
 	PolySide outStatus;
@@ -263,10 +275,10 @@ static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 	else
 	{
 		// If both points are outside on the same side, then the line is outside.
-		outStatus = GetDimBoxStatus(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 0);
+		outStatus = GetDimBoxStatus(pInfo->m_Pts[0].x, pInfo->m_Pts[1].x, pNode->m_BBoxMin.x, pNode->m_BBoxMax.x);
 		if(outStatus != Intersect)
 		{
-			if(outStatus == GetDimBoxStatus(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 2))
+			if(outStatus == GetDimBoxStatus(pInfo->m_Pts[0].z, pInfo->m_Pts[1].z, pNode->m_BBoxMin.z, pNode->m_BBoxMax.z))
 			{
 				// Trivial reject.
 				return LTFALSE;
@@ -274,8 +286,10 @@ static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 		}
 		
 		// Allllllllllll-righty, we'll do the extensive test!
-		if(TestBoxBothSides(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 0, 2) ||
-			TestBoxBothSides(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 2, 0))
+		if(TestBoxBothSides(pInfo->m_Pts[0].x, pInfo->m_Pts[1].x, pNode->m_BBoxMin.x, pNode->m_BBoxMax.x,
+				pNode->m_BBoxMin.z, pNode->m_BBoxMax.z, pInfo->m_Pts[0].z, pInfo->m_Pts[1].z) ||
+			TestBoxBothSides(pInfo->m_Pts[0].z, pInfo->m_Pts[1].z, pNode->m_BBoxMin.z, pNode->m_BBoxMax.z,
+				pNode->m_BBoxMin.x, pNode->m_BBoxMax.x, pInfo->m_Pts[0].x, pInfo->m_Pts[1].x))
 		{
 			return IntersectSegment_R(pNode, pInfo);
 		}
@@ -387,7 +401,48 @@ static LTBOOL DummyNodeFilter(WorldTreeNode *pNode)
 }
 
 
-/*void VisQuery_R(WorldTreeNode *pNode, VisQueryRequest *pInfo, uint32 curDepth)
+// talon: the 2001 world tree's vis query, which Build 69 has commented out
+// (VisQuery_R 0x44c9d0, WorldTree::DoVisQuery 0x44de30, DummyNodeFilter
+// 0x44df10, AddListToVisibility 0x44df20). Stand-ins until world_tree.h has
+// the 2001 classes: VisQueryRequest (0x48 bytes; the members VisQuery_R and
+// DoVisQuery use are where Build 69's commented-out class has them),
+// WorldTreeObj's eighth virtual DoVisQuery (vtable 0x474c84, slot 0x1c, an
+// empty ASSERT body at 0x42f5b0) and WorldTree's virtual DoVisQuery (vtable
+// 0x475ce4, slot 0x14, before GetBBox).
+class VisQueryRequest
+{
+public:
+
+	NodeObjArray		m_iObjArray;
+	LTVector			m_Viewpoint;
+	float				m_ViewRadius;
+	WTObjCallback		m_ObjectCB;
+	void				*m_AddObjects;
+	void				*m_pUserData;
+	void				*m_LeafCB;
+	void				*m_PortalTest;
+	NodeFilterFn		m_NodeFilterFn;
+
+	LTVector			m_Min;
+	LTVector			m_Max;
+	WorldTree			*m_pTree;
+};
+
+class WorldTreeObj2001 : public WorldTreeObj
+{
+public:
+	virtual void	DoVisQuery(VisQueryRequest *pRequest)=0;
+};
+
+class WorldTree2001 : public WorldTree
+{
+public:
+	void			DoVisQuery(VisQueryRequest *pRequest);
+};
+
+
+// 0x44c9d0. talon: the 2001 one has no terrain sections.
+void VisQuery_R(WorldTreeNode *pNode, VisQueryRequest *pInfo, uint32 curDepth)
 {
 	LTLink *pCur, *pListHead;
 	LTVector vMin, vMax;
@@ -416,17 +471,11 @@ static LTBOOL DummyNodeFilter(WorldTreeNode *pNode)
 			pObj->m_WTFrameCode = pInfo->m_pTree->m_TempFrameCode;
 
 			ASSERT(pObj->IsVisContainer());
-			pObj->DoVisQuery(pInfo);
+			((WorldTreeObj2001*)pObj)->DoVisQuery(pInfo);
 		}
-
-		// Now we need to look for terrain sections.
-		VisQuery_CheckTerrainSections_R(pNode, pInfo, curDepth);
 	}
 	else
 	{
-		// Check for terrain sections.
-		VisQuery_CheckTerrainSections(pNode, pInfo);
-
 		// Check objects sitting on this node.	
 		pListHead = pNode->m_Objects[pInfo->m_iObjArray].AsDLink();
 		for(pCur=pListHead->m_pNext; pCur != pListHead;)
@@ -481,7 +530,6 @@ static LTBOOL DummyNodeFilter(WorldTreeNode *pNode)
 		}
 	}
 }
-*/
 
 // -------------------------------------------------------------------------------- //
 // WorldTreeObj.
@@ -1021,7 +1069,6 @@ void WorldTree::IntersectSegment(LTVector *pPt1, LTVector *pPt2,
 
 	IntersectSegment_R(&m_RootNode, &isInfo);
 }
-/*
 // Adds a list of objects to the visibility list via the request's callback
 static void AddListToVisibility(LTLink *pListHead, VisQueryRequest *pRequest)
 {
@@ -1045,7 +1092,8 @@ static void AddListToVisibility(LTLink *pListHead, VisQueryRequest *pRequest)
 }
 
 
-void WorldTree::DoVisQuery(VisQueryRequest *pRequest)
+// 0x44de30 (WorldTree::DoVisQuery; see WorldTree2001 above).
+void WorldTree2001::DoVisQuery(VisQueryRequest *pRequest)
 {
 	ASSERT(m_pHelper);
 	m_TempFrameCode = m_pHelper->IncFrameCode();
@@ -1062,7 +1110,6 @@ void WorldTree::DoVisQuery(VisQueryRequest *pRequest)
 	// Add the always-visible list to the visibility list first
 	AddListToVisibility(m_AlwaysVisObjects.AsLTLink(), pRequest);
 }
-*/
 
 LTBOOL WorldTree::Inherit(WorldTree *pOther)
 {
