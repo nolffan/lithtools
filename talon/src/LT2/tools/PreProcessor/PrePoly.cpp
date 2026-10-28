@@ -38,6 +38,12 @@ void CPrePoly::Term()
 }
 
 
+// talon: near, 538 bytes against 541 (0x42dd50): the edge plane's
+// m_Dist and the DistTo sums are scheduled differently (shipped keeps the
+// normal's z on the stack and sums z, y, x; ours starts with y), the
+// instructions otherwise the same. Build 69's source as it is; DistTo
+// spelled out, an LTPlane or a bare normal and distance, the references
+// reordered or a reference to Pt(i) each make it worse.
 void CPrePoly::RemoveCollinearVertices()
 {
 	CPrePlane edgePlane;
@@ -76,6 +82,11 @@ BOOL CPrePoly::PostJoinFixup(PReal convexThreshold)
 }
 
 
+// talon: near, 802 bytes against 808 (0x42e200): the inline budget. The
+// shipped code calls _CVector's constructor (0x4021c0) for all four
+// corners' last + and ours expands the first one. Normal() through
+// GetPlane(), VEC_MULSCALAR, Vert(0).m_Vec, vCenter set later or declared
+// first, and CreatePoly moved down do not change it.
 CPrePortal* CPrePoly::MakePortal(PReal fSize)
 {
 	CPrePortal *pRet;

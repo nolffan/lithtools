@@ -34,6 +34,12 @@ TInfo* FindTInfo(CGLinkedList<TInfo*> &theList, const char *pTextureName)
 //   <type> <u> <v> [Z:<z>] <radius> [<inner r g b>] [<outer r g b>]
 // where type is center, dirlight or anything else for an omni light
 // (the name is ours).
+//
+// talon: near, 667/667 bytes: in Append's inlined free of the old array
+// the shipped code loads m_nElements before the cache size (0x4136fc);
+// ours loads them the other way round, as GenAppend (0x42d540) does in
+// both. Add, Push, Insert and Insert2 written out, and up to 40 extra
+// declarations above, leave it.
 static void ParseLightDefs(TInfo *pInfo, char *pDefs)
 {
 	char		*pCurPos;
