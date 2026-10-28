@@ -1484,7 +1484,7 @@ BOOL SavePortalFile(CPreMainWorld *pMainWorld, const char *pFilename)
 				}
 			}
 
-			if(pLeaf->m_Unknown_6c.GetSize() == 0)
+			if(pLeaf->m_LeafLists.m_Lists.GetSize() == 0)
 			{
 				fputs("    Visibility: \n", fp);
 			}
@@ -1492,7 +1492,7 @@ BOOL SavePortalFile(CPreMainWorld *pMainWorld, const char *pFilename)
 			{
 				fputs("    Visibility: ", fp);
 				uint32 bit = 0;
-				WriteVisibleLeaves(pLeaf->m_Unknown_6c[0], &bit, pWorld->m_RootNode, fp);
+				WriteVisibleLeaves(pLeaf->m_LeafLists.m_Lists[0], &bit, pWorld->m_RootNode, fp);
 				fputc('\n', fp);
 			}
 

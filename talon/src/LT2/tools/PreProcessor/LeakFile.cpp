@@ -1,6 +1,7 @@
 #include "bdefs.h"
 #include "preworld.h"
 #include "preleaf.h"
+#include "pregeometry.h"
 #include "processing.h"
 #include "editobjects.h"
 

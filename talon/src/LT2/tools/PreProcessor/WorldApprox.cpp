@@ -273,11 +273,11 @@ static inline int StandIn_InlineBudget(int a, int b, int c, int d)
 }
 
 
-// Gives each leaf its lists (CPreLeaf::m_Unknown_6c): the leaves it sees
+// Gives each leaf its lists (CPreLeaf::m_LeafLists): the leaves it sees
 // with every vis-blocking surface closed (m_Unknown_14 -1), and for each
 // such surface it sees, the ones more it sees through it (m_Unknown_14 the
 // surface's index). A leaf whose lists are an earlier leaf's gets that
-// leaf's index (m_Unknown_80) instead (0x44b460).
+// leaf's index (m_LeafLists.m_iSameAs) instead (0x44b460).
 //
 // talon: the inline budget: users' destructor calls _DeleteAndDestroyArray
 // (0x44ba24; the four byte arrays' destructors after it expand it), which
@@ -337,7 +337,7 @@ static void MakeLeafLists()
 
 		// With every surface closed.
 		pList = new CPreLeafList;
-		pLeaf->m_Unknown_6c.Append(pList);
+		pLeaf->m_LeafLists.m_Lists.Append(pList);
 
 		memset(&seen[0], 0, g_pPVSInfo->m_nVisBytes);
 		memset(&visited[0], 0, g_pPVSInfo->m_nVisBytes);
@@ -371,7 +371,7 @@ static void MakeLeafLists()
 			if(AnyBits(through))
 			{
 				pList = new CPreLeafList;
-				pLeaf->m_Unknown_6c.Append(pList);
+				pLeaf->m_LeafLists.m_Lists.Append(pList);
 
 				pList->m_Unknown_14 = users[i]->m_Index;
 				WriteListBits(through, pList, g_pPVSInfo->m_pWorld->m_Leaves.GetSize());
@@ -381,11 +381,11 @@ static void MakeLeafLists()
 
 		if(iLeaf > 0)
 		{
-			pSame = FindSameLists(g_pPVSInfo->m_pWorld, pLeaf->m_Unknown_6c, iLeaf-1);
+			pSame = FindSameLists(g_pPVSInfo->m_pWorld, pLeaf->m_LeafLists.m_Lists, iLeaf-1);
 			if(pSame)
 			{
-				pLeaf->m_Unknown_80 = pSame->m_Index;
-				DeleteAndClearArray(pLeaf->m_Unknown_6c);
+				pLeaf->m_LeafLists.m_iSameAs = pSame->m_Index;
+				DeleteAndClearArray(pLeaf->m_LeafLists.m_Lists);
 			}
 		}
 	}
@@ -550,7 +550,7 @@ static CPreLeaf* FindSameLists(CPreWorld *pWorld, CMoArray<CPreLeafList*> &lists
 	for(i=0; i < nLeaves; i++)
 	{
 		pLeaf = pWorld->m_Leaves[i];
-		if(VisCompareLeafLists(pLeaf->m_Unknown_6c, lists))
+		if(VisCompareLeafLists(pLeaf->m_LeafLists.m_Lists, lists))
 			return pLeaf;
 	}
 

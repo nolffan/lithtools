@@ -83,33 +83,7 @@
 	// A portal on a vis blocker: it has no partner.
 	#define PORTALF_BLOCKER		(1<<0)
 
-	// A copy of pPortal: its vertices, plane and index (0x413a10).
-	CPrePortal* ClonePortal(CPrePortal *pPortal);
-
-	// pSrc's vertices and split attributes into pDest (0x413a70, the name
-	// is ours).
-	void CopyPortal(CPrePortal *pSrc, CPrePortal *pDest);
-
-	// Two portals to clip back and forth between (the PVS's); m_iCur is
-	// the one holding the current shape. The names are ours.
-	struct PortalBuffer
-	{
-		CPrePortal*		Cur()		{return m_pPortals[m_iCur];}
-		CPrePortal*		Other()		{return m_pPortals[!m_iCur];}
-
-		int				m_iCur;
-		CPrePortal		*m_pPortals[2];
-	};
-
-	// Clips the current portal to pPlane's front side; FALSE when nothing
-	// is left (0x413ad0, the name is ours).
-	BOOL ClipPortalToPlane(CPrePlane *pPlane, PortalBuffer *pBuf);
-
-	// The six portals of a box (0x413c90).
-	BOOL MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax);
-
-	// Sets the portal's plane from its vertices (0x4143d0, the name is ours).
-	void CalcPortalPlane(CPrePortal *pPortal);
+	// The portal functions are LeafPortals.h's.
 
 
 	// talon (W2): what CPreLeaf::m_Unknown_58 holds (CPreWorld::LoadFile
@@ -136,6 +110,28 @@
 			uint32			m_Unknown_14;
 	};
 
+	// talon: a leaf's lists of visible leaves (CPreLeaf's 0x6c, 0x18
+	// bytes): its own (an array of its own: Init is called out of line,
+	// its destructor 0x42d370 has its own EH state), or, when m_iSameAs
+	// isn't 0xFFFF, those of the leaf with that index (WorldApprox's
+	// MakeLeafLists, 0x44b460).
+	class CLeafListArray
+	{
+		public:
+							CLeafListArray() : m_Lists(0)
+							{
+								m_iSameAs = 0xFFFF;
+							}
+
+							~CLeafListArray()
+							{
+								DeleteAndClearArray(m_Lists);
+							}
+
+			CMoArray<CPreLeafList*>	m_Lists;
+			uint16					m_iSameAs;	// then two bytes' padding
+	};
+
 	class CPreLeaf
 	{
 		public:
@@ -150,11 +146,7 @@
 			CLinkedList<CPrePoly*>	m_Polies;
 			// talon (W2): two uint16s each (CPreWorld::LoadFile).
 			CMoArray<LeafPolyRef>	m_Unknown_58;
-			// talon: arrays freed with the leaf (0x42d1c0); what they hold is
-			// not known yet.
-			CMoArray<CPreLeafList*>	m_Unknown_6c;
-			uint16					m_Unknown_80;
-			uint16					m_Unknown_82;
+			CLeafListArray			m_LeafLists;
 
 			// The node whose front side this leaf is.
 			CNode					*m_pNode;
@@ -176,15 +168,7 @@
 	// Reached while looking for a leak (the name is ours).
 	#define LEAFF_VISITED		(1<<1)
 
-	class CBaseEditObj;
-	class CPreWorld;
-
-	// The leaf holding the first object of class pClassName that is in one,
-	// and that object (0x42cd70, the name is ours).
-	CPreLeaf* FindObjectLeaf(CPreWorld *pWorld, const char *pClassName, CBaseEditObj **ppObj=NULL);
-
-	// The leaf of a GameStartPoint, a StartPoint, a Light or a DirLight,
-	// whichever is found first (0x42ce40, the name is ours).
-	CPreLeaf* FindInsideLeaf(CPreWorld *pWorld, CBaseEditObj **ppObj);
+	// FindObjectLeaf and FindInsideLeaf (pregeometry.cpp's) are
+	// PreGeometry.h's.
 
 #endif

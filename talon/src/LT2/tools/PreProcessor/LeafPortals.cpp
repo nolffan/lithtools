@@ -1,5 +1,6 @@
 #include "bdefs.h"
 #include "preleaf.h"
+#include "LeafPortals.h"
 #include "splitpoly.h"
 
 // talon: written from the image (0x413a10..0x4144f0); Build 69 has no

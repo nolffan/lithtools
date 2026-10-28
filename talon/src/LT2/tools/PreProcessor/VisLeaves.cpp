@@ -12,6 +12,8 @@
 #include "bdefs.h"
 #include "preworld.h"
 #include "preleaf.h"
+#include "pregeometry.h"
+#include "LeafPortals.h"
 #include "prepoly.h"
 #include "presurface.h"
 #include "node.h"

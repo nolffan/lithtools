@@ -16,9 +16,8 @@
 
 // talon: 0x42d060..0x42d7f0 in the image.
 
-CPreLeaf::CPreLeaf() : m_Unknown_6c(0)
+CPreLeaf::CPreLeaf()
 {
-	m_Unknown_80 = 0xFFFF;
 	m_Flags = 0;
 	m_Index = 0;
 	m_Unknown_9c = 0;
@@ -31,6 +30,4 @@ CPreLeaf::~CPreLeaf()
 
 	for(i=0; i < m_Portals; i++)
 		DeletePoly(m_Portals[i]);
-
-	DeleteAndClearArray(m_Unknown_6c);
 }

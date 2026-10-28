@@ -14,6 +14,7 @@
 #include "bdefs.h"
 #include "preworld.h"
 #include "preleaf.h"
+#include "LeafPortals.h"
 #include "BuildHulls.h"
 #include "processing.h"
 #include "splitpoly.h"

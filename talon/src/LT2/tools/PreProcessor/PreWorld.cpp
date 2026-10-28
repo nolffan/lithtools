@@ -1656,14 +1656,14 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> nLeafLists;
 		if(nLeafLists == 0xFFFF)
 		{
-			file >> pLeaf->m_Unknown_80;
+			file >> pLeaf->m_LeafLists.m_iSameAs;
 		}
 		else
 		{
 			for(j=0; j < nLeafLists; j++)
 			{
 				pList = new CPreLeafList;
-				pLeaf->m_Unknown_6c.Append(pList);
+				pLeaf->m_LeafLists.m_Lists.Append(pList);
 
 				file >> word;
 				pList->m_Unknown_14 = word;
@@ -2984,8 +2984,8 @@ uint32 CPreWorld::CalcVisListMemory()
 	{
 		pLeaf = m_Leaves[i];
 
-		for(j=0; j < pLeaf->m_Unknown_6c; j++)
-			size += pLeaf->m_Unknown_6c[j]->GetSize();
+		for(j=0; j < pLeaf->m_LeafLists.m_Lists; j++)
+			size += pLeaf->m_LeafLists.m_Lists[j]->GetSize();
 	}
 
 	return size;
@@ -2999,7 +2999,7 @@ uint32 CPreWorld::CalcVisListCount()
 
 	count = 0;
 	for(i=0; i < m_Leaves; i++)
-		count += m_Leaves[i]->m_Unknown_6c.GetSize();
+		count += m_Leaves[i]->m_LeafLists.m_Lists.GetSize();
 
 	return count;
 }
@@ -3491,12 +3491,12 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 	{
 		pLeaf = m_Leaves[i];
 
-		if(pLeaf->m_Unknown_80 == 0xFFFF)
+		if(pLeaf->m_LeafLists.m_iSameAs == 0xFFFF)
 		{
-			file << (uint16)pLeaf->m_Unknown_6c.GetSize();
-			for(j=0; j < pLeaf->m_Unknown_6c; j++)
+			file << (uint16)pLeaf->m_LeafLists.m_Lists.GetSize();
+			for(j=0; j < pLeaf->m_LeafLists.m_Lists; j++)
 			{
-				pList = pLeaf->m_Unknown_6c[j];
+				pList = pLeaf->m_LeafLists.m_Lists[j];
 
 				file << (uint16)pList->m_Unknown_14;
 				file << (uint16)pList->m_Data.GetSize();
@@ -3506,7 +3506,7 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 		else
 		{
 			file << (uint16)0xFFFF;
-			file << pLeaf->m_Unknown_80;
+			file << pLeaf->m_LeafLists.m_iSameAs;
 		}
 
 		file << pLeaf->m_Polies.GetSize();
