@@ -28,6 +28,7 @@ endif()
 add_library(lithtech STATIC
   core/src/rez.cpp
   core/src/dtx.cpp
+  core/src/pcx.cpp
   core/src/abc.cpp
   core/src/ltb.cpp
   core/src/ps2ltb.cpp
