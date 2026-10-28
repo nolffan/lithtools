@@ -159,46 +159,8 @@ the vis container to output any visible objects.
 	};
 
 
-/*	class VisQueryRequest
-	{
-	public:
-
-							VisQueryRequest()
-							{
-								m_Viewpoint.Init();
-								m_ViewRadius = 0.0f;
-								m_ObjectCB = DummyIterateObject;
-								m_AddObjects = LTNULL;
-								m_pUserData = LTNULL;
-								m_LeafCB = DummyIterateLeaf;
-								m_iObjArray = NOA_Objects;
-								m_PortalTest = DummyPortalTest;
-								m_NodeFilterFn = LTNULL;
-							}
-
-
-	// Set before calling VisQuery.
-	public:
-	
-		NodeObjArray		m_iObjArray;
-		LTVector			m_Viewpoint;
-		float				m_ViewRadius;
-		WTObjCallback		m_ObjectCB;
-		AddObjectsFn		m_AddObjects;
-		void				*m_pUserData;
-		IterateLeafCB		m_LeafCB;
-		PortalTestFn		m_PortalTest;
-		NodeFilterFn		m_NodeFilterFn;
-	
-	// Set automatically.
-	public:
-		
-		LTVector			m_Min;
-		LTVector			m_Max;
-		WorldTree			*m_pTree;
-
-	};
-  */
+	// talon: the 2001 vis query's request (world_tree.cpp has it).
+	class VisQueryRequest;
 	
 	// This links a WorldTreeObj to a node.
 	class WTObjLink
@@ -248,7 +210,8 @@ the vis container to output any visible objects.
 		virtual void	AddToVis(WorldTreeObj *pObj)	{ASSERT(LTFALSE);}
 
 		// Do the callback for all the visible objects.
-//		virtual void	DoVisQuery(VisQueryRequest *pRequest)	{ASSERT(LTFALSE);}
+		// talon: in 2001 (vtable 0x474c84, slot 0x1c: an empty body, 0x42f5b0).
+		virtual void	DoVisQuery(VisQueryRequest *)	{ASSERT(LTFALSE);}
 
 
 	public:
@@ -390,7 +353,8 @@ the vis container to output any visible objects.
 		// Finds objects inside the specified bounding box.  This differs from FindObjectsInBox
 		// in that if it runs across a vis container, it asks the vis container to handle objects
 		// in and under its node.
-//		virtual void	DoVisQuery(VisQueryRequest *pRequest);
+		// talon: in 2001 (vtable 0x475ce4, slot 0x14; 0x44de30).
+		virtual void	DoVisQuery(VisQueryRequest *);
 
 		// Copy from the other tree.
 		LTBOOL			Inherit(WorldTree *pOther);

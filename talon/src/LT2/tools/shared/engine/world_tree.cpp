@@ -403,14 +403,15 @@ static LTBOOL DummyNodeFilter(WorldTreeNode *pNode)
 
 // talon: the 2001 world tree's vis query, which Build 69 has commented out
 // (VisQuery_R 0x44c9d0, WorldTree::DoVisQuery 0x44de30, DummyNodeFilter
-// 0x44df10, AddListToVisibility 0x44df20). Stand-ins until world_tree.h has
-// the 2001 classes: VisQueryRequest (0x48 bytes; the members VisQuery_R and
-// DoVisQuery use are where Build 69's commented-out class has them),
-// WorldTreeObj's eighth virtual DoVisQuery (vtable 0x474c84, slot 0x1c, an
-// empty ASSERT body at 0x42f5b0) and WorldTree's virtual DoVisQuery (vtable
-// 0x475ce4, slot 0x14, before GetBBox).
+// 0x44df10, AddListToVisibility 0x44df20).
+
+// The request (0x48 bytes; Build 69 has the class commented out in
+// world_tree.h, the members where it has them): VisQuery_R
+// (0x44c9d0) and WorldTree::DoVisQuery (0x44de30) use it. The callbacks
+// nothing in Processor sets are void*.
 class VisQueryRequest
 {
+// Set before calling VisQuery.
 public:
 
 	NodeObjArray		m_iObjArray;
@@ -423,21 +424,12 @@ public:
 	void				*m_PortalTest;
 	NodeFilterFn		m_NodeFilterFn;
 
+// Set automatically.
+public:
+
 	LTVector			m_Min;
 	LTVector			m_Max;
 	WorldTree			*m_pTree;
-};
-
-class WorldTreeObj2001 : public WorldTreeObj
-{
-public:
-	virtual void	DoVisQuery(VisQueryRequest *pRequest)=0;
-};
-
-class WorldTree2001 : public WorldTree
-{
-public:
-	void			DoVisQuery(VisQueryRequest *pRequest);
 };
 
 
@@ -471,7 +463,7 @@ void VisQuery_R(WorldTreeNode *pNode, VisQueryRequest *pInfo, uint32 curDepth)
 			pObj->m_WTFrameCode = pInfo->m_pTree->m_TempFrameCode;
 
 			ASSERT(pObj->IsVisContainer());
-			((WorldTreeObj2001*)pObj)->DoVisQuery(pInfo);
+			pObj->DoVisQuery(pInfo);
 		}
 	}
 	else
@@ -1092,8 +1084,8 @@ static void AddListToVisibility(LTLink *pListHead, VisQueryRequest *pRequest)
 }
 
 
-// 0x44de30 (WorldTree::DoVisQuery; see WorldTree2001 above).
-void WorldTree2001::DoVisQuery(VisQueryRequest *pRequest)
+// 0x44de30.
+void WorldTree::DoVisQuery(VisQueryRequest *pRequest)
 {
 	ASSERT(m_pHelper);
 	m_TempFrameCode = m_pHelper->IncFrameCode();
