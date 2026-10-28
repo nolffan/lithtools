@@ -281,18 +281,26 @@ uint32 CPreMainWorld::LoadFile(CAbstractIO &file, BOOL bLoadObjects)
 		else
 			file.SeekTo(lightDataPos);
 
-		if(LoadLightAnims(file) && SetupLeafPolies())
-			return 0;
+		// 0x43178b: the failure path (Term, 2) is laid out before success.
+		if(!LoadLightAnims(file))
+		{
+			Term();
+			return 2;
+		}
 
-		Term();
+		if(!SetupLeafPolies())
+		{
+			Term();
+			return 2;
+		}
+
+		return 0;
 	}
 	catch(CLithException &exception)
 	{
 		Term();
 		throw exception;
 	}
-
-	return 2;
 }
 
 
@@ -581,6 +589,13 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 }
 
 
+// 0x432a40. Near (811 bytes against 813): the vertex-colour loops'
+// bound (nVerts, zero-extended) is loaded before the Write of nVerts in
+// the shipped code (0x432c7e), after it in ours; and the shipped code
+// loads the frame count as a byte (0x432b4c). Retail bug: the frame
+// count, the poly count and each poly's vertex count are written as
+// uint8, uint16 and uint8, the data for all of them after; more than 255
+// frames (or 65535 polies) desyncs the file for LoadLightAnims.
 BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 {
 	uint32 i, iFrame;
@@ -588,25 +603,26 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
 	CMoArray<uint32> *pColors;
-	uint8 nVerts, j;
+	uint8 nVerts;
+	uint32 j;
 
 
 	if(!CheckLightAnims())
 		return FALSE;
 
 	{
-		uint32 iAnim, nPolyRefs, nFrames, dataSize, nMaps;
+		uint32 iAnim, nMaps, dataSize, nFrames, nPolyRefs;
 
-		nPolyRefs = 0;
-		nFrames = 0;
-		dataSize = 0;
 		nMaps = 0;
+		dataSize = 0;
+		nFrames = 0;
+		nPolyRefs = 0;
 		for(iAnim=0; iAnim < m_LightAnims; iAnim++)
 		{
 			pAnim = m_LightAnims[iAnim];
 
-			nFrames += pAnim->m_Frames.GetSize();
 			nPolyRefs += pAnim->m_Polies.GetSize();
+			nFrames += pAnim->m_Frames.GetSize();
 			dataSize += pAnim->CalcFrameDataSize();
 			nMaps += pAnim->m_Polies.GetSize() * pAnim->m_Frames.GetSize();
 		}
@@ -624,9 +640,8 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 		pAnim = m_LightAnims[iAnim];
 
 		file.WriteString(pAnim->m_Name);
-		file << (uint32)pAnim->m_bShadowMap;
-		file << (uint8)pAnim->m_Frames.GetSize();
-		file << (uint16)pAnim->m_Polies.GetSize();
+		// 0x432b4c: one chain, its operands loaded before the first Write.
+		file << (uint32)pAnim->m_bShadowMap << (uint8)pAnim->m_Frames.GetSize() << (uint16)pAnim->m_Polies.GetSize();
 
 		for(i=0; i < pAnim->m_Polies; i++)
 		{
@@ -682,6 +697,13 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 
 
 // Fills each world model's poly array from its poly list.
+// 0x432d70. Near (200 bytes against 213): the shipped code calls
+// m_Unknown_30's _DeleteAndDestroyArray (0x411640) inside the inlined
+// SetSize, ours expands it (the inline budget); the rest is registers.
+// m_Unknown_30 is a CMoArray<CPrePoly*> in 2001 (CPreWorld's constructor
+// stores that vtable, 0x4746b8, at 0x433c19), but retyping it removes
+// the CMoArray<void*> instance and moves _$E216 off 0x430a90 (the
+// declaration-count flip, guide 09).
 void CPreMainWorld::SetupPolyArrays()
 {
 	uint32 i, iPoly;
@@ -721,6 +743,8 @@ CPrePoly* CPreMainWorld::GetLMPoly(const CPrePolyRef *pRef)
 
 // Whether the light animations fit the world: their polies exist and
 // their lightmaps are the polies' sizes (the name is ours).
+// 0x432e90. Near (280 bytes against 284): registers (the shipped code
+// keeps this in esi, spilled and reloaded inside the poly loop).
 BOOL CPreMainWorld::CheckLightAnims()
 {
 	uint32 iAnim, iFrame, iPoly;
@@ -902,10 +926,13 @@ void CPreMainWorld::RemoveAllLightMaps()
 
 // The lightmaps' size as 32-bit pixels over their compressed size (the
 // name is ours).
+// 0x433520. Near, size-exact: registers (this in ebp, pFrame spilled).
+// Retail bug: with no light animation data the divisor is 0 (0/0, a NaN
+// in the statistics); and the uint32 divisor is divided as a signed
+// 32-bit integer (fidivl, 0x433609).
 PReal CPreMainWorld::CalcLMCompressionRatio()
 {
-	uint32 iAnim, iFrame, iPoly, uncompressed;
-	int compressed;
+	uint32 iAnim, iFrame, iPoly, uncompressed, compressed;
 	CPreLightAnim *pAnim;
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
@@ -1065,6 +1092,22 @@ void PBlockTable::Clear()
 }
 
 
+// 0x433af0: the members' constructors (m_Polies's vtable 0x4746b8 stored
+// at 0x433b02, m_Nodes's 0x4753ec, m_PBlocks's), then these. Near (112
+// bytes against 140): the shipped code expands m_PBlocks's Clear here
+// (0x433b3f..0x433b68), so the 2001 Clear was inline, but CPreWorld's
+// constructor calls it (0x433c40, the out-of-line copy at 0x433b80), and
+// with Clear inline ours expands it there too (382 bytes against 377).
+// Clear's spelling, where it is defined and the constructor in the class
+// don't move that; CPreWorld's constructor, identical, wins.
+CPreSubBsp::CPreSubBsp()
+{
+	m_RootNode = NODE_OUT;
+	m_Unknown_2c = 0;
+	m_Unknown_30.Init();
+}
+
+
 CPreWorld::CPreWorld(CPreMainWorld *pMainWorld)
 {
 	Construct(pMainWorld);
@@ -1168,6 +1211,9 @@ void CPreWorld::Term()
 }
 
 
+// 0x433f60. Near (498 bytes against 516): the shipped code expands
+// m_Points.Term's SetSize2 (0x434107), ours calls it (the inline budget;
+// Build 69's m_Points.SetSize(0) doesn't move it).
 void CPreWorld::TermGeometry()
 {
 	GPOS pos;
@@ -1204,6 +1250,11 @@ void CPreWorld::TermGeometry()
 }
 
 
+// 0x434170..0x434572 (the function table's 0x434443, 0x434465 and
+// 0x434470 are inside it). Near (1017 bytes against 1026): only the end,
+// theQueue's vector destructor, where the shipped code expands
+// allocator::deallocate (the null test and __node_alloc's deallocate,
+// 0x422060, with the size in bytes) and ours calls it (the inline budget).
 void CPreWorld::InitPolyVertexIndices()
 {
 	priority_queue<PointElement> theQueue;
@@ -1370,7 +1421,8 @@ BOOL CPreWorld::GetPolyLightAnims(CMoArray< CMoArray<PolyAnimRef> > &polyAnims, 
 
 // The used surfaces, those that are the same as one before them left out,
 // and for each surface the index of the one it's saved as (BAD_INDEX if
-// it isn't used; 0x436400).
+// it isn't used; 0x436400). Near (567 bytes against 566): registers
+// (this, surfaceMap and pSurface rotate through ebx, ebp and edi).
 void CPreWorld::GetUniqueSurfaces(CMoArray<CPreSurface*> &surfaces, CMoArray<uint32> &surfaceMap)
 {
 	GPOS pos;
@@ -1910,6 +1962,13 @@ void CPreWorld::RemoveUnusedSurfaces()
 }
 
 
+// talon: the 2001 CPreSurface's destructor is here, out of line (0x438a50,
+// called from RemoveUnusedSurfaces at 0x438a24): m_PolyList's RemoveAll.
+CPreSurface::~CPreSurface()
+{
+}
+
+
 void CPreWorld::RemoveUnusedPlanes()
 {
 	GPOS pos, oldPos, surfacePos;
@@ -2110,6 +2169,10 @@ struct EdgeHashEntry
 };
 
 
+// 0x439050. Near (551 bytes against 589): edgeHash's constructor. The
+// shipped code calls Clear (0x420650) and expands Init (Term's SetSize2,
+// _InitArray 0x422440, SetSize's SetSize2); ours expands Clear and calls
+// Init. The rest is registers.
 uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 {
 	CMoArray<EdgeHashEntry*> edgeHash;
@@ -2527,8 +2590,11 @@ static void RecurseAndGetTreeDepth(NODEREF iRoot, int depth)
 // ----------------------------------------------------------------------- //
 
 // The box of the polies under pNode, into vMin and vMax; FALSE if pNode
-// isn't a node. Sets the nodes' spheres on the way up (0x439e60; the name
-// is ours).
+// isn't a node. Sets the nodes' spheres on the way up (0x439e60..0x43a286;
+// the function table's 0x43a1d8 is inside it; the name is ours). Near (1056
+// bytes against 1062): in the radius loop the shipped code keeps nStack
+// in memory and fRadius's address in ebp, and copies vCenter once per node
+// (0x43a0f3); ours keeps nStack in ebp and copies vCenter per vertex.
 BOOL CPreWorld::CalcNodeBoundingBoxes_R(NODEREF pNode, PVector &vMin, PVector &vMax)
 {
 	PVector vChildMin, vChildMax, vPt;
@@ -3118,7 +3184,6 @@ public:
 BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 {
 	int i;
-	PBlock *pBlock;
 
 	file >> pTable->m_nBlocks[0];
 	file >> pTable->m_nBlocks[1];
@@ -3147,14 +3212,13 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 	file >> pTable->m_Unknown_0c.y;
 	file >> pTable->m_Unknown_0c.z;
 
+	// 0x4387b9: the block is indexed afresh for each use.
 	for(i=0; i < (int)pTable->m_nBlocksTotal; i++)
 	{
-		pBlock = &pTable->m_pBlocks[i];
-
-		file >> pBlock->m_nNodes;
-		file >> pBlock->m_iRoot;
-		pBlock->m_pData = dalloc(pBlock->m_nNodes * sizeof(SaveNode));
-		file.Read(pBlock->m_pData, pBlock->m_nNodes * sizeof(SaveNode));
+		file >> pTable->m_pBlocks[i].m_nNodes;
+		file >> pTable->m_pBlocks[i].m_iRoot;
+		pTable->m_pBlocks[i].m_pData = dalloc(pTable->m_pBlocks[i].m_nNodes * sizeof(SaveNode));
+		file.Read(pTable->m_pBlocks[i].m_pData, pTable->m_pBlocks[i].m_nNodes * sizeof(SaveNode));
 	}
 
 	return TRUE;
@@ -3164,29 +3228,21 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 void CPreWorld::SavePBlockTable(CAbstractIO &file, PBlockTable *pTable)
 {
 	int i;
-	PBlock *pBlock;
 
-	file << pTable->m_nBlocks[0];
-	file << pTable->m_nBlocks[1];
-	file << pTable->m_nBlocks[2];
+	file << pTable->m_nBlocks[0] << pTable->m_nBlocks[1] << pTable->m_nBlocks[2];
 	pTable->m_nBlocksXY = pTable->m_nBlocks[0] * pTable->m_nBlocks[1];
 	pTable->m_nBlocksTotal = pTable->m_nBlocks[2] * pTable->m_nBlocks[0] * pTable->m_nBlocks[1];
 
-	file << pTable->m_vMin.x;
-	file << pTable->m_vMin.y;
-	file << pTable->m_vMin.z;
-	file << pTable->m_Unknown_0c.x;
-	file << pTable->m_Unknown_0c.y;
-	file << pTable->m_Unknown_0c.z;
+	file << pTable->m_vMin.x << pTable->m_vMin.y << pTable->m_vMin.z;
+	file << pTable->m_Unknown_0c.x << pTable->m_Unknown_0c.y << pTable->m_Unknown_0c.z;
 
+	// 0x43891b: the block is indexed afresh for each use.
 	for(i=0; i < (int)pTable->m_nBlocksTotal; i++)
 	{
-		pBlock = &pTable->m_pBlocks[i];
-
-		CheckSaveNodes_R((SaveNode**)&pBlock->m_pData, pBlock->m_iRoot);
-		file << pBlock->m_nNodes;
-		file << pBlock->m_iRoot;
-		file.Write(pBlock->m_pData, pBlock->m_nNodes * sizeof(SaveNode));
+		CheckSaveNodes_R((SaveNode**)&pTable->m_pBlocks[i].m_pData, pTable->m_pBlocks[i].m_iRoot);
+		file << pTable->m_pBlocks[i].m_nNodes;
+		file << pTable->m_pBlocks[i].m_iRoot;
+		file.Write(pTable->m_pBlocks[i].m_pData, pTable->m_pBlocks[i].m_nNodes * sizeof(SaveNode));
 	}
 }
 
