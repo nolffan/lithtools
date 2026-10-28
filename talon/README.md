@@ -30,7 +30,7 @@ they are re-implemented.
 |---|---|--:|--:|---|--:|--:|
 | `DEdit.exe` | world editor (Talon, Update 1/2) | 0 / 4,391 | 0 / 572,795 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 4,391 | 0 |
 | `ModelEdit.exe` | model editor (Talon, Update 1/2) | 0 / 1,923 | 0 / 221,281 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,923 | 0 |
-| `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 1,390 / 1,504 | 266,074 / 339,492 bytes | `███████████████░░░░░` 78.3% | 2 | 4 |
+| `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 1,396 / 1,504 | 267,337 / 339,492 bytes | `███████████████░░░░░` 78.7% | 3 | 2 |
 | `Processor.exe (NOLF)` | world processor, NOLF (Tools 001) | 0 / 2,732 | 0 / 415,145 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 2,732 | 0 |
 | `lithrez.exe` | resource (.rez) packer, LithRez 1.00 | 121 / 122 | 21,652 / 22,326 bytes | `███████████████████░` 96.9% | 0 | 0 |
 | `TProcessor.exe` | DirectEngine world processor (1998, NOLF Tools 001) | 0 / 1,314 | 0 / 236,418 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,314 | 0 |
@@ -52,7 +52,7 @@ they are re-implemented.
 | `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 0 / 435 | 0 / 50,178 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 435 | 0 |
 | `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 0 / 764 | 0 / 116,225 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 764 | 0 |
 | `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 0 / 764 | 0 / 116,225 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 764 | 0 |
-| **All** | | **1,642 / 24,686** | **306,964 / 3,119,255 bytes** | `█░░░░░░░░░░░░░░░░░░░` **9.8%** | **22,876** | **4** |
+| **All** | | **1,648 / 24,686** | **308,227 / 3,119,255 bytes** | `█░░░░░░░░░░░░░░░░░░░` **9.8%** | **22,877** | **2** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte
