@@ -1464,14 +1464,16 @@ void CPreWorld::GetUniqueSurfaces(CMoArray<CPreSurface*> &surfaces, CMoArray<uin
 }
 
 
-static inline BOOL AreVectorsClose(const PVector &v1, const PVector &v2)
-{
-	return LTDIFF(v1.x, v2.x) <= SURFACE_EQUAL_EPSILON &&
-		LTDIFF(v1.y, v2.y) <= SURFACE_EQUAL_EPSILON &&
-		LTDIFF(v1.z, v2.z) <= SURFACE_EQUAL_EPSILON;
-}
-
-// Whether two surfaces can be saved as one (0x436640).
+// Whether two surfaces can be saved as one (0x436640). Near (1162 bytes
+// against 1166), calls as shipped: the eight vector compares are all
+// Equals, the first five expanded and the last three calls to 0x43d310
+// (the inline budget; a local AreVectorsClose helper expanded them all),
+// and the portal and effect tests are one condition with one `return
+// false` (shipped has seven epilogues: separate returns for the two blocks
+// make eight and merged the early ones, 1154 bytes). Left: the true
+// epilogue sits at the end where shipped places it after the portal test
+// (0x436943), and the first compare's operands are the other way round
+// (flipping the source order breaks two more blocks).
 bool AreSurfacesEqual(CPreSurface *pSurface1, CPreSurface *pSurface2)
 {
 	BOOL bEffect1, bEffect2;
@@ -1495,30 +1497,20 @@ bool AreSurfacesEqual(CPreSurface *pSurface1, CPreSurface *pSurface2)
 	if(stricmp(pSurface2->m_pTextureName, pSurface1->m_pTextureName) != 0)
 		return false;
 
-	if(portal1)
-	{
-		if(!AreVectorsClose(pSurface1->m_TextureO, pSurface2->m_TextureO) ||
-			!AreVectorsClose(pSurface1->P, pSurface2->P) ||
-			!AreVectorsClose(pSurface1->Q, pSurface2->Q) ||
-			!AreVectorsClose(pSurface1->m_pPlane->m_Normal, pSurface2->m_pPlane->m_Normal) ||
-			fabs(pSurface1->m_pPlane->m_Dist - pSurface2->m_pPlane->m_Dist) >= 0.01)
-		{
-			return false;
-		}
-	}
-
-	if(bEffect1)
-	{
-		if(!AreVectorsClose(pSurface1->m_TextureO, pSurface2->m_TextureO) ||
+	if((portal1 && (!pSurface1->m_TextureO.Equals(pSurface2->m_TextureO, 0.01f) ||
+			!pSurface1->P.Equals(pSurface2->P, 0.01f) ||
+			!pSurface1->Q.Equals(pSurface2->Q, 0.01f) ||
+			!pSurface1->m_pPlane->m_Normal.Equals(pSurface2->m_pPlane->m_Normal, 0.01f) ||
+			fabs(pSurface1->m_pPlane->m_Dist - pSurface2->m_pPlane->m_Dist) >= 0.01)) ||
+		(bEffect1 && (!pSurface1->m_TextureO.Equals(pSurface2->m_TextureO, 0.01f) ||
 			!pSurface1->P.Equals(pSurface2->P, 0.01f) ||
 			!pSurface1->Q.Equals(pSurface2->Q, 0.01f) ||
 			!pSurface1->m_pPlane->m_Normal.Equals(pSurface2->m_pPlane->m_Normal, 0.01f) ||
 			fabs(pSurface1->m_pPlane->m_Dist - pSurface2->m_pPlane->m_Dist) >= 0.01 ||
 			strcmp((char*)pSurface1->m_Unknown_a0, (char*)pSurface2->m_Unknown_a0) != 0 ||
-			strcmp((char*)pSurface1->m_Unknown_a4, (char*)pSurface2->m_Unknown_a4) != 0)
-		{
-			return false;
-		}
+			strcmp((char*)pSurface1->m_Unknown_a4, (char*)pSurface2->m_Unknown_a4) != 0)))
+	{
+		return false;
 	}
 
 	return true;
@@ -1526,7 +1518,23 @@ bool AreSurfacesEqual(CPreSurface *pSurface1, CPreSurface *pSurface2)
 
 
 // ----------------------------------------------------------------------- //
-// talon: CPreWorld::LoadFile (0x434630).
+// talon: CPreWorld::LoadFile (0x434630, 6978 bytes). Near: callseq 198 of
+// 199. What moved it from 183 (all budget, measured round 2):
+//  - each failed check is its own `return 2` (no shared Error: label): the
+//    early returns' destructors (vptr + Term inline, SetSize2 0x43d3e0
+//    called) are tail-merged into the one block at 0x435ab7, and their cost
+//    is what leaves Inverse()'s Norm (0x4044b0) out of line, as shipped;
+//  - m_PolyArray.SetSizeInit(n, pNullBsp), the LoadSubBsp idiom: one level
+//    deeper than SetSize + a NULL loop, so SetSize2 stays a call (0x435c9f);
+//  - Append, not AddTail, for the poly-loop m_Surfaces, m_Nodes and
+//    m_Unknown_04 adds (InsertAfter 0x43dc50 called at 0x43582a, 0x435878).
+// Left: m_Unknown_04's InsertAfter (0x435a87) is still expanded, and the
+// success path's third destructor (polies) calls _DeleteAndDestroyArray
+// where shipped expands it. Tried for those: every AddTail/Append mix of the
+// last three adds (7 combos, all 196-197), IndexToNode for the node sides
+// and root (worse: 191). Also left: the texture-name loop spills
+// textureName-1 (shipped rematerialises it; three spellings tried), and the
+// frame is 0x3a0 against 0x3a4 (one 4-byte local short).
 // ----------------------------------------------------------------------- //
 
 
@@ -1564,6 +1572,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 	CPrePlane				*pPlane;
 	CPreSurface				*pSurface, *pSrcSurface;
 	PreSurfaceUser		*pUser;
+	CPreSubBsp				*pNullBsp;
 
 
 	// Header.
@@ -1718,7 +1727,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 		file >> iTexture;
 		if(iTexture >= m_TextureNames.GetSize())
-			goto Error;
+			return 2;
 
 		pSurface->m_pTextureName = m_TextureNames[iTexture];
 		pSurface->m_pPlane = NULL;
@@ -1776,11 +1785,11 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 		file >> iSurface;
 		if(iSurface >= surfaces.GetSize())
-			goto Error;
+			return 2;
 
 		file >> iPlane;
 		if(iPlane >= m_Planes.GetSize())
-			goto Error;
+			return 2;
 
 		pSrcSurface = surfaces[iSurface];
 
@@ -1844,14 +1853,14 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		pSurface->m_Unknown_a4 = pSrcSurface->m_Unknown_a4;
 		pSurface->m_TextureFlags = pSrcSurface->m_TextureFlags;
 
-		m_Surfaces.AddTail(pSurface);
+		m_Surfaces.Append(pSurface);
 	}
 
 	// Link up the nodes.
 	for(i=0; i < nNodes; i++)
 	{
 		pNode = nodes[i];
-		m_Nodes.AddTail(pNode);
+		m_Nodes.Append(pNode);
 
 		file >> iPoly;
 		pNode->m_pPoly = polies[iPoly];
@@ -1878,13 +1887,13 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> dummy;
 		file >> iPoly;
 		if(iPoly >= m_Polies.GetSize())
-			goto Error;
+			return 2;
 
 		pUser->m_pSurface = polies[iPoly]->m_pSurface;
 
 		file >> word;
 		if(word >= m_Surfaces.GetSize())
-			goto Error;
+			return 2;
 
 		pUser->m_pSurface->m_Unknown_80 = (uint32)pUser;
 
@@ -1895,11 +1904,11 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> vec.y;
 		file >> vec.z;
 
-		m_Unknown_04.AddTail(pUser);
+		m_Unknown_04.Append(pUser);
 	}
 
 	if(!LoadPBlockTable(file, &m_PBlocks))
-		goto Error;
+		return 2;
 
 	// The poly vertices' positions.
 	for(pos=m_Polies; pos; )
@@ -1918,11 +1927,9 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 	// The sub-BSPs.
 	file >> nSubBsps;
-	if(!m_PolyArray.SetSize(nSubBsps))
+	pNullBsp = NULL;
+	if(!m_PolyArray.SetSizeInit(nSubBsps, pNullBsp))
 		return 2;
-
-	for(i=0; i < m_PolyArray.GetSize(); i++)
-		m_PolyArray[i] = NULL;
 
 	for(i=0; i < nSubBsps; i++)
 	{
@@ -1936,7 +1943,6 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 	return 0;
 
-Error:
 	return 2;
 }
 
