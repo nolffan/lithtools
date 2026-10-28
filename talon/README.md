@@ -34,10 +34,10 @@ they are re-implemented.
 | `Processor.exe (NOLF)` | world processor, NOLF (Tools 001) | 0 / 2,732 | 0 / 415,145 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 2,732 | 0 |
 | `lithrez.exe` | resource (.rez) packer, LithRez 1.00 | 121 / 122 | 21,652 / 22,326 bytes | `███████████████████░` 96.9% | 0 | 0 |
 | `TProcessor.exe` | DirectEngine world processor (1998, NOLF Tools 001) | 0 / 1,314 | 0 / 236,418 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,314 | 0 |
-| `LithExport.dll (AvP2)` | Softimage|3D model exporter (AvP2 v1.0) | 0 / 1,408 | 0 / 156,440 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,408 | 0 |
-| `LithExport.dll (NOLF)` | Softimage|3D model exporter, debug build (NOLF Tools 001) | 0 / 3,701 | 0 / 266,971 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 3,701 | 0 |
-| `LandExport.dll (AvP2)` | Softimage|3D terrain exporter (AvP2 v1.0) | 0 / 511 | 0 / 72,518 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 511 | 0 |
-| `LandExport.dll (NOLF)` | Softimage|3D terrain exporter (NOLF Tools 001) | 0 / 511 | 0 / 72,146 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 511 | 0 |
+| `LithExport.dll (AvP2)` | Softimage\|3D model exporter (AvP2 v1.0) | 0 / 1,408 | 0 / 156,440 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 1,408 | 0 |
+| `LithExport.dll (NOLF)` | Softimage\|3D model exporter, debug build (NOLF Tools 001) | 0 / 3,701 | 0 / 266,971 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 3,701 | 0 |
+| `LandExport.dll (AvP2)` | Softimage\|3D terrain exporter (AvP2 v1.0) | 0 / 511 | 0 / 72,518 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 511 | 0 |
+| `LandExport.dll (NOLF)` | Softimage\|3D terrain exporter (NOLF Tools 001) | 0 / 511 | 0 / 72,146 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 511 | 0 |
 | `LithMayaExport.mll` | Maya model exporter (1999, AvP2 v1.0) | 0 / 206 | 0 / 37,710 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 206 | 0 |
 | `IMFLithDTX.dll` | Maya .dtx image plug-in (Update 2) | 131 / 186 | 19,238 / 19,893 bytes | `███████████████████░` 96.7% | 0 | 0 |
 | `MaxDTXLoader30.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2) | 0 / 257 | 0 / 20,482 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 257 | 0 |
