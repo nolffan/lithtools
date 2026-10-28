@@ -549,18 +549,18 @@ void CProcessingOptionsDlg::OnAIVolumes()
 
 // "<" and ">" step the slider (0x444330, 0x4443d0).
 //
-// talon: both near, 148/148 bytes. Shipped copies GetPos into ebx and
-// decrements (increments) it in place (0x44435a, 0x444362); this source
-// gives the same registers with one `lea -1(%eax),%ebx` instead. Written
-// as `int pos = GetPos() - 1;` (or with pos-- / --pos / pos -= 1 / an
-// early return / an inline helper) the mov+dec comes back but VC6 swaps
-// ebx and edi (the SendMessage pointer goes to ebx, pos and pWnd to edi).
+// talon: the range end is read into a local and pos stepped in the
+// compare. `if(pos - 1 >= m_SplitWeight.GetRangeMin())` gives a
+// `lea -1(%eax),%ebx` for the shipped mov+dec (0x44435a, 0x444362), and
+// `int pos = GetPos() - 1;` (pos--, --pos, pos -= 1, an early return, an
+// inline helper) gives the mov+dec with ebx and edi swapped.
 void CProcessingOptionsDlg::OnSliderLeft()
 {
 	int pos = m_SplitWeight.GetPos();
-	if(pos - 1 >= m_SplitWeight.GetRangeMin())
+	int minPos = m_SplitWeight.GetRangeMin();
+	if(--pos >= minPos)
 	{
-		m_SplitWeight.SetPos(pos - 1);
+		m_SplitWeight.SetPos(pos);
 
 		CWnd *pWnd = GetDlgItem(IDC_PO_SLIDERREF);
 		if(pWnd)
@@ -575,9 +575,10 @@ void CProcessingOptionsDlg::OnSliderLeft()
 void CProcessingOptionsDlg::OnSliderRight()
 {
 	int pos = m_SplitWeight.GetPos();
-	if(pos + 1 <= m_SplitWeight.GetRangeMax())
+	int maxPos = m_SplitWeight.GetRangeMax();
+	if(++pos <= maxPos)
 	{
-		m_SplitWeight.SetPos(pos + 1);
+		m_SplitWeight.SetPos(pos);
 
 		CWnd *pWnd = GetDlgItem(IDC_PO_SLIDERREF);
 		if(pWnd)

@@ -39,7 +39,14 @@ TInfo* FindTInfo(CGLinkedList<TInfo*> &theList, const char *pTextureName)
 // the shipped code loads m_nElements before the cache size (0x4136fc);
 // ours loads them the other way round, as GenAppend (0x42d540) does in
 // both. Add, Push, Insert and Insert2 written out, and up to 40 extra
-// declarations above, leave it.
+// declarations above, leave it; so do (round 2) a temporary for pDef, the
+// array through a reference or a pointer, a const pInfo, pDef declared in
+// the loop, ParseLightDefs not static or defined after its caller, a
+// function before it that constructs, deletes or sizes a TInfo, the
+// header's sum written the other way round (VC6 emits the same code from
+// both), and cl 8447. MakePBlockNodes_R (0x425b10) differs the same way;
+// MakeZones and FindSurfaceUsers (WorldApprox.cpp) match with the
+// shipped load order from the same inlined Append.
 static void ParseLightDefs(TInfo *pInfo, char *pDefs)
 {
 	char		*pCurPos;

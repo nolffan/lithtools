@@ -38,12 +38,9 @@ void CPrePoly::Term()
 }
 
 
-// talon: near, 538 bytes against 541 (0x42dd50): the edge plane's
-// m_Dist and the DistTo sums are scheduled differently (shipped keeps the
-// normal's z on the stack and sums z, y, x; ours starts with y), the
-// instructions otherwise the same. Build 69's source as it is; DistTo
-// spelled out, an LTPlane or a bare normal and distance, the references
-// reordered or a reference to Pt(i) each make it worse.
+// talon: Build 69's, with the edge in a local (0x42dd50). Written as
+// Build 69's `(next - prev).Cross(Normal())` the edge plane's m_Dist sum
+// starts with y instead of z (538 bytes against the shipped 541).
 void CPrePoly::RemoveCollinearVertices()
 {
 	CPrePlane edgePlane;
@@ -54,7 +51,8 @@ void CPrePoly::RemoveCollinearVertices()
 		PVector &prev = PrevPt(i);
 		PVector &next = NextPt(i);
 
-		edgePlane.m_Normal = (next - prev).Cross(Normal());
+		PVector vec = next - prev;
+		edgePlane.m_Normal = vec.Cross(Normal());
 		edgePlane.m_Normal.Norm();
 		edgePlane.m_Dist = edgePlane.m_Normal.Dot(prev);
 
@@ -86,7 +84,15 @@ BOOL CPrePoly::PostJoinFixup(PReal convexThreshold)
 // shipped code calls _CVector's constructor (0x4021c0) for all four
 // corners' last + and ours expands the first one. Normal() through
 // GetPlane(), VEC_MULSCALAR, Vert(0).m_Vec, vCenter set later or declared
-// first, and CreatePoly moved down do not change it.
+// first, and CreatePoly moved down do not change it; nor do (round 2)
+// m_BasePoly.SetVert or Vert(i).m_Vec for the four points, the plane
+// through GetSurface()->m_pPlane, BuildFrameOfReference given
+// &GetPlane()->m_Normal, or vCenter as GetCenter() or a reference to
+// Pt(0); `up = up * fSize` (an operator spending budget late) comes to
+// 806 bytes, but scales up through a temporary the shipped code does not
+// have. Shipped expands only the first operator of Pt(0) and Pt(1) (the
+// unary minus and the subtractions) and calls _CVector's constructor for
+// every last + and for all of Pt(2) and Pt(3).
 CPrePortal* CPrePoly::MakePortal(PReal fSize)
 {
 	CPrePortal *pRet;
