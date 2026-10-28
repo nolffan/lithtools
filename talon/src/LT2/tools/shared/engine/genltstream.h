@@ -19,7 +19,7 @@
 	public:
 
 		virtual LTRESULT	ReadString(char *pStr, uint32 maxBytes);
-		virtual LTRESULT	WriteString(const char *pStr);
+		virtual LTRESULT	WriteString(char *pStr);	// talon: char*, as the LT2 SDK's ILTStream declares it
 		virtual LTRESULT	WriteStream(ILTStream &dsSource, uint32 dwMin, uint32 dwMax);
 
 	};

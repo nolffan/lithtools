@@ -54,7 +54,7 @@ LTRESULT CGenLTStream::ReadString(char *pStr, uint32 maxBytes)
 }
 	
 
-LTRESULT CGenLTStream::WriteString(const char *pStr)
+LTRESULT CGenLTStream::WriteString(char *pStr)
 {
 	uint16 len;
 
