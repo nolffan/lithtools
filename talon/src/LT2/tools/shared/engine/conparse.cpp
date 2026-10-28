@@ -69,9 +69,10 @@ LTBOOL ConParse::ParseFind(char *pLookFor, LTBOOL bCaseSensitive, uint32 minToke
 }
 
 
+// 0x40a230. talon: the 2001 loop is a while(1) with the status scoped in it
+// and both ends a break to the one return 0 (one call site, not peeled).
 int cp_Parse(char *pCommand, char **pNewCommandPos, char *argBuffer, char **argPointers, int *nArgs)
 {
-	GNTResult status;
 	char *pCurArgBufferPos, *pToken;
 	char *pCurPos;
 
@@ -81,15 +82,15 @@ int cp_Parse(char *pCommand, char **pNewCommandPos, char *argBuffer, char **argP
 	pCurArgBufferPos = argBuffer;
 	*nArgs = 0;
 	
-	for(;;)
+	while(1)
 	{
 		pToken = pCurArgBufferPos;
-		status = cp_GetNextToken(pCurPos, pCurArgBufferPos);
+		GNTResult status = cp_GetNextToken(pCurPos, pCurArgBufferPos);
 
 		if(status == GNT_NoToken)
 		{
 			// All done..
-			return 0;
+			break;
 		}
 		else if(status == GNT_GotToken)
 		{

@@ -7,6 +7,43 @@
 // the rotation is set straight from the angles.
 
 
+// talon: the 2001 file constructs an unused global (0x484e04) at startup,
+// whose constructor (0x411fa0) fills an eight-byte table (0x484e08) that
+// nothing reads, and whose destructor is empty (0x42dd40, registered with
+// atexit at 0x411f80). It came from a header not found yet; the class, its
+// table and the names are ours, written from the image (the stores in
+// shipped order).
+class CGPUnknown_484e04
+{
+public:
+	CGPUnknown_484e04();
+	~CGPUnknown_484e04();
+
+	static uint8 s_Table[8];
+};
+
+// 0x411fa0 (not inline: shipped calls it from the initializer).
+CGPUnknown_484e04::CGPUnknown_484e04()
+{
+	s_Table[7] = 0;
+	s_Table[6] = 1;
+	s_Table[2] = 2;
+	s_Table[3] = 3;
+	s_Table[1] = 4;
+	s_Table[0] = 5;
+	s_Table[4] = 6;
+	s_Table[5] = 7;
+}
+
+// 0x42dd40 (an empty function the linker folded with another).
+CGPUnknown_484e04::~CGPUnknown_484e04()
+{
+}
+
+uint8 CGPUnknown_484e04::s_Table[8];
+static CGPUnknown_484e04 g_GPUnknown_484e04;
+
+
 static void _SetNumProp(GenericProp *pProp, float val)
 {
 	sprintf(pProp->m_String, "%f", val);
