@@ -175,6 +175,18 @@ SOURCE=.\LightMapMaker.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\LightMapMaker_r1.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\LightMapMaker_r2.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\LightMapMaker_r3.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\..\sdk\inc\ltquatbase.cpp
 # End Source File
 # Begin Source File
@@ -251,6 +263,10 @@ SOURCE=..\shared\engine\parse_world_info.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\PhysicsBlocks.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\PreBrush.cpp
 # End Source File
 # Begin Source File
@@ -308,6 +324,10 @@ SOURCE=.\VisLeaves.cpp
 # Begin Source File
 
 SOURCE=.\WorldApprox.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\ProcessorTail.cpp
 # End Source File
 # End Group
 # End Target
