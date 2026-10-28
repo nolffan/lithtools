@@ -80,9 +80,16 @@ BOOL CPrePoly::PostJoinFixup(PReal convexThreshold)
 }
 
 
-// talon: near, 802 bytes against 808 (0x42e200): the inline budget. The
-// shipped code calls _CVector's constructor (0x4021c0) for all four
-// corners' last + and ours expands the first one. Normal() through
+// talon: near, 808 bytes as shipped (0x42e200). The shipped code calls
+// _CVector's constructor (0x4021c0) for all four corners' last +; ours
+// expanded the first one until the dead GetPlane() at the end (a
+// stand-in, see below) spent the inline budget. That is behaviour, not
+// just spelling: expanded, Pt(0)'s -right - up had its y and z stored to
+// floats before the add (rounded twice), and the portals' corners came
+// out an ulp off, which changes how hull making clips them (and so the
+// heap, and the physics BSP's uninitialised vertex colours; RETAIL_BUGS).
+// Left: shipped copies vCenter's y and z later (0x42e32e), scheduling
+// only. Before the stand-in (802 bytes): Normal() through
 // GetPlane(), VEC_MULSCALAR, Vert(0).m_Vec, vCenter set later or declared
 // first, and CreatePoly moved down do not change it; nor do (round 2)
 // m_BasePoly.SetVert or Vert(i).m_Vec for the four points, the plane
@@ -114,6 +121,12 @@ CPrePortal* CPrePoly::MakePortal(PReal fSize)
 	pRet->Pt(3) = (-right + up) + vCenter;
 
 	pRet->m_Plane = *GetPlane();
+
+	// talon: stand-in: an inline call whose value is dropped (it compiles
+	// to nothing). It only spends the inline budget so that Pt(0)'s + calls
+	// the constructor (0x42e37b) as shipped; what the 2001 source spent it
+	// on is unknown.
+	GetPlane();
 	return pRet;
 }
 
