@@ -260,19 +260,35 @@ uint32 MakePVS(PVSInfo *pInfo)
 // The leaf lists (0x44b460..0x44c140).
 // ------------------------------------------------------------------ //
 
+// talon: stand-in: a dead inline call that spends MakeLeafLists' inline
+// budget (see below). It does nothing and compiles to nothing.
+static inline int StandIn_InlineBudget(int a, int b, int c, int d)
+{
+	if(a < c && b < c)
+		return 0;
+	else if (a > d && b > d)
+		return 1;
+	else
+		return 2;
+}
+
+
 // Gives each leaf its lists (CPreLeaf::m_Unknown_6c): the leaves it sees
 // with every vis-blocking surface closed (m_Unknown_14 -1), and for each
 // such surface it sees, the ones more it sees through it (m_Unknown_14 the
 // surface's index). A leaf whose lists are an earlier leaf's gets that
 // leaf's index (m_Unknown_80) instead (0x44b460).
 //
-// talon: near, 8 bytes long: the inline budget. users' destructor expands
-// _DeleteAndDestroyArray where the shipped code calls it (0x44ba24; the
-// four byte arrays' destructors after it expand it in both). The memsets
+// talon: the inline budget: users' destructor calls _DeleteAndDestroyArray
+// (0x44ba24; the four byte arrays' destructors after it expand it), which
+// only the stand-in below reproduces (8 bytes long without it). The memsets
 // through &x[0] (the shipped budget: with GetArray() the second array's
 // Init is expanded too) and the rest are the spellings that came closest
 // (a search over the equivalent ones: Get/GetAt/[], SetSize/SetSize2,
-// Append/Add/Push, DeleteAndClearArray or the loop written out).
+// Append/Add/Push, DeleteAndClearArray or the loop written out; then
+// users.GetSize() as the loop's bound, the leaf counts and through's size
+// by operator conversion, Get(i), WA_SETBIT through operator[], and the
+// leaf's bit set through an inline function, which spends too much).
 static void MakeLeafLists()
 {
 	CMoArray<uint8> leafVis, seen, through, visited;
@@ -281,6 +297,16 @@ static void MakeLeafLists()
 	CPrePortal *pPortal;
 	CPreLeafList *pList;
 	uint32 iLeaf, i, j;
+
+	// talon: stand-in: two dead calls (no code, no behaviour) that spend
+	// as much of the inline budget as the 2001 source spent on something
+	// we have not found: with them users' destructor calls
+	// _DeleteAndDestroyArray (0x44ba24) as shipped and the function is
+	// byte-identical; with one it is expanded, with four the first
+	// array's Init is called too. Real spellings tried are listed above
+	// the function.
+	StandIn_InlineBudget(0,0,0,0);
+	StandIn_InlineBudget(0,0,0,0);
 
 	g_pPVSInfo->m_pWorld->CalcLeafSpheres();
 	g_pPVSInfo->m_pWorld->m_RootNode->SetParentNodes(NULL);

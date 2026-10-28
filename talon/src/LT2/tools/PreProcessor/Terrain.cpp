@@ -324,19 +324,24 @@ BOOL MakeTerrain(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld, 
 // ------------------------------------------------------------------------ //
 
 // talon: Build 69's CPrePoly::OverlapExtents, inline in 0x447220 (not in
-// our header: it moves BrushToWorld's declaration count).
+// our header: it moves BrushToWorld's declaration count). The 2001 one tests
+// and returns true or false: that is what spends sub_447220's inline budget
+// as shipped (Build 69's single return leaves Insert2's
+// _DeleteAndDestroyArray expanded).
 inline bool OverlapExtents_447220(const CPrePoly &thisPoly, const CPrePoly &pOtherPoly)
 {
-	return	(pOtherPoly.m_vExtentsMin.x < thisPoly.m_vExtentsMax.x) && (pOtherPoly.m_vExtentsMax.x > thisPoly.m_vExtentsMin.x) &&
+	if((pOtherPoly.m_vExtentsMin.x < thisPoly.m_vExtentsMax.x) && (pOtherPoly.m_vExtentsMax.x > thisPoly.m_vExtentsMin.x) &&
 			(pOtherPoly.m_vExtentsMin.y < thisPoly.m_vExtentsMax.y) && (pOtherPoly.m_vExtentsMax.y > thisPoly.m_vExtentsMin.y) &&
-			(pOtherPoly.m_vExtentsMin.z < thisPoly.m_vExtentsMax.z) && (pOtherPoly.m_vExtentsMax.z > thisPoly.m_vExtentsMin.z);
+			(pOtherPoly.m_vExtentsMin.z < thisPoly.m_vExtentsMax.z) && (pOtherPoly.m_vExtentsMax.z > thisPoly.m_vExtentsMin.z))
+		return true;
+	else
+		return false;
 }
 
 // Adds to touching each poly of the BSP under pRoot that lies on pPoly's
-// plane and overlaps its extents (0x447220). Near, 898 bytes against 888:
-// the shipped code calls Insert2's _DeleteAndDestroyArray (0x4474e1), ours
-// expands it (inline budget; Dot, 0x4472b9, is a call in both only with
-// OverlapExtents an inline function).
+// plane and overlaps its extents (0x447220). The shipped code calls
+// Insert2's _DeleteAndDestroyArray (0x4474e1) and Dot (0x4472b9): the
+// inline budget, which OverlapExtents' spelling decides.
 void sub_447220(NODEREF pRoot, CPrePoly *pPoly, CMoArray<CPrePoly*> &touching)
 {
 	static SplitStruct	splitStruct;
