@@ -5,6 +5,8 @@
 #   make reference  extract the shipped binaries and their function tables
 #                   into out/reference/ (build/reference.sh)
 #   make progress   score the build against the shipped binaries
+#   make test       run the shipped tools and ours on the same inputs and
+#                   compare what they write (tests/README.md)
 #   make shell      a shell in the build container
 #   make help       everything else
 #
@@ -23,7 +25,7 @@ DOCKER_RUN = docker run --rm --init -u $(shell id -u):$(shell id -g) \
 
 TOOLCHAIN_FILES = toolchains/msvc-6.00-8966/BIN/cl.exe toolchains/msvc-6.00-9044/BIN/cl.exe
 
-.PHONY: all reference progress progress-update shell clean help check-toolchain
+.PHONY: all reference progress progress-update test shell clean help check-toolchain
 
 all: check-toolchain
 	$(DOCKER_RUN) make -f build/build.mk -j$(JOBS)
@@ -33,6 +35,7 @@ help:
 	@echo "make reference  extract the shipped binaries into out/reference/"
 	@echo "make progress   score the build against them"
 	@echo "make progress-update  record the score in progress/"
+	@echo "make test       behaviour tests against the shipped tools (TESTS=suite...)"
 	@echo "make shell      a shell in the build container"
 	@echo "make clean      remove out/ and every build output in src/"
 
@@ -49,6 +52,9 @@ progress:
 
 progress-update:
 	$(DOCKER_RUN) bash -c "python3 tools/progress.py && python3 tools/ratchet.py update $(if $(ACCEPT_LOSSES),--accept-losses)"
+
+test:
+	$(DOCKER_RUN) bash tests/run.sh $(TESTS)
 
 shell:
 	docker run --rm --init -it -u $(shell id -u):$(shell id -g) \
