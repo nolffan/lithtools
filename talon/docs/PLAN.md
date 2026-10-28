@@ -204,6 +204,37 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         PreWorld function; 0x40e790 is two functions (0x40e790,
         0x40e7c0).
     - [x] The MFC application (0x42f580..0x430a40): ProcessorApp.cpp, above.
+    - [~] The last unwritten rows (2026-10-28, seven agents; 69.2% ->
+      73.9%, unwritten 115 -> 56): lighting in LightMapMaker_r1/r2/r3.cpp
+      (rewrites of LightMapMaker.cpp's and LeafPortals.cpp's unmatched
+      drafts, which they replace at the fold-in; g_LMPlanes'
+      initializer, LightWorldModelCB and DoesSunLightHit identical, the
+      rest near), PhysicsBlocks.cpp (the templates identical, the two
+      makers near), PreWorld's and Processing's remaining functions
+      (DoProcessing and GenerateSurfaces identical; ProblemBrushes.cpp
+      gone, its two arrays are Processing's), streamsim (genltstream's
+      WriteString takes char*), cp_Parse, genericprop_setup's
+      initializer, the 2001 vis query in world_tree.cpp and CWorldNode::
+      Term. What is left:
+      - 22 written but near (the inline budget, registers, frame slots).
+      - 9 kept from appearing by the inline budget: Processing's template
+        code 0x441ea0..0x442ce0 (one inline level less than ours: depth 7
+        reproduces it, or a derived element class, neither supported by
+        the sources), TestBoxPlane 0x44dda0 (matches out of line once
+        TestNode stops expanding it), FVec 0x41e090 (once
+        ApplyLightToPoly calls it), the AddTail at 0x43d3a0 (PreWorld's).
+      - 17 function-table rows that are pieces of other functions
+        (0x413fcc 0x416567 0x41656c 0x416f66 0x417061 0x41706f 0x41746e
+        0x417478 0x41756e 0x41c364 0x41de17 0x434443 0x434465 0x434470
+        0x43a1d8 0x43d3c9 0x44dd8c) and 8 that aren't ours: StdLith
+        starts at 0x44ea00 (0x44ea30 is l_allocator's), MFC at 0x456750
+        (0x456750..0x456807). The scoreboard should drop them.
+      - To link: the shared EditObjects, EditPlane, EditPoly, EditRegion
+        and PrefabRef (Build 69's) don't compile; the 2001 files stand in
+        for them (both fold-in lists above). world_tree.h needs
+        VisQueryRequest and the two DoVisQuery virtuals; SaveNode belongs
+        in a shared header; PBlockTable's first fields are the block
+        size and the grid origin.
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
