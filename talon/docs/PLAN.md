@@ -298,12 +298,16 @@ version 85). `progress/Processor-avp2-map.md` is the map.
         the rest (0x42dd40). Why the shipped linker kept them apart is not
         known yet. The scorer's verification of the 1-byte 0x42dd40 flips
         with it (accepted as lost in round 2).
-      - Behaviour: processing AvP2 v1.0's Sample_DM.ed with default options
-        (out/runtest/, not in git), the shipped exe's .dat is deterministic
-        and ours (round 1) differs: the PhysicsBSP world model has 11169
-        nodes against 11126 (same points, planes, polies), and the VisBSP
-        model's bytes differ at equal counts. MakePhysicsBlocks (0x425d20,
-        84 bytes short) and the node-building code are the first suspects.
+      - Behaviour (2026-10-28): our exe processes all seven AvP2 v1.0
+        sample worlds (Sample_DM, _Evac, _Evac_Events, _OverRun, _Marine,
+        _Pred, _Alien; `Processor.exe <world.ed> -skipdialog`) to .dat
+        files byte-identical to the shipped exe's. Two near functions
+        behaved differently and are fixed: DoBrushesIntersect's edge normal
+        and threshold, and MakePortal's rounding (Pt(0)'s last + through
+        _CVector's constructor). The comparison needs the exe's name to be
+        as long as the shipped one's: the physics BSP's T-junction splits
+        write uninitialised vertex colours, which follow the heap
+        (RETAIL_BUGS.md). The harness is in out/runtest/ (not in git).
     - [ ] The rest of the BSP modules, problem brushes and leak files
       (0x40b540..), DTX output,
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
