@@ -591,8 +591,10 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 
 // 0x432a40. Near (811 bytes against 813): the vertex-colour loops'
 // bound (nVerts, zero-extended) is loaded before the Write of nVerts in
-// the shipped code (0x432c7e), after it in ours; and the shipped code
-// loads the frame count as a byte (0x432b4c). Retail bug: the frame
+// the shipped code (0x432c7e), after it in ours (tried: the cast in the
+// Write, the assignment inside it). The frame count is a uint8 local:
+// the shipped code loads it as a byte (0x432b4c), and so does ours only
+// from a local, not from the cast in the chain. Retail bug: the frame
 // count, the poly count and each poly's vertex count are written as
 // uint8, uint16 and uint8, the data for all of them after; more than 255
 // frames (or 65535 polies) desyncs the file for LoadLightAnims.
@@ -603,7 +605,7 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
 	CMoArray<uint32> *pColors;
-	uint8 nVerts;
+	uint8 nVerts, nAnimFrames;
 	uint32 j;
 
 
@@ -641,7 +643,8 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 
 		file.WriteString(pAnim->m_Name);
 		// 0x432b4c: one chain, its operands loaded before the first Write.
-		file << (uint32)pAnim->m_bShadowMap << (uint8)pAnim->m_Frames.GetSize() << (uint16)pAnim->m_Polies.GetSize();
+		nAnimFrames = (uint8)pAnim->m_Frames.GetSize();
+		file << (uint32)pAnim->m_bShadowMap << nAnimFrames << (uint16)pAnim->m_Polies.GetSize();
 
 		for(i=0; i < pAnim->m_Polies; i++)
 		{
@@ -1081,7 +1084,25 @@ BOOL CPreMainWorld::SetupLeafPolies()
 // CPreWorld.
 // ----------------------------------------------------------------------- //
 
-void PBlockTable::Clear()
+// 0x433af0: the members' constructors (m_Polies's vtable 0x4746b8 stored
+// at 0x433b02, m_Nodes's 0x4753ec, m_PBlocks's, with Clear expanded at
+// 0x433b3f..0x433b68), then these.
+CPreSubBsp::CPreSubBsp()
+{
+	m_RootNode = NODE_OUT;
+	m_Unknown_2c = 0;
+	m_Unknown_30.Init();
+}
+
+
+// 0x433b80, here between the two constructors. Inline: CPreSubBsp's
+// constructor expands it, CPreWorld's calls this copy (0x433c40, its
+// inline budget) with no unwind-state store before the call. Without the
+// throw() ours stores one (movb $4, 382 bytes against 377): the copy is
+// compiled after CPreWorld's constructor, too late for VC6 to see that it
+// cannot throw. Not inline, CPreSubBsp's constructor calls it (161
+// against 140).
+inline void PBlockTable::Clear() throw()
 {
 	m_vBlockSize.Init();
 	m_vMin.Init();
@@ -1089,22 +1110,6 @@ void PBlockTable::Clear()
 	m_nBlocksXY = 0;
 	m_nBlocksTotal = 0;
 	m_pBlocks = NULL;
-}
-
-
-// 0x433af0: the members' constructors (m_Polies's vtable 0x4746b8 stored
-// at 0x433b02, m_Nodes's 0x4753ec, m_PBlocks's), then these. Near (112
-// bytes against 140): the shipped code expands m_PBlocks's Clear here
-// (0x433b3f..0x433b68), so the 2001 Clear was inline, but CPreWorld's
-// constructor calls it (0x433c40, the out-of-line copy at 0x433b80), and
-// with Clear inline ours expands it there too (382 bytes against 377).
-// Clear's spelling, where it is defined and the constructor in the class
-// don't move that; CPreWorld's constructor, identical, wins.
-CPreSubBsp::CPreSubBsp()
-{
-	m_RootNode = NODE_OUT;
-	m_Unknown_2c = 0;
-	m_Unknown_30.Init();
 }
 
 
@@ -2173,10 +2178,14 @@ struct EdgeHashEntry
 };
 
 
-// 0x439050. Near (551 bytes against 589): edgeHash's constructor. The
-// shipped code calls Clear (0x420650) and expands Init (Term's SetSize2,
-// _InitArray 0x422440, SetSize's SetSize2); ours expands Clear and calls
-// Init. The rest is registers.
+// 0x439050. Near (575 bytes against 589), registers only: the calls are
+// the shipped ones (edgeHash's constructor calls Clear, 0x420650, and
+// expands Init around Term's SetSize2, _InitArray 0x422440 and SetSize's
+// SetSize2), but the shipped code keeps pPolyEdges in memory and ours in
+// ebp. The next index is Index((i+1) % NumVerts()), not NextIndex(i):
+// with NextIndex's extra inline levels the inline budget runs out before
+// edgeHash's constructor and ours expanded Clear and called Init (551
+// bytes).
 uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 {
 	CMoArray<EdgeHashEntry*> edgeHash;
@@ -2203,7 +2212,7 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 		for(i=0; i < pPoly->NumVerts(); i++)
 		{
 			iPt1 = pPoly->Index(i);
-			iPt2 = pPoly->NextIndex(i);
+			iPt2 = pPoly->Index((i+1) % pPoly->NumVerts());
 
 			*pPolyEdges = FindEdge(edgeHash, iPt1, iPt2);
 			if(*pPolyEdges == 0xFFFF)
@@ -3266,6 +3275,11 @@ static inline NODEREF IndexToNode(uint32 index, CMoArray<CNode*> &nodes)
 }
 
 
+// 0x437fc0. Near (960 bytes against 957): the calls are the shipped ones
+// but the last: nodes's destructor at the end calls BaseDelete (0x43835b) in the
+// shipped code and ours expands it (the inline budget; frame 0x3c against
+// 0x44). Append, not AddTail: AddTail stays out of line then, as shipped
+// (0x43d3a0, called at 0x4381ce).
 BOOL CPreWorld::LoadSubBsp(CAbstractIO &file, CMoArray<CPrePoly*> &polies, CPreSubBsp *pBsp)
 {
 	CMoArray<CNode*> nodes;
@@ -3313,7 +3327,7 @@ BOOL CPreWorld::LoadSubBsp(CAbstractIO &file, CMoArray<CPrePoly*> &polies, CPreS
 
 	pBsp->m_Nodes.Term();
 	for(i=0; i < nodes; i++)
-		pBsp->m_Nodes.AddTail(nodes[i]);
+		pBsp->m_Nodes.Append(nodes[i]);
 
 	file >> index;
 	pNullPoly = NULL;
