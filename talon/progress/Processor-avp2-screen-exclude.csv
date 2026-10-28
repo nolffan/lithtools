@@ -16,3 +16,4 @@ addr,reason
 0x0043d3c9,"not a function: interior block of the AddTail at 0x0043d3a0; the target of its je at 0x43d3a5"
 0x0044626b,"not a function: interior block of AreSurfacesSame_RS (0x004461f0); code after its first ret, reached by the jump at 0x44623c"
 0x0044dd8c,"not a function: interior block of TestNode (0x0044dac0); only TestNode's own calls and jumps reach it"
+0x0043a1d8,"not a function: interior block of CPreWorld::CalcNodeBoundingBoxes_R (0x00439e60); mid-instruction (0x43a1d6 mov edx,[0x485618])"
