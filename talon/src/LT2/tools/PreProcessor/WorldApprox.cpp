@@ -18,38 +18,18 @@
 #include "editobjects.h"
 #include "processing.h"
 #include "threads.h"
-#include "WorldApprox_decl.h"
+#include "VisLeaves.h"
 
 
 // pregeometry.cpp (0x42ccd0).
 CPreLeaf* LocatePointInTree(CPreWorld *pWorld, PVector &point, NODEREF iRoot);
 
 
-// talon: CPrePortal::m_Unknown_3c[3] is the portal's center (the average
-// of its vertices, 0x44c66c); PreLeaf.h has it as three uint32s.
-#define PORTAL_CENTER(pPortal)	(*(PVector*)(pPortal)->m_Unknown_3c)
 
 // The bits of a leaf set: a byte array indexed by CPreLeaf::m_Index.
 #define WA_TESTBIT(arr, i)		((arr)[(i) >> 3] & (1 << ((i) & 7)))
 #define WA_SETBIT(arr, i)		((arr)[(i) >> 3] |= (1 << ((i) & 7)))
 #define WA_CLEARBIT(arr, i)		((arr)[(i) >> 3] &= ~(1 << ((i) & 7)))
-
-// talon: CPreLeafList as the 2001 code builds it: with no constructor of
-// its own (0x44b69f and 0x44b8c7 construct its byte array inline; PreLeaf.h
-// declares one, so `new CPreLeafList` would call 0x43afb0, the compiler's
-// copy that PreWorld.cpp's LoadFile left out of line). Same layout.
-struct WA_LeafList
-{
-	CMoArray<uint8>	m_Data;
-	uint32			m_Unknown_14;
-};
-
-#define NEW_LEAFLIST()			((CPreLeafList*)new WA_LeafList)
-
-
-// 0x485adc: the portal whose vis 0x44c3b0 floods (VisLeaves.cpp's
-// g_Unknown_485adc).
-#define g_pFloodPortal			(*(CPrePortal**)&g_Unknown_485adc)
 
 
 static void		MakeLeafLists();												// 0x44b460
@@ -330,7 +310,7 @@ static void MakeLeafLists()
 		VisCalcLeafRadius(g_pPVSInfo->m_pWorld, pLeaf, leafVis);
 
 		// With every surface closed.
-		pList = NEW_LEAFLIST();
+		pList = new CPreLeafList;
 		pLeaf->m_Unknown_6c.Append(pList);
 
 		memset(&seen[0], 0, g_pPVSInfo->m_nVisBytes);
@@ -364,7 +344,7 @@ static void MakeLeafLists()
 			RemoveBits(through, seen);
 			if(AnyBits(through))
 			{
-				pList = NEW_LEAFLIST();
+				pList = new CPreLeafList;
 				pLeaf->m_Unknown_6c.Append(pList);
 
 				pList->m_Unknown_14 = users[i]->m_Index;
@@ -647,7 +627,7 @@ static void FloodPortalVis_R(CPreLeaf *pLeaf, CPrePortal *pFrom, float fDistSqr)
 	{
 		pPortal = pLeaf->m_Unknown_00[i];
 
-		vDiff = PORTAL_CENTER(pPortal) - PORTAL_CENTER(pFrom);
+		vDiff = pPortal->m_vCenter - pFrom->m_vCenter;
 		if(CanSeeThrough(g_pFloodPortal, pPortal))
 			FloodPortalVis_R(pPortal->m_pLeaf, pPortal, fDistSqr + VEC_MAGSQR(vDiff));
 	}
@@ -729,11 +709,11 @@ static void SetupPortals()
 	{
 		pPortal = g_pPVSInfo->m_Portals[i];
 
-		PORTAL_CENTER(pPortal).Init();
+		pPortal->m_vCenter.Init();
 		for(j=0; j < pPortal->NumVerts(); j++)
-			PORTAL_CENTER(pPortal) += pPortal->Pt(j);
+			pPortal->m_vCenter += pPortal->Pt(j);
 
-		PORTAL_CENTER(pPortal) /= (PReal)pPortal->NumVerts();
+		pPortal->m_vCenter /= (PReal)pPortal->NumVerts();
 	}
 
 	g_pPVSInfo->m_nPortalBytes = (g_pPVSInfo->m_nPortals >> 3) + 1;

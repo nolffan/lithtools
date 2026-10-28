@@ -5,8 +5,7 @@
 // vis-BSP walk collects, zone flood fills, the leaf spheres, the per-thread
 // leaf loop and the portal flow (0x449c00..0x44ac50), and the FastApprox
 // marking (0x44ac50). MakePVS and the rest of the PVS (0x44acd0..) are
-// WorldApprox.cpp's; the globals they share with these are declared in
-// VisLeaves_decl.h.
+// WorldApprox.cpp's; what they share with these is declared in VisLeaves.h.
 //
 // Written from the image; neither Build 69 nor nolfsrc has any of it.
 
@@ -19,7 +18,56 @@
 #include "editobjects.h"
 #include "processing.h"
 #include "threads.h"
-#include "VisLeaves_decl.h"
+#include "VisLeaves.h"
+
+
+// CPreLeaf::m_Flags (LEAFF_VISITED, 1<<1, is PreLeaf.h's).
+// Reached from the inside leaf or an InsideDef (0x4498f0).
+#define LEAFF_INSIDE		(1<<0)
+
+// The bits of a leaf set: a byte array indexed by CPreLeaf::m_Index.
+#define VIS_TESTBIT(arr, i)	((arr)[(i) >> 3] & (1 << ((i) & 7)))
+#define VIS_SETBIT(arr, i)	((arr)[(i) >> 3] |= (1 << ((i) & 7)))
+#define VIS_CLEARBIT(arr, i)	((arr)[(i) >> 3] &= ~(1 << ((i) & 7)))
+
+// The flow's portal buffers: four portals of up to 100 vertices each,
+// one set per level of the flow (0x4060 bytes, newed at 0x44a5af).
+#define VIS_PORTALBUF_SIZE	(sizeof(CPrePortal) + sizeof(CPolyVert)*97)
+struct VisPortalBuffers
+{
+	uint8					m_Portals[4][VIS_PORTALBUF_SIZE];
+};
+
+// The flow from one portal (0x44 bytes, VisFlowPortal's local).
+struct VisFlowState
+{
+	// Inline; out of line at 0x44a400 (for the unwinding).
+							~VisFlowState()		{ DeleteAndClearArray(m_Buffers); }
+
+	CMoArray<VisPortalBuffers*>	m_Buffers;		// vtable 0x475c84
+	uint32					m_iDepth;			// 0x14: the buffers in use
+	CMoArray<uint8>			m_OnPath;			// 0x18: the leaves on the way here
+	CMoArray<uint8>			m_Seen;				// 0x2c: what the portal sees
+	CPreLeaf				*m_pLeaf;			// 0x40: set, not read
+};
+
+// 0x485ac0: the leaves the vis-BSP walk (0x449c00) collects.
+extern CMoArray<CPreLeaf*>	g_VisWalkLeaves;
+// 0x485ad8: the bit index of the vis-BSP walk.
+extern uint32				g_iVisWalkBit;
+// 0x485ae0: the bits that walk reads.
+extern class CPreLeafList	*g_pVisWalkBits;
+
+
+struct PortalBuffer;
+
+void			VisCollectLeaves_R(CNode *pNode);																// 0x449c00
+void			VisLeafDone();																					// 0x44a0f0
+uint32			VisGetNextLeaf();																				// 0x44a160
+void			VisFlowPortal(CPreLeaf *pLeaf, CPrePortal *pPortal);											// 0x44a200
+void			VisFlow_R(VisFlowState *pState, CPrePortal *pSource, CPrePortal *pPass, uint8 *pMightSee,
+					BOOL bCheckBlocker);																		// 0x44a510
+BOOL			VisClipToSeparators(CPrePortal *pSource, CPrePortal *pPass, PortalBuffer *pBuf, BOOL bFlip);	// 0x44a930
 
 
 // pregeometry.cpp (0x42ccd0).
@@ -172,7 +220,7 @@ uint32 CUnseenPolyRemover::RemovePolies(CPreWorld *pWorld)
 CMoArray<CPreLeaf*>		g_VisWalkLeaves;
 uint32					g_nFastApproxLeaves;
 uint32					g_iVisWalkBit;
-uint32					g_Unknown_485adc;
+CPrePortal				*g_pFloodPortal;
 CPreLeafList			*g_pVisWalkBits;
 PVSInfo					*g_pPVSInfo;
 void					*g_pProgressCS;
@@ -226,17 +274,6 @@ void VisCollectLeaves(CPreWorld *pWorld, CNode *pRoot, CPreLeafList *pBits)
 
 	VisCollectLeaves_R(pRoot);
 }
-
-
-// What CPreSurface::m_Unknown_80 points to (CPreWorld::LoadFile makes
-// them, PreWorld.cpp; WorldApprox_decl.h has the same struct): a surface
-// that can block vis, and its index.
-struct PreSurfaceUser : public CGLLNode
-{
-	CPreSurface		*m_pSurface;
-	const char		*m_pName;
-	uint32			m_Index;			// 0x10
-};
 
 
 // Floods from pLeaf through the leaves set in allowed, marking each in

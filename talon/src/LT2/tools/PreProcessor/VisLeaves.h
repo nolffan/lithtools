@@ -1,11 +1,11 @@
-// talon: what WorldApprox.cpp (the PVS from FastApproxArea on,
-// 0x44acd0..0x44c9d0) uses from the rest of the PVS module (VisLeaves.cpp,
-// 0x4498d0..0x44acd0), and the PVS maker's state. In the image these are
-// one module: their globals sit together in .data (0x485ac0..0x485aef).
-// The names are ours; the shared globals' names are VisLeaves_decl.h's.
+// talon: the PVS (the names are ours). In the image it is one module,
+// VisLeaves.cpp (0x4498d0..0x44acd0) and WorldApprox.cpp (FastApproxArea
+// and MakePVS, 0x44acd0..0x44c9d0): their globals sit together in .data
+// (0x485ac0..0x485aef). What the two files and Processing's MakeWorldPVS
+// share: the PVS maker's state and VisLeaves.cpp's helpers.
 
-#ifndef __WORLDAPPROX_DECL_H__
-#define __WORLDAPPROX_DECL_H__
+#ifndef __VISLEAVES_H__
+#define __VISLEAVES_H__
 
 	class CPreWorld;
 	class CPreLeaf;
@@ -29,7 +29,9 @@
 
 	// What CPreSurface::m_Unknown_80 points to: one of the world's
 	// m_Unknown_04 (the surfaces that can block vis, as CPreWorld::LoadFile
-	// fills them; PreWorld.cpp has the same struct).
+	// fills them). talon: PreWorld.cpp defines it too, for LoadFile: in
+	// PreWorld.h it would cost PreWorld.cpp's static CMoArray destructor
+	// (0x430a90, the header declaration-count threshold, tools/guides/09).
 	struct PreSurfaceUser : public CGLLNode
 	{
 		CPreSurface		*m_pSurface;
@@ -76,13 +78,11 @@
 	};
 
 
-	// The globals the module shares: VisLeaves.cpp defines them (its names
-	// and types).
+	// The globals the module shares: VisLeaves.cpp defines them.
 	// 0x485ad4: how many leaves VisMarkFastApprox_R marked FastApprox.
 	extern uint32				g_nFastApproxLeaves;
-	// 0x485adc: the portal whose vis FloodPortalVis_R floods (VisLeaves.cpp
-	// has it as a uint32 it does not use).
-	extern uint32				g_Unknown_485adc;
+	// 0x485adc: the portal whose vis FloodPortalVis_R floods (0x44c3b0).
+	extern CPrePortal			*g_pFloodPortal;
 	// 0x485ae4.
 	extern PVSInfo				*g_pPVSInfo;
 	// 0x485ae8, 0x485aec: critical sections (thd_CreateCriticalSection):
