@@ -142,6 +142,11 @@ BOOL BrushToWorld(
 }
 
 
+// 0x403010. talon: near (240 against 243 bytes): the same code under a
+// register rotation (pRet in ebp, shipped esi) and the box's y and z stored
+// through pRet where shipped stores x through pMin; the three bytes are
+// ebp's disp8. Spelling the box as pRet->m_Min, assigning pMin after the
+// Inits and moving the declarations don't move it.
 static TempBrush* SetupTempBrush(CPreWorld *pWorld, CEditBrush *pBrush)
 {
 	TempBrush *pRet;
@@ -334,6 +339,11 @@ static void FindIntersecters(CMoArray<TempBrush*> &brushes, CMoArray<TempBrush*>
 }
 
 
+// 0x403720. talon: near (868 against 748 bytes), the inline budget: the
+// shipped code calls the _CVector constructor in the edge loop's
+// operator- and Cross (0x4021c0), Norm (0x4044b0) and both Dots
+// (0x4021e0), where ours expands them all. The rest (the touching test,
+// IsDetail on pPoly2 first, the final DistTo loop) is the shipped shape.
 static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 {
 	GPOS pos1, pos2;
@@ -359,7 +369,7 @@ static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 			// Faces touching, one detail and one not?
 			if(pPlane1->m_Normal.Dot(pPlane2->m_Normal) < -0.9 && pPlane2->m_Dist + pPlane1->m_Dist < 0.1)
 			{
-				if(pPoly2->GetSurface()->IsDetail() != pPoly1->GetSurface()->IsDetail())
+				if(pPoly1->GetSurface()->IsDetail() != pPoly2->GetSurface()->IsDetail())
 				{
 					// If pPoly1 is inside pPoly2's edges, they only touch.
 					for(i=0; i < pPoly2->NumVerts(); i++)

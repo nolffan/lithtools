@@ -78,9 +78,14 @@ uint32 MakeHulls(CHullInfo *pInfo, CPreWorld *pWorld, void (*ProgressFn)(float f
 }
 
 
+// 0x4085a0. talon: near. The shipped loop keeps storing each leaf into
+// the dead parameter slot (0x4085b4), so pLeaf is in memory; volatile is
+// the only spelling found that keeps the store, and it schedules it right
+// after the load where shipped puts it after the add and the dec (same
+// size). What the 2001 body did with the leaf compiled to nothing.
 static void CheckLeaves(CPreWorld *pWorld)
 {
-	CPreLeaf *pLeaf;
+	CPreLeaf * volatile pLeaf;
 	uint32 i;
 
 	for(i=0; i < pWorld->m_Leaves.GetSize(); i++)
