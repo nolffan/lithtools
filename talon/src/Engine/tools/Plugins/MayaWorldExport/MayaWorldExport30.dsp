@@ -50,8 +50,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\..\built\Release\tools\Plugins\MayaWorldExport30"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /GF /Gy /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /GF /Gy /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
