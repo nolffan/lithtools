@@ -352,3 +352,47 @@ dialog thread's allocations counts too. Harmless as far as is known (the physics
 is not drawn), but it makes the .dat depend on the run.
 
 Not fixed yet.
+
+### The Max model exporter hangs on a skinned node whose first modifier isn't Physique or Skin
+
+MaxModelExport30/40.dle 0x105b27d0 (ExportSkeletalPiece) and 0x105b3d70 /
+0x105b4320 (ExportSkeletalBindings, 30 / 40), both in
+src/Engine/tools/Plugins/MaxModelExport/Exporter.cpp; identical. Each
+walks the node's derived-object chain with `while (obj &&
+obj->SuperClassID() == GEN_DERIVOB_CLASS_ID)` looking for the Physique or
+Skin modifier, but never advances `obj` inside the loop: if the first
+derived object holds neither, the export loops forever. DeterminePieceType
+does walk the chain (`GetObjRef()`), so a modifier further down marks the
+piece skeletal and leads straight into the hang.
+
+Not fixed yet.
+
+### The Max model exporter writes a byte past the base texture path's buffer
+
+MaxModelExport30/40.dle 0x105b4d50 / 0x105b5ad0 (GetTextureInfo,
+src/Engine/tools/Plugins/MaxModelExport/Exporter.cpp; identical).
+`new char[strlen(path)]` then `strcpy` into it: one byte short for the
+terminator, a heap overrun on every texture path.
+
+Not fixed yet.
+
+### The Max model exporter samples vertex animations at the wrong times
+
+MaxModelExport30/40.dle 0x105b1cd0 (ExportVertexAnimations,
+src/Engine/tools/Plugins/MaxModelExport/Exporter.cpp; identical). The
+start is computed in frames (`Start()/GetTicksPerFrame() + 1`) and then
+used as ticks (`curTime = start + i*GetTicksPerFrame() + 1`), so unless
+the animation range starts at 0 the samples are taken from the wrong
+times.
+
+Not fixed yet.
+
+### The Max model exporter deletes a TriObject with delete instead of DeleteThis
+
+MaxModelExport30/40.dle 0x105b1f50 (ExportVertexAnimation,
+src/Engine/tools/Plugins/MaxModelExport/Exporter.cpp; identical). The
+TriObject from ConvertToType is freed with `delete tri`, unlike every
+other export path's `DeleteThis()`: across the plug-in/Max heap boundary
+that can corrupt Max's heap.
+
+Not fixed yet.
