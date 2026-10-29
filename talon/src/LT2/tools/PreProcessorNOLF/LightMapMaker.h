@@ -289,10 +289,4 @@
 	};
 
 
-	// Copies the lights under each LightGroup object under pNode into the
-	// group's numbered properties in pWorld's copy of it (0x41d790, called by
-	// DoProcessing; the name is ours).
-	void SetupLightGroups(CWorldNode *pNode, CPreMainWorld *pWorld);
-
-
 #endif  // __LIGHTMAP_MAKER_H__
