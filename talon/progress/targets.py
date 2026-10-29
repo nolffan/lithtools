@@ -156,33 +156,43 @@ TARGETS = [
          shipped=U2 + "/Exporters/MaxDTXLoader40.bmi", stem="MaxDTXLoader40", built=None, optional=True,
          app=[(0x10001000, 0x10006884)]),   # provisional: to the runtime
     dict(label="MaxModelExport30.dle", what="3ds Max model exporter for 3ds Max 3 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxModelExport30.dle", stem="MaxModelExport30", built=None, optional=True,
+         shipped=U2 + "/Exporters/MaxModelExport30.dle", stem="MaxModelExport30", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxModelExport/MaxModelExport30.dle",
          app=[(0x105b1000, 0x105bbc5f)]),   # provisional: to the runtime
     dict(label="MaxModelExport40.dle", what="3ds Max model exporter for 3ds Max 4 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxModelExport40.dle", stem="MaxModelExport40", built=None, optional=True,
+         shipped=U2 + "/Exporters/MaxModelExport40.dle", stem="MaxModelExport40", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxModelExport/MaxModelExport40.dle",
          app=[(0x105b1000, 0x105bcaaf)]),   # provisional: to the runtime
     dict(label="MaxWorldExport30.dle", what="3ds Max world exporter for 3ds Max 3 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxWorldExport30.dle", stem="MaxWorldExport30", built=None, optional=True,
+         shipped=U2 + "/Exporters/MaxWorldExport30.dle", stem="MaxWorldExport30", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxWorldExport/MaxWorldExport30.dle",
          app=[(0x10001000, 0x10012a52)]),   # provisional: to the runtime
     dict(label="MaxWorldExport40.dle", what="3ds Max world exporter for 3ds Max 4 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxWorldExport40.dle", stem="MaxWorldExport40", built=None, optional=True,
+         shipped=U2 + "/Exporters/MaxWorldExport40.dle", stem="MaxWorldExport40", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxWorldExport/MaxWorldExport40.dle",
          app=[(0x10001000, 0x10012c52)]),   # provisional: to the runtime
     dict(label="MaxWorldImport30.dli", what="3ds Max world importer for 3ds Max 3 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxWorldImport30.dli", stem="MaxWorldImport30", built=None, optional=True,
+         shipped=U2 + "/Exporters/MaxWorldImport30.dli", stem="MaxWorldImport30", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxWorldImport/MaxWorldImport30.dli",
          app=[(0x10001000, 0x1000d3f8)]),   # provisional: to the runtime
     dict(label="MaxWorldImport40.dli", what="3ds Max world importer for 3ds Max 4 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxWorldImport40.dli", stem="MaxWorldImport40", built=None, optional=True,
+         shipped=U2 + "/Exporters/MaxWorldImport40.dli", stem="MaxWorldImport40", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxWorldImport/MaxWorldImport40.dli",
          app=[(0x10001000, 0x1000d4c8)]),   # provisional: to the runtime
     dict(label="MayaModelExport30.mll", what="Maya model exporter for Maya 3 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MayaModelExport30.mll", stem="MayaModelExport30", built=None, optional=True,
+         shipped=U2 + "/Exporters/MayaModelExport30.mll", stem="MayaModelExport30", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MayaModelExport/MayaModelExport30.mll",
          app=[(0x10001000, 0x1000e16c)]),   # provisional: to the runtime
     dict(label="MayaModelExport40.mll", what="Maya model exporter for Maya 4 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MayaModelExport40.mll", stem="MayaModelExport40", built=None, optional=True,
+         shipped=U2 + "/Exporters/MayaModelExport40.mll", stem="MayaModelExport40", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MayaModelExport/MayaModelExport40.mll",
          app=[(0x10001000, 0x1000e16c)]),   # provisional: to the runtime
     dict(label="MayaWorldExport30.mll", what="Maya world exporter for Maya 3 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MayaWorldExport30.mll", stem="MayaWorldExport30", built=None, optional=True,
+         shipped=U2 + "/Exporters/MayaWorldExport30.mll", stem="MayaWorldExport30", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MayaWorldExport/MayaWorldExport30.mll",
          app=[(0x10001000, 0x1001ed78)]),   # provisional: to the runtime
     dict(label="MayaWorldExport40.mll", what="Maya world exporter for Maya 4 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MayaWorldExport40.mll", stem="MayaWorldExport40", built=None, optional=True,
+         shipped=U2 + "/Exporters/MayaWorldExport40.mll", stem="MayaWorldExport40", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MayaWorldExport/MayaWorldExport40.mll",
          app=[(0x10001000, 0x1001ed78)]),   # provisional: to the runtime
 ]
