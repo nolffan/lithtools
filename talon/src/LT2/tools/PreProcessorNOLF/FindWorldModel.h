@@ -29,10 +29,6 @@
 	// The first world model is always the main world.
 	void FindWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels);
 
-	// talon: the world models of the AIVolumes and MusicVolumes (0x411c00,
-	// the name is ours).
-	void FindAIVolumes(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels);
-
 	uint32 GetBrushType(CEditBrush *pBrush);
 
 	// The brush's DetailLevel, at most MAX_SURFACE_DETAIL_LEVEL.

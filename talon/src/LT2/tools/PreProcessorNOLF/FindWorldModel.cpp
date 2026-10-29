@@ -15,7 +15,7 @@
 
 static void RecurseAndAddMainBrushes(CWorldNode *pNode, CMoArray<CEditBrush*> &brushes);
 static void RecurseAndAddWorldModels(CEditRegion *pRegion, CWorldNode *pNode,
-	CMoArray<CWorldModelDef*> &worldModels, BOOL bVolumes);
+	CMoArray<CWorldModelDef*> &worldModels);
 static void GatherWorldModelBrushes(CWorldNode *pNode, CMoArray<CEditBrush*> &brushes);
 static uint32 GetRealProp(CPropList *pList, char *pName, DWORD defaultValue);
 
@@ -47,7 +47,7 @@ void FindWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModel
 	}
 
 	// Fill in the worldmodels
-	RecurseAndAddWorldModels(pRegion, &pRegion->m_RootNode, worldModels, FALSE);
+	RecurseAndAddWorldModels(pRegion, &pRegion->m_RootNode, worldModels);
 }
 
 
@@ -72,12 +72,12 @@ static void RecurseAndAddMainBrushes(CWorldNode *pNode, CMoArray<CEditBrush*> &b
 }
 
 
-// With bVolumes, only AIVolumes and MusicVolumes.
+// talon: NOLF's has no AI volumes (AvP2's bVolumes: only AIVolumes and
+// MusicVolumes): its only strings are "Pos" and "Terrain" (0x41cd21).
 static void RecurseAndAddWorldModels(
 	CEditRegion *pRegion,
 	CWorldNode *pNode,
-	CMoArray<CWorldModelDef*> &worldModels,
-	BOOL bVolumes)
+	CMoArray<CWorldModelDef*> &worldModels)
 {
 	CWorldModelDef *pDef;
 	CMoArray<CEditBrush*> brushes;
@@ -85,9 +85,6 @@ static void RecurseAndAddWorldModels(
 
 	if(pNode->m_Type == Node_Object)
 	{
-		if(!bVolumes ||
-			stricmp(pNode->GetClassName(), "AIVolume") == 0 ||
-			stricmp(pNode->GetClassName(), "MusicVolume") == 0)
 		{
 			CVectorProp *pProp = (CVectorProp*)pNode->m_PropList.GetProp("Pos");
 			if(pProp)
@@ -124,7 +121,7 @@ static void RecurseAndAddWorldModels(
 	{
 		// Recurse into children.
 		for(GPOS pos=pNode->m_Children; pos; )
-			RecurseAndAddWorldModels(pRegion, pNode->m_Children.GetNext(pos), worldModels, bVolumes);
+			RecurseAndAddWorldModels(pRegion, pNode->m_Children.GetNext(pos), worldModels);
 	}
 }
 
@@ -142,12 +139,6 @@ static void GatherWorldModelBrushes(CWorldNode *pNode, CMoArray<CEditBrush*> &br
 
 	for(pos=pNode->m_Children; pos; )
 		GatherWorldModelBrushes(pNode->m_Children.GetNext(pos), brushes);
-}
-
-
-void FindAIVolumes(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels)
-{
-	RecurseAndAddWorldModels(pRegion, &pRegion->m_RootNode, worldModels, TRUE);
 }
 
 
