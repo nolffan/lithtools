@@ -162,7 +162,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talon-tests
-          path: |
-            talon/out/tests/
-            !talon/out/tests/wine/
+          path: talon/out/tests/
           if-no-files-found: ignore
