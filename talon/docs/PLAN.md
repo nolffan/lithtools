@@ -14,12 +14,30 @@ with VC6 SP5, and bring it back.
 - [x] **IMFLithDTX.dll** (Maya DTX image plug-in): done. Build 69's source,
   build 51's libraries and SDK headers, no TdGuard, StdLith and MFC's
   import library linked: 105 functions identical, 81 small, none left.
-- [ ] **MaxDTXLoader30/40**, **MaxModelExport30/40**,
-  **MaxWorldExport30/40**, **MaxWorldImport30/40**: need the 3ds Max 3 and
-  4 SDK headers (class layouts changed between Max versions; Build 69 has
-  only Max 7's). To find: the SDKs from the 3ds Max 3.x/4.x CDs.
-- [ ] **MayaModelExport30/40**, **MayaWorldExport30/40**: need the Maya 3.0
-  and 4.0 devkit headers and libraries (Build 69 has 6.5's and 7.0's).
+- [ ] **MaxDTXLoader30/40**: not started (the same set-up as below).
+- [x] **MaxModelExport30/40**, **MaxWorldExport30/40**,
+  **MaxWorldImport30/40**, **MayaModelExport30/40**,
+  **MayaWorldExport30/40** (2026-10-29): Build 69's source brought back,
+  one source per plug-in for its 30 and 40 builds, with ltamgr (the LTA
+  library they link, src/Engine/libs/ltamgr). The SDKs are in toolchains/
+  (maxsdk-3.0; maxsdk-4.0, the 4.2 SDK with MAX_RELEASE 4000 and INT_PTR
+  as int; maya-3.0-devkit, maya-4.0-devkit); Character Studio's headers
+  are Build 69's (src/Engine/tools/Plugins/SDKFiles/CSTUDIO/SDK). Every
+  function of the plug-ins' own objects and of ltamgr matches but three
+  nears in MaxWorldExport (ExportNodeAsTriBrush, ExportNodeAsBrush: a cold
+  block's placement and, in 40, a register; AddKeyFramerGroup: two loads,
+  declaration count). What the 2002 builds were: VC6 SP5, STLport 4.0
+  first in the includes (the LT2 copy, with threads and old iostreams:
+  MSVCIRT.dll), /YX, no /GF (string literals in .data); /G6 for the model
+  exporter only (it halves the world plug-ins' match). Left: the rows
+  still counted unwritten (function-table pieces of matched functions,
+  catch blocks, static initializers: screen them as the Processor's
+  were); the link's folding picks other copies of identical functions
+  than Monolith's link, and import order differs; the assert strings name
+  Monolith's paths (`..\sdkfiles\max30sdk\include\tab.h`,
+  `C:\Jupiter_TO2_SDK\TO2_Build\...`): .data only. One stand-in (38
+  typedefs, MaxModelExport30, guide 09's count); four retail bugs, in
+  RETAIL_BUGS.md.
 
 ## 2. The world processors
 
