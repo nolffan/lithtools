@@ -1,12 +1,13 @@
 Microsoft Developer Studio Workspace File, Format Version 6.00
 # WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
 
-# talon: the world processor and the LT2 libraries it links; written for
-# this project.
+# talon: NOLF Tools 001's world processor (2001-01-03) and the LT2 libraries
+# it links, built with VC6 SP3 (cl 8447) into their own directories; written
+# for this project, from the AvP2 processor's (../PreProcessor).
 
 ###############################################################################
 
-Project: "LT2_StdLith"=..\..\lithshared\stdlith\Lib_StdLith.dsp - Package Owner=<4>
+Project: "NOLF_StdLith"=..\..\lithshared\stdlith\Lib_StdLith_NOLF.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -18,7 +19,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "LT2_ZLib"=..\..\lithshared\zlib\Lib_ZLib.dsp - Package Owner=<4>
+Project: "NOLF_ZLib"=..\..\lithshared\zlib\Lib_ZLib_NOLF.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -30,7 +31,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "LT2_RegMgr"=..\..\lithshared\regmgr\regmgr60.dsp - Package Owner=<4>
+Project: "NOLF_RegMgr"=..\..\lithshared\regmgr\regmgr60_NOLF.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -42,7 +43,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "Processor"=.\Processor.dsp - Package Owner=<4>
+Project: "ProcessorNOLF"=.\Processor.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -51,13 +52,13 @@ Package=<5>
 Package=<4>
 {{{
     Begin Project Dependency
-    Project_Dep_Name LT2_StdLith
+    Project_Dep_Name NOLF_StdLith
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name LT2_ZLib
+    Project_Dep_Name NOLF_ZLib
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name LT2_RegMgr
+    Project_Dep_Name NOLF_RegMgr
     End Project Dependency
 }}}
 

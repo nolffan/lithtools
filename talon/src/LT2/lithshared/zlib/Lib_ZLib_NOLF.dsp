@@ -22,6 +22,12 @@ CFG=Lib_ZLib - Win32 Debug
 !MESSAGE "Lib_ZLib - Win32 Final" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
+# talon: this library as NOLF Tools 001's Processor.exe (2001-01-03) links
+# it: the same sources and settings, compiled by VC6 SP3 (cl 12.00.8447:
+# build.mk's NOLF_* projects) into their own directory. The image's StdLith,
+# zlib and RegMgr code is 8447's (its Rich header: C++ and C objects of
+# build 8447 besides MFC's; progress/Processor-nolf-map.md).
+
 # Begin Project
 # PROP AllowPerConfigDependencies 0
 # PROP Scc_ProjName "Lib_ZLib"
@@ -38,8 +44,8 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "..\Built\Release\Lib_ZLib"
-# PROP Intermediate_Dir "..\Built\Release\Lib_ZLib"
+# PROP Output_Dir "..\built\ReleaseNOLF\Lib_ZLib"
+# PROP Intermediate_Dir "..\built\ReleaseNOLF\Lib_ZLib"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
 # ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\..\libs\STLPORT-4.0\STLPORT" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FR /YX /FD /c

@@ -6,7 +6,8 @@
 <target> is a label or stem of progress/targets.py. For every function of
 its function table (out/reference/<stem>-functions.csv) inside the target's
 app range, the 32-bit immediates and displacements of its instructions that
-point at a NUL-terminated printable string in .rdata or .data are listed
+point at a NUL-terminated printable string in .rdata, .data or .data1
+(Intel C/C++'s literals: NOLF's processor) are listed
 with the string. Functions without one are left out unless --all.
 
 A reading aid for tools/guides/13-cluster-recon.md step 1: literal order
@@ -40,7 +41,7 @@ def sections(d):
 
 def string_at(d, secs, a):
     for name, va, sz, ptr, rsz in secs:
-        if name in ('.rdata', '.data') and va <= a < va + rsz:
+        if name in ('.rdata', '.data', '.data1') and va <= a < va + rsz:
             o = ptr + a - va
             e = d.find(b'\0', o, o + 400)
             if e < 0 or e - o < 2:

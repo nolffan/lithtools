@@ -12,7 +12,8 @@
 #
 # Needs docker and the three submodules (`git submodule update --init`):
 # toolchains/ (the compilers: toolchains/README.md; this project uses
-# msvc-6.00-8966 and msvc-6.00-9044), rez/ (its disc-image readers) and
+# msvc-6.00-8966 and msvc-6.00-9044, and for NOLF's processor
+# msvc-6.00-8447 and icl-4.0), rez/ (its disc-image readers) and
 # tools/ (the reconstruction tools). Every step runs in a throwaway
 # container of the cjacksrc build image (Ubuntu 24.04 with 32-bit Wine),
 # with this directory mounted at /repo, as you.
@@ -23,7 +24,8 @@ JOBS  ?= $(shell nproc)
 DOCKER_RUN = docker run --rm --init -u $(shell id -u):$(shell id -g) \
 	-e HOME=/tmp/home -v $(CURDIR):/repo -w /repo $(IMAGE)
 
-TOOLCHAIN_FILES = toolchains/msvc-6.00-8966/BIN/cl.exe toolchains/msvc-6.00-9044/BIN/cl.exe
+TOOLCHAIN_FILES = toolchains/msvc-6.00-8966/BIN/cl.exe toolchains/msvc-6.00-9044/BIN/cl.exe \
+	toolchains/msvc-6.00-8447/BIN/cl.exe toolchains/icl-4.0/BIN/icl.exe
 
 .PHONY: all reference progress progress-update test shell clean help check-toolchain
 
@@ -42,7 +44,7 @@ help:
 check-toolchain:
 	@for f in $(TOOLCHAIN_FILES); do [ -f $$f ] || { \
 	  echo "missing $$f: build the compilers first (toolchains/README.md:"; \
-	  echo "  bash toolchains/fetch.sh msvc-6.00-8966 msvc-6.00-9044, in the build container)"; exit 1; }; done
+	  echo "  bash toolchains/fetch.sh msvc-6.00-8966 msvc-6.00-9044 msvc-6.00-8447 icl-4.0, in the build container)"; exit 1; }; done
 
 reference:
 	$(DOCKER_RUN) bash build/reference.sh

@@ -64,9 +64,12 @@ TALON_RCFLAGS ?=
 #   src/Libs/Libs.dsw                      Monolith's shared static libraries
 #   src/Engine/tools/Plugins/Plugins.dsw   the modelling-package plug-ins
 #   src/LT2/tools/LithRez/LithRez.dsw      LithRez 1.00 (1998), Visual C++ 5.0
+#   src/LT2/tools/PreProcessorNOLF/Processor.dsw  the world processor (NOLF),
+#                                          Intel C/C++ 4.0 and VC6 SP3
 WORKSPACES := \
     src/LT2/lithshared/lithshared.dsw:LT2_StdLith,LT2_ZLib,LT2_RegMgr \
     src/LT2/tools/PreProcessor/Processor.dsw:Processor \
+    src/LT2/tools/PreProcessorNOLF/Processor.dsw:ProcessorNOLF \
     src/Libs/Libs.dsw:ButeMgr,CryptMgr,DibMgr,GenRegMgr,Lib_Lith,MFCStub,RegMgr,regmgr32,Lib_StdLith,Lib_ZLib \
     src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader,MaxDTXLoader30,MaxDTXLoader40,MaxModelExport30,MaxModelExport40,MaxWorldExport30,MaxWorldExport40,MaxWorldImport30,MaxWorldImport40,MayaModelExport30,MayaModelExport40,MayaWorldExport30,MayaWorldExport40 \
     src/LT2/tools/LithRez/LithRez.dsw:LithRez
@@ -113,6 +116,25 @@ LINK_VC5   := $(VC5)/BIN/link.exe
 LIBEXE_VC5 := $(VC5)/BIN/lib.exe
 $(foreach p,LithRez RezMgr Lith,$(eval ENV_$(p) := $$(ENV_VC5))$(eval CL_$(p) := $$(CL_VC5))\
     $(eval LINK_$(p) := $$(LINK_VC5))$(eval LIBEXE_$(p) := $$(LIBEXE_VC5)))
+
+# NOLF Tools 001's Processor.exe (2001-01-03; progress/Processor-nolf-map.md):
+# its own objects are Intel C/C++ 4.0's (icl-4.0, with VC6 SP3's headers and
+# MFC's), but PreWorld.cpp, which is VC6 SP3's (cl 12.00.8447), as are the
+# LT2 libraries (the NOLF_* projects) and the MFC and C runtime it links
+# statically (msvc-6.00-8447's nafxcw.lib and libcmt.lib), with SP3's linker.
+VC6SP3  := $(TC)/msvc-6.00-8447
+ICL40   := $(TC)/icl-4.0
+ENV_SP3 := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(VC6SP3))\BIN' \
+    INCLUDE='$(call ws,$(VC6SP3))\INCLUDE;$(call ws,$(VC6SP3))\MFC\INCLUDE' \
+    LIB='$(call ws,$(VC6SP3))\LIB;$(call ws,$(VC6SP3))\MFC\LIB'
+ENV_ICL40 := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(ICL40))\BIN' \
+    INCLUDE='$(call ws,$(ICL40))\INCLUDE;$(call ws,$(VC6SP3))\INCLUDE;$(call ws,$(VC6SP3))\MFC\INCLUDE' \
+    LIB='$(call ws,$(ICL40))\LIB;$(call ws,$(VC6SP3))\LIB;$(call ws,$(VC6SP3))\MFC\LIB'
+$(foreach p,NOLF_StdLith NOLF_ZLib NOLF_RegMgr ProcessorNOLF__PreWorld,$(eval ENV_$(p) := $$(ENV_SP3))\
+    $(eval CL_$(p) := $$(VC6SP3)/BIN/cl.exe)$(eval LIBEXE_$(p) := $$(VC6SP3)/BIN/lib.exe))
+ENV_ProcessorNOLF  := $(ENV_ICL40)
+CL_ProcessorNOLF   := $(ICL40)/BIN/icl.exe
+LINK_ProcessorNOLF := $(VC6SP3)/BIN/link.exe
 
 # The prefix: made the first time, then only checked; every tool run waits
 # for it (an order-only prerequisite, so it causes no rebuild).
