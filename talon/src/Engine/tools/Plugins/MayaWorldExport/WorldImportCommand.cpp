@@ -18,7 +18,6 @@
 #include "WorldImportCommand.h"
 #include <set>
 #include <utility>
-#include "tdguard.h"
 
 
 WorldImportCommand::WorldImportCommand()
@@ -183,11 +182,6 @@ MStatus WorldImportCommand::parseArgs( const MArgList& args )
 
 MStatus WorldImportCommand::doIt( const MArgList& args )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return MStatus::kFailure;
-	}
-
 	MStatus status;
 
 	// default to failure
@@ -600,8 +594,7 @@ bool WorldImportCommand::AddBrush( WINode* node, MObject& parentXForm, MObject& 
 	meshFn.cleanupEdgeSmoothing();
 
 	// name the mesh
-	MFnDependencyNode xFormNameFn( curXForm );
-	MString meshName = xFormNameFn.name();
+	MString meshName( node->Name() );
 	meshName += "Shape";
 	meshFn.setName( meshName );
 
@@ -670,8 +663,7 @@ bool WorldImportCommand::AddObject( WINode* node, MObject& parentXForm, MObject&
 	MStatus status;
 
 	// create a name for the locator object
-	MFnDependencyNode xFormNameFn( curXForm );
-	MString locatorName = xFormNameFn.name();
+	MString locatorName( node->Name() );
 	locatorName += "Shape";
 
 	// create the locator

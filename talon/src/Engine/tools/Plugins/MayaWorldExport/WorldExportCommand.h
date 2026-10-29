@@ -41,7 +41,7 @@ public:
 private:
 	bool exportAll;					// false if only the selected objects are to be exported
 	bool exportUVs;					// generate texture mapping based on the maya materials
-	MString projectPath;			// game project path
+	MString baseTexPath;			// base path of the texture tree
 	MString fileName;				// full path of file to be exported to
 	double scale;					// scale value for converting from Maya units to LithTech units
 	bool detailBrushes;				// true if exported brushes should be marked as detail brushes
@@ -50,8 +50,6 @@ private:
 	bool forceKeys;					// true if keys are being exported at even intervals
 	unsigned forceKeysFrames;		// the interval keys will be forced at
 	bool includeKeys;				// if keys are being forced, should we also include user defined keys
-	bool externalKeys;				// true if keys should be exported to an external file
-	MString keyPath;				// path offset from project path in which to create the key file
 
 	int numImproperFaces;			// number of faces with bad texture assignments
 
@@ -78,7 +76,7 @@ private:
 	AnimNode* FindAnimNode( const MDagPath& path );
 
 	// export the animated brushes
-	bool ExportAnimNodes( const MString& keyFileRelative );
+	bool ExportAnimNodes();
 
 	// export group objects for the keyframers
 	bool ExportKeyFramerGroups();
@@ -87,10 +85,10 @@ private:
 	bool BuildAnimNodeTransform( AnimNode* animNode, MTime time, int curFrame );
 
 	// export a specific animnode
-	bool ExportAnimNode( AnimNode* animNode, const MString& keyFileRelative );
+	bool ExportAnimNode( AnimNode* animNode );
 
 	// export a key for this node
-	bool ExportNodeKey( AnimNode* animNode, MTime timeInterval, const MMatrix& xform, const MVector& kfPos, const char* keyName );
+	bool ExportNodeKey( AnimNode* animNode, MTime timeInterval, const MMatrix& xform, const char* keyName );
 
 	// take a dag node and fill in the keyframes that it uses, returns NULL if the node is not animated
 	AnimNode* BuildAnimNode( const MDagPath& path, const AnimNode* parentAnimNode );
@@ -106,12 +104,6 @@ private:
 
 	// convert uvs to opqs
 	void GenerateOPQ( const MVector& v0, const MVector& v1, const MVector& v2, const MVector& tv0, const MVector& tv1, const MVector& tv2, int width, int height, MVector& o, MVector& p, MVector& q );
-
-	// create the external key file name based on the filename and key path offset
-	void ExternalKeyFileName( const char* name, MString& projectRelative, MString& fullPath, MString& fullPathDir );
-
-	// convert a path into a friendly format
-	void ConvertPath( MString& path );
 };
 
 

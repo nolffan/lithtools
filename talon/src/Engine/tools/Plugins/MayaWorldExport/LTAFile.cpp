@@ -1,11 +1,8 @@
 #include "LTAFile.h"
 
-LTAFile::LTAFile( bool detailBrushes, bool externalKeys )
+LTAFile::LTAFile( bool detailBrushes )
 {
 	nodeAlloc = new CLTADefaultAlloc;
-
-	this->externalKeys = externalKeys;
-	numKeys = 0;
 
 	this->detailBrushes = detailBrushes;
 
@@ -19,9 +16,6 @@ LTAFile::LTAFile( bool detailBrushes, bool externalKeys )
 	polyRoot = new CLTANode;
 	propRoot = new CLTANode;
 	curPolyhedronRoot = NULL;
-
-	keyRoot = NULL;
-	keyList = NULL;
 
 	// first container for brushes
 	CLTANode* container = new CLTANode;
@@ -223,25 +217,12 @@ LTAFile::LTAFile( bool detailBrushes, bool externalKeys )
 			N()
 		)
 	);
-
-	// setup external key file
-	if( externalKeys )
-	{
-		keyRoot = new CLTANode;
-		keyList = new CLTANode;
-
-		A( keyRoot, N("keys") );
-		A( keyRoot, keyList );
-	}
 }
 
 LTAFile::~LTAFile()
 {
 	// recursively delete the tree
 	nodeAlloc->FreeNode( root );
-
-	if( externalKeys )
-		nodeAlloc->FreeNode( keyRoot );
 
 	// delete the property list
 	PropertyList* curProp = propList;
@@ -318,7 +299,6 @@ void LTAFile::AddProperty( const char* name )
 			 A(
 			 A(
 			 A(
-			 A(
 			A(
 			A(
 			A(
@@ -372,11 +352,6 @@ void LTAFile::AddProperty( const char* name )
 				A(
 				N(),
 					N("longint \"LightControl\" (groupowner group1) (data 0.000)")
-				)
-			),
-				A(
-				N(),
-					N("string \"TextureEffect\" (textureeffect)")
 				)
 			),
 				A(
@@ -818,9 +793,6 @@ void LTAFile::AddWorldModel( const char* name, const MVector& pos )
 			A(
 			 A(
 			 A(
-			 A(
-			 A(
-			 A(
 			A(
 			A(
 			A(
@@ -872,11 +844,6 @@ void LTAFile::AddWorldModel( const char* name, const MVector& pos )
 				A(
 				N(),
 					N("rotation \"Rotation\" () (data (eulerangles (0.000 0.000 0.000)))")
-				)
-			),
-				A(
-				N(),
-					N("bool \"Template\" () (data 0)")
 				)
 			),
 				A(
@@ -977,16 +944,6 @@ void LTAFile::AddWorldModel( const char* name, const MVector& pos )
 				A(
 				N(),
 					N("real \"MaxHitPoints\" (group1) (data 100.000)")
-				)
-			),
-				A(
-				N(),
-					N("real \"Energy\" (group1) (data 100.000)")
-				)
-			),
-				A(
-				N(),
-					N("real \"MaxEnergy\" (group1) (data 100.000)")
 				)
 			),
 				A(
@@ -1159,7 +1116,7 @@ void LTAFile::AddWorldModel( const char* name, const MVector& pos )
 }
 
 // adds a new keyframer as a child, and sets the root to that object
-void LTAFile::AddKeyFramer( const char* name, const char* worldModelName, const char* keyBaseName, const char* keyFile, const MVector& pos )
+void LTAFile::AddKeyFramer( const char* name, const char* worldModelName, const char* keyBaseName, const MVector& pos )
 {
 	// location in tree we are adding the container to
 	CLTANode* curRoot = nodeList->containerNode;
@@ -1190,12 +1147,6 @@ void LTAFile::AddKeyFramer( const char* name, const char* worldModelName, const 
 	MString propModelName = MString("string \"ObjectName\" () (data \"") + worldModelName + MString("\")");
 	MString propKeyName = MString("string \"BaseKeyName\" () (data \"") + keyBaseName + MString("\")");
 
-	MString propKeyFile;
-	if( externalKeys )
-		propKeyFile = MString("string \"ExternalKeyFile\" () (data \"") + keyFile + MString("\")");
-	else
-		propKeyFile = MString("string \"ExternalKeyFile\" ()");
-
 	// add the property to the property tree
 	A(
 	propRoot,
@@ -1209,8 +1160,6 @@ void LTAFile::AddKeyFramer( const char* name, const char* worldModelName, const 
 			A(
 			A(
 			A(
-			 A(
-			 A(
 			 A(
 			 A(
 			 A(
@@ -1249,16 +1198,6 @@ void LTAFile::AddKeyFramer( const char* name, const char* worldModelName, const 
 				A(
 				N(),
 					N(propKeyName.asChar())
-				)
-			),
-				A(
-				N(),
-					N(propKeyFile.asChar())
-				)
-			),
-				A(
-				N(),
-					N("real \"KeyDataIndex\" (hidden) (data -1.0)")
 				)
 			),
 				A(
@@ -1540,16 +1479,7 @@ void LTAFile::AddKeyFramerGroup( const char* name, std::vector<MString>& keyFram
 }
 
 // add a new key as a child, and sets the root to that object
-void LTAFile::AddKey( const char* name, float time, const MVector& kfPos, const MVector& pos, const MVector& eulerRotation, const char* sound, float soundRadius, const char* command )
-{
-	if( externalKeys )
-		AddKeyExternalFile( name, time, pos - kfPos, eulerRotation, sound, soundRadius, command );
-	else
-		AddKeyWorldFile( name, time, pos, eulerRotation, sound, soundRadius, command );
-}
-
-// add a new key as a child, and sets the root to that object
-void LTAFile::AddKeyWorldFile( const char* name, float time, const MVector& pos, const MVector& eulerRotation, const char* sound, float soundRadius, const char* command )
+void LTAFile::AddKey( const char* name, float time, const MVector& pos, const MVector& eulerRotation )
 {
 	// location in the tree we are adding the container to
 	CLTANode* curRoot = nodeList->containerNode;
@@ -1579,15 +1509,6 @@ void LTAFile::AddKeyWorldFile( const char* name, float time, const MVector& pos,
 	MString propPos = MString("vector \"Pos\" ( distance ) (data (vector (") + VectorString(pos) + MString(")))");
 	MString propRot = MString("rotation \"Rotation\" () (data (eulerangles (") + VectorString(eulerRotation) + MString(")))");
 	MString propTime = MString("real \"TimeStamp\" () (data ") + time + MString(")");
-	MString propSoundRadius = MString("real \"SoundRadius\" (radius) (data ") + soundRadius + MString(")");
-
-	MString propSound = MString("string \"SoundName\" ()");
-	if( strlen( sound ) )
-		propSound += MString(" (data \"") + sound + MString("\")");
-
-	MString propCommand = MString("string \"Command\" (notifychange)");
-	if( strlen( command ) )
-		propCommand += MString(" (data \"") + command + MString("\")");
 
 	// add the property to the property tree
 	A(
@@ -1629,17 +1550,17 @@ void LTAFile::AddKeyWorldFile( const char* name, float time, const MVector& pos,
 			),
 				A(
 				N(),
-					N(propSound.asChar())
+					N("string \"SoundName\" ()")
 				)
 			),
 				A(
 				N(),
-					N(propSoundRadius.asChar())
+					N("real \"SoundRadius\" (radius) (data 0.000)")
 				)
 			),
 				A(
 				N(),
-					N(propCommand.asChar())
+					N("string \"Command\" (notifychange)")
 				)
 			),
 				A(
@@ -1716,85 +1637,10 @@ void LTAFile::AddKeyWorldFile( const char* name, float time, const MVector& pos,
 	);
 }
 
-// add a key to the external key file
-void LTAFile::AddKeyExternalFile( const char* name, float time, const MVector& pos, const MVector& eulerRotation, const char* sound, float soundRadius, const char* command )
-{
-	MString keyName = MString("\"") + name + MString("\"");
-	MString keyPos = MString("pos ") + VectorString( pos );
-	MString keyRot = MString("rot ") + VectorString( eulerRotation );
-	MString keyTime = MString("time ") + time;
-	MString keySound = MString("sound \"") + sound + MString("\"");
-	MString keySoundRadius = MString("soundradius ") + soundRadius;
-	MString keyCommand = MString("command \"") + command + MString("\"");
-
-	A(
-	keyList,
-		A(
-		A(
-		A(
-		A(
-		A(
-		 A(
-		 A(
-		 A(
-		 A(
-		N(),
-			N(keyName.asChar())
-		),
-			A(
-			N(),
-				N(keyPos.asChar())
-			)
-		),
-			A(
-			N(),
-				N(keyRot.asChar())
-			)
-		),
-			A(
-			N(),
-				N(keyTime.asChar())
-			)
-		),
-			A(
-			N(),
-				N(keySound.asChar())
-			)
-		),
-			A(
-			N(),
-				N(keySoundRadius.asChar())
-			)
-		),
-			A(
-			N(),
-				N(keyCommand.asChar())
-			)
-		),
-			A(
-			N(),
-				N("bezierprev 0.0 0.0 0.0")
-			)
-		),
-			A(
-			N(),
-				N("beziernext 0.0 0.0 0.0")
-			)
-		)
-	);
-}
-
 // save out the lta file.  returns 0 on error
-bool LTAFile::Output( const MString& fileName, const MString& keyFileName )
+bool LTAFile::Output( const MString& fileName )
 {
-	bool success = false;
-
-	success = CLTANodeWriter::SaveNode( root, fileName.asChar(), CLTAUtil::IsFileCompressed( fileName.asChar() ) );
-
-	if( success && externalKeys )
-		success = CLTANodeWriter::SaveNode( keyRoot, keyFileName.asChar(), CLTAUtil::IsFileCompressed( keyFileName.asChar() ) );
-
-	return success;
+	return CLTANodeWriter::SaveNode( root, fileName.asChar(), CLTAUtil::IsFileCompressed( fileName.asChar() ) );
 }
 
 // create a maya string containing a formatted vector

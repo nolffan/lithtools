@@ -25,6 +25,9 @@ CFG=MayaWorldExport40 - Win32 Release
 # talon: "Release Maya40": the Maya 4.0 developer kit (toolchains/maya-4.0-devkit), /MD,
 # talon: /Ob1, no TdGuard.lib (Touchdown's, later); VC6 SP5's compiler (8966) and
 # talon: linker.
+# talon: STLport (LT2\lithshared\stl), as the shipped code has it: its vector has no
+# talon: allocator word and size() makes no null test. No LTEulerAngles.cpp: the 2002
+# talon: ExportNodeKey converts with MEulerRotation::reorderIt.
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -47,8 +50,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\..\built\Release\tools\Plugins\MayaWorldExport40"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-4.0-devkit\include" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA4_SDK" /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-4.0-devkit\include" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA4_SDK" /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-4.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA4_SDK" /GF /Gy /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-4.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\Shared" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA4_SDK" /GF /Gy /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -75,10 +78,6 @@ SOURCE=.\DllMain.cpp
 # Begin Source File
 
 SOURCE=.\LTAFile.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\..\..\sdk\inc\LTEulerAngles.cpp
 # End Source File
 # Begin Source File
 

@@ -46,7 +46,7 @@ MStatus WorldExportFileTranslator::writer( const MFileObject& file, const MStrin
 	int cmdResult = 0;
 
 	bool useTextureInfo = false;
-	MString projectPath( "" );
+	MString baseTexPath( "" );
 	MString scale( "1.0" );
 	bool detailBrushes = true;
 	bool triangulateBrushes = false;
@@ -54,8 +54,6 @@ MStatus WorldExportFileTranslator::writer( const MFileObject& file, const MStrin
 	bool forceKeys = false;
 	MString forceKeysFrames( "5" );
 	bool includeKeys = false;
-	bool externalKeys = false;
-	MString keyPath( "" );
 
 	if( options.length() > 0 )
 	{
@@ -77,9 +75,9 @@ MStatus WorldExportFileTranslator::writer( const MFileObject& file, const MStrin
 			{
 				useTextureInfo = curOption[1].asInt() > 0;
 			}
-			else if( curOption[0] == MString( "projectPath" ) )
+			else if( curOption[0] == MString( "baseTexPath" ) )
 			{
-				projectPath = curOption[1];
+				baseTexPath = curOption[1];
 			}
 			else if( curOption[0] == MString( "scale" ) )
 			{
@@ -109,20 +107,10 @@ MStatus WorldExportFileTranslator::writer( const MFileObject& file, const MStrin
 			{
 				includeKeys = curOption[1].asInt() > 0;
 			}
-			else if( curOption[0] == MString( "externalKeys" ) )
-			{
-				externalKeys = curOption[1].asInt() > 0;
-			}
-			else if( curOption[0] == MString( "keyPath" ) )
-			{
-				keyPath = curOption[1];
-			}
 		}
 	}
 
 	MString cmdString( "lithtechWorldExport " );
-
-	cmdString += "-projectPath \"" + projectPath + "\" ";
 
 	if( (mode == MPxFileTranslator::kExportAccessMode) || (mode == MPxFileTranslator::kSaveAccessMode) )
 		cmdString += "-all ";
@@ -130,7 +118,7 @@ MStatus WorldExportFileTranslator::writer( const MFileObject& file, const MStrin
 		return MStatus::kFailure;
 
 	if( useTextureInfo )
-		cmdString += "-useTexInfo ";
+		cmdString += "-useTexInfo \"" + baseTexPath + "\" ";
 
 	cmdString += "-scale " + scale + " ";
 
@@ -150,11 +138,6 @@ MStatus WorldExportFileTranslator::writer( const MFileObject& file, const MStrin
 
 			if( includeKeys )
 				cmdString += "-includeKeys ";
-		}
-
-		if( externalKeys )
-		{
-			cmdString += "-externalKeyFile \"" + keyPath + "\" ";
 		}
 	}
 

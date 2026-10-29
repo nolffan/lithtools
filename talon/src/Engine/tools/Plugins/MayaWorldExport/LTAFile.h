@@ -15,11 +15,11 @@ struct PropertyList;
 class LTAFile
 {
 public:
-	LTAFile( bool detailBrushes, bool externalKeys );
+	LTAFile( bool detailBrushes );
 	~LTAFile();
 
 	// output the tree to a stream
-	bool Output( const MString& fileName, const MString& keyFileName );
+	bool Output( const MString& fileName );
 
 	// going up and down the node hierarchy
 	void AddObject( const char* name, bool asBrush );	// adds a new object as a child, and sets the root to that object
@@ -38,10 +38,10 @@ public:
 	void AddWorldModel( const char* name, const MVector& pos );
 
 	// adds a new keyframer as a child, and sets the root to that object
-	void AddKeyFramer( const char* name, const char* worldModelName, const char* keyBaseName, const char* keyFile, const MVector& pos );
+	void AddKeyFramer( const char* name, const char* worldModelName, const char* keyBaseName, const MVector& pos );
 
 	// add a new key as a child, and sets the root to that object
-	void AddKey( const char* name, float time, const MVector& kfPos, const MVector& pos, const MVector& eulerRotation, const char* sound, float soundRadius, const char* command );
+	void AddKey( const char* name, float time, const MVector& pos, const MVector& eulerRotation );
 
 	// add a new group object as a child, and sets the root to that object
 	void AddKeyFramerGroup( const char* name, std::vector<MString>& keyFramerNames );
@@ -79,16 +79,6 @@ private:
 	CLTANode* curEditPoly;			// where polygons are added into the current polyhedron
 	CLTANode* curPointList;			// where points are added into the current polyhedron
 
-	// external key file node tree
-	CLTANode* keyRoot;
-	CLTANode* keyList;
-
-	// true if keys should be added to an external file
-	bool externalKeys;
-
-	// number of keys that have been added so far
-	int numKeys;
-
 	// linked list for the nodehierarchy tree, points to current level nodes are added to
 	LTANodeList* nodeList;
 
@@ -96,12 +86,6 @@ private:
 	PropertyList* propList;
 
 	ILTAAllocator* nodeAlloc;		// allocator used for generating new nodes
-
-	// add a new key as a child, and sets the root to that object
-	void AddKeyWorldFile( const char* name, float time, const MVector& pos, const MVector& eulerRotation, const char* sound, float soundRadius, const char* command );
-
-	// add a key to the external key file
-	void AddKeyExternalFile( const char* name, float time, const MVector& pos, const MVector& eulerRotation, const char* sound, float soundRadius, const char* command );
 
 	// shortcuts to steamline things A = Append  N = Node
 	inline CLTANode* A( CLTANode* a, CLTANode* b ) { a->AppendElement( b, nodeAlloc ); return a; }

@@ -13,9 +13,7 @@
 #include <maya/MItDependencyGraph.h>
 #include <maya/MAnimControl.h>
 #include <maya/MAnimUtil.h>
-#include "LTEulerAngles.h"
 #include "WorldExportCommand.h"
-#include "tdguard.h"
 #include <algorithm>
 
 #pragma warning(disable : 4018 4244)
@@ -25,7 +23,7 @@ WorldExportCommand::WorldExportCommand()
 {
 	exportAll = false;
 	exportUVs = false;
-	projectPath = "";
+	baseTexPath = "";
 	scale = 1.0;
 	detailBrushes = false;
 	triangulateBrushes = false;
@@ -33,8 +31,6 @@ WorldExportCommand::WorldExportCommand()
 	forceKeys = false;
 	forceKeysFrames = 5;
 	includeKeys = false;
-	externalKeys = false;
-	keyPath = "";
 
 	numImproperFaces = 0;
 }
@@ -70,15 +66,13 @@ MSyntax WorldExportCommand::newSyntax( void )
 
 	// add the optional flags
 	syntax.addFlag( "all", "allObjects" );
-	syntax.addFlag( "pp", "projectPath", MSyntax::kString );
-	syntax.addFlag( "ti", "useTexInfo" );
+	syntax.addFlag( "ti", "useTexInfo", MSyntax::kString );
 	syntax.addFlag( "sc", "scale", MSyntax::kDouble );
 	syntax.addFlag( "db", "detailBrushes" );
 	syntax.addFlag( "tb", "triangulateBrushes" );
 	syntax.addFlag( "ea", "exportAnimations" );
 	syntax.addFlag( "fk", "forceKeys", MSyntax::kUnsigned );
 	syntax.addFlag( "ik", "includeKeys" );
-	syntax.addFlag( "ek", "externalKeyFile", MSyntax::kString );
 
 	// add the filename argument
 	syntax.addArg( MSyntax::kString );
@@ -94,18 +88,31 @@ MStatus WorldExportCommand::parseArgs( const MArgList& args )
 	// initialize the parser
 	MArgDatabase argData( syntax(), args );
 
-	// the game project path
-	if( argData.isFlagSet( "pp" ) )
+	// should texture info be saved
+	if( argData.isFlagSet( "ti" ) )
 	{
 		MString tmp;
-		status = argData.getFlagArgument( "pp", 0, tmp );
+		status = argData.getFlagArgument( "ti", 0, tmp );
 		if( !status )
 		{
 			return MStatus::kFailure;
 		}
 
-		ConvertPath( tmp );
-		projectPath = tmp;
+		exportUVs = true;
+
+		// convert the base texture path into a friendly format
+		char tmpPath[_MAX_PATH];
+		strcpy( tmpPath, tmp.asChar() );
+		int tmpPathLen = strlen( tmpPath );
+		for( int i = 0; i < tmpPathLen; i++ )
+		{
+			if( isupper( tmpPath[i] ) )
+				tmpPath[i] = tolower( tmpPath[i] );
+			else if( tmpPath[i] == '/' )
+				tmpPath[i] = '\\';
+		}
+
+		baseTexPath = tmpPath;
 	}
 
 	// get the scale value
@@ -119,12 +126,6 @@ MStatus WorldExportCommand::parseArgs( const MArgList& args )
 		}
 
 		scale = tmp;
-	}
-
-	// should texture info be saved
-	if( argData.isFlagSet( "ti" ) )
-	{
-		exportUVs = true;
 	}
 
 	// should brushes be exported as detail brushes
@@ -168,20 +169,6 @@ MStatus WorldExportCommand::parseArgs( const MArgList& args )
 		includeKeys = true;
 	}
 
-	// should keys be saved to an external path
-	if( argData.isFlagSet( "ek" ) )
-	{
-		MString tmp;
-		status = argData.getFlagArgument( "ek", 0, tmp );
-		if( !status )
-			return MStatus::kFailure;
-
-		externalKeys = true;
-
-		ConvertPath( tmp );
-		keyPath = tmp;
-	}
-
 	// should the entire scene be exported, or just the current selection
 	if( argData.isFlagSet( "all" ) )
 	{
@@ -204,11 +191,6 @@ MStatus WorldExportCommand::parseArgs( const MArgList& args )
 
 MStatus WorldExportCommand::doIt( const MArgList& args )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return MStatus::kFailure;
-	}
-
 	MStatus status;
 
 	// default to failure
@@ -226,7 +208,7 @@ MStatus WorldExportCommand::doIt( const MArgList& args )
 bool WorldExportCommand::ExportScene( void )
 {
 	// create the lta node tree
-	ltaFile = new LTAFile( detailBrushes, externalKeys );
+	ltaFile = new LTAFile( detailBrushes );
 
 	// get the selection list if we care about it
 	if( !exportAll )
@@ -289,31 +271,13 @@ bool WorldExportCommand::ExportScene( void )
 			success = false;
 	}
 
-	// get the external key file paths (project relative and full)
-	MString keyFileRelative, keyFileFull, keyFileFullDir;
-	ExternalKeyFileName( fileName.asChar(), keyFileRelative, keyFileFull, keyFileFullDir );
-
-	// make sure the directory for the external key file exists (create it if not)
-	if( success && externalKeys )
-	{
-		// attempt to create the directory
-		if( !CreateDirectory( keyFileFullDir.asChar(), NULL ) )
-		{
-			if( GetLastError() != ERROR_ALREADY_EXISTS )
-			{
-				MGlobal::displayError( "Couldn't create directory for external key file." );
-				success = false;
-			}
-		}
-	}
-
 	// export animated brushes
-	if( success && !ExportAnimNodes( keyFileRelative ) )
+	if( !ExportAnimNodes() )
 		success = false;
 
 	// save the file
 	if( success )
-		success = ltaFile->Output( fileName, keyFileFull );
+		success = ltaFile->Output( fileName );
 
 	delete ltaFile;
 
@@ -720,7 +684,7 @@ AnimNode* WorldExportCommand::FindAnimNode( const MDagPath& path )
 
 
 // export the animated brushes
-bool WorldExportCommand::ExportAnimNodes( const MString& keyFileRelative )
+bool WorldExportCommand::ExportAnimNodes( void )
 {
 	int numNodes = animNodes.size();
 	if( !numNodes )
@@ -754,7 +718,7 @@ bool WorldExportCommand::ExportAnimNodes( const MString& keyFileRelative )
 
 	for( std::list<AnimNode*>::iterator nodeIt = animNodes.begin(); nodeIt != animNodes.end(); nodeIt++ )
 	{
-		if( !ExportAnimNode( *nodeIt, keyFileRelative ) )
+		if( !ExportAnimNode( *nodeIt ) )
 			return false;
 	}
 
@@ -822,7 +786,7 @@ bool WorldExportCommand::BuildAnimNodeTransform( AnimNode* animNode, MTime time,
 
 
 // export a specific animnode
-bool WorldExportCommand::ExportAnimNode( AnimNode* animNode, const MString& keyFileRelative )
+bool WorldExportCommand::ExportAnimNode( AnimNode* animNode )
 {
 	assert( animNode );
 
@@ -856,7 +820,7 @@ bool WorldExportCommand::ExportAnimNode( AnimNode* animNode, const MString& keyF
 	MString keyFramerName = baseName + "KF";
 	MString keyBaseName = baseName + "Key";
 
-	ltaFile->AddKeyFramer( keyFramerName.asChar(), worldModelName.asChar(), keyBaseName.asChar(), keyFileRelative.asChar(), nodePos );
+	ltaFile->AddKeyFramer( keyFramerName.asChar(), worldModelName.asChar(), keyBaseName.asChar(), nodePos );
 
 	int curKeyNum = 0;
 	MString curKeyName;
@@ -893,10 +857,11 @@ bool WorldExportCommand::ExportAnimNode( AnimNode* animNode, const MString& keyF
 		}
 
 		MMatrix keyXForm = offset * animNode->xform[curKeyNum];
+		keyXForm *= convertMat;
 
 		curKeyNum++;
 
-		ExportNodeKey( animNode, curTimeInterval, keyXForm, nodePos, curKeyName.asChar() );
+		ExportNodeKey( animNode, curTimeInterval, keyXForm, curKeyName.asChar() );
 	}
 
 	// pop the keyframer object
@@ -907,30 +872,23 @@ bool WorldExportCommand::ExportAnimNode( AnimNode* animNode, const MString& keyF
 
 
 // export a key for this node
-bool WorldExportCommand::ExportNodeKey( AnimNode* animNode, MTime timeInterval, const MMatrix& xform, const MVector& kfPos, const char* keyName )
+bool WorldExportCommand::ExportNodeKey( AnimNode* animNode, MTime timeInterval, const MMatrix& xform, const char* keyName )
 {
 	MVector pos, rot;
 
 	MTransformationMatrix trans( xform );
 
-	MQuaternion quat = trans.rotation();
-	LTRotation ltQuat( quat[0], quat[1], quat[2], quat[3] );
-	EulerAngles eul = Eul_FromQuat( ltQuat, EulOrdYXZr );
+	MEulerRotation eulerRot = trans.eulerRotation();
+	eulerRot.reorderIt( MEulerRotation::kYXZ );
+	rot = eulerRot.asVector();
 
-	rot.y = -eul.x;
-	rot.x = -eul.y;
-	rot.z = eul.z;
-
-	pos = trans.translation( MSpace::kWorld ) * convertMat;
+	pos = trans.translation( MSpace::kWorld );
 
 	float timeInSeconds = timeInterval.as( MTime::kSeconds );
 
 	// add the key object
-	ltaFile->AddKey( keyName, timeInSeconds, kfPos, pos, rot, "", 0.0f, "" );
-
-	// pop the key object if we added it to the main world file
-	if( !externalKeys )
-		ltaFile->AscendTree();
+	ltaFile->AddKey( keyName, timeInSeconds, pos, rot );
+	ltaFile->AscendTree();
 
 	return true;
 }
@@ -941,13 +899,6 @@ AnimNode* WorldExportCommand::BuildAnimNode( const MDagPath& path, const AnimNod
 {
 	AnimNode* curAnimNode = new AnimNode;
 	curAnimNode->path = path;
-
-	if( !exportAll && !selectionList.hasItem( path ) )
-	{
-		// the node isn't selected
-		delete curAnimNode;
-		return NULL;
-	}
 
 	if( !BuildNodeKeyTimes( curAnimNode ) )
 	{
@@ -1152,6 +1103,10 @@ bool WorldExportCommand::GenerateTextureName( MString& name )
 	char ext[_MAX_EXT];
 	char path[_MAX_PATH];
 
+	// talon: unused, as shipped (both calls are in the 2002 code)
+	const char* texName = name.asChar();
+	const char* basePath = baseTexPath.asChar();
+
 	strcpy( path, name.asChar() );
 	int pathLen = strlen( path );
 	for( int i = 0; i < pathLen; i++ )
@@ -1169,7 +1124,7 @@ bool WorldExportCommand::GenerateTextureName( MString& name )
 	int fulldirLen = strlen( fulldir );
 
 	// oops, the base path is longer than the texture directory path
-	int basePathLen = strlen( projectPath.asChar() );
+	int basePathLen = strlen( baseTexPath.asChar() );
 	if( fulldirLen < basePathLen )
 		return false;
 
@@ -1178,7 +1133,7 @@ bool WorldExportCommand::GenerateTextureName( MString& name )
 
 	// test to make sure the roots of each of the paths are identical
 	fulldir[basePathLen] = 0;
-	if( strcmp( fulldir, projectPath.asChar() ) )
+	if( strcmp( fulldir, baseTexPath.asChar() ) )
 		return false;
 
 	// create the new texture name
@@ -1186,48 +1141,4 @@ bool WorldExportCommand::GenerateTextureName( MString& name )
 	name = path;
 
 	return true;
-}
-
-
-// create the external key file name based on the filename and key path offset
-void WorldExportCommand::ExternalKeyFileName( const char* name, MString& projectRelative, MString& fullPath, MString& fullPathDir )
-{
-	char projRel[_MAX_PATH];
-	char full[_MAX_PATH];
-	char fullDir[_MAX_PATH];
-	char fname[_MAX_FNAME];
-
-	_splitpath( name, NULL, NULL, fname, NULL );
-
-	sprintf( full, "%s%s%sKeys.ltc", projectPath.asChar(), keyPath.asChar(), fname );
-	sprintf( projRel, "%s%sKeys.ltc", keyPath.asChar(), fname );
-	sprintf( fullDir, "%s%s", projectPath.asChar(), keyPath.asChar() );
-
-	projectRelative = projRel;
-	fullPath = full;
-	fullPathDir = fullDir;
-}
-
-
-// convert a path into a friendly format
-void WorldExportCommand::ConvertPath( MString& path )
-{
-	char tmpPath[_MAX_PATH];
-
-	strcpy( tmpPath, path.asChar() );
-	int tmpPathLen = strlen( tmpPath );
-	for( int i = 0; i < tmpPathLen; i++ )
-	{
-		if( isupper( tmpPath[i] ) )
-			tmpPath[i] = tolower( tmpPath[i] );
-		else if( tmpPath[i] == '/' )
-			tmpPath[i] = '\\';
-	}
-	if( tmpPathLen && tmpPath[tmpPathLen-1] != '\\' )
-	{
-		tmpPath[tmpPathLen] = '\\';
-		tmpPath[tmpPathLen+1] = 0;
-	}
-
-	path = tmpPath;
 }

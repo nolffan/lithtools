@@ -33,12 +33,9 @@ global proc LithTechWorldExportUpdateControls()
 	checkBox -edit -enable $exportAnimations forceKeys;
 	intFieldGrp -edit -enable $bothTrue forceKeysFrames;
 	checkBox -edit -enable $bothTrue includeKeys;
-	checkBox -edit -enable $exportAnimations externalKeys;
 
-	int $externalKeys = `checkBox -query -value externalKeys`;
-	$bothTrue = $exportAnimations && $externalKeys;
-
-	textFieldGrp -edit -enable $bothTrue keyPath;
+	int $useTexInfo = `checkBox -query -value useTextureInfo`;
+	textFieldButtonGrp -edit -enable $useTexInfo baseTexPath;
 
 	int $forceKeysFrames = `intFieldGrp -query -value1 forceKeysFrames`;
 	if( $forceKeysFrames < 1 )
@@ -56,20 +53,18 @@ global proc int LithTechWorldExportOptions ( string $parent, string $action, str
 		setParent $parent;
 
 		columnLayout -adjustableColumn true mainLayout;
-			string $projPathCtl = `textFieldButtonGrp -label "Project Path:" -fileName "" -buttonLabel "..." projectPath`;
 			floatFieldGrp -label "Scale:" -value1 1.0 -precision 3 scale;
 			checkBox -label "Export As Detail Brushes" -align "left" -value on detailBrushes;
 			checkBox -label "Triangulate Brushes" -align "left" -value off triangulateBrushes;
-			checkBox -label "Use Maya Texture Information" -align "left" -value on useTextureInfo;
 			checkBox -label "Export Animated World Models" -align "left" -value off -changeCommand "LithTechWorldExportUpdateControls" exportAnimations;
 			checkBox -label "Force Keys" -align "left" -value off -changeCommand "LithTechWorldExportUpdateControls" forceKeys;
 			intFieldGrp -label "Every" -extraLabel "Frames" -value1 5 -changeCommand "LithTechWorldExportUpdateControls" forceKeysFrames;
 			checkBox -label "Include Defined Keys" -align "left" -value off includeKeys;
-			checkBox -label "Create External Key File" -align "left" -value off -changeCommand "LithTechWorldExportUpdateControls" externalKeys;
-			textFieldGrp -label "Path Offset:" -fileName "" keyPath;
+			checkBox -label "Use Maya Texture Information" -align "left" -value on -changeCommand "LithTechWorldExportUpdateControls" useTextureInfo;
+			string $texPathCtl = `textFieldButtonGrp -label "Base Texture Path:" -fileName "" -buttonLabel "..." baseTexPath`;
 
-		string $projPathButtonCmd = ( "fileBrowserDialog -m 4 -an \"\" -fc \"LithTechWorldExportGetPath " + $projPathCtl + "\"" );
-		textFieldButtonGrp -edit -buttonCommand $projPathButtonCmd projectPath;
+		string $texPathButtonCmd = ( "fileBrowserDialog -m 4 -an \"\" -fc \"LithTechWorldExportGetPath " + $texPathCtl + "\"" );
+		textFieldButtonGrp -edit -buttonCommand $texPathButtonCmd baseTexPath;
 
 		// now set the current settings
 		string $currentOptions = $initialSettings;
@@ -90,9 +85,9 @@ global proc int LithTechWorldExportOptions ( string $parent, string $action, str
 					int $optionIntValue = $optionBreakDown[1];
 					checkBox -edit -value $optionIntValue useTextureInfo;
 				}
-				else if( $optionBreakDown[0] == "projectPath" )
+				else if( $optionBreakDown[0] == "baseTexPath" )
 				{
-					textFieldButtonGrp -edit -fileName $optionBreakDown[1] projectPath;
+					textFieldButtonGrp -edit -fileName $optionBreakDown[1] baseTexPath;
 				}
 				else if( $optionBreakDown[0] == "scale" )
 				{
@@ -129,15 +124,6 @@ global proc int LithTechWorldExportOptions ( string $parent, string $action, str
 					int $optionIntValue = $optionBreakDown[1];
 					checkBox -edit -value $optionIntValue includeKeys;
 				}
-				else if( $optionBreakDown[0] == "externalKeys" )
-				{
-					int $optionIntValue = $optionBreakDown[1];
-					checkBox -edit -value $optionIntValue externalKeys;
-				}
-				else if( $optionBreakDown[0] == "keyPath" )
-				{
-					textFieldGrp -edit -fileName $optionBreakDown[1] keyPath;
-				}
 			}
 		}
 
@@ -150,7 +136,7 @@ global proc int LithTechWorldExportOptions ( string $parent, string $action, str
 		string $currentOptions;
 
 		$currentOptions += ( "useTextureInfo=" + `checkBox -query -value useTextureInfo` );
-		$currentOptions += ( ";projectPath=" + `textFieldButtonGrp -query -fileName projectPath` );
+		$currentOptions += ( ";baseTexPath=" + `textFieldButtonGrp -query -fileName baseTexPath` );
 		$currentOptions += ( ";scale=" + `floatFieldGrp -query -value1 scale` );
 		$currentOptions += ( ";detailBrushes=" + `checkBox -query -value detailBrushes` );
 		$currentOptions += ( ";triangulateBrushes=" + `checkBox -query -value triangulateBrushes` );
@@ -158,8 +144,6 @@ global proc int LithTechWorldExportOptions ( string $parent, string $action, str
 		$currentOptions += ( ";forceKeys=" + `checkBox -query -value forceKeys` );
 		$currentOptions += ( ";forceKeysFrames=" + `intFieldGrp -query -value1 forceKeysFrames` );
 		$currentOptions += ( ";includeKeys=" + `checkBox -query -value includeKeys` );
-		$currentOptions += ( ";externalKeys=" + `checkBox -query -value externalKeys` );
-		$currentOptions += ( ";keyPath=" + `textFieldGrp -query -fileName keyPath` );
 
 		eval( $resultCallback + " \"" + $currentOptions + "\"" );
 
