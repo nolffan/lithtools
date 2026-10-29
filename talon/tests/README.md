@@ -19,7 +19,12 @@ The shipped tool is the reference, so no expected output is stored here:
 both run in the same container, under the same Wine prefix and virtual
 display (`lib.sh`), so nothing depends on another machine's Wine behaving
 the same. Work files go to `out/tests/<suite>/`, the shipped side's under
-`ship/`, ours under `ours/`, so a failure can be diffed afterwards.
+`ship/`, ours under `ours/`, so a failure can be diffed afterwards (the Wine
+prefix is `out/tests-wine/`).
+
+Where a retail bug makes the shipped tool's own output vary, the
+comparison masks exactly those bytes and says how many it masked: the
+processor's physics BSP vertex colours (`datcmp.py`).
 
 | Suite | What it runs | Inputs |
 |---|---|---|

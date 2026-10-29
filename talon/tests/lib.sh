@@ -9,7 +9,9 @@
 TALON=${TALON:-$PWD}
 REFERENCE="$TALON/out/reference"
 WORK="$TALON/out/tests"
-export WINEPREFIX="$WORK/wine" WINEDEBUG=-all
+# outside out/tests: its dosdevices/z: is the whole filesystem, which must
+# not be in what CI keeps of a failed run
+export WINEPREFIX="$TALON/out/tests-wine" WINEDEBUG=-all
 TEST_DISPLAY=:97
 FAILED=0
 
@@ -24,7 +26,7 @@ need() {   # need <file> <what to run to make it>
 # One Wine prefix and one virtual display for the whole run.
 start_wine() {
     mkdir -p "$WORK"
-    [ -d "$WINEPREFIX" ] || wineboot -i >/dev/null 2>&1
+    [ -d "$WINEPREFIX/drive_c" ] || wineboot -i >/dev/null 2>&1
     Xvfb "$TEST_DISPLAY" -screen 0 1024x768x24 >/dev/null 2>&1 &
     XVFB_PID=$!
     trap stop_wine EXIT

@@ -4,9 +4,11 @@
 #
 # Each run gets a fresh directory (the processor reads and writes
 # processor.opt in its working directory), and both exes run from paths of
-# the same length: the physics BSP's T-junction splits write uninitialised
-# vertex colours (RETAIL_BUGS.md), which follow the heap, which follows the
-# exe's path.
+# the same length. The physics BSP's T-junction splits write uninitialised
+# vertex colours (RETAIL_BUGS.md): they follow the heap, which follows the
+# exe's path and the lighting threads' timing (the shipped exe alone, on one
+# CPU and on several, differs there), so tests/datcmp.py compares the files
+# byte for byte except where those colours hold garbage.
 
 SHIPPED="$REFERENCE/avp2tools/Tools/Processor.exe"
 OURS="$TALON/src/LT2/built/Release/tools/Processor/Processor.exe"
@@ -37,10 +39,10 @@ suite_processor_avp2() {
             fi
             [ -f "$dir/$side/$name/$name.dat" ] || { fail "$name: the $side exe wrote no .dat"; continue 2; }
         done
-        if cmp -s "$dir/ship/$name/$name.dat" "$dir/ours/$name/$name.dat"; then
-            pass "$name.dat ($(stat -c %s "$dir/ours/$name/$name.dat") bytes)"
+        if verdict=$(python3 -I "$TALON/tests/datcmp.py" "$dir/ship/$name/$name.dat" "$dir/ours/$name/$name.dat"); then
+            pass "$name.dat ($(stat -c %s "$dir/ours/$name/$name.dat") bytes): $verdict"
         else
-            fail "$name.dat differs: $(cmp "$dir/ship/$name/$name.dat" "$dir/ours/$name/$name.dat" 2>&1 | head -1)"
+            fail "$name.dat $verdict"
         fi
     done
 }
