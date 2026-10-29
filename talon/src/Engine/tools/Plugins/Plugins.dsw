@@ -30,6 +30,168 @@ Package=<4>
 
 ###############################################################################
 
+Project: "LTAMgr"=..\..\libs\ltamgr\ltamgr.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "MaxModelExport30"=.\MaxModelExport\MaxModelExport30.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MaxModelExport40"=.\MaxModelExport\MaxModelExport40.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MaxWorldExport30"=.\MaxWorldExport\MaxWorldExport30.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MaxWorldExport40"=.\MaxWorldExport\MaxWorldExport40.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MaxWorldImport30"=.\MaxWorldImport\MaxWorldImport30.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MaxWorldImport40"=.\MaxWorldImport\MaxWorldImport40.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MayaModelExport30"=.\MayaModelExport\MayaModelExport30.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MayaModelExport40"=.\MayaModelExport\MayaModelExport40.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MayaWorldExport30"=.\MayaWorldExport\MayaWorldExport30.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MayaWorldExport40"=.\MayaWorldExport\MayaWorldExport40.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Global:
 
 Package=<5>

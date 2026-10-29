@@ -1,0 +1,99 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+IDD_ABOUT DIALOG 0, 0, 186, 78
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "About LithTech World Exporter"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDC_OK, 67, 60, 50, 14
+    CTEXT           "LithTech World Exporter", IDC_STATIC, 54, 10, 78, 8
+    CTEXT           "Copyright © 2000-2002 LithTech, Inc.", IDC_STATIC, 32, 36, 122, 8
+    CTEXT           "for LithTech Jupiter", IDC_STATIC, 67, 19, 51, 8
+END
+
+IDD_EXPORT DIALOG 0, 0, 188, 166
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "LithTech World Exporter"
+FONT 8, "MS Sans Serif"
+BEGIN
+    AUTOCHECKBOX    "Pivot Point to Origin", IDC_OBJECTSPACE, 19, 4, 78, 10
+    AUTOCHECKBOX    "Triangulate Brushes", IDC_TRIANGULATE_BRUSHES, 19, 16, 79, 10
+    AUTOCHECKBOX    "Export Animated World Models", IDC_EXPORT_ANIMATIONS, 19, 28, 113, 10
+    AUTOCHECKBOX    "Force Keys Every", IDC_FORCE_KEYS, 33, 40, 71, 10
+    EDITTEXT        IDC_FORCE_KEYS_FRAMES, 105, 38, 31, 12, ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Frames", IDC_STATIC_FORCE_KEYS, 140, 40, 24, 8
+    AUTOCHECKBOX    "Include Defined Keys", IDC_INCLUDE_DEFINED_KEYS, 47, 52, 83, 10
+    AUTOCHECKBOX    "Create External Key File", IDC_EXTERNAL_KEY_FILE, 33, 64, 91, 10
+    LTEXT           "Path Offset:", IDC_STATIC_EXTERNAL_KEY_FILE_PATH, 47, 76, 38, 8
+    EDITTEXT        IDC_EXTERNAL_KEY_FILE_PATH, 47, 86, 118, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Use MAX Texture Information", IDC_EXPORT_UV, 19, 103, 109, 10
+    LTEXT           "Project Path:", IDC_STATIC_PROJECT_PATH, 19, 117, 42, 8
+    EDITTEXT        IDC_PROJECT_PATH, 19, 127, 145, 12, ES_AUTOHSCROLL
+    PUSHBUTTON      "...", IDC_BROWSE_PROJECT_PATH, 167, 127, 12, 12
+    DEFPUSHBUTTON   "OK", IDC_OK, 75, 149, 50, 14
+    PUSHBUTTON      "Cancel", IDC_CANCEL, 129, 149, 50, 14
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 3,1,0,0
+ PRODUCTVERSION 3,1,0,0
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x2L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", "for LithTech Jupiter\0"
+            VALUE "CompanyName", "LithTech, Inc.\0"
+            VALUE "FileDescription", "MAXWorldExport\0"
+            VALUE "FileVersion", "3.1\0"
+            VALUE "InternalName", "MAXWorldExport\0"
+            VALUE "LegalCopyright", "Copyright © 2000, 2001 LithTech, Inc.\0"
+            VALUE "LegalTrademarks", ""
+            VALUE "OriginalFilename", "MAXWorldExport.dle\0"
+            VALUE "PrivateBuild", ""
+            VALUE "ProductName", "  MAXWorldExport\0"
+            VALUE "ProductVersion", "3.1\0"
+            VALUE "SpecialBuild", ""
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 0x4b0
+    END
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    IDS_SHORTDESC                   "LithTech World"
+    IDS_LONGDESC                    "LithTech LTA World Exporter"
+    IDS_LIBDESC                     "LithTech LTA World Exporter"
+    IDS_CLASSNAME                   "LTA World SceneExport"
+    IDS_AUTHOR                      "LithTech, Inc."
+    IDS_COPYRIGHT                   "Copyright © 2000, 2001 LithTech, Inc."
+    IDS_PROGRESSBAR                 "Exporting world file..."
+    IDS_ENDREPORT_BADMATS_TITLE     "Warning"
+    IDS_ENDREPORT_BADMATS           "Found improper material assignments!\nNumber of bad faces: %d"
+    IDS_CHOOSE_DIRECTORY            "Base Texture Path"
+    IDS_MESSAGE_TITLE               "LithTech World Exporter"
+    IDS_MESSAGE_FORCEKEYSRANGE      "Forced keys interval must be greater than 0.\nThe value is being set to 1."
+    IDS_MESSAGE_KEY_FILE_CREATEDIRECTORY_FAILED "Couldn't create directory for external key file."
+END
+
+#endif
