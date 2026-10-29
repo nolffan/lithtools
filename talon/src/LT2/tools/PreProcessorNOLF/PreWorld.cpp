@@ -200,8 +200,9 @@ void CPreMainWorld::TermGeometry()
 // The DAT file.
 // ----------------------------------------------------------------------- //
 
-// The DAT file's version (the name is ours).
-#define CURRENT_DAT_VERSION		70
+// The DAT file's version (the name is ours): NOLF's 66, checked at 0x4433b6
+// and written at 0x4437d3 (AvP2's processor: 70).
+#define CURRENT_DAT_VERSION		66
 
 // The object list (EditRegion's, 0x40ef40 and 0x40f290; the names are ours).
 BOOL LoadObjectList(CAbstractIO &file, CMoArray<CBaseEditObj*> &objects);
@@ -824,75 +825,6 @@ CPreWorld* CPreMainWorld::FindWorldModel(const char *pName)
 	}
 
 	return NULL;
-}
-
-
-// Removes the world models of the AIVolumes and MusicVolumes, and their
-// polies from the light animations (the name is ours).
-void CPreMainWorld::RemoveAIVolumes()
-{
-	uint32 i, iWorld, iAnim, iPoly, iFrame;
-	CBaseEditObj *pObj;
-	const char *pClassName;
-	char *pName;
-	CPreLightAnim *pAnim;
-	CPreLightFrame *pFrame;
-
-	for(i=0; i < m_Objects; i++)
-	{
-		pObj = m_Objects[i];
-
-		pClassName = pObj->GetClassName();
-		pName = pObj->GetName();
-		if(pClassName && pName &&
-			(stricmp(pClassName, "AIVolume") == 0 || stricmp(pClassName, "MusicVolume") == 0))
-		{
-			for(iWorld=0; iWorld < m_WorldModels; iWorld++)
-			{
-				if(stricmp(m_WorldModels[iWorld]->m_WorldName, pName) == 0)
-					break;
-			}
-
-			if(iWorld < m_WorldModels)
-			{
-				delete m_WorldModels[iWorld];
-				m_WorldModels.Remove(iWorld);
-
-				for(iAnim=0; iAnim < m_LightAnims; iAnim++)
-				{
-					pAnim = m_LightAnims[iAnim];
-
-					for(iPoly=0; iPoly < pAnim->m_Polies; iPoly++)
-					{
-						if(pAnim->m_Polies[iPoly].m_iWorld > iWorld)
-						{
-							pAnim->m_Polies[iPoly].m_iWorld--;
-						}
-						else if(pAnim->m_Polies[iPoly].m_iWorld == iWorld)
-						{
-							pAnim->m_Polies.Remove(iPoly);
-
-							for(iFrame=0; iFrame < pAnim->m_Frames; iFrame++)
-							{
-								pFrame = pAnim->m_Frames[iFrame];
-
-								delete pFrame->m_PolyMaps[iPoly];
-								pFrame->m_PolyMaps[iPoly] = NULL;
-
-								delete pFrame->m_Unknown_14[iPoly];
-								pFrame->m_Unknown_14[iPoly] = NULL;
-
-								pFrame->m_PolyMaps.Remove(iPoly);
-								pFrame->m_Unknown_14.Remove(iPoly);
-							}
-
-							iPoly--;
-						}
-					}
-				}
-			}
-		}
-	}
 }
 
 

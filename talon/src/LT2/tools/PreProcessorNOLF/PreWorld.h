@@ -414,10 +414,6 @@ public:
 	// talon, W1: whether the light animations fit the world (0x432e90).
 	BOOL					CheckLightAnims();
 
-	// talon, W1: removes the AIVolumes' and MusicVolumes' world models
-	// (0x433000).
-	void					RemoveAIVolumes();
-
 	// talon, W1: the lightmaps' size over their compressed size (0x433520).
 	PReal					CalcLMCompressionRatio();
 
