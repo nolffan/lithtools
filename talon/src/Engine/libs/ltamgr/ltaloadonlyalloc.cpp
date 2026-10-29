@@ -79,7 +79,7 @@ void* CLTALoadOnlyAlloc::AllocateBlock(uint32 nSize)
 		//we need to allocate the memory for a block. If the size is bigger than
 		//a block, we need to allocate the block to be that big
 		uint8* pMem;
-		LT_MEM_TRACK_ALLOC(pMem = new uint8[nBlockSize],LT_MEM_TYPE_MISC);
+		pMem = new uint8[nBlockSize];
 
 		//check the allocation
 		if(pMem == NULL)
@@ -87,7 +87,7 @@ void* CLTALoadOnlyAlloc::AllocateBlock(uint32 nSize)
 
 		//now allocate the block structure that will maintain the mem
 		CLoadMemBlock* pNewBlock;
-		LT_MEM_TRACK_ALLOC(pNewBlock = new CLoadMemBlock(pMem, m_pHead),LT_MEM_TYPE_MISC);
+		pNewBlock = new CLoadMemBlock(pMem, m_pHead);
 
 		//check the allocation
 		if(pNewBlock == NULL)

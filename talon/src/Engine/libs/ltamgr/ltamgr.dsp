@@ -23,6 +23,8 @@ CFG=LTAMgr - Win32 Release
 # talon: the LTA reader/writer library (Engine/libs/ltamgr) the 3ds Max and Maya
 # talon: plug-ins of AvP2 Tools Update 2 link, written for this project from
 # talon: Build 69's ltamgr.vcproj (Release: /MD, /Ob1, sdk\inc); VC6 SP5 (8966).
+# talon: LT2\lithshared\stl (STLport 4.0) comes first: the shipped CLTAUtil::ShallowFindAll
+# talon: grows its vector through STLport's _M_insert_overflow and __node_alloc.
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -43,8 +45,8 @@ RSC=rc.exe
 # PROP Output_Dir "..\..\built\Release\libs\ltamgr"
 # PROP Intermediate_Dir "..\..\built\Release\libs\ltamgr"
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"  /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"  /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\..\LT2\lithshared\stl" /I "..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"  /GF /Gy /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\..\LT2\lithshared\stl" /I "..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS"  /GF /Gy /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe

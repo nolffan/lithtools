@@ -136,7 +136,7 @@ bool CLTAFileBuffer::AllocateCache(uint32 nBufferSize)
 	FreeCache();
 
 	//allocate a new one
-	LT_MEM_TRACK_ALLOC(m_pCache = new uint8[nBufferSize],LT_MEM_TYPE_MISC);
+	m_pCache = new uint8[nBufferSize];
 
 	//see if it worked
 	if(m_pCache == NULL)

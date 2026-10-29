@@ -127,7 +127,7 @@ bool CLTAHuffmanTree::CreateTree(uint32* pnWeightsets)
 	//create all the initial leaves
 	for(uint32 nCurrElem = 0; nCurrElem < 256; nCurrElem++)
 	{
-		LT_MEM_TRACK_ALLOC(pNodes[nCurrElem]		= new CLTAHuffmanNode(pnWeightsets[nCurrElem], nCurrElem),LT_MEM_TYPE_MISC);
+		pNodes[nCurrElem]		= new CLTAHuffmanNode(pnWeightsets[nCurrElem], nCurrElem);
 		m_pLeaves[nCurrElem]	= pNodes[nCurrElem];
 	}
 
@@ -176,8 +176,8 @@ bool CLTAHuffmanTree::CreateTree(uint32* pnWeightsets)
 
 		//now that we have the two elements, we need to create a parent node for it
 		uint32 nParentWeight = pNodes[nSmallest[0]]->GetWeight() + pNodes[nSmallest[1]]->GetWeight();
-		LT_MEM_TRACK_ALLOC(CLTAHuffmanNode* pParent = new CLTAHuffmanNode(nParentWeight, 0, 
-														pNodes[nSmallest[0]], pNodes[nSmallest[1]]),LT_MEM_TYPE_MISC);
+		CLTAHuffmanNode* pParent = new CLTAHuffmanNode(nParentWeight, 0, 
+														pNodes[nSmallest[0]], pNodes[nSmallest[1]]);
 
 		//parentize the children
 		pNodes[nSmallest[0]]->SetParent(pParent);

@@ -160,7 +160,7 @@ bool CLTANodeBuilder::AddElement(CLTANode* pElement)
 	if(m_pCache[nRow] == NULL)
 	{
 		//we do
-		LT_MEM_TRACK_ALLOC(m_pCache[nRow] = new CLTANode* [CACHE_ROW_SIZE],LT_MEM_TYPE_MISC);
+		m_pCache[nRow] = new CLTANode* [CACHE_ROW_SIZE];
 
 		//make sure the allocation succeeded
 		if(m_pCache[nRow] == NULL)
@@ -285,7 +285,7 @@ bool CLTANodeBuilder::MoveElements(CLTANodeBuilder& MoveFrom)
 
 	//allocate the list
 	CLTANode** pList;
-	LT_MEM_TRACK_ALLOC(pList = new CLTANode*[nNumToMove],LT_MEM_TYPE_MISC);
+	pList = new CLTANode*[nNumToMove];
 
 	//make sure we allocated memory ok
 	if(pList == NULL)
@@ -402,7 +402,7 @@ uint32 CLTANodeBuilder::DetachHeadsTo(CLTANode* pNewParentNode)
 
 	//now we need to create a buffer
 	CLTANode** ppChildList;
-	LT_MEM_TRACK_ALLOC(ppChildList = new CLTANode*[GetNumCacheElements()],LT_MEM_TYPE_MISC);
+	ppChildList = new CLTANode*[GetNumCacheElements()];
 
 	//make sure the memory allocation worked
 	if(ppChildList == NULL)
