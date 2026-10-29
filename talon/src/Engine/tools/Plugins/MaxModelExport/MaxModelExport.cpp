@@ -1,7 +1,6 @@
 #include "MaxModelExport.h"
 #include "Exporter.h"
 #include "ltautil.h"
-#include "tdguard.h"
 
 
 // class descriptor stuff to let MAX know a little something about this plug-in
@@ -32,10 +31,6 @@ MAXModelExport::MAXModelExport()
 	options.scale = 1.0f;
 	options.baseTexPath = "";
 	options.useTexInfo = false;
-	options.bLithtechZ = true;
-	options.nKeyFrameStep = 5;
-	options.bForceSampling = false;
-	options.bForceTM = false;
 	options.displayPatchWarning = true;
 }
 
@@ -177,11 +172,6 @@ void MAXModelExport::SaveExporterConfig( void )
 		fputc( options.baseTexPath[i], cfgStream );
 	}
 	_putw( options.displayPatchWarning ? 1 : 0, cfgStream );
-	_putw( options.bLithtechZ ? 1 : 0, cfgStream );
-	_putw( options.nKeyFrameStep, cfgStream );
-	_putw( options.bForceSampling ? 1 : 0, cfgStream );
-	_putw( options.bForceTM ? 1 : 0, cfgStream );
-
 
 	// close the configuration file
 	fclose( cfgStream );
@@ -239,22 +229,6 @@ bool MAXModelExport::LoadExporterConfig( void )
 		options.displayPatchWarning = _getw( cfgStream ) > 0;
 	}
 
-	if( version >= 4 )
-	{
-		options.bLithtechZ = _getw( cfgStream ) > 0;
-	}
-
-	if( version >= 5 )
-	{
-		options.nKeyFrameStep = _getw( cfgStream );
-		options.bForceSampling = _getw( cfgStream ) > 0;
-	}
-
-	if( version >= 6 )
-	{
-		options.bForceTM = _getw( cfgStream ) > 0;
-	}
-
 	fclose( cfgStream );
 	return true;
 }
@@ -283,8 +257,6 @@ static BOOL CALLBACK ConfigDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARA
 	if( !export && (msg != WM_INITDIALOG) )
 		return FALSE;
 
-	ISpinnerControl  *spin;
-
 	switch( msg )
 	{
 	case WM_INITDIALOG:
@@ -296,21 +268,6 @@ static BOOL CALLBACK ConfigDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARA
 		sprintf( tmpStr, "%.3f", export->options.scale );
 		SetWindowText( GetDlgItem( hWnd, IDC_SCALE ), tmpStr );
 		SetCheckBox( hWnd, IDC_USETEXINFO, export->options.useTexInfo );
-		SetCheckBox( hWnd, IDC_USELITHZ, export->options.bLithtechZ );
-
-		SetCheckBox( hWnd, IDC_FORCESAMPLING, export->options.bForceSampling );
-
-		// Setup the spinner controls for the controller key sample rate 
-		spin = GetISpinner(GetDlgItem(hWnd, IDC_CONT_STEP_SPIN)); 
-		spin->LinkToEdit(GetDlgItem(hWnd,IDC_CONT_STEP), EDITTYPE_INT ); 
-		spin->SetLimits(1, 100, TRUE); 
-		spin->SetScale(1.0f);
-		spin->SetValue(export->options.nKeyFrameStep,FALSE);
-		ReleaseISpinner(spin);
-
-		SetCheckBox( hWnd, IDC_FORCETM, export->options.bForceTM );
-
-
 		SetWindowText( GetDlgItem( hWnd, IDC_BASETEXPATH ), export->options.baseTexPath );
 		EnableWindow( GetDlgItem( hWnd, IDC_BASETEXPATH ), export->options.useTexInfo );
 		EnableWindow( GetDlgItem( hWnd, IDC_BROWSE_BASETEXPATH ), export->options.useTexInfo );
@@ -318,10 +275,6 @@ static BOOL CALLBACK ConfigDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARA
 		// put a pointer to the exporter class instance in the user data
 		SetWindowLong( hWnd, GWL_USERDATA, lParam );
 		CenterWindow( hWnd, GetParent( hWnd ) );
-		break;
-
-	case CC_SPINNER_CHANGE:
-		spin = (ISpinnerControl*)lParam; 
 		break;
 
 	case WM_DESTROY:
@@ -347,9 +300,6 @@ static BOOL CALLBACK ConfigDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARA
 			EnableWindow( GetDlgItem( hWnd, IDC_STATIC_BASETEXPATH ), on );
 			break;
 		}
-
-		case IDC_USELITHZ:
-			break;
 
 		case IDC_BROWSE_BASETEXPATH:
 		{
@@ -380,7 +330,6 @@ DWORD WINAPI ProgressBarUpdate( LPVOID arg )
 bool MAXModelExport::DialogAccepted( HWND hWnd )
 {
 	char tmpStr[256];
-	ISpinnerControl  *spin;
 
 	GetWindowText( GetDlgItem( hWnd, IDC_SCALE ), tmpStr, 255 );
 	float tmpScale = (float)atof( tmpStr );
@@ -402,16 +351,6 @@ bool MAXModelExport::DialogAccepted( HWND hWnd )
 	options.animationName = tmpStr;
 
 	options.useTexInfo = GetCheckBox( hWnd, IDC_USETEXINFO ) > 0;
-	options.bLithtechZ = GetCheckBox( hWnd, IDC_USELITHZ ) > 0;
-
-	spin = GetISpinner(GetDlgItem(hWnd, IDC_CONT_STEP_SPIN)); 
-	options.nKeyFrameStep = spin->GetIVal(); 
-	ReleaseISpinner(spin);
-
-	options.bForceSampling = GetCheckBox( hWnd, IDC_FORCESAMPLING ) > 0;
-
-	options.bForceTM = GetCheckBox( hWnd, IDC_FORCETM ) > 0;
-
 
 	char dir[_MAX_PATH];
 	GetWindowText( GetDlgItem( hWnd, IDC_BASETEXPATH ), dir, _MAX_PATH );
@@ -439,11 +378,6 @@ bool MAXModelExport::DialogAccepted( HWND hWnd )
 // export to a file
 int MAXModelExport::DoExport( const TCHAR* name, ExpInterface* ei, Interface* ip, BOOL suppressPrompts, DWORD options )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return 1;
-	}
-
 	this->ip = ip;
 
 	// try to load the configuration info

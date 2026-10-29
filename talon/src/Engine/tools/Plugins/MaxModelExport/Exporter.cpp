@@ -8,44 +8,9 @@
 #include <algorithm>
 #ifndef USES_MAX3_SDK
 #	include "ISkin.h"
+#else	// talon: stand-in: 38 declarations (one line, so no __LINE__ moves) for the declarations the 2002 Max 3 build made here and Build 69's source lost (unknown: the 40 build matches without them); VC6's codegen of ExportNodeAnimation and ExportVertexAnimation follows the symbol count mod 64 (tools/guides/09), and the Max 3 build needs +21..+52 more than ours (measured: +21, +30..+46, +48, +49, +51, +52). No code.
+typedef int MaxModelExportPad1; typedef int MaxModelExportPad2; typedef int MaxModelExportPad3; typedef int MaxModelExportPad4; typedef int MaxModelExportPad5; typedef int MaxModelExportPad6; typedef int MaxModelExportPad7; typedef int MaxModelExportPad8; typedef int MaxModelExportPad9; typedef int MaxModelExportPad10; typedef int MaxModelExportPad11; typedef int MaxModelExportPad12; typedef int MaxModelExportPad13; typedef int MaxModelExportPad14; typedef int MaxModelExportPad15; typedef int MaxModelExportPad16; typedef int MaxModelExportPad17; typedef int MaxModelExportPad18; typedef int MaxModelExportPad19; typedef int MaxModelExportPad20; typedef int MaxModelExportPad21; typedef int MaxModelExportPad22; typedef int MaxModelExportPad23; typedef int MaxModelExportPad24; typedef int MaxModelExportPad25; typedef int MaxModelExportPad26; typedef int MaxModelExportPad27; typedef int MaxModelExportPad28; typedef int MaxModelExportPad29; typedef int MaxModelExportPad30; typedef int MaxModelExportPad31; typedef int MaxModelExportPad32; typedef int MaxModelExportPad33; typedef int MaxModelExportPad34; typedef int MaxModelExportPad35; typedef int MaxModelExportPad36; typedef int MaxModelExportPad37; typedef int MaxModelExportPad38;
 #endif
-#include "tdguard.h"
-
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-
-
-namespace
-{
-	const float EPSILON = 0.00001f;
-
-	// Not truly the correct way to compare floats of arbitary magnitude...
-	bool EqualPoint3(Point3 p1, Point3 p2)
-	{
-		if (fabs(p1.x - p2.x) > EPSILON)
-		{
-			return false;
-		}
-		if (fabs(p1.y - p2.y) > EPSILON)
-		{
-			return false;
-		}
-		if (fabs(p1.z - p2.z) > EPSILON)
-		{
-			return false;
-		}
-
-		return true;
-	}
-
-} // namespace
-
-
 
 //---------------
 //--- ExpNode ---
@@ -59,7 +24,6 @@ ExpNode::~ExpNode()
 		delete children[i];
 	}
 }
-
 
 //---------------------
 //--- ModelExporter ---
@@ -83,12 +47,6 @@ ModelExporter::ModelExporter( ExporterOptions* options, Interface* ip, MAXModelE
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 ModelExporter::~ModelExporter()
 {
 	// delete the ExpNode tree
@@ -103,20 +61,9 @@ ModelExporter::~ModelExporter()
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export the model (it all begins here)
 bool ModelExporter::Export( const TCHAR* fileName )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return false;
-	}
-
 	// get the root of the scene
 	INode* maxRoot = ip->GetRootNode();
 	BailOutIfFalse( maxRoot );
@@ -157,12 +104,11 @@ bool ModelExporter::Export( const TCHAR* fileName )
 	}
 
 	// export the vertex animations
-	ip->ProgressUpdate( 45, FALSE, GetString(IDS_PROGRESS_VERTEXANIMS) );
+	ip->ProgressUpdate( 50, FALSE, GetString(IDS_PROGRESS_VERTEXANIMS) );
 	if( !ExportVertexAnimations() )
 		return false;
 
 	// build the key frame list
-	ip->ProgressUpdate( 55, FALSE, GetString(IDS_PROGRESS_KEYFRAME) );
 	BuildKeyTimes( root );
 
 	// export the node animations
@@ -189,12 +135,6 @@ bool ModelExporter::Export( const TCHAR* fileName )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // build up the tree and piece lists recursively
 ExpNode* ModelExporter::EnumNode( INode* maxNode, ExpNode* parent )
 {
@@ -246,12 +186,6 @@ ExpNode* ModelExporter::EnumNode( INode* maxNode, ExpNode* parent )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // locate a node within a subtree, returns NULL if nothing is found
 ExpNode* ModelExporter::FindNode( INode* maxNode, ExpNode* start )
 {
@@ -283,12 +217,6 @@ ExpNode* ModelExporter::FindNode( INode* maxNode, ExpNode* start )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // recursively write the scene link hierarchy to the file
 bool ModelExporter::ExportTree( ExpNode* expNode )
 {
@@ -315,31 +243,8 @@ bool ModelExporter::ExportTree( ExpNode* expNode )
 		ltaWriter.Write( "transform" );
 		ltaWriter.Write( node->GetName(), true );
 
-		LTMatrix mat;
-
-		// when lithtechZ is set on the root gets rotated 
-		if ( options->bLithtechZ )
-		{
-			// If this is Max's scene root then rotate Z so the model is correct
-			if ( !strcmp ("Scene Root", node->GetName() ) )
-			{
-				// rotate the scene 180 to fix modeledit
-				expNode->xform.RotateZ(MATH_PI);
-
-				mat = ConvertMatrix( expNode->xform );
-				
-			}
-			else // we dont need to rotate everything else 
-			{
-				// get initial transform and adjust it for the export scale factor
-				mat = ConvertMatrix( expNode->xform );
-			}
-		}
-		else
-		{
-				mat = ConvertMatrix( expNode->xform );
-		}
-
+		// get initial transform and adjust it for the export scale factor
+		LTMatrix mat = ConvertMatrix( expNode->xform );
 		LTVector t;
 		mat.GetTranslation( t );
 		t *= options->scale;
@@ -392,12 +297,6 @@ bool ModelExporter::ExportTree( ExpNode* expNode )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // tag any forced nodes or socket nodes and their parents
 bool ModelExporter::TagLinkNodes( void )
 {
@@ -430,19 +329,10 @@ bool ModelExporter::TagLinkNodes( void )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export vertex animations
 bool ModelExporter::ExportVertexAnimations( void )
 {
 	BailOutIfFalse( ltaWriter.IsValid() );
-
-	// dont export if we have any vertex animated pieces
-	if ( !vertexPieces.size() ) return true; 
 
 	// build the list of frame times
 	list<int> frameTimes;	// max frame times
@@ -484,12 +374,6 @@ bool ModelExporter::ExportVertexAnimations( void )
 	return true;
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export the vertex animation for a piece
 bool ModelExporter::ExportVertexAnimation( ExpNode* expNode, list<int>& frameTimes )
 {
@@ -527,7 +411,6 @@ bool ModelExporter::ExportVertexAnimation( ExpNode* expNode, list<int>& frameTim
 		BailOutIfFalse( tri );
 
 		Matrix3 xform = node->GetObjTMBeforeWSM( curTime );
-
 		xform = ConvertMatrixSpace( xform );
 		float scale = options->scale;
 
@@ -564,12 +447,6 @@ bool ModelExporter::ExportVertexAnimation( ExpNode* expNode, list<int>& frameTim
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export animated positions of nodes
 bool ModelExporter::ExportNodeAnimations( void )
 {
@@ -599,12 +476,6 @@ bool ModelExporter::ExportNodeAnimations( void )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export animation data for a node and recurse
 bool ModelExporter::ExportNodeAnimation( ExpNode* expNode )
 {
@@ -696,12 +567,6 @@ bool ModelExporter::ExportNodeAnimation( ExpNode* expNode )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // write out a list of keyframes to the lta file
 bool ModelExporter::WriteFrameList( list<int>& frameList )
 {
@@ -742,25 +607,15 @@ bool ModelExporter::WriteFrameList( list<int>& frameList )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export a skeletally animated piece
 bool ModelExporter::ExportSkeletalPiece( ExpNode* expNode )
 {
-
 	INode* node = expNode->node;
 	assert( node );
-
 	if( !node )
 		return false;
-
 	// grab the skin or physique modifier
 	Object* obj = node->GetObjectRef();
-
 	while( obj && obj->SuperClassID() == GEN_DERIVOB_CLASS_ID )
 	{
 		IDerivedObject* derObj = (IDerivedObject*)obj;
@@ -788,12 +643,6 @@ bool ModelExporter::ExportSkeletalPiece( ExpNode* expNode )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export a skeletally animated piece (using physique modifier)
 bool ModelExporter::ExportSkeletalPiecePhysique( ExpNode* expNode, Modifier* mod )
 {
@@ -937,12 +786,6 @@ bool ModelExporter::ExportSkeletalPiecePhysique( ExpNode* expNode, Modifier* mod
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 #ifndef USES_MAX3_SDK
 // export a skeletally animated piece (using skin modifier)
 bool ModelExporter::ExportSkeletalPieceSkin( ExpNode* expNode, Modifier* mod )
@@ -993,9 +836,7 @@ bool ModelExporter::ExportSkeletalPieceSkin( ExpNode* expNode, Modifier* mod )
 			if( SKIN_OK == skinExport->GetBoneInitTM( curExpNode->node, curMat ) )
 				curExpNode->xform = curMat;
 			else
-			{
 				break;
-			}
 
 			curExpNode->isLinkNode = true;
 			curExpNode = curExpNode->parent;
@@ -1026,8 +867,7 @@ bool ModelExporter::ExportSkeletalPieceSkin( ExpNode* expNode, Modifier* mod )
 
 		// get transform
 		Matrix3 xform;
-		int skinTMRes = skinExport->GetSkinInitTM( node, xform, 1 );
-
+		int skinTMRes = skinExport->GetSkinInitTM( node, xform );
 		BailOutIfFalse( skinTMRes == SKIN_OK );
 		xform = ConvertMatrixSpace( xform );
 
@@ -1049,12 +889,6 @@ bool ModelExporter::ExportSkeletalPieceSkin( ExpNode* expNode, Modifier* mod )
 #endif
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export a vertex animated piece
 bool ModelExporter::ExportVertexPiece( ExpNode* expNode )
 {
@@ -1100,12 +934,6 @@ bool ModelExporter::ExportVertexPiece( ExpNode* expNode )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export a shape given a mesh and a transform
 bool ModelExporter::ExportPieceMesh( ExpNode* expNode, Mesh& mesh, const Matrix3& xform )
 {
@@ -1338,12 +1166,6 @@ bool ModelExporter::ExportPieceMesh( ExpNode* expNode, Mesh& mesh, const Matrix3
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export tools specific info
 bool ModelExporter::ExportToolsInfo( void )
 {
@@ -1386,12 +1208,6 @@ bool ModelExporter::ExportToolsInfo( void )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export the on-load-cmds node
 bool ModelExporter::ExportOnLoadCmds( void )
 {
@@ -1414,12 +1230,6 @@ bool ModelExporter::ExportOnLoadCmds( void )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export the sockets
 bool ModelExporter::ExportSockets( void )
 {
@@ -1491,12 +1301,6 @@ bool ModelExporter::ExportSockets( void )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export the skeletal bindings
 bool ModelExporter::ExportSkeletalBindings( void )
 {
@@ -1550,12 +1354,6 @@ bool ModelExporter::ExportSkeletalBindings( void )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // export the skeletal bindings (using physique modifier)
 bool ModelExporter::ExportSkeletalBindingPhysique( ExpNode* expNode, Modifier* mod )
 {
@@ -1798,12 +1596,6 @@ bool ModelExporter::ExportSkeletalBindingPhysique( ExpNode* expNode, Modifier* m
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 #ifndef USES_MAX3_SDK
 // export the skeletal bindings (using skin modifier)
 bool ModelExporter::ExportSkeletalBindingSkin( ExpNode* expNode, Modifier* mod )
@@ -1949,12 +1741,6 @@ bool ModelExporter::ExportSkeletalBindingSkin( ExpNode* expNode, Modifier* mod )
 #endif
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // returns whether this piece is animated skeletally, vertex animated, or not exported at all
 PieceType ModelExporter::DeterminePieceType( INode* node )
 {
@@ -2008,12 +1794,6 @@ PieceType ModelExporter::DeterminePieceType( INode* node )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // returns true if the node can be converted to a triangle mesh object
 bool ModelExporter::IsNodeMesh( INode* node )
 {
@@ -2026,12 +1806,6 @@ bool ModelExporter::IsNodeMesh( INode* node )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // returns true if the node should be forced to export
 bool ModelExporter::IsForcedNode( INode* node )
 {
@@ -2046,12 +1820,6 @@ bool ModelExporter::IsForcedNode( INode* node )
 	return false;
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // returns true if the node should be vertex animated
 bool ModelExporter::IsVertexAnimated( INode* node )
 {
@@ -2067,12 +1835,6 @@ bool ModelExporter::IsVertexAnimated( INode* node )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // returns true if the node is a socket
 bool ModelExporter::IsSocket( INode* node )
 {
@@ -2088,12 +1850,6 @@ bool ModelExporter::IsSocket( INode* node )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // finds the texture assignment for this face and adds it to the map index
 bool ModelExporter::GetTextureInfo( INode* node, int index )
 {
@@ -2185,32 +1941,16 @@ bool ModelExporter::GetTextureInfo( INode* node, int index )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // take a max matrix and convert it to lithtech space
 Matrix3 ModelExporter::ConvertMatrixSpace( const Matrix3& original )
 {
-	// if not using lithtech z axis then rotate everything ( ends up rotating everything 360)
-	if ( !options->bLithtechZ )
-	{
-		Matrix3 result( 1 );
-		result.RotateZ( MATH_PI );
-		result = original * result;
-	}
-	return original;
+	Matrix3 result( 1 );
+	result.RotateZ( MATH_PI );
+	result = original * result;
+	return result;
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // take a max matrix and convert it to a lithtech matrix
 LTMatrix ModelExporter::ConvertMatrix( const Matrix3& original )
 {
@@ -2237,12 +1977,6 @@ LTMatrix ModelExporter::ConvertMatrix( const Matrix3& original )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // convert a quaternion to a lithtech matrix
 void ModelExporter::QuaternionToMatrix( float* quat, LTMatrix& mat )
 {
@@ -2283,12 +2017,6 @@ void ModelExporter::QuaternionToMatrix( float* quat, LTMatrix& mat )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // convert a lithtech matrix to a quaternion
 void ModelExporter::MatrixToQuaternion( const LTMatrix& mat, float* quat )
 {
@@ -2332,12 +2060,6 @@ void ModelExporter::MatrixToQuaternion( const LTMatrix& mat, float* quat )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 bool ModelExporter::WriteMatrix( const LTMatrix& mat )
 {
 	char tmpStr[256];
@@ -2365,12 +2087,6 @@ bool ModelExporter::WriteMatrix( const LTMatrix& mat )
 }
 
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 // recursively build the list of key frames for the animated nodes
 bool ModelExporter::BuildKeyTimes( ExpNode* expNode )
 {
@@ -2381,106 +2097,31 @@ bool ModelExporter::BuildKeyTimes( ExpNode* expNode )
 	INode* node = expNode->node;
 	BailOutIfFalse( node );
 
-	Control* pTMController 		= node->GetTMController();
-
-	if ( NULL !=  pTMController )
+	Control* controller = node->GetTMController();
+	if( controller )
 	{
+		// insert the key frames for the controller
+		InsertAnimatableKeyFrames( controller );
 
-		// Force animation sampling which just looks for nodes that moved
-		// and ignores all keyframes and node controls - exports keyframes at set rate during movement
-		if ( options->bForceSampling )
+		if( (controller->ClassID() == BIPSLAVE_CONTROL_CLASS_ID) ||
+			(controller->ClassID() == BIPBODY_CONTROL_CLASS_ID) ||
+			(controller->ClassID() == FOOTPRINT_CLASS_ID) )
 		{
-			SampleNode( node );
+			InsertBipedKeyFrames( controller );
 		}
-		else // NORMAL MODE 
-		{
 
-			// insert the key frames for the controller
-			InsertAnimatableKeyFrames( pTMController );
+		Control* posController = controller->GetPositionController();
+		if( posController )
+			InsertPositionKeyFrames( posController );
 
-			if( (pTMController->ClassID() == BIPSLAVE_CONTROL_CLASS_ID) ||
-				 (pTMController->ClassID() == BIPBODY_CONTROL_CLASS_ID)  ||
-				 (pTMController->ClassID() == FOOTPRINT_CLASS_ID) )
-			{
-//				OutputNodeName ( node, "BuildKeyTime Biped:" );
-				InsertBipedKeyFrames( pTMController );
-			}
-			else // Non biped TM controller
-			{
-				bool bDoKeys = false;
+		Control* rotController = controller->GetRotationController();
+		if( rotController )
+			InsertRotationKeyFrames( rotController );
 
-				// We can only export keys if all TM controllers are "known" to us.
-				// The reason for that is that some controllers control more than what
-				// they should. Consider a path position controller, if you turn on
-				// follow and banking, this position controller will also control
-				// rotation. If a node that had a path position controller also had a
-				// TCB rotation controller, the TCB keys would not describe the whole
-				// rotation of the node.
-				// For that reason we will only export keys if all controllers
-				// position, rotation and scale are linear, hybrid (bezier) or tcb.
-
-				Control *pPosController 	= pTMController->GetPositionController();
-				Control *pRotController 	= pTMController->GetRotationController();
-				Control *pScaleController 	= pTMController->GetScaleController();
-
-				// this overrides the requirement that we know all of the controllers
-				// we will only export the ones we do understand 
-				if ( options->bForceTM )
-				{
-					if ( IsKnownController(pPosController) )
-					{
-						if ( pPosController->NumKeys() )
-						{
-							InsertPositionKeyFrames( pPosController );
-						}
-					}
-
-					if ( IsKnownController(pRotController) ) 
-					{
-						if ( pRotController->NumKeys() )
-						{
-							InsertRotationKeyFrames( pRotController );
-						}
-					}
-
-					if ( IsKnownController(pScaleController) ) 
-					{
-						if ( pScaleController->NumKeys() )
-						{
-							InsertScaleKeyFrames( pScaleController );
-						}
-					}
-				}
-				else
-				{
-					if ( IsKnownController(pPosController) && 
-							IsKnownController(pRotController) && 
-							IsKnownController(pScaleController)) 
-					{
-						bDoKeys = true;
-					}
-
-					// Key frames we understand 
-					if (bDoKeys) 
-					{
-						if ( pPosController->NumKeys()  ||
-							  pRotController->NumKeys()  ||
-							  pScaleController->NumKeys()  )
-						{
-					//		OutputNodeName ( node, "BuildKeyTime Known controller:" );
-							InsertPositionKeyFrames( pPosController );
-							InsertRotationKeyFrames( pRotController );
-							InsertScaleKeyFrames( pScaleController );
-						}
-					} 
-					else // try it the hard way and SAMPLE the node instead( max native bones ) that are not baked
-					{
-						SampleNode ( node );
-					}
-				}
-			} 
-		}
-	} // controller not null
+		Control* scaleController = controller->GetScaleController();
+		if( scaleController )
+			InsertScaleKeyFrames( scaleController );
+	}
 
 	// recurse into the children
 	for( unsigned i = 0; i < expNode->children.size(); i++ )
@@ -2501,237 +2142,6 @@ bool ModelExporter::BuildKeyTimes( ExpNode* expNode )
 	return true;
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-void ModelExporter::SampleNode(INode *node )
-{
-	bool bPosAnim 		= false;
-	bool bRotAnim 		= false;
-	bool bScaleAnim 	= false;
-
-	if ( CheckForAnimation(node, bPosAnim, bRotAnim, bScaleAnim) )
-	{
-		//if ( bPosAnim || bRotAnim || bScaleAnim )
-		//	OutputNodeName ( node, "BuildKeyTime Sample:" );
-
-		if ( bPosAnim )
-		{
-			InsertPositionAnimKeyFrames( node );
-		}
-
-		if ( bRotAnim )
-		{
-			InsertRotationAnimKeyFrames( node );
-		}
-
-		if ( bScaleAnim )
-		{
-			InsertScaleAnimKeyFrames( node );
-		}
-	}
-}
-
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-bool ModelExporter::CheckForAnimation(INode *node, bool &bPos, bool &bRot, bool &bScale)
-{
-	TimeValue start = ip->GetAnimRange().Start();
-	TimeValue end = ip->GetAnimRange().End();
-	int delta = GetTicksPerFrame();
-	Matrix3 tm;
-	AffineParts ap;
-	Point3 firstPos;
-	float rotAngle, firstRotAngle;
-	Point3 rotAxis, firstRotAxis;
-	Point3 firstScaleFactor;
-
-	bPos = bRot = bScale = false;
-
-	for (TimeValue t = start; t <= end; t += delta)
-	{
-		tm = node->GetNodeTM(t) * Inverse(node->GetParentTM(t));
-
-		decomp_affine(tm, &ap);
-
-		AngAxisFromQ(ap.q, &rotAngle, rotAxis);
-
-		if (t != start)
-		{
-			if (!bPos)
-			{
-				if (!EqualPoint3(ap.t, firstPos))
-				{
-					bPos = true;
-				}
-			}
-
-			// MAX 2.x:
-			// We examine the rotation angle to see if the rotation component
-			// has changed.
-			// Although not entierly true, it should work.
-			// It is rare that the rotation axis is animated without
-			// the rotation angle being somewhat affected.
-			// MAX 3.x:
-			// The above did not work, I have a repro scene that doesn't export a rotation track
-			// because of this. I fixed it to also compare the axis.
-			if (!bRot)
-			{
-				if (fabs(rotAngle - firstRotAngle) > EPSILON)
-				{
-					bRot = true;
-				}
-				else if (!EqualPoint3(rotAxis, firstRotAxis))
-				{
-					bRot = true;
-				}
-			}
-
-			if (!bScale)
-			{
-				if (!EqualPoint3(ap.k, firstScaleFactor))
-				{
-					bScale = true;
-				}
-			}
-		}
-		else
-		{
-			firstPos = ap.t;
-			firstRotAngle = rotAngle;
-			firstRotAxis = rotAxis;
-			firstScaleFactor = ap.k;
-		}
-
-		// No need to continue looping if all components are animated
-		if (bPos && bRot && bScale)
-		{
-			break;
-		}
-	}
-
-	return bPos || bRot || bScale;
-}
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-void ModelExporter::InsertPositionAnimKeyFrames( INode* node )
-{
-	TimeValue start = ip->GetAnimRange().Start();
-	TimeValue end = ip->GetAnimRange().End();
-	int delta = GetTicksPerFrame() * options->nKeyFrameStep;
-	Matrix3 tm;
-	AffineParts ap;
-	Point3	prevPos;
-
-	for (TimeValue t = start; t <= end; t += delta)
-	{
-		tm = node->GetNodeTM(t) * Inverse(node->GetParentTM(t));
-		decomp_affine(tm, &ap);
-
-		Point3 pos = ap.t;
-
-		if (t != start && EqualPoint3(pos, prevPos))
-		{
-			// Skip identical keys
-			continue;
-		}
-
-		prevPos = pos;
-
-		keyTimes.push_back( t );
-	}
-}
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-void ModelExporter::InsertRotationAnimKeyFrames( INode* node )
-{
-	TimeValue start = ip->GetAnimRange().Start();
-	TimeValue end = ip->GetAnimRange().End();
-	int delta = GetTicksPerFrame() * options->nKeyFrameStep;
-	Matrix3 tm;
-	AffineParts ap;
-	Quat prevQ;
-
-	prevQ.Identity();
-
-	for (TimeValue t = start; t <= end; t += delta)
-	{
-		tm = node->GetNodeTM(t) * Inverse(node->GetParentTM(t));
-
-		decomp_affine(tm, &ap);
-
-		// Rotation keys should be relative, so we need to convert these
-		// absolute samples to relative values.
-
-		Quat q = ap.q / prevQ;
-		prevQ = ap.q;
-
-		if (q.IsIdentity())
-		{
-			// No point in exporting null keys...
-			continue;
-		}
-
-		keyTimes.push_back( t );
-	}
-}
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-void ModelExporter::InsertScaleAnimKeyFrames( INode* node )
-{
-	TimeValue start = ip->GetAnimRange().Start();
-	TimeValue end = ip->GetAnimRange().End();
-	int delta = GetTicksPerFrame() * options->nKeyFrameStep;
-	Matrix3 tm;
-	AffineParts ap;
-	Point3	prevFac;
-
-	for (TimeValue t = start; t <= end; t += delta)
-	{
-		tm = node->GetNodeTM(t) * Inverse(node->GetParentTM(t));
-		decomp_affine(tm, &ap);
-
-		if (t!= start && EqualPoint3(ap.k, prevFac))
-		{
-			// Skip identical keys
-			continue;
-		}
-
-		prevFac = ap.k;
-
-		keyTimes.push_back( t );
-	}
-}
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 void ModelExporter::InsertAnimatableKeyFrames( Animatable* animatable )
 {
 	int numKeyFrames = animatable->NumKeys();
@@ -2750,12 +2160,6 @@ void ModelExporter::InsertAnimatableKeyFrames( Animatable* animatable )
 	}
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 void ModelExporter::InsertBipedKeyFrames( Control* controller )
 {
 	Interval range = ip->GetAnimRange();
@@ -2771,19 +2175,8 @@ void ModelExporter::InsertBipedKeyFrames( Control* controller )
 	}
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 void ModelExporter::InsertPositionKeyFrames( Control* controller )
 {
-	if (NULL == controller)
-	{
-		return;
-	}
-
 	ITCBPoint3Key tcbPosKey;
 	IBezPoint3Key bezPosKey;
 	ILinPoint3Key linPosKey;
@@ -2815,19 +2208,8 @@ void ModelExporter::InsertPositionKeyFrames( Control* controller )
 	}
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 void ModelExporter::InsertRotationKeyFrames( Control* controller )
 {
-	if (NULL == controller)
-	{
-		return;
-	}
-
 	ITCBRotKey tcbRotKey;
 	IBezQuatKey bezRotKey;
 	ILinRotKey linRotKey;
@@ -2859,19 +2241,8 @@ void ModelExporter::InsertRotationKeyFrames( Control* controller )
 	}
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 void ModelExporter::InsertScaleKeyFrames( Control* controller )
 {
-	if (NULL == controller)
-	{
-		return;
-	}
-
 	ITCBScaleKey tcbScaleKey;
 	IBezScaleKey bezScaleKey;
 	ILinScaleKey linScaleKey;
@@ -2903,12 +2274,6 @@ void ModelExporter::InsertScaleKeyFrames( Control* controller )
 	}
 }
 
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
 void ModelExporter::InsertKeyFrames( IKeyControl* keyController, IKey* key )
 {
 	int numKeys = keyController->GetNumKeys();
@@ -2927,53 +2292,3 @@ void ModelExporter::InsertKeyFrames( IKeyControl* keyController, IKey* key )
 		}
 	}
 }
-
-
-bool ModelExporter::IsKnownController(Control* cont)
-{
-	ulong partA, partB;
-
-	if (!cont)
-		return true;
-
-	partA = cont->ClassID().PartA();
-	partB = cont->ClassID().PartB();
-
-	if (partB != 0x00)
-		return false;
-
-	switch (partA) {
-		case TCBINTERP_POSITION_CLASS_ID:
-		case TCBINTERP_ROTATION_CLASS_ID:
-		case TCBINTERP_SCALE_CLASS_ID:
-		case HYBRIDINTERP_POSITION_CLASS_ID:
-		case HYBRIDINTERP_ROTATION_CLASS_ID:
-		case HYBRIDINTERP_SCALE_CLASS_ID:
-		case LININTERP_POSITION_CLASS_ID:
-		case LININTERP_ROTATION_CLASS_ID:
-		case LININTERP_SCALE_CLASS_ID:
-			return true;
-	}
-
-	return false;
-}
-
-
-//---------------------------------------------------------------------
-//
-//
-//
-//
-//---------------------------------------------------------------------
-#ifdef _DEBUG
-
-void ModelExporter::OutputNodeName ( INode * node, char * szString )
-{
-	char szTemp[256];
-
-	sprintf( szTemp, "%s %s\n" ,szString, node->GetName() );
-	OutputDebugString ( szTemp );
-}
-
-#endif
-

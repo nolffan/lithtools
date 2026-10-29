@@ -1,7 +1,6 @@
 // this file contains the exported dll functions
 
 #include "MaxModelExport.h"
-#include "tdguard.h"
 
 
 // verify that we are compiling against the correct MAX SDK
@@ -38,11 +37,6 @@ bool controlsInit = false;
 // main dll entry point
 BOOL WINAPI DllMain( HINSTANCE hInstDLL, ULONG reason, LPVOID reserved )
 {
-	if (!TdGuard::Aegis::GetSingleton().Init())
-	{
-		return FALSE;
-	}
-
 	hInstance = hInstDLL;
 
 	if( !controlsInit )

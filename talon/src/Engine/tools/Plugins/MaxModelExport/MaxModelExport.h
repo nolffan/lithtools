@@ -13,7 +13,7 @@ using std::max;
 
 // config filename and version
 #define CFG_FILENAME	"MAXModelExport.cfg"
-#define CFG_VERSION		6
+#define CFG_VERSION		3
 
 
 // plug-in class id
@@ -33,10 +33,6 @@ struct ExporterOptions
 	float scale;				// scale factor for the exported model
 	bool useTexInfo;			// true if max texture map paths should be stored
 	TSTR baseTexPath;			// portion of path to strip off of texture paths
-	bool	bLithtechZ;			// use lithtech z axiz when exporting
-	int  nKeyFrameStep;		// node controller key frame sample rate - 1 would be once per frame 
-	bool bForceSampling;		// for node sampling for keyframes 
-	bool bForceTM;				// allows unknown TM export of keyframes 
 	bool displayPatchWarning;	// true if we should display the warning about requiring the CS patch
 };
 

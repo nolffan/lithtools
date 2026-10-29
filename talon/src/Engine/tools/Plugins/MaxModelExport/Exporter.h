@@ -116,9 +116,6 @@ private:
 	// recursively build the list of key frames for the animated nodes
 	bool BuildKeyTimes( ExpNode* expNode );
 	void InsertAnimatableKeyFrames( Animatable* animatable );
-	void InsertPositionAnimKeyFrames( INode* node );
-	void InsertRotationAnimKeyFrames( INode* node );
-	void InsertScaleAnimKeyFrames( INode* node );
 	void InsertBipedKeyFrames( Control* controller );
 	void InsertPositionKeyFrames( Control* controller );
 	void InsertRotationKeyFrames( Control* controller );
@@ -140,9 +137,6 @@ private:
 	// returns true if the node should be vertex animated
 	bool IsVertexAnimated( INode* node );
 
-	// returns true if the node has an animation
-	bool CheckForAnimation(INode *node, bool &bPos, bool &bRot, bool &bScale);
-
 	// finds the texture assignment for this face and adds it to the map index
 	bool GetTextureInfo( INode* node, int index );
 
@@ -160,16 +154,6 @@ private:
 
 	// write out a matrix to the lta file
 	bool WriteMatrix( const LTMatrix& mat );
-
-	// Is this a key frame controller we can use 
-	bool IsKnownController(Control* cont);
-	
-	// sample animation for a node - usually max native boned - or forced sampling
-	void SampleNode(INode *node );
-
-#ifdef _DEBUG
-	void OutputNodeName ( INode *node, char * szString );
-#endif
 
 };
 

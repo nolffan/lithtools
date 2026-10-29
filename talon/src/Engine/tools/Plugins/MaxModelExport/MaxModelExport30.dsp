@@ -24,7 +24,11 @@ CFG=MaxModelExport30 - Win32 Release
 # talon: Update 2, built 2002-03-28), written for this project from Build 69's
 # talon: MaxModelExport.vcproj, "Release MAX30": maxsdk-3.0's headers and libraries
 # talon: (toolchains/maxsdk-3.0), /MD, /Ob1, no TdGuard.lib (Touchdown's, later);
-# talon: VC6 SP5's compiler (8966) and linker.
+# talon: VC6 SP5's compiler (8966) and linker. Changed from Build 69's flags by
+# talon: the shipped code: STLport 4.0 (LT2/lithshared/stl) first on the include
+# talon: path (its node allocator and spin lock are in the image); /G6 (the
+# talon: instruction scheduling of every function); no /GF (the string literals
+# talon: are in .data, not pooled in .rdata); kernel32.lib and user32.lib named.
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -47,8 +51,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\..\built\Release\tools\Plugins\MaxModelExport30"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maxsdk-3.0\include" /I "..\SDKFiles\CSTUDIO\SDK" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maxsdk-3.0\include" /I "..\SDKFiles\CSTUDIO\SDK" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /G6 /O2 /Ob1 /I "..\..\..\..\LT2\lithshared\stl" /I "t:\maxsdk-3.0\include" /I "..\SDKFiles\CSTUDIO\SDK" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /Gy /FD /c
+# ADD CPP /nologo /MD /W3 /GX /G6 /O2 /Ob1 /I "..\..\..\..\LT2\lithshared\stl" /I "t:\maxsdk-3.0\include" /I "..\SDKFiles\CSTUDIO\SDK" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /Gy /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -57,8 +61,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 comctl32.lib core.lib geom.lib gfx.lib mesh.lib maxutil.lib maxscrpt.lib paramblk2.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxModelExport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxModelExport\MaxModelExport30.dle" /libpath:"t:\maxsdk-3.0\lib" /base:"0x105b0000"
-# ADD LINK32 comctl32.lib core.lib geom.lib gfx.lib mesh.lib maxutil.lib maxscrpt.lib paramblk2.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxModelExport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxModelExport\MaxModelExport30.dle" /libpath:"t:\maxsdk-3.0\lib" /base:"0x105b0000"
+# ADD BASE LINK32 kernel32.lib user32.lib comctl32.lib core.lib geom.lib gfx.lib mesh.lib maxutil.lib maxscrpt.lib paramblk2.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxModelExport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxModelExport\MaxModelExport30.dle" /libpath:"t:\maxsdk-3.0\lib" /base:"0x105b0000"
+# ADD LINK32 kernel32.lib user32.lib comctl32.lib core.lib geom.lib gfx.lib mesh.lib maxutil.lib maxscrpt.lib paramblk2.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxModelExport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxModelExport\MaxModelExport30.dle" /libpath:"t:\maxsdk-3.0\lib" /base:"0x105b0000"
 
 !ENDIF 
 
