@@ -1,10 +1,11 @@
 // Microsoft Visual C++ generated resource script.
 //
-// talon: the shipped Processor.exe's (AvP2 v1.0) resources, decompiled by
-// tools/rsrc2rc.py: each compiles back to the shipped bytes
-// (tools/rsrcdiff.py). An AppWizard dialog application's, unedited since
-// 1996 but for the main window and the options dialog; Res\PreProcessor.ico
-// is the shipped icon (one 32x32 16-colour image).
+// talon: the shipped Processor.exe's (NOLF Tools 001) resources, decompiled
+// by tools/rsrc2rc.py: each compiles back to the shipped bytes
+// (tools/rsrcdiff.py). As AvP2's (../PreProcessor/PreProcessor.rc) but for
+// the options dialog: no "Import AI and Music Vol." box, no slider
+// reference and its two buttons, a vertical slider. Res\PreProcessor.ico is
+// the shipped icon, the same as AvP2's.
 //
 #include "resource.h"
 
@@ -53,7 +54,7 @@ BEGIN
     LTEXT           "Process Priority", IDC_STATIC, 337, 208, 49, 8
 END
 
-IDD_PROCESSINGOPTIONS DIALOG 0, 0, 338, 223
+IDD_PROCESSINGOPTIONS DIALOG 0, 0, 338, 222
 STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
 CAPTION "Processing Options"
 FONT 8, "MS Sans Serif"
@@ -69,26 +70,21 @@ BEGIN
     AUTOCHECKBOX    "Vertex Lighting Only", IDC_PO_VERTICESONLY, 122, 53, 89, 10, WS_DISABLED
     AUTOCHECKBOX    "Full Optimization", IDC_PO_OPTIMIZE, 232, 20, 70, 10
     AUTOCHECKBOX    "Fast Approximation", IDC_PO_FAST, 232, 31, 75, 10
-    CONTROL         "Slider1", IDC_PO_SPLITWEIGHT, "msctls_trackbar32", WS_TABSTOP | TBS_AUTOTICKS | TBS_LEFT, 50, 170, 240, 20
-    EDITTEXT        IDC_PO_PROJECTDIR, 80, 112, 190, 15, ES_AUTOHSCROLL
-    EDITTEXT        IDC_PO_EXTRAPARAMS, 80, 132, 190, 15, ES_AUTOHSCROLL
-    AUTOCHECKBOX    "Log File", IDC_PO_LOGFILE, 285, 124, 40, 10
-    DEFPUSHBUTTON   "OK", IDOK, 96, 202, 50, 14
-    PUSHBUTTON      "Cancel", IDCANCEL, 191, 202, 50, 14
-    CTEXT           "Balanced Tree", IDC_STATIC, 295, 170, 30, 15
-    CTEXT           "Less Polies", IDC_STATIC, 13, 170, 30, 15
-    LTEXT           "Extra Parameters:", IDC_STATIC, 13, 132, 60, 15, SS_CENTERIMAGE
-    LTEXT           "Project Directory:", IDC_STATIC, 13, 112, 60, 15, SS_CENTERIMAGE
-    GROUPBOX        "Visibility", IDC_STATIC, 226, 7, 105, 85
-    GROUPBOX        "Geometry", IDC_STATIC, 7, 7, 104, 85
-    GROUPBOX        "Lighting", IDC_STATIC, 116, 7, 104, 85
-    GROUPBOX        "Options", IDC_STATIC, 7, 98, 324, 98
+    CONTROL         "Slider1", IDC_PO_SPLITWEIGHT, "msctls_trackbar32", WS_TABSTOP | TBS_VERT | TBS_BOTH | TBS_NOTICKS, 29, 106, 15, 70
+    EDITTEXT        IDC_PO_PROJECTDIR, 84, 121, 241, 15, ES_AUTOHSCROLL
+    EDITTEXT        IDC_PO_EXTRAPARAMS, 84, 152, 241, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Log File", IDC_PO_LOGFILE, 84, 174, 40, 10
+    DEFPUSHBUTTON   "OK", IDOK, 96, 201, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 191, 201, 50, 14
+    CTEXT           "Balanced Tree", IDC_STATIC, 14, 175, 50, 10
+    CTEXT           "Less Polies", IDC_STATIC, 14, 98, 50, 10
+    LTEXT           "Extra Parameters", IDC_STATIC, 84, 142, 190, 10
+    LTEXT           "Project Directory", IDC_STATIC, 84, 111, 185, 10
+    GROUPBOX        "Visibility", IDC_STATIC, 226, 7, 105, 70
+    GROUPBOX        "Geometry", IDC_STATIC, 7, 7, 104, 70
+    GROUPBOX        "Lighting", IDC_STATIC, 116, 7, 104, 70
+    GROUPBOX        "Options", IDC_STATIC, 7, 83, 324, 106
     AUTOCHECKBOX    "Lambertian Lightmaps", IDC_PO_LAMBERTIAN, 122, 64, 89, 10, WS_DISABLED
-    AUTOCHECKBOX    "Import AI and Music Vol.", IDC_PO_AIVOLUMES, 13, 75, 95, 10
-    CTEXT           "", IDC_PO_SLIDERREF, 180, 158, 40, 10, SS_SUNKEN
-    CTEXT           "Slider Reference:", IDC_STATIC, 120, 158, 60, 10
-    PUSHBUTTON      "<", IDC_PO_SLIDERLEFT, 90, 158, 16, 10
-    PUSHBUTTON      ">", IDC_PO_SLIDERRIGHT, 240, 158, 16, 10
 END
 
 VS_VERSION_INFO VERSIONINFO
