@@ -1,5 +1,6 @@
 """LithTech .dtx textures (version -5: NOLF, AvP2, AvP2 Primal Hunt, NOLF2,
-Contract J.A.C.K., Tron 2.0).
+Contract J.A.C.K., Tron 2.0; and the older -2, Blood 2, and -3, KISS Psycho
+Circus).
 
     from lithtech import dtx
     tex = dtx.read_file("GL0007.dtx")     # or dtx.read(data)
@@ -33,9 +34,13 @@ alpha halved because the PS2's GS takes 0x80 as opaque. decode() gives
 the stored alpha by default, which is what the PC engine draws;
 ps2_alpha=True reads it as the PS2 draws it (ps2_palette_alpha()).
 
-Version handling is explicit: read() dispatches on the header's version
-through _READERS, and only -5 is known (every shipped file from NOLF to
-Tron 2.0 is -5; nothing older or newer was found to test against).
+Version handling is explicit: read() and write() dispatch on the header's
+version through _READERS/_WRITERS. -5 is every shipped file from NOLF to
+Tron 2.0. -2 (LithTech 1.0, Blood 2) and -3 (LithTech 1.5, KISS Psycho
+Circus) are 8-bit palettised with optional 4-bit alpha masks, laid out as
+the engines' own loaders read them (DTX.md, "Versions -2 and -3"; LithRez's
+core/src/dtx.cpp reads them the same way): read, decoded and written back
+byte for byte, but not encoded (from_rgba makes -5 files).
 """
 
 import struct
@@ -90,11 +95,23 @@ DTX_FLAGSAVEMASK = (DTX_FULLBRITE | DTX_32BITSYSCOPY | DTX_PREFER16BIT |
                     DTX_CUBEMAP | DTX_BUMPMAP | DTX_LUMBUMPMAP |
                     DTX_NOSYSCACHE)
 
+# Versions -2/-3 share bits 0 (FULLBRITE) and 3 (SECTIONSFIXED) with -5;
+# bit 1 means the file carries 4-bit alpha masks, and bit 5 keeps the
+# renderer off 8-bit paletted surfaces (skies). The names are ours.
+DTX_OLD_ALPHAMASKS = 1 << 1
+DTX_OLD_NOPALETTED = 1 << 5
+# The -2/-3 renderers make palette entries 246-255 opaque in every format
+# they build, whatever a mask says.
+OLD_OPAQUE_FIRST = 246
+OLD_VERSIONS = (-2, -3)
+OLD_GAMES = {-2: "LithTech 1.0: Blood 2", -3: "LithTech 1.5: KISS Psycho Circus"}
+
 SECTION_PALETTE32 = "PALLETE32"   # sic
 SECTION_CUBEMAP = "CUBEMAPDATA"
 SECTION_LIGHTDEFS = "LIGHTDEFS"   # texture lights, read by Processor
 
-_HEADER = struct.Struct("<Ii4H2i12s128s")       # 164 bytes
+_HEADER = struct.Struct("<Ii4H2i12s128s")       # 164 bytes (-5, -3)
+_HEADER_V2 = struct.Struct("<Ii4H2i12s")         # 36 bytes (-2: no command string)
 _SECTION = struct.Struct("<15s10s3sI")           # 32 bytes (3 pad)
 HEADER_SIZE = _HEADER.size
 SECTION_HEADER_SIZE = _SECTION.size
@@ -212,11 +229,39 @@ class Texture:
     # The file ends inside the pixel data (two Tron 2.0 prototype textures
     # lack their 2x32 DXT5 level); the short levels are kept as found.
     truncated: bool = False
+    # Versions -2/-3 only: the 8-byte palette id (the engine's palette cache
+    # key), the 256 palette entries as stored ({unused, R, G, B} each), and
+    # with DTX_OLD_ALPHAMASKS one mask per level (rows of w/2 bytes, the low
+    # nibble the even pixel's alpha; 1 byte for a 1x1 level).
+    palette_id: bytes = b""
+    palette_raw: bytes = b""
+    masks: List[bytes] = field(default_factory=list)
 
     # -- m_Extra (DtxHeader accessors) --
 
     @property
+    def is_old(self):
+        return self.version in OLD_VERSIONS
+
+    @property
+    def has_alpha_masks(self):
+        return self.is_old and bool(self.iflags & DTX_OLD_ALPHAMASKS)
+
+    @property
+    def old_detail_scale(self):
+        """-3: the detail texture's scale, a plain float (not -5's value
+        minus 1), in header bytes 28-31 (KISS's renderer, d3d.ren
+        0x10023f30)."""
+        return struct.unpack_from("<f", self.extra, 4)[0]
+
+    @property
+    def old_detail_angle(self):
+        return struct.unpack_from("<H", self.extra, 8)[0]
+
+    @property
     def bpp(self):
+        if self.is_old:
+            return BPP_8P
         return self.extra[2] or BPP_32
 
     @bpp.setter
@@ -290,7 +335,12 @@ class Texture:
 
     @property
     def command(self):
-        return _cstr(self.command_raw)
+        if self.version == -2:
+            return ""
+        c = _cstr(self.command_raw)
+        if self.is_old and any(ord(ch) < 0x20 or ord(ch) > 0x7e for ch in c):
+            return ""     # -3: no shipped file holds text there, only leftover memory
+        return c
 
     @command.setter
     def command(self, s):
@@ -300,7 +350,7 @@ class Texture:
 
     @property
     def is_cubemap(self):
-        return bool(self.iflags & DTX_CUBEMAP)
+        return not self.is_old and bool(self.iflags & DTX_CUBEMAP)
 
     def mip_size(self, i):
         return (max(self.width >> i, 0), max(self.height >> i, 0))
@@ -315,6 +365,8 @@ class Texture:
     def palette(self, ps2_alpha=False):
         """The PALLETE32 section's 256 colors as RGBA bytes, or None;
         ps2_alpha reads their alpha as the PS2 does (ps2_palette_alpha)."""
+        if self.is_old:
+            return old_palette_rgba(self.palette_raw)
         s = self.find_section(SECTION_PALETTE32)
         if s is None:
             return None
@@ -352,6 +404,14 @@ class Texture:
         """(width, height, RGBA bytes, top row first) of one level.
         ps2_alpha reads BPP_32P palette alpha as the PS2 does."""
         w, h = self.mip_size(mip)
+        if self.is_old:
+            if face:
+                raise ValueError("not a cube map")
+            mask = None
+            if self.has_alpha_masks:
+                # missing or cut short: reads as zero (transparent)
+                mask = self.masks[mip] if mip < len(self.masks) else b""
+            return w, h, decode_old_pixels(w, h, self.mips[mip], self.palette_raw, mask)
         data = self.face_mips(face)[mip]
         return w, h, decode_pixels(self.bpp, w, h, data,
                                    self.palette(ps2_alpha and self.bpp == BPP_32P),
@@ -414,16 +474,108 @@ def _write_v5(t):
     return bytes(out)
 
 
-_READERS = {-5: _read_v5}
-_WRITERS = {-5: _write_v5}
+def old_mask_size(width, height):
+    """Bytes of a -2/-3 level's alpha mask (dtx_Alloc: n/2, but 1 for 1x1)."""
+    n = max(width, 0) * max(height, 0)
+    return n >> 1 if n > 1 else n
+
+
+def _old_header(version):
+    return _HEADER_V2 if version == -2 else _HEADER
+
+
+def _read_old(data, lenient):
+    """-2/-3 (Blood 2's Client.exe 0x420d80, KISS's 0x1cc8b40): the header,
+    an 8-byte palette id and 256 four-byte palette entries, every level's
+    8-bit pixels, then (DTX_OLD_ALPHAMASKS) every level's 4-bit mask, then
+    sections as in -5 (none in the shipped files)."""
+    version = struct.unpack_from("<i", data, 4)[0]
+    hdr = _old_header(version)
+    if len(data) < hdr.size + 8 + 1024:
+        raise ValueError("too short for a DTX header")
+    fields = hdr.unpack_from(data, 0)
+    res_type, version, w, h, nmips, nsec, iflags, uflags, extra = fields[:9]
+    t = Texture(res_type, version, w, h, nmips, nsec, iflags, uflags, bytearray(extra),
+                fields[9] if version == -3 else b"")
+    if nmips == 0 or nmips > 15:
+        raise ValueError(f"bad mip count {nmips}")
+    pos = hdr.size
+    t.palette_id = bytes(data[pos:pos + 8])
+    t.palette_raw = bytes(data[pos + 8:pos + 8 + 1024])
+    pos += 8 + 1024
+
+    def take(n):
+        nonlocal pos
+        if pos + n > len(data):
+            if not lenient:
+                raise ValueError("pixel data runs past the end of the file")
+            t.truncated = True
+        b = bytes(data[pos:pos + n])
+        pos = min(pos + n, len(data))
+        return b
+
+    dims = mip_dims(w, h, nmips)
+    t.mips = [take(mw * mh) for mw, mh in dims]
+    if iflags & DTX_OLD_ALPHAMASKS:
+        t.masks = [take(old_mask_size(mw, mh)) for mw, mh in dims]
+    if t.truncated:
+        return t
+    if iflags & DTX_SECTIONSFIXED:
+        for _ in range(nsec):
+            ty, nm, pad, n = _SECTION.unpack_from(data, pos)
+            pos += SECTION_HEADER_SIZE
+            if pos + n > len(data):
+                raise ValueError("section data runs past the end of the file")
+            t.sections.append(Section(ty, nm, pad, bytes(data[pos:pos + n])))
+            pos += n
+    t.trailing = bytes(data[pos:])
+    return t
+
+
+def _write_old(t):
+    if len(t.mips) != t.mip_count:
+        raise ValueError("mip_count does not match mips")
+    if (t.iflags & DTX_SECTIONSFIXED) and len(t.sections) != t.section_count:
+        raise ValueError("section_count does not match sections")
+    if len(t.palette_id) != 8 or len(t.palette_raw) != 1024:
+        raise ValueError("a -2/-3 texture needs an 8-byte palette id and 1024 palette bytes")
+    head = (t.res_type, t.version, t.width, t.height, t.mip_count, t.section_count,
+            t.iflags, t.user_flags, bytes(t.extra))
+    if t.version == -3:
+        head += (t.command_raw,)
+    out = bytearray(_old_header(t.version).pack(*head))
+    out += t.palette_id + t.palette_raw
+    dims = mip_dims(t.width, t.height, t.mip_count)
+    for (mw, mh), m in zip(dims, t.mips):
+        if len(m) != mw * mh and not t.truncated:
+            raise ValueError(f"mip {mw}x{mh} is {len(m)} bytes")
+        out += m
+    if t.iflags & DTX_OLD_ALPHAMASKS:
+        if len(t.masks) != t.mip_count and not t.truncated:
+            raise ValueError("one alpha mask per level is needed")
+        for (mw, mh), m in zip(dims, t.masks):
+            if len(m) != old_mask_size(mw, mh) and not t.truncated:
+                raise ValueError(f"mask {mw}x{mh} is {len(m)} bytes")
+            out += m
+    for s in t.sections:
+        out += _SECTION.pack(s.type_raw, s.name_raw, s.pad, len(s.data))
+        out += s.data
+    out += t.trailing
+    return bytes(out)
+
+
+_READERS = {-5: _read_v5, -3: _read_old, -2: _read_old}
+_WRITERS = {-5: _write_v5, -3: _write_old, -2: _write_old}
 
 
 def read(data, lenient=True):
     """A Texture from a file's bytes. lenient keeps a file that ends inside
     its pixel data (Texture.truncated) instead of raising."""
-    if len(data) < HEADER_SIZE:
+    if len(data) < 8:
         raise ValueError("too short for a DTX header")
     res_type, version = struct.unpack_from("<Ii", data, 0)
+    if version not in OLD_VERSIONS and len(data) < HEADER_SIZE:
+        raise ValueError("too short for a DTX header")
     if res_type != LT_RESTYPE_DTX:
         raise ValueError(f"not a DTX (resource type {res_type})")
     reader = _READERS.get(version)
@@ -458,6 +610,58 @@ def sync_counts(t):
 
 
 # -- Pixel helpers --
+
+def old_palette_rgba(palette_raw):
+    """A -2/-3 palette ({unused, R, G, B} entries: d3d.ren builds colours
+    from bytes 1-3) as 256 opaque RGBA entries."""
+    p = bytes(palette_raw[:1024]).ljust(1024, b"\0")
+    out = bytearray(1024)
+    out[0::4] = p[1::4]
+    out[1::4] = p[2::4]
+    out[2::4] = p[3::4]
+    out[3::4] = b"\xff" * 256
+    return bytes(out)
+
+
+def decode_old_pixels(width, height, data, palette_raw, mask=None):
+    """RGBA from one -2/-3 level. Without a mask every pixel is opaque; with
+    one (bytes, possibly short or empty: the rest reads as 0), alpha is the
+    pixel's nibble * 17, except palette entries 246-255, always opaque."""
+    pal = old_palette_rgba(palette_raw)
+    n = max(width, 0) * max(height, 0)
+    data = bytes(data[:n]).ljust(n, b"\0")
+    out = bytearray(n * 4)
+    if _np is not None and n:
+        p = _np.frombuffer(pal, _np.uint8).reshape(256, 4)
+        idx = _np.frombuffer(data, _np.uint8)
+        px = p[idx].copy()
+        if mask is not None:
+            stride = width >> 1
+            m = _np.zeros(height * stride, _np.uint8)
+            mb = _np.frombuffer(bytes(mask[:height * stride]), _np.uint8)
+            m[:len(mb)] = mb
+            m = m.reshape(height, stride) if stride else m.reshape(height, 0)
+            a = _np.zeros((height, width), _np.uint8)
+            a[:, 0:stride * 2:2] = (m & 15) * 17
+            a[:, 1:stride * 2:2] = (m >> 4) * 17
+            a = a.reshape(-1)
+            px[:, 3] = _np.where(idx >= OLD_OPAQUE_FIRST, 255, a)
+        return px.tobytes()
+    stride = width >> 1
+    for i in range(n):
+        y, x = divmod(i, width) if width else (0, 0)
+        c = data[i]
+        o = 4 * i
+        out[o:o + 3] = pal[4 * c:4 * c + 3]
+        if mask is None or c >= OLD_OPAQUE_FIRST:
+            out[o + 3] = 255
+        elif x < stride * 2:
+            k = y * stride + (x >> 1)
+            v = mask[k] if k < len(mask) else 0
+            out[o + 3] = ((v >> (4 * (x & 1))) & 15) * 17
+        else:
+            out[o + 3] = 0
+    return bytes(out)
 
 def bgra_to_rgba(b):
     b = bytearray(b)

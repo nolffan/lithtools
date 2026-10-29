@@ -1,8 +1,8 @@
 // DTX reading and decoding, the C++ twin of plugins/blender's lithtech/dtx.py
 // (which round-trips all 21,954 shipped textures). The integer maths are the
 // engine's (FormatMgr scale tables, ConvertDXTGeneric). Versions -2 and -3
-// (read_old) follow the Blood 2 and KISS Psycho Circus engines; dtx.py does
-// not read them.
+// (read_old) follow the Blood 2 and KISS Psycho Circus engines, as dtx.py's
+// _read_old does.
 
 #include "lithtech/dtx.hpp"
 

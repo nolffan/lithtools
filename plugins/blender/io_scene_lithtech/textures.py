@@ -88,12 +88,24 @@ def load_image(path, name=None, ps2_alpha=None):
     img["lt_user_flags"] = t.user_flags
     img["lt_iflags"] = t.iflags
     img["lt_command"] = t.command
-    img["lt_texture_group"] = t.texture_group
-    img["lt_mipmaps_to_use"] = t.mipmaps_to_use
+    img["lt_dtx_version"] = t.version
     img["lt_mip_count"] = t.mip_count
-    img["lt_priority"] = t.priority
-    img["lt_detail_scale"] = t.detail_scale
-    img["lt_detail_angle"] = t.detail_angle
+    if t.is_old:
+        # Blood 2 / KISS (-2/-3): their header has none of -5's texture
+        # group, mip settings or priority; -3 has a detail scale and angle
+        # (a plain float). Saved changed, they become -5 files (8-bit
+        # palettised has no encoder): flags as -5 reads them, keeping only
+        # fullbright and sections-fixed.
+        img["lt_iflags"] = t.iflags & (dtx.DTX_FULLBRITE | dtx.DTX_SECTIONSFIXED)
+        scale = t.old_detail_scale if t.version == -3 else 0.0
+        img["lt_detail_scale"] = scale if scale > 0 else 1.0
+        img["lt_detail_angle"] = t.old_detail_angle if t.version == -3 else 0
+    else:
+        img["lt_texture_group"] = t.texture_group
+        img["lt_mipmaps_to_use"] = t.mipmaps_to_use
+        img["lt_priority"] = t.priority
+        img["lt_detail_scale"] = t.detail_scale
+        img["lt_detail_angle"] = t.detail_angle
     img["lt_ps2_alpha"] = ps2_alpha
     img["lt_dtx"] = raw
     img["lt_pixels"] = _digest(_pixels_to_rgba(img)[2])

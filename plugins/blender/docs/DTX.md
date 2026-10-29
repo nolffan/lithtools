@@ -10,8 +10,13 @@ game trees. All of them read and write back byte for byte with
 
 The older engines wrote 8-bit palettized textures, versions -2 (LithTech
 1.0, Blood 2, 1998) and -3 (LithTech 1.5, KISS Psycho Circus, 2000); see
-[Versions -2 and -3](#versions--2-and--3). The C++ library
-(`tools/lithrez`, `lithtech::dtx`) reads them; `dtx.py` does not.
+[Versions -2 and -3](#versions--2-and--3). Both `dtx.py` and the C++
+library (`tools/lithrez`, `lithtech::dtx`) read and decode them, and
+`dtx.py` writes them back byte for byte: every one in the Blood 2 (EU, the
+Nightmare Levels, the demo) and KISS Psycho Circus (DE, EU, 1.11) installs,
+4,315 and 1,513 distinct files, the two decoding alike (FNV of every top
+level). Five `.dtx` names in Blood 2 hold something else (see
+[Odd files](#odd-files)).
 
 Evidence, in order of weight:
 
@@ -355,6 +360,13 @@ mark only the fullbright entries, not coverage. (How the renderer uses that
 alpha for FULLBRITE textures was not traced.)
 
 ## Odd files
+
+- `blood2-eu BLOOD2.REZ:SKINS/GRYCRET1.dtx`, `METAL1.dtx`, `ORGBRIKB.dtx`,
+  `CRATE1.dtx` and `TEXTURES/GREYS/DULL1_TRANS.dtx` (the first four also in
+  the Nightmare Levels' `BLOOD2.REZ`) are not DTX files: they start
+  `04 00 07 00` or `04 00 08 00` (resource type 0x70004/0x80004) with a
+  128×128 size at offset 0x12, an older texture format the game evidently
+  doesn't load. Neither reader takes them.
 
 - `tron2-usa Game2.rez:TEX/PROTOTYPE/M09/DAN/PANGLOWEDIT.dtx` is 0 bytes.
 - `tron2-usa Game2.rez:TEX/PROTOTYPE/M06/DAN/FLOORANGLEUV.dtx` (64×1024,
