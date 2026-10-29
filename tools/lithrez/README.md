@@ -60,6 +60,12 @@ These read the game archives (never committed), so they aren't part of
   `tests/ps2ltb_dump.py` compares the C++ and Python PS2 readers).
   `dtx_decode_all --ps2-alpha <folder>` decodes loose files, such as the
   PS2 discs' 8,930 textures, reading palette alpha as the PS2 does.
+  `dtx_decode_all` also reads the old versions: Blood 2's `-2` (the demo's
+  `B2Demo.rez`: 519 textures, 246 plain and 273 with alpha masks) and KISS
+  Psycho Circus's `-3` (`PSYCHO.REZ` 1.11: 2,929, 1,941 plain and 988
+  masked), strictly, every level, each file exactly the size its layout
+  says; all decode. `dtx_old_test` (in ctest) checks hand-made `-2` and
+  `-3` files pixel by pixel.
 - `pcx_test` and `image_test` (in ctest): PCX, TGA and BMP images made in
   the tests, one per layout. `image_decode_all [--dump <dir>] <rez | image
   | folder>...` decodes every `.pcx`, `.tga` and `.bmp`, and
@@ -175,7 +181,8 @@ lithrez roundtrip "NOLF (USA).iso" LITH_PS2.REZ   the archive alone, rebuilt fro
   as `lithrez c`), the Rez Wizard with WinRez's per-game folder layouts,
   Import (another rez's contents) and Merge (several rez files into one).
 - **Preview pane:** textures and images (`.dtx`, `.pcx`, `.tga`, `.bmp`,
-  every layout of each format; "Magenta transparent" shows the colour key
+  every layout of each format, including the 8-bit `.dtx` of Blood 2
+  (version -2) and KISS Psycho Circus (-3) with their 4-bit alpha masks; "Magenta transparent" shows the colour key
   the games' interface art uses), models (`.abc`, `.ltb` and the PS2's `.ltb`)
   with their skins and animations, sounds, text (PS2 `.but` attribute files
   decoded), and hex for everything else. For NOLF2, Contract

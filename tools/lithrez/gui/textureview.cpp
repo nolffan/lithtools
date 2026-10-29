@@ -61,17 +61,26 @@ void paintChecker(QPainter& p, const QRect& r, int cell, QColor a, QColor b) {
             p.fillRect(QRect(x, y, cell, cell).intersected(r), b);
 }
 
-QString flagNames(uint32_t f) {
+QString flagNames(uint32_t f, bool old = false) {
     using namespace lithtech::dtx;
-    struct { uint32_t bit; const char* name; } names[] = {
+    struct Name { uint32_t bit; const char* name; };
+    static const Name v5[] = {
         {DTX_FULLBRITE, "FULLBRITE"}, {DTX_PREFER16BIT, "PREFER16BIT"}, {1u << 2, "MIPSALLOCED"},
         {DTX_SECTIONSFIXED, "SECTIONSFIXED"}, {DTX_NOSYSCACHE, "NOSYSCACHE"}, {DTX_PREFER4444, "PREFER4444"},
         {DTX_PREFER5551, "PREFER5551"}, {DTX_32BITSYSCOPY, "32BITSYSCOPY"}, {DTX_CUBEMAP, "CUBEMAP"},
         {DTX_BUMPMAP, "BUMPMAP"}, {DTX_LUMBUMPMAP, "LUMBUMPMAP"},
     };
+    // -2/-3 (our names: the engines' own are not known)
+    static const Name v2[] = {
+        {DTX_FULLBRITE, "FULLBRITE"}, {DTX_OLD_ALPHAMASKS, "ALPHAMASKS"}, {DTX_SECTIONSFIXED, "SECTIONSFIXED"},
+        {DTX_OLD_NOPALETTED, "NOPALETTED"},
+    };
     QStringList out;
     uint32_t known = 0;
-    for (auto& n : names) {
+    auto begin = old ? std::begin(v2) : std::begin(v5);
+    auto end = old ? std::end(v2) : std::end(v5);
+    for (auto it = begin; it != end; ++it) {
+        const Name& n = *it;
         known |= n.bit;
         if (f & n.bit) out << QString::fromLatin1(n.name);
     }
@@ -557,33 +566,65 @@ void TextureView::refresh() {
         return;
     }
     h += row(tr("Size"), QStringLiteral("%1 × %2").arg(t.width).arg(t.height));
-    h += row(tr("Format"), QString::fromLatin1(lithtech::dtx::bpp_name(t.bpp())));
-    h += row(tr("Mips"), QString::number(t.mip_count));
-    h += row(tr("Version"), QString::number(t.version));
-    h += row(tr("Flags"), flagNames(t.iflags).toHtmlEscaped());
-    h += row(tr("User flags"), QStringLiteral("0x%1").arg(t.user_flags, 8, 16, QLatin1Char('0')));
-    h += row(tr("Texture group"), QString::number(t.texture_group()));
-    h += row(tr("Mipmaps to use"), QString::number(t.mipmaps_to_use()));
-    h += row(tr("Non-S3TC mip offset"), QString::number(t.non_s3tc_mip_offset()));
-    h += row(tr("UI mip offset"), QString::number(t.ui_mip_offset()));
-    h += row(tr("Priority"), QString::number(t.priority()));
-    h += row(tr("Detail scale"), QString::number(double(t.detail_scale()), 'g', 6));
-    h += row(tr("Detail angle"), QString::number(t.detail_angle()));
-    h += row(tr("Command"), t.command.empty() ? QStringLiteral("—") : QString::fromLatin1(t.command.c_str()).toHtmlEscaped());
-    if (const auto* pal = t.find_section("PALLETE32"); pal && t.bpp() == lithtech::dtx::BPP_32P) {
-        int amax = 0, colours = 0;
+    if (t.is_old()) {
+        // Versions -2/-3: 8-bit palettized, nothing of -5's m_Extra.
+        h += row(tr("Format"), t.has_alpha_masks() ? tr("8P with 4-bit alpha masks") : tr("8P"));
+        h += row(tr("Mips"), QString::number(t.mip_count));
+        h += row(tr("Version"), t.version == -2 ? tr("-2 (LithTech 1.0: Blood 2)") : tr("-3 (LithTech 1.5: KISS Psycho Circus)"));
+        h += row(tr("Flags"), flagNames(t.iflags, true).toHtmlEscaped());
+        h += row(tr("User flags"), QStringLiteral("0x%1").arg(t.user_flags, 8, 16, QLatin1Char('0')));
         std::vector<bool> used(256);
         for (const auto& m : t.mips)
             for (uint8_t i : m) used[i] = true;
-        for (int i = 0; i < 256; ++i) {
-            if (4 * std::size_t(i) + 3 < pal->data.size()) amax = std::max<int>(amax, pal->data[4 * std::size_t(i) + 3]);
-            colours += used[std::size_t(i)];
-        }
+        int colours = int(std::count(used.begin(), used.end(), true));
         h += row(tr("Palette"), tr("%1 of 256 colours used").arg(colours));
-        h += row(tr("Palette alpha"), amax == 0 ? tr("none (all zero: the PS2 draws it opaque)")
-                                                : tr("up to 0x%1").arg(amax, 2, 16, QLatin1Char('0')));
-        if (t.ps2_style_palette())
-            h += row(tr("Made for"), tr("the PS2 (DEdit's Convert to 32P: alpha halved, 0x80 is opaque)"));
+        h += row(tr("Palette id"), QStringLiteral("%1 %2").arg(t.palette_id[0], 8, 16, QLatin1Char('0'))
+                                                         .arg(t.palette_id[1], 8, 16, QLatin1Char('0')));
+        if (t.iflags & lithtech::dtx::DTX_FULLBRITE)
+            h += row(tr("Fullbright"), tr("palette entries %1–255").arg(lithtech::dtx::kOldOpaqueFirst));
+        if (t.has_alpha_masks()) {
+            bool high = false;
+            for (int i = lithtech::dtx::kOldOpaqueFirst; i < 256; ++i) high |= used[std::size_t(i)];
+            h += row(tr("Alpha"), high ? tr("the masks; palette entries %1–255 always opaque (used here)").arg(lithtech::dtx::kOldOpaqueFirst)
+                                       : tr("the masks"));
+        }
+        QString extra;
+        for (uint8_t b : t.extra) extra += QStringLiteral("%1 ").arg(b, 2, 16, QLatin1Char('0'));
+        if (t.version == -3) {
+            h += row(tr("Detail scale"), QString::number(double(t.old_detail_scale()), 'g', 6));
+            h += row(tr("Detail angle"), QString::number(t.old_detail_angle()));
+            h += row(tr("Command"), t.command.empty() ? QStringLiteral("—") : QString::fromLatin1(t.command.c_str()).toHtmlEscaped());
+        }
+        h += row(tr("Header bytes 24–35"), extra.trimmed());
+    } else {
+        h += row(tr("Format"), QString::fromLatin1(lithtech::dtx::bpp_name(t.bpp())));
+        h += row(tr("Mips"), QString::number(t.mip_count));
+        h += row(tr("Version"), QString::number(t.version));
+        h += row(tr("Flags"), flagNames(t.iflags).toHtmlEscaped());
+        h += row(tr("User flags"), QStringLiteral("0x%1").arg(t.user_flags, 8, 16, QLatin1Char('0')));
+        h += row(tr("Texture group"), QString::number(t.texture_group()));
+        h += row(tr("Mipmaps to use"), QString::number(t.mipmaps_to_use()));
+        h += row(tr("Non-S3TC mip offset"), QString::number(t.non_s3tc_mip_offset()));
+        h += row(tr("UI mip offset"), QString::number(t.ui_mip_offset()));
+        h += row(tr("Priority"), QString::number(t.priority()));
+        h += row(tr("Detail scale"), QString::number(double(t.detail_scale()), 'g', 6));
+        h += row(tr("Detail angle"), QString::number(t.detail_angle()));
+        h += row(tr("Command"), t.command.empty() ? QStringLiteral("—") : QString::fromLatin1(t.command.c_str()).toHtmlEscaped());
+        if (const auto* pal = t.find_section("PALLETE32"); pal && t.bpp() == lithtech::dtx::BPP_32P) {
+            int amax = 0, colours = 0;
+            std::vector<bool> used(256);
+            for (const auto& m : t.mips)
+                for (uint8_t i : m) used[i] = true;
+            for (int i = 0; i < 256; ++i) {
+                if (4 * std::size_t(i) + 3 < pal->data.size()) amax = std::max<int>(amax, pal->data[4 * std::size_t(i) + 3]);
+                colours += used[std::size_t(i)];
+            }
+            h += row(tr("Palette"), tr("%1 of 256 colours used").arg(colours));
+            h += row(tr("Palette alpha"), amax == 0 ? tr("none (all zero: the PS2 draws it opaque)")
+                                                    : tr("up to 0x%1").arg(amax, 2, 16, QLatin1Char('0')));
+            if (t.ps2_style_palette())
+                h += row(tr("Made for"), tr("the PS2 (DEdit's Convert to 32P: alpha halved, 0x80 is opaque)"));
+        }
     }
     if (t.truncated) h += row(tr("Warning"), tr("the file ends inside its pixel data"));
     if (!err.isEmpty()) h += row(tr("Error"), err.toHtmlEscaped());
