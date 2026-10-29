@@ -7,6 +7,10 @@ target_link_libraries(abc_verify PRIVATE lithtech)
 # DTX decoding over whole archives, and texture viewer screenshots.
 add_executable(dtx_decode_all dtx_decode_all.cpp)
 target_link_libraries(dtx_decode_all PRIVATE lithtech)
+# Versions -2 and -3 (Blood 2, KISS Psycho Circus) on files made here.
+add_executable(dtx_old_test dtx_old_test.cpp)
+target_link_libraries(dtx_old_test PRIVATE lithtech)
+add_test(NAME dtx_old_test COMMAND dtx_old_test)
 if(TARGET Qt6::Widgets)
   set(CMAKE_AUTOMOC ON)
   add_executable(dtx_view_shots dtx_view_shots.cpp ../gui/textureview.h ../gui/textureview.cpp)

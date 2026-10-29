@@ -8,6 +8,11 @@ game trees. All of them read and write back byte for byte with
 `lithtech/dtx.py` (one 0-byte Tron file is not a texture; see
 [Odd files](#odd-files)).
 
+The older engines wrote 8-bit palettized textures, versions -2 (LithTech
+1.0, Blood 2, 1998) and -3 (LithTech 1.5, KISS Psycho Circus, 2000); see
+[Versions -2 and -3](#versions--2-and--3). The C++ library
+(`tools/lithrez`, `lithtech::dtx`) reads them; `dtx.py` does not.
+
 Evidence, in order of weight:
 
 - **talon**: `talon/src/LT2/tools/shared/engine/dtxmgr.h`, `dtxmgr.cpp`
@@ -218,9 +223,136 @@ there:
 - NOLF, AvP2 and PH, NOLF2, Contract J.A.C.K. and Tron 2.0 all ship -5.
   Talon and Build 69 both define `CURRENT_DTX_VERSION` as -5 and reject
   everything else.
-- Earlier engines (Shogo, Blood 2: -2/-3/-4?) and later ones (LithTech
-  Jupiter EX and on) are not in our data, and there is no source for them.
-  A reader for them goes in `_READERS`/`_WRITERS` beside `_read_v5`.
+- -2 (Blood 2) and -3 (KISS Psycho Circus) are below. The C++ reader has
+  them (`read_old` in `tools/lithrez/core/src/dtx.cpp`); a Python one would
+  go in `_READERS` beside `_read_v5`. -4 (Shogo? the Blood 2 add-on?) and
+  the Jupiter EX versions are not in our data.
+
+## Versions -2 and -3
+
+8-bit palettized textures with optional 4-bit alpha masks. There is no
+source; the layout comes from the engines' own loaders and renderers,
+disassembled, and every claim was checked against all the files we have:
+
+- **Blood 2 demo** (`B2Demo.rez`): 519 textures, all -2. The engine is the
+  demo's `Client.exe` and `d3d.ren`.
+- **KISS Psycho Circus 1.11** (`PSYCHO.REZ`): 2,929 textures, all -3. The
+  engine is `KPC_V111/Psycho/client.exe` and `d3d.ren`.
+
+Every file is exactly the size the layout below gives; there are no
+sections in any of them, and nothing follows the last mask.
+
+### Layout
+
+```
+header                  36 bytes (-2) or 164 bytes (-3)
+palette id              8 bytes
+palette                 256 x 4 bytes
+pixels of mip 0..n-1    w>>i x h>>i bytes each, one block
+masks of mip 0..n-1     only with flag bit 1, one block after all the pixels
+section 0..m-1          only with DTX_SECTIONSFIXED: as in -5
+```
+
+`dtx_Create` (Blood 2 `Client.exe` 0x420d80; KISS `client.exe` 0x1cc8b40)
+reads the header (0x24 bytes; KISS 0xa4), rejects any other version (-2;
+KISS -3) and a mip count of 0 or over 15, then reads 0x408 bytes (the id
+and the palette) and hands them to the palette cache (0x43c820; KISS
+0x1cefa00). `dtx_Alloc` (0x420c20; KISS 0x1cc89c0) sizes one allocation for
+all the levels and, with flag bit 1, the masks, and gives each level a
+20-byte entry {width, height, pitch, pixels, mask}. `dtx_Create` then reads
+all the pixels in one call and all the masks in a second one, and the
+sections as -5 does (32-byte header, data length at 28).
+
+### Header
+
+| Offset | Type | Field | Notes |
+|---|---|---|---|
+| 0 | uint32 | res type | 0 |
+| 4 | int32 | version | -2 or -3 |
+| 8 | uint16 | width | |
+| 10 | uint16 | height | |
+| 12 | uint16 | mip count | 1..15; KISS always 4, Blood 2 4 (16 files 1) |
+| 14 | uint16 | section count | 0 in every file |
+| 16 | int32 | flags | see below |
+| 20 | int32 | user flags | as -5: small numbers (Blood 2: 0, 10, 20 ... 110; KISS also bit masks up to 0x8000) |
+| 24 | uint8[12] | ? | see below |
+| 36 | char[128] | command string | -3 only |
+
+Bytes 24-35: in -3, bytes 28-31 are a float and 32-33 a uint16 that KISS's
+`d3d.ren` turns into its detail-texture matrix (0x10023f30 builds it from
+the texture's +0x20 and +0x24, which are header bytes 28 and 32, since the
+header is copied to +4; the detail pass at 0x1000c6f0, gated on the
+`DetailTextures` variable, reads the matrix). They are the detail scale
+(stored as is, not as -5's value - 1: 6.0 in 1,977 files, 0 in the other
+952) and angle (0 in every file). In Blood 2 bytes 28-35 are always zero.
+Bytes 24-27 hold small values in both games (Blood 2 `05 04 88 00`,
+`00 02 88 80`; KISS `02 01 88 00`, `00 02 00 00`) that neither engine is
+seen to read; byte 26 is 0, 0x88 or 0xec where -5 has its BPP ident. The
+library keeps bytes 24-35 as `extra`.
+
+The -3 command string is never text in KISS: in 2,790 files it is empty,
+and in the rest leftover memory (fragments like `sible`). The library
+keeps it only when it is printable.
+
+### Flags
+
+| Bit | Meaning | Evidence |
+|---|---|---|
+| 0 | FULLBRITE | the renderer copies it into its texture (Blood 2 `d3d.ren` 0x1001e640; KISS 0x10023f30), and Blood 2 picks the surface format by it |
+| 1 | alpha masks | `dtx_Create`/`dtx_Alloc` read and size the masks; the upload ORs them in (below). -5 has PREFER16BIT here |
+| 3 | SECTIONSFIXED | as -5 (set in most files, but the count is always 0) |
+| 5 | never paletted | 0x1001e640: without it a plain, not-fullbright texture may go to an 8-bit paletted surface; with it, to 16-bit. Skies (`SKY/STARZ2`, `SKYPAN9`), user flags 0x6e |
+
+Shipped: Blood 2 0xa (273 files), 0x8 (185), 0x9 (41), 0x0 (17), 0x1 (2),
+0x28 (1); KISS 0x8 (1,825), 0xa (968), 0x9 (96), 0x28 (20), 0xb (16), 0x2a
+(4). The library calls bit 1 `DTX_OLD_ALPHAMASKS` and bit 5
+`DTX_OLD_NOPALETTED` (the engines' names are not known).
+
+### Palette
+
+The 8-byte id is the palette cache's key: 0x43c820 hashes its first dword
+(mod 30) and shares a palette between textures whose id and 1,024 bytes
+match. It is not pixel data (96 distinct ids in Blood 2, 1,322 in KISS).
+
+Each entry is 4 bytes, **{unused, R, G, B}**. The upload's 16-bit table
+(Blood 2 `d3d.ren` 0x1001d718) takes red, green and blue from bytes 1, 2
+and 3 (rounded and shifted into the surface format); for an 8-bit
+paletted surface the same function builds a DirectDraw palette of
+`PALETTEENTRY {peRed, peGreen, peBlue}` = bytes 1, 2, 3 and calls
+CreatePalette with 0x44 (DDPCAPS_8BIT | DDPCAPS_ALLOW256). Byte 0 is 0xff
+in all of KISS and in all but 16 Blood 2 files (0 there), and nothing reads
+it. KISS's table builder (`d3d.ren` 0x100227d0) is the same, with a
+brightness factor.
+
+**Entries 246-255 are always opaque.** The table builder then ORs the
+surface format's alpha mask (`dwRGBAlphaBitMask`, the format entry's +0x28)
+into entries 246 to 255, in every format it builds (Blood 2 0x1001d718;
+KISS 0x100227d0, the same loop of 10 from `+ 0xf6`). In the alpha formats a
+masked texture uses, those ten colours stay opaque whatever the mask says.
+They are the fullbright colours: a FULLBRITE texture is uploaded in a
+format with alpha, which marks them. Blood 2's masked textures never put
+those indices under a partial mask; 36 of KISS's do (51,153 texels, mostly
+Shogo explosion sprites and model skins such as `SKINS/DECOS/DRUMS.DTX`,
+whose unused black areas stay opaque). The library draws them as the
+engine does.
+
+### Masks
+
+One mask per level, after all the levels' pixels. A level of n = w·h
+pixels has n/2 mask bytes, or 1 byte if n is 1 (`dtx_Alloc`: `n > 1 ? n
+>> 1 : n`); 4 levels of 8×8 give 32 + 8 + 2 + 1 = 43.
+
+The D3D upload (Blood 2 `d3d.ren` 0x1001db60; KISS 0x100242b0) reads each
+row as w/2 bytes and ORs each byte into two 4444 texels: the **low nibble**
+is the alpha of the even pixel (`byte << 12`), the **high nibble** that of
+the odd one (`(byte & 0xf0) << 8`). Alpha is the nibble × 17. A level one
+pixel wide gets no mask bits (w/2 is 0): it is clear, except for entries
+246-255. Flag bit 1 also sends the texture to the alpha format (0x1001e640;
+the alpha format list at 0x1004c7b0 prefers 4444, then 1555).
+
+The library draws a texture without masks opaque: its tables' alpha bits
+mark only the fullbright entries, not coverage. (How the renderer uses that
+alpha for FULLBRITE textures was not traced.)
 
 ## Odd files
 

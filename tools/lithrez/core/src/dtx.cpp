@@ -1,6 +1,8 @@
 // DTX reading and decoding, the C++ twin of plugins/blender's lithtech/dtx.py
 // (which round-trips all 21,954 shipped textures). The integer maths are the
-// engine's (FormatMgr scale tables, ConvertDXTGeneric).
+// engine's (FormatMgr scale tables, ConvertDXTGeneric). Versions -2 and -3
+// (read_old) follow the Blood 2 and KISS Psycho Circus engines; dtx.py does
+// not read them.
 
 #include "lithtech/dtx.hpp"
 
@@ -78,13 +80,93 @@ const Section* Texture::find_section(const std::string& t) const {
     return nullptr;
 }
 
+float Texture::old_detail_scale() const {
+    float f;
+    std::memcpy(&f, extra + 4, 4);
+    return f;
+}
+
+std::size_t old_mask_size(int w, int h) {
+    std::size_t n = std::size_t(std::max(w, 0)) * std::size_t(std::max(h, 0));
+    return n > 1 ? n >> 1 : n;
+}
+
+namespace {
+
+// Sections after the pixels (DTX_SECTIONSFIXED), the same in every version:
+// a 32-byte header (type, name, data length at 28), then the data.
+void read_sections(const std::vector<uint8_t>& d, std::size_t pos, Texture& t) {
+    if (t.iflags & DTX_SECTIONSFIXED) {
+        for (int i = 0; i < t.section_count; ++i) {
+            if (pos + kSectionHeader > d.size()) throw Error("section header past the end of the file");
+            Section s;
+            s.type = cstr(&d[pos], 15);
+            s.name = cstr(&d[pos + 15], 10);
+            uint32_t n = rd32(&d[pos + 28]);
+            pos += kSectionHeader;
+            if (pos + n > d.size()) throw Error("section data past the end of the file");
+            s.data.assign(d.begin() + std::ptrdiff_t(pos), d.begin() + std::ptrdiff_t(pos + n));
+            pos += n;
+            t.sections.push_back(std::move(s));
+        }
+    }
+}
+
+// Versions -2 and -3: the LithTech 1.0 and 1.5 dtx_Create (Blood 2
+// Client.exe 0x420d80, KISS client.exe 0x1cc8b40). The header (36 bytes;
+// 164 in -3, which adds -5's 128-byte command string), an 8-byte palette
+// id and 256 four-byte palette entries, every level's 8-bit pixels in one
+// block, then (DTX_OLD_ALPHAMASKS) every level's 4-bit mask in one block.
+Texture read_old(const std::vector<uint8_t>& d, Texture t, bool lenient) {
+    const std::size_t header = t.version == -3 ? kHeader : 36;
+    if (d.size() < header + 8 + 1024) throw Error("too short for a DTX header");
+    t.width = rd16(&d[8]);
+    t.height = rd16(&d[10]);
+    t.mip_count = rd16(&d[12]);
+    t.section_count = rd16(&d[14]);
+    t.iflags = rd32(&d[16]);
+    t.user_flags = rd32(&d[20]);
+    std::memcpy(t.extra, &d[24], 12);
+    if (t.version == -3) {
+        t.command = cstr(&d[36], 128);
+        for (char c : t.command)
+            if (uint8_t(c) < 0x20 || uint8_t(c) > 0x7e) { t.command.clear(); break; }
+    }
+    if (t.mip_count == 0 || t.mip_count > 15) throw Error("bad mip count " + std::to_string(t.mip_count));
+    t.palette_id[0] = rd32(&d[header]);
+    t.palette_id[1] = rd32(&d[header + 4]);
+    t.palette.assign(d.begin() + std::ptrdiff_t(header + 8), d.begin() + std::ptrdiff_t(header + 8 + 1024));
+    std::size_t pos = header + 8 + 1024;
+    auto take = [&](std::size_t n) {
+        if (pos + n > d.size()) {
+            if (!lenient) throw Error("pixel data runs past the end of the file");
+            t.truncated = true;
+            n = d.size() > pos ? d.size() - pos : 0;
+        }
+        std::vector<uint8_t> v(d.begin() + std::ptrdiff_t(pos), d.begin() + std::ptrdiff_t(pos + n));
+        pos += n;
+        return v;
+    };
+    for (int i = 0; i < t.mip_count; ++i)
+        t.mips.push_back(take(std::size_t(std::max(t.width >> i, 0)) * std::size_t(std::max(t.height >> i, 0))));
+    if (t.iflags & DTX_OLD_ALPHAMASKS)
+        for (int i = 0; i < t.mip_count; ++i) t.masks.push_back(take(old_mask_size(t.width >> i, t.height >> i)));
+    if (t.truncated) return t;
+    read_sections(d, pos, t);
+    return t;
+}
+
+}  // namespace
+
 Texture read(const std::vector<uint8_t>& d, bool lenient) {
-    if (d.size() < kHeader) throw Error("too short for a DTX header");
+    if (d.size() < 8) throw Error("too short for a DTX header");
     Texture t;
     t.res_type = rd32(&d[0]);
     t.version = int32_t(rd32(&d[4]));
     if (t.res_type != 0) throw Error("not a DTX (resource type " + std::to_string(t.res_type) + ")");
+    if (t.version == -2 || t.version == -3) return read_old(d, std::move(t), lenient);
     if (t.version != -5) throw Error("unsupported DTX version " + std::to_string(t.version));
+    if (d.size() < kHeader) throw Error("too short for a DTX header");
     t.width = rd16(&d[8]);
     t.height = rd16(&d[10]);
     t.mip_count = rd16(&d[12]);
@@ -107,20 +189,7 @@ Texture read(const std::vector<uint8_t>& d, bool lenient) {
         pos += n;
     }
     if (t.truncated) return t;
-    if (t.iflags & DTX_SECTIONSFIXED) {
-        for (int i = 0; i < t.section_count; ++i) {
-            if (pos + kSectionHeader > d.size()) throw Error("section header past the end of the file");
-            Section s;
-            s.type = cstr(&d[pos], 15);
-            s.name = cstr(&d[pos + 15], 10);
-            uint32_t n = rd32(&d[pos + 28]);
-            pos += kSectionHeader;
-            if (pos + n > d.size()) throw Error("section data past the end of the file");
-            s.data.assign(d.begin() + std::ptrdiff_t(pos), d.begin() + std::ptrdiff_t(pos + n));
-            pos += n;
-            t.sections.push_back(std::move(s));
-        }
-    }
+    read_sections(d, pos, t);
     return t;
 }
 
@@ -266,9 +335,65 @@ Image decode_pixels(Bpp bpp, int width, int height, const uint8_t* data, std::si
     throw Error("unknown pixel format");
 }
 
+Image decode_old_pixels(int width, int height, const uint8_t* data, std::size_t size, const uint8_t* pal,
+                        const uint8_t* mask, std::size_t mask_size) {
+    // The engine's D3D upload (Blood 2 d3d.ren 0x1001db60, KISS d3d.ren
+    // 0x100242b0) maps each index through a 16-bit table made from palette
+    // bytes 1-3 (0x1001d718: R, G, B; byte 0 is unused), ORs the format's
+    // alpha bits into entries 246-255, and with masks ORs each row's w/2
+    // bytes in as 4444 alpha: low nibble for the even pixel, high for the
+    // odd one. A 1-pixel-wide level gets no mask bits.
+    Image img;
+    img.width = std::max(width, 0);
+    img.height = std::max(height, 0);
+    std::size_t n = std::size_t(img.width) * img.height;
+    img.rgba.assign(n * 4, 0);
+    if (!n) return img;
+    if (!pal) throw Error("palettized texture without a palette");
+    const std::size_t stride = std::size_t(img.width) >> 1;
+    uint8_t* o = img.rgba.data();
+    for (int y = 0; y < img.height; ++y)
+        for (int x = 0; x < img.width; ++x, o += 4) {
+            std::size_t i = std::size_t(y) * img.width + x;
+            uint8_t idx = i < size ? data[i] : 0;
+            const uint8_t* p = pal + 4 * idx;
+            o[0] = p[1];
+            o[1] = p[2];
+            o[2] = p[3];
+            if (!mask || idx >= kOldOpaqueFirst) {
+                o[3] = 255;
+            } else if (std::size_t(x) < stride * 2) {
+                std::size_t m = std::size_t(y) * stride + std::size_t(x >> 1);
+                o[3] = uint8_t((m < mask_size ? (mask[m] >> (4 * (x & 1))) & 15 : 0) * 17);
+            } else {
+                o[3] = 0;
+            }
+        }
+    return img;
+}
+
 Image Texture::decode(int mip, int face, PaletteAlpha alpha) const {
     if (mip < 0 || mip >= int(mips.size())) throw Error("no such mip level");
     int w = std::max(width >> mip, 0), h = std::max(height >> mip, 0);
+    if (is_old()) {
+        if (face > 0) throw Error("not a cube map");
+        std::vector<uint8_t> pal = palette;
+        pal.resize(1024, 0);
+        // A mask missing or cut short by the end of the file reads as zero
+        // (transparent), but the texture stays masked: mask is non-null.
+        static const uint8_t kNoMask = 0;
+        const uint8_t* m = nullptr;
+        std::size_t mn = 0;
+        if (has_alpha_masks()) {
+            m = &kNoMask;
+            if (std::size_t(mip) < masks.size() && !masks[std::size_t(mip)].empty()) {
+                m = masks[std::size_t(mip)].data();
+                mn = masks[std::size_t(mip)].size();
+            }
+        }
+        const auto& px = mips[std::size_t(mip)];
+        return decode_old_pixels(w, h, px.data(), px.size(), pal.data(), m, mn);
+    }
     const std::vector<uint8_t>* level = &mips[std::size_t(mip)];
     std::vector<uint8_t> face_data;
     if (face > 0) {

@@ -1,6 +1,8 @@
-// LithTech .dtx textures, version -5 (every shipped file from NOLF to Tron
-// 2.0): reading and decoding to RGBA. See plugins/blender/docs/DTX.md for
-// the format and the evidence.
+// LithTech .dtx textures: reading and decoding to RGBA. Version -5 is every
+// shipped file from NOLF to Tron 2.0; versions -2 (LithTech 1.0, Blood 2)
+// and -3 (LithTech 1.5, KISS Psycho Circus) are 8-bit palettized with
+// optional 4-bit alpha masks, read only. See plugins/blender/docs/DTX.md for
+// the formats and the evidence.
 
 #pragma once
 
@@ -22,6 +24,19 @@ enum Flags : uint32_t {
     DTX_32BITSYSCOPY = 1u << 9, DTX_CUBEMAP = 1u << 10, DTX_BUMPMAP = 1u << 11,
     DTX_LUMBUMPMAP = 1u << 12,
 };
+
+// Versions -2 and -3 share bits 0 (FULLBRITE) and 3 (SECTIONSFIXED) with
+// -5; bit 1 is the alpha masks, and bit 5 keeps the renderer off 8-bit
+// paletted surfaces (it converts to 16-bit instead).
+enum OldFlags : uint32_t {
+    DTX_OLD_ALPHAMASKS = 1u << 1,
+    DTX_OLD_NOPALETTED = 1u << 5,
+};
+
+// In -2/-3 textures the renderer gives palette entries 246-255 the alpha
+// bits of every 16-bit format it builds: they are always opaque, even where
+// an alpha mask says otherwise.
+constexpr int kOldOpaqueFirst = 246;
 
 // How BPP_32P palette alpha is read. The files are the same on both
 // platforms; what differs is how each engine draws them:
@@ -67,7 +82,22 @@ struct Texture {
     std::vector<Section> sections;
     bool truncated = false;
 
-    Bpp bpp() const { return Bpp(extra[2] ? extra[2] : uint8_t(BPP_32)); }
+    // Versions -2/-3 only. extra holds header bytes 24-35 (the 36-byte -2
+    // header has no command string; the -3 one has -5's 128 bytes, but no
+    // shipped file holds text there, so command stays empty unless it is
+    // printable).
+    uint32_t palette_id[2] = {};               // the engine's palette cache key
+    std::vector<uint8_t> palette;              // 256 x {unused, R, G, B}
+    std::vector<std::vector<uint8_t>> masks;   // per level, DTX_OLD_ALPHAMASKS: rows of w/2 bytes, low nibble first
+
+    bool is_old() const { return version == -2 || version == -3; }
+    bool has_alpha_masks() const { return is_old() && (iflags & DTX_OLD_ALPHAMASKS); }
+    // -3: the detail texture's scale (a plain float, not -5's value - 1) and
+    // angle, header bytes 28 and 32.
+    float old_detail_scale() const;
+    int old_detail_angle() const { return uint16_t(extra[8] | extra[9] << 8); }
+
+    Bpp bpp() const { return is_old() ? BPP_8P : Bpp(extra[2] ? extra[2] : uint8_t(BPP_32)); }
     int texture_group() const { return extra[0]; }
     int mipmaps_to_use() const { return extra[1]; }
     int non_s3tc_mip_offset() const { return extra[3]; }
@@ -75,7 +105,7 @@ struct Texture {
     int priority() const { return extra[5]; }
     float detail_scale() const;
     int detail_angle() const;
-    bool is_cubemap() const { return iflags & DTX_CUBEMAP; }
+    bool is_cubemap() const { return !is_old() && (iflags & DTX_CUBEMAP); }
     const Section* find_section(const std::string& type) const;
 
     // One level (and cube face 0-5) as RGBA.
@@ -89,6 +119,10 @@ struct Texture {
 const char* bpp_name(Bpp b);
 std::size_t image_size(Bpp bpp, int width, int height);
 
+// Bytes of a -2/-3 level's alpha mask (dtx_Alloc: n/2, but 1 for a 1x1 level).
+std::size_t old_mask_size(int width, int height);
+
+// Versions -5, -3 and -2.
 // lenient: keep a file that ends inside its pixels (two Tron prototypes).
 Texture read(const std::vector<uint8_t>& data, bool lenient = true);
 Texture read_file(const std::string& path, bool lenient = true);
@@ -97,5 +131,10 @@ Texture read_file(const std::string& path, bool lenient = true);
 Image decode_pixels(Bpp bpp, int width, int height, const uint8_t* data, std::size_t size,
                     const uint8_t* palette_bgra = nullptr, uint32_t iflags = 0,
                     PaletteAlpha alpha = PaletteAlpha::Stored);
+
+// RGBA from one -2/-3 level: palette entries {unused, R, G, B}; with a mask,
+// alpha is its nibble * 17 (palette entries 246-255 opaque), else 255.
+Image decode_old_pixels(int width, int height, const uint8_t* data, std::size_t size, const uint8_t* palette,
+                        const uint8_t* mask = nullptr, std::size_t mask_size = 0);
 
 }  // namespace lithtech::dtx
