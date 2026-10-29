@@ -150,11 +150,13 @@ TARGETS = [
     # Provisional ranges: to the import thunks before msvcrt.lib's
     # crtdll.obj (or to crtdll.obj where no thunk run precedes it).
     dict(label="MaxDTXLoader30.bmi", what="3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxDTXLoader30.bmi", stem="MaxDTXLoader30", built=None, optional=True,
-         app=[(0x10001000, 0x10006724)]),   # provisional: to the runtime
+         shipped=U2 + "/Exporters/MaxDTXLoader30.bmi", stem="MaxDTXLoader30", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxDTXLoader/MaxDTXLoader30.bmi",
+         app=[(0x10001000, 0x100066c0)]),   # to msvcprt's delop_s.obj (operator delete), the runtime's first
     dict(label="MaxDTXLoader40.bmi", what="3ds Max .dtx bitmap loader for 3ds Max 4 (Update 2)", kind="image",
-         shipped=U2 + "/Exporters/MaxDTXLoader40.bmi", stem="MaxDTXLoader40", built=None, optional=True,
-         app=[(0x10001000, 0x10006884)]),   # provisional: to the runtime
+         shipped=U2 + "/Exporters/MaxDTXLoader40.bmi", stem="MaxDTXLoader40", optional=True,
+         built="src/Engine/built/Release/tools/Plugins/MaxDTXLoader/MaxDTXLoader40.bmi",
+         app=[(0x10001000, 0x10006820)]),   # to msvcprt's delop_s.obj (operator delete), the runtime's first
     dict(label="MaxModelExport30.dle", what="3ds Max model exporter for 3ds Max 3 (Update 2)", kind="image",
          shipped=U2 + "/Exporters/MaxModelExport30.dle", stem="MaxModelExport30", optional=True,
          built="src/Engine/built/Release/tools/Plugins/MaxModelExport/MaxModelExport30.dle",

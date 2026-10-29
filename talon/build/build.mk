@@ -68,7 +68,7 @@ WORKSPACES := \
     src/LT2/lithshared/lithshared.dsw:LT2_StdLith,LT2_ZLib,LT2_RegMgr \
     src/LT2/tools/PreProcessor/Processor.dsw:Processor \
     src/Libs/Libs.dsw:ButeMgr,CryptMgr,DibMgr,GenRegMgr,Lib_Lith,MFCStub,RegMgr,regmgr32,Lib_StdLith,Lib_ZLib \
-    src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader,MaxModelExport30,MaxModelExport40,MaxWorldExport30,MaxWorldExport40,MaxWorldImport30,MaxWorldImport40,MayaModelExport30,MayaModelExport40,MayaWorldExport30,MayaWorldExport40 \
+    src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader,MaxDTXLoader30,MaxDTXLoader40,MaxModelExport30,MaxModelExport40,MaxWorldExport30,MaxWorldExport40,MaxWorldImport30,MaxWorldImport40,MayaModelExport30,MayaModelExport40,MayaWorldExport30,MayaWorldExport40 \
     src/LT2/tools/LithRez/LithRez.dsw:LithRez
 
 # ---------------------------------------------------------------------------
