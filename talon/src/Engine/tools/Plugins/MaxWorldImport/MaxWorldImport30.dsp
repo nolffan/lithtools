@@ -25,6 +25,12 @@ CFG=MaxWorldImport30 - Win32 Release
 # talon: MaxWorldImport.vcproj, "Release MAX30": maxsdk-3.0's headers and libraries
 # talon: (toolchains/maxsdk-3.0), /MD, /Ob1, no TdGuard.lib (Touchdown's, later);
 # talon: VC6 SP5's compiler (8966) and linker.
+# talon: As shipped (2002), not as Build 69 has it: STLport 4.0 as the AvP2
+# talon: release carries it (LT2\lithshared\stl: _STL exceptions, its node
+# talon: allocator's lock, old iostreams, hence MSVCIRT.dll), no /GF (the
+# talon: string literals are in .data), /YX (the unwind table of map<string,
+# talon: int>::_M_create_node, ~WIProp and ~WIPrefabRef match only with it),
+# talon: and kernel32.lib/user32.lib named on the link line. No /G6.
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -47,8 +53,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\..\built\Release\tools\Plugins\MaxWorldImport30"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maxsdk-3.0\include" /I "..\Shared" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maxsdk-3.0\include" /I "..\Shared" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\..\..\LT2\lithshared\stl" /I "t:\maxsdk-3.0\include" /I "..\Shared" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /Gy /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\..\..\LT2\lithshared\stl" /I "t:\maxsdk-3.0\include" /I "..\Shared" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX3_SDK" /Gy /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -57,8 +63,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 comctl32.lib core.lib maxutil.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldImport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldImport\MaxWorldImport30.dli" /libpath:"t:\maxsdk-3.0\lib"
-# ADD LINK32 comctl32.lib core.lib maxutil.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldImport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldImport\MaxWorldImport30.dli" /libpath:"t:\maxsdk-3.0\lib"
+# ADD BASE LINK32 kernel32.lib user32.lib comctl32.lib core.lib maxutil.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldImport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldImport\MaxWorldImport30.dli" /libpath:"t:\maxsdk-3.0\lib"
+# ADD LINK32 kernel32.lib user32.lib comctl32.lib core.lib maxutil.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldImport30.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldImport\MaxWorldImport30.dli" /libpath:"t:\maxsdk-3.0\lib"
 
 !ENDIF 
 

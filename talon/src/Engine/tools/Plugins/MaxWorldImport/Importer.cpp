@@ -3,7 +3,6 @@
 #include "dummy.h"
 #include "stdmat.h"
 //#include "mnmath.h"
-#include "tdguard.h"
 
 
 // configuration dialog process
@@ -92,11 +91,6 @@ void MAXWorldImport::DialogAccepted( HWND hWnd )
 // import from a file
 int MAXWorldImport::DoImport( const TCHAR* name, ImpInterface* ii, Interface* ip, BOOL suppressPrompts )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return 1;
-	}
-
 	this->ip = ip;
 	this->ii = ii;
 
