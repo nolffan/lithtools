@@ -42,17 +42,17 @@ they are re-implemented.
 | `IMFLithDTX.dll` | Maya .dtx image plug-in (Update 2) | 131 / 186 | 19,238 / 19,893 bytes | `███████████████████░` 96.7% | 0 | 0 |
 | `MaxDTXLoader30.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2) | 0 / 257 | 0 / 20,482 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 257 | 0 |
 | `MaxDTXLoader40.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 4 (Update 2) | 0 / 265 | 0 / 20,789 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 265 | 0 |
-| `MaxModelExport30.dle` | 3ds Max model exporter for 3ds Max 3 (Update 2) | 0 / 464 | 0 / 40,527 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 464 | 0 |
-| `MaxModelExport40.dle` | 3ds Max model exporter for 3ds Max 4 (Update 2) | 0 / 473 | 0 / 44,112 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 473 | 0 |
-| `MaxWorldExport30.dle` | 3ds Max world exporter for 3ds Max 3 (Update 2) | 0 / 519 | 0 / 68,247 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 519 | 0 |
-| `MaxWorldExport40.dle` | 3ds Max world exporter for 3ds Max 4 (Update 2) | 0 / 538 | 0 / 68,670 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 538 | 0 |
-| `MaxWorldImport30.dli` | 3ds Max world importer for 3ds Max 3 (Update 2) | 0 / 628 | 0 / 45,164 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 628 | 0 |
-| `MaxWorldImport40.dli` | 3ds Max world importer for 3ds Max 4 (Update 2) | 0 / 635 | 0 / 45,323 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 635 | 0 |
-| `MayaModelExport30.mll` | Maya model exporter for Maya 3 (Update 2) | 0 / 435 | 0 / 50,178 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 435 | 0 |
-| `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 0 / 435 | 0 / 50,178 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 435 | 0 |
-| `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 0 / 764 | 0 / 116,225 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 764 | 0 |
-| `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 0 / 764 | 0 / 116,225 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 764 | 0 |
-| **All** | | **1,648 / 24,686** | **308,227 / 3,119,255 bytes** | `█░░░░░░░░░░░░░░░░░░░` **9.8%** | **22,877** | **2** |
+| `MaxModelExport30.dle` | 3ds Max model exporter for 3ds Max 3 (Update 2) | 278 / 450 | 38,287 / 40,495 bytes | `██████████████████░░` 94.5% | 27 | 2 |
+| `MaxModelExport40.dle` | 3ds Max model exporter for 3ds Max 4 (Update 2) | 286 / 459 | 41,866 / 44,080 bytes | `██████████████████░░` 94.9% | 28 | 2 |
+| `MaxWorldExport30.dle` | 3ds Max world exporter for 3ds Max 3 (Update 2) | 300 / 504 | 58,611 / 68,239 bytes | `█████████████████░░░` 85.8% | 27 | 0 |
+| `MaxWorldExport40.dle` | 3ds Max world exporter for 3ds Max 4 (Update 2) | 307 / 523 | 59,011 / 68,662 bytes | `█████████████████░░░` 85.9% | 39 | 0 |
+| `MaxWorldImport30.dli` | 3ds Max world importer for 3ds Max 3 (Update 2) | 381 / 599 | 42,342 / 45,124 bytes | `██████████████████░░` 93.8% | 28 | 2 |
+| `MaxWorldImport40.dli` | 3ds Max world importer for 3ds Max 4 (Update 2) | 387 / 606 | 42,495 / 45,283 bytes | `██████████████████░░` 93.8% | 29 | 2 |
+| `MayaModelExport30.mll` | Maya model exporter for Maya 3 (Update 2) | 264 / 420 | 48,151 / 50,154 bytes | `███████████████████░` 96.0% | 19 | 2 |
+| `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 264 / 420 | 48,151 / 50,154 bytes | `███████████████████░` 96.0% | 19 | 2 |
+| `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 501 / 729 | 113,215 / 116,193 bytes | `███████████████████░` 97.4% | 20 | 2 |
+| `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 501 / 729 | 113,215 / 116,193 bytes | `███████████████████░` 97.4% | 20 | 2 |
+| **All** | | **5,117 / 24,470** | **913,571 / 3,118,983 bytes** | `█████░░░░░░░░░░░░░░░` **29.2%** | **17,478** | **18** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte
