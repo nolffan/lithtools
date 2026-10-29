@@ -57,7 +57,6 @@
 		BOOL	m_bBsp;
 		BOOL	m_bIgnoreHidden;
 		PReal	m_SplitWeight, m_BalanceWeight;
-		BOOL	m_bAIVolumes;
 		BOOL	m_bLight;
 		BOOL	m_bClipLight;			// cleared by -nocliplight
 		BOOL	m_bLightAnimations;

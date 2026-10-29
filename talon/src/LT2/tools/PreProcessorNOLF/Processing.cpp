@@ -168,7 +168,6 @@ void InitProcessOptions(CProcessorGlobs *pGlobs)
 	pGlobs->m_bFixTJunc = FALSE;
 	pGlobs->m_bNoSnapNoCSG = FALSE;
 	pGlobs->m_bBalanceBSPs = TRUE;
-	pGlobs->m_bAIVolumes = FALSE;
 	strcpy(pGlobs->m_ProjectDir, ".");
 
 	for(i=0; i < (int)pGlobs->m_Argc; i++)
@@ -229,10 +228,6 @@ void InitProcessOptions(CProcessorGlobs *pGlobs)
 		{
 			pGlobs->m_bBsp = TRUE;
 		}
-		else if(CHelpers::UpperStrcmp(pArg, "aivolumes"))
-		{
-			pGlobs->m_bAIVolumes = TRUE;
-		}
 		else if(CHelpers::UpperStrcmp(pArg, "replacetextures"))
 		{
 			pGlobs->m_bReplaceTextures = TRUE;
@@ -256,6 +251,12 @@ void InitProcessOptions(CProcessorGlobs *pGlobs)
 		{
 			pGlobs->m_bClipLight = FALSE;
 		}
+		// talon: NOLF's parser takes -skipdialog itself (0x44d30b..0x44d31f;
+		// AvP2's application looks for it, ProcessorApp.cpp).
+		else if(CHelpers::UpperStrcmp(pArg, "skipdialog"))
+		{
+			pGlobs->m_bSkipDialog = TRUE;
+		}
 		else if(CHelpers::UpperStrcmp(pArg, "optimize"))
 		{
 			pGlobs->m_bOptimize = TRUE;
@@ -272,7 +273,7 @@ void InitProcessOptions(CProcessorGlobs *pGlobs)
 		{
 			pGlobs->m_bVerticesOnly = TRUE;
 		}
-		else if(CHelpers::UpperStrcmp(pArg, "Lambertian"))
+		else if(CHelpers::UpperStrcmp(pArg, "LambertianLightmaps"))
 		{
 			pGlobs->m_bLambertian = TRUE;
 		}
@@ -1035,7 +1036,7 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 				goto Done;
 			}
 
-			if(g_pGlobs->m_bBsp || g_pGlobs->m_bAIVolumes || g_pGlobs->m_bReplaceTextures ||
+			if(g_pGlobs->m_bBsp || g_pGlobs->m_bReplaceTextures ||
 				g_pGlobs->m_bLight || g_pGlobs->m_bOptimize)
 			{
 				DrawStatusText("Loading DAT file.");
@@ -1045,7 +1046,6 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 
 			mainWorld.m_pInfoString = mainWorld.m_StringHolder.AddString(g_InputRegion->m_pInfoString, TRUE);
 			CopyRegionObjects(g_InputRegion->m_Objects, mainWorld.m_Objects, g_pGlobs->m_bIgnoreHidden);
-			SetupLightGroups(&g_InputRegion->m_RootNode, &mainWorld);
 
 			if(pGlobs->m_bReplaceTextures)
 			{
@@ -1074,17 +1074,6 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 					goto Done;
 
 				bLoaded = TRUE;
-			}
-			else if(g_pGlobs->m_bAIVolumes)
-			{
-				DrawStatusText("");
-				DrawStatusText("-------------------");
-
-				g_pGlobs->m_MaxLMSize = mainWorld.m_LMGridSize;
-				mainWorld.RemoveAIVolumes();
-				FindAIVolumes((CEditRegion*)g_InputRegion, worldModels);
-				if(!AddWorldModels((CEditRegion*)g_InputRegion, worldModels, &mainWorld))
-					goto Done;
 			}
 
 			if(g_pGlobs->m_bLight)

@@ -47,7 +47,6 @@ void CProcessingOptionsDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_PO_IMPORTGEOMETRY, m_ImportGeometry);
 	DDX_Control(pDX, IDC_PO_SPLITWEIGHT, m_SplitWeight);
 	DDX_Control(pDX, IDC_PO_IGNOREHIDDEN, m_IgnoreHidden);
-	DDX_Control(pDX, IDC_PO_AIVOLUMES, m_AIVolumes);
 }
 
 
@@ -65,7 +64,6 @@ BEGIN_MESSAGE_MAP(CProcessingOptionsDlg, CDialog)
 	ON_BN_CLICKED(IDC_PO_LAMBERTIAN, OnLambertian)
 	ON_BN_CLICKED(IDC_PO_OPTIMIZE, OnOptimize)
 	ON_BN_CLICKED(IDC_PO_FAST, OnFast)
-	ON_BN_CLICKED(IDC_PO_AIVOLUMES, OnAIVolumes)
 	ON_BN_CLICKED(IDC_PO_SLIDERLEFT, OnSliderLeft)
 	ON_BN_CLICKED(IDC_PO_SLIDERRIGHT, OnSliderRight)
 	ON_WM_LBUTTONUP()
@@ -108,8 +106,6 @@ void CProcessingOptionsDlg::UpdateControls()
 			m_TextureFlags.SetCheck(m_pGlobs->m_bTextureFlags);
 			m_IgnoreHidden.EnableWindow(FALSE);
 			m_IgnoreHidden.SetCheck(m_pGlobs->m_bIgnoreHidden);
-			m_AIVolumes.EnableWindow(FALSE);
-			m_AIVolumes.SetCheck(0);
 			m_FixTJunc.EnableWindow(FALSE);
 			m_FixTJunc.SetCheck(m_pGlobs->m_bFixTJunc);
 		}
@@ -124,8 +120,6 @@ void CProcessingOptionsDlg::UpdateControls()
 				m_TextureFlags.SetCheck(m_pGlobs->m_bTextureFlags);
 				m_FixTJunc.EnableWindow(TRUE);
 				m_FixTJunc.SetCheck(m_pGlobs->m_bFixTJunc);
-				m_AIVolumes.EnableWindow(FALSE);
-				m_AIVolumes.SetCheck(1);
 			}
 			else
 			{
@@ -133,8 +127,6 @@ void CProcessingOptionsDlg::UpdateControls()
 				m_TextureFlags.SetCheck(m_pGlobs->m_bTextureFlags);
 				m_FixTJunc.EnableWindow(FALSE);
 				m_FixTJunc.SetCheck(m_pGlobs->m_bFixTJunc);
-				m_AIVolumes.EnableWindow(TRUE);
-				m_AIVolumes.SetCheck(m_pGlobs->m_bAIVolumes);
 			}
 
 			m_IgnoreHidden.EnableWindow(TRUE);
@@ -151,8 +143,6 @@ void CProcessingOptionsDlg::UpdateControls()
 		m_TextureFlags.SetCheck(m_pGlobs->m_bTextureFlags);
 		m_IgnoreHidden.EnableWindow(TRUE);
 		m_IgnoreHidden.SetCheck(m_pGlobs->m_bIgnoreHidden);
-		m_AIVolumes.EnableWindow(FALSE);
-		m_AIVolumes.SetCheck(1);
 		m_FixTJunc.EnableWindow(TRUE);
 		m_FixTJunc.SetCheck(m_pGlobs->m_bFixTJunc);
 	}
@@ -276,7 +266,6 @@ static char* ProcessorOptions_GetToken(char **ppIn, char **ppOut)
 // and the slider, into the globals (0x443980).
 void CProcessingOptionsDlg::SaveControls()
 {
-	m_pGlobs->m_bAIVolumes = m_AIVolumes.GetCheck();
 	m_pGlobs->m_bReplaceTextures = m_ReplaceTextures.GetCheck();
 	m_pGlobs->m_bLightAnimations = m_LightAnims.GetCheck();
 	m_pGlobs->m_bClipLight = m_Shadows.GetCheck();
@@ -362,7 +351,7 @@ void CProcessingOptionsDlg::BuildCommandLine(CString &cmdLine, CString &extra)
 		cmdLine += "-onlylightverts ";
 
 	if(m_pGlobs->m_bLambertian)
-		cmdLine += "-Lambertian ";
+		cmdLine += "-LambertianLightmaps ";
 
 	if(m_pGlobs->m_bOptimize)
 		cmdLine += "-optimize ";
@@ -370,15 +359,13 @@ void CProcessingOptionsDlg::BuildCommandLine(CString &cmdLine, CString &extra)
 	if(m_pGlobs->m_bFast)
 		cmdLine += "-fast ";
 
-	if(m_pGlobs->m_bAIVolumes)
-		cmdLine += "-aivolumes ";
-
 	if(m_pGlobs->m_bLogFile)
 		cmdLine += "-logfile ";
 
-	cmdLine += "-projectdir ";
+	// talon: NOLF's quotes the directory ("-projectdir \"", "\" ").
+	cmdLine += "-projectdir \"";
 	cmdLine += m_pGlobs->m_ProjectDir;
-	cmdLine += " ";
+	cmdLine += "\" ";
 
 	sprintf(str, "-splitweight %f ", m_pGlobs->m_SplitWeight);
 	cmdLine += str;
@@ -406,7 +393,6 @@ BOOL CProcessingOptionsDlg::OnInitDialog()
 	m_pGlobs->m_bTextureFlags = TRUE;
 	m_pGlobs->m_bIgnoreHidden = FALSE;
 	m_pGlobs->m_bFixTJunc = TRUE;
-	m_pGlobs->m_bAIVolumes = FALSE;
 
 	fp = fopen(m_pGlobs->m_OutputFile, "rt");
 	if(fp)
@@ -537,12 +523,6 @@ void CProcessingOptionsDlg::OnOptimize()
 void CProcessingOptionsDlg::OnFast()
 {
 	m_pGlobs->m_bFast = m_Fast.GetCheck();
-	UpdateControls();
-}
-
-void CProcessingOptionsDlg::OnAIVolumes()
-{
-	m_pGlobs->m_bAIVolumes = m_AIVolumes.GetCheck();
 	UpdateControls();
 }
 

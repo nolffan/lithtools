@@ -69,7 +69,6 @@ public:
 	afx_msg void		OnLambertian();									// 0x444270
 	afx_msg void		OnOptimize();									// 0x4442a0
 	afx_msg void		OnFast();										// 0x4442d0
-	afx_msg void		OnAIVolumes();									// 0x444300
 	afx_msg void		OnSliderLeft();									// 0x444330
 	afx_msg void		OnSliderRight();								// 0x4443d0
 	afx_msg void		OnLButtonUp(UINT nFlags, CPoint point);			// 0x4445d0
@@ -103,7 +102,6 @@ public:
 	CButton				m_ImportGeometry;	// 0x6c8
 	CSliderCtrl			m_SplitWeight;		// 0x704
 	CButton				m_IgnoreHidden;		// 0x740
-	CButton				m_AIVolumes;		// 0x77c
 };
 
 #endif  // __PROCESSOROPTIONS_DECL_H__
