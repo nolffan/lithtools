@@ -1,0 +1,28 @@
+// Microsoft Visual C++ generated resource script.
+//
+#include "resource.h"
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    IDS_LIBDESC                     "DTX file I/O (LithTech)"
+    IDS_BITMAP_IO                   "Bitmap I/O"
+    IDS_CLASSNAME                   "LithTech DTX"
+    IDS_LONGDESC                    "DTX Image File"
+    IDS_SHORTDESC                   "DTX"
+    IDS_COPYRIGHT                   "Copyright © 2001 LithTech, Inc."
+    IDS_AUTHOR                      "LithTech, Inc."
+    IDS_READ_ERROR                  "Error Reading DTX File"
+    IDS_NO_32P                      "32P DTX Files Not Supported"
+END
+
+#endif

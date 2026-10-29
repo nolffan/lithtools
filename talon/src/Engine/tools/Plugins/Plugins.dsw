@@ -42,6 +42,36 @@ Package=<4>
 
 ###############################################################################
 
+Project: "MaxDTXLoader30"=.\MaxDTXLoader\MaxDTXLoader30.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name Lib_StdLith
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Project: "MaxDTXLoader40"=.\MaxDTXLoader\MaxDTXLoader40.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name Lib_StdLith
+    End Project Dependency
+}}}
+
+###############################################################################
+
 Project: "MaxModelExport30"=.\MaxModelExport\MaxModelExport30.dsp - Package Owner=<4>
 
 Package=<5>

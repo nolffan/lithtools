@@ -19,7 +19,6 @@
 #undef HALFPI
 #undef __LINKLIST_H__		// joy
 #include "MaxDTXLoader.h"
-#include "tdguard.h"
 
 
 // =====================================================================
@@ -151,11 +150,6 @@ BMMRES DTXLoader::GetImageInfo( BitmapInfo* bi )
 // load the image
 BitmapStorage* DTXLoader::Load( BitmapInfo* bi, Bitmap* map, BMMRES* status )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return NULL;
-	}
-
 	BitmapStorage* s = NULL;
 	DStream* stream = NULL;
 	TextureData* texData = NULL;

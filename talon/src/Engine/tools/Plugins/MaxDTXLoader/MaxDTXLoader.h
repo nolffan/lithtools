@@ -1,24 +1,5 @@
 #pragma once
 
-#ifndef _AFXDLL
-	#define _AFXDLL
-#endif
-
-#include <afxwin.h>         // MFC core and standard components
-#include <afxext.h>         // MFC extensions
-
-#ifndef _AFX_NO_AFXCMN_SUPPORT
-#include <afxcmn.h>			// MFC support for Windows Common Controls
-#endif // _AFX_NO_AFXCMN_SUPPORT
-
-#include <afxsock.h>		// MFC socket extensions
-#include <afxole.h>
-
-
-#include <algorithm>
-using std::min;
-using std::max;
-
 #include "max.h"
 #include "bmmlib.h"
 #include "resource.h"

@@ -1,18 +1,12 @@
 // this file contains the exported dll functions
 
 #include "MaxDTXLoader.h"
-#include "tdguard.h"
 
 HINSTANCE hInstance = NULL;
 
 // main dll entry point
 BOOL WINAPI DllMain( HINSTANCE hInstDLL, ULONG reason, LPVOID reserved )
 {
-	if (!TdGuard::Aegis::GetSingleton().Init())
-	{
-		return FALSE;
-	}
-
 	if( reason == DLL_PROCESS_ATTACH )
 	{
 		if( hInstance )
