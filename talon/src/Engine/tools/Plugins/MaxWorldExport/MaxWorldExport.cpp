@@ -26,7 +26,6 @@ MAXWorldExport::MAXWorldExport()
 	// dialog defaults
 	objectSpace = false;
 	exportAnimations = false;
-	asPrefab = false;
 	forceKeys = true;
 	forceKeysFrames = 5;
 	includeDefinedKeys = false;
@@ -191,7 +190,6 @@ void MAXWorldExport::SaveExporterConfig( void )
 	{
 		fputc( keyFilePath[i], cfgStream );
 	}
-	_putw( asPrefab ? 1 : 0, cfgStream );
 
 	// close the configuration file
 	fclose( cfgStream );
@@ -269,11 +267,6 @@ bool MAXWorldExport::LoadExporterConfig( void )
 			{
 				keyFilePath[i] = fgetc( cfgStream );
 			}
-		}
-
-		if( version >= 7 )
-		{
-			asPrefab = _getw( cfgStream ) > 0;
 		}
 	}
 

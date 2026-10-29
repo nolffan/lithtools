@@ -12,8 +12,6 @@ using std::max;
 
 struct LTANodeList;
 struct PropertyList;
-struct LTAVert;
-struct LTAPoly;
 
 
 class LTAFile
@@ -47,10 +45,10 @@ public:
 	void AddProperty( const char* name );
 
 	// add polygon info to the current polyhedron
-	void AddBrushPolygon( const LTAPoly& poly );
+	void AddBrushPolygon( int numVerts, const int* indices, const Point3& n, float d, const Point3& o, const Point3& p, const Point3& q, const TSTR& textureName );
 
 	// add vertex info to the current polyhedron
-	void AddBrushVertices( int numVerts, const LTAVert* verts );
+	void AddBrushVertices( int numVerts, const Point3* verts );
 
 private:
 	// shortcuts to steamline things A = Append  N = Node
@@ -130,24 +128,3 @@ struct PropertyList
 	PropertyList* next;				// next property in the list
 };
 
-
-struct LTAVert
-{
-	Point3 pos;
-	uint8 r, g, b, a;
-};
-
-
-struct LTAPoly
-{
-	LTAPoly();
-
-	int numVerts;
-	int* indices;
-	Point3 n;
-	float d;
-	Point3 o[2];
-	Point3 p[2];
-	Point3 q[2];
-	TSTR textureName[2];
-};

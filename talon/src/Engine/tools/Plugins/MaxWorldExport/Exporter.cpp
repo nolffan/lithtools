@@ -3,7 +3,6 @@
 #include "mnmath.h"
 #include "decomp.h"
 #include "notetrck.h"
-#include "tdguard.h"
 
 
 // determine supported exporter options
@@ -30,7 +29,6 @@ void UpdateEnabledControls( HWND hWnd )
 	bool forcedKeys = GetCheckBox( hWnd, IDC_FORCE_KEYS ) > 0;
 	bool externalKeys = GetCheckBox( hWnd, IDC_EXTERNAL_KEY_FILE ) > 0;
 
-	EnableWindow( GetDlgItem( hWnd, IDC_AS_PREFAB ), exportAnims );
 	EnableWindow( GetDlgItem( hWnd, IDC_FORCE_KEYS ), exportAnims );
 	EnableWindow( GetDlgItem( hWnd, IDC_FORCE_KEYS_FRAMES ), exportAnims );
 	EnableWindow( GetDlgItem( hWnd, IDC_STATIC_FORCE_KEYS ), exportAnims );
@@ -58,7 +56,6 @@ static BOOL CALLBACK ConfigDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARA
 		SetCheckBox( hWnd, IDC_OBJECTSPACE, export->objectSpace );
 		SetCheckBox( hWnd, IDC_TRIANGULATE_BRUSHES, export->triangulateBrushes );
 		SetCheckBox( hWnd, IDC_EXPORT_ANIMATIONS, export->exportAnimations );
-		SetCheckBox( hWnd, IDC_AS_PREFAB, export->asPrefab );
 		SetCheckBox( hWnd, IDC_FORCE_KEYS, export->forceKeys );
 		char buf[256];
 		sprintf( buf, "%d", export->forceKeysFrames );
@@ -136,7 +133,6 @@ void MAXWorldExport::DialogAccepted( HWND hWnd )
 	objectSpace = GetCheckBox( hWnd, IDC_OBJECTSPACE ) > 0;
 	triangulateBrushes = GetCheckBox( hWnd, IDC_TRIANGULATE_BRUSHES ) > 0;
 	exportAnimations = GetCheckBox( hWnd, IDC_EXPORT_ANIMATIONS ) > 0;
-	asPrefab = GetCheckBox( hWnd, IDC_AS_PREFAB ) > 0;
 	forceKeys = GetCheckBox( hWnd, IDC_FORCE_KEYS ) > 0;
 	GetWindowText( GetDlgItem( hWnd, IDC_FORCE_KEYS_FRAMES ), keyFrames, 255 );
 	forceKeysFrames = atoi( keyFrames );
@@ -180,11 +176,6 @@ void MAXWorldExport::DialogAccepted( HWND hWnd )
 // export to a file
 int MAXWorldExport::DoExport( const TCHAR* name, ExpInterface* ei, Interface* ip, BOOL suppressPrompts, DWORD options )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return 1;
-	}
-
 	this->ip = ip;
 
 	// try to load the configuration info
@@ -406,90 +397,13 @@ bool MAXWorldExport::ExportNode( INode* node, Box3* bounds, LTAFile& file )
 }
 
 
-bool MAXWorldExport::GetTextureInfo( BitmapTex* tex, int texNum, MultiTextureInfo& texInfo )
-{
-	ASSERT( tex && texNum < 2 && texNum >= 0 );
-
-	Bitmap* bitmap = tex->GetBitmap( 0 );
-	if( !bitmap )
-		return false;
-
-	// get the name of the texture file
-	TSTR texName = tex->GetMapName();
-	if( !GenerateTextureName( texName ) )
-		return false;
-	texInfo.texName[texNum] = texName;
-
-	// get the texture dimensions
-	texInfo.mapWidth[texNum] = bitmap->Width();
-	texInfo.mapHeight[texNum] = bitmap->Height();
-
-	if( !(texInfo.mapWidth[texNum] > 0 && texInfo.mapHeight[texNum] > 0) )
-		return false;
-
-	// get the texture transform
-	StdUVGen* uvGen = tex->GetUVGen();
-	uvGen->GetUVTransform( texInfo.uvXForm[texNum] );
-
-	// get the mapping coordinate channel
-	switch( tex->GetUVWSource() )
-	{
-	case UVWSRC_EXPLICIT:
-		texInfo.mapChannel[texNum] = tex->GetMapChannel();
-		break;
-	case UVWSRC_EXPLICIT2:
-		texInfo.mapChannel[texNum] = 0;		// vertex color special case
-		break;
-	default:
-		return false;
-	}
-
-	return true;
-}
-
-
-void MAXWorldExport::GetMultiTextureInfo( Mtl* material, int matID, MultiTextureInfo& texInfo )
-{
-	// start off with a sane default
-	texInfo.numTextures = 0;
-
-	// if this is a multi/sub-object material, grab the appropriate one based on the material ID
-	if( material && (material->NumSubMtls() != 0) && (material->ClassID() == Class_ID(MULTI_CLASS_ID,0)) )
-		material = material->GetSubMtl( matID % material->NumSubMtls() );
-
-	// no valid standard material found
-	if( !material || (material->ClassID() != Class_ID(DMTL_CLASS_ID,0)) )
-		return;
-
-	// grab the diffuse texture
-	Texmap* tex = material->GetSubTexmap( ID_DI );
-
-	if( !tex )
-		return;
-
-	if( tex->ClassID() == Class_ID(BMTEX_CLASS_ID,0) )
-	{
-		// grab the info for this bitmap texture
-		if( GetTextureInfo( (BitmapTex*)tex, 0, texInfo ) )
-			texInfo.numTextures = 1;
-	}
-	else if( tex->NumSubTexmaps() >= 2 )
-	{
-		// attempt to fill in info for the first subtexture
-		Texmap* subTex = tex->GetSubTexmap( 0 );
-		if( !subTex || (subTex->ClassID() != Class_ID(BMTEX_CLASS_ID,0)) || !GetTextureInfo( (BitmapTex*)subTex, 0, texInfo ) )
-			return;
-
-		// attempt to fill in info for the second subtexture
-		subTex = tex->GetSubTexmap( 1 );
-		if( !subTex || (subTex->ClassID() != Class_ID(BMTEX_CLASS_ID,0)) || !GetTextureInfo( (BitmapTex*)subTex, 1, texInfo ) )
-			return;
-
-		texInfo.numTextures = 2;
-	}
-}
-
-
+// talon: near (block placement), both builds. In 30 the code is instruction-for-
+// talon: instruction the shipped one, but VC6 places the cold block (Bitmap::Width()'s
+// talon: no-storage arm through GenerateTextureName) after the parity if's first
+// talon: arm, ours right after Width()'s first arm, so a few jumps change size.
+// talon: Not sensitive to the declaration count (0..63 typedefs). In 40 the
+// talon: register allocation differs as well (shipped 40 keeps no zero register),
+// talon: possibly the 4.2 SDK headers standing in for 4.0.
 void MAXWorldExport::ExportNodeAsTriBrush( Mesh* mesh, Mtl* material, Matrix3& xform, LTAFile& file )
 {
 	int i;
@@ -497,12 +411,18 @@ void MAXWorldExport::ExportNodeAsTriBrush( Mesh* mesh, Mtl* material, Matrix3& x
 	// variables used for exporting a face
 	Point3 v0, v1, v2;
 	Point3 tv0, tv1, tv2;
-	Point3 pos;
-	int indexList[3];
+	Point3 n;
+	float d;
+
+	// texture info for the current face
+	TSTR texName;
+	Matrix3 uvXForm;
+	int width, height;
 
 	int numVerts = mesh->getNumVerts();
 	int numFaces = mesh->getNumFaces();
 	bool negParity = xform.Parity() > 0;
+	bool hasTVerts = mesh->getNumTVerts() > 0;
 
 	if( numFaces < 1 )
 		return;
@@ -522,46 +442,17 @@ void MAXWorldExport::ExportNodeAsTriBrush( Mesh* mesh, Mtl* material, Matrix3& x
 		vx2 = 0;
 	}
 
-	LTAVert* vertList = new LTAVert[numVerts];
+	Point3* vertList = new Point3[numVerts];
 
 	// fill in the vertlist from the mesh
 	for( i = 0; i < numVerts; i++ )
 	{
-		pos = mesh->getVert( i );
+		vertList[i] = mesh->getVert( i );
 
 		if( !objectSpace )
-			pos = pos * xform;
+			vertList[i] = vertList[i] * xform;
 
-		vertList[i].pos = ConvertPoint( pos );
-		vertList[i].r = vertList[i].g = vertList[i].b = vertList[i].a = 255;
-	}
-
-	// fill in the vertex color info if it exists
-	if( mesh->mapSupport( 0 ) )
-	{
-		TVFace* colorFaces = mesh->mapFaces( 0 );
-		UVVert* colorVerts = mesh->mapVerts( 0 );
-
-		for( i = 0; i < numFaces; i++ )
-		{
-			tv0 = colorVerts[colorFaces[i].t[vx0]];
-			tv1 = colorVerts[colorFaces[i].t[vx1]];
-			tv2 = colorVerts[colorFaces[i].t[vx2]];
-			
-			Face& curFace = mesh->faces[i];
-			vertList[curFace.v[vx0]].r = (uint8)(255.0f * tv0.x);
-			vertList[curFace.v[vx0]].g = (uint8)(255.0f * tv0.y);
-			vertList[curFace.v[vx0]].b = (uint8)(255.0f * tv0.z);
-			vertList[curFace.v[vx0]].a = (uint8)(255.0f * ((tv0.x + tv0.y + tv0.z) / 3.0f));
-			vertList[curFace.v[vx1]].r = (uint8)(255.0f * tv1.x);
-			vertList[curFace.v[vx1]].g = (uint8)(255.0f * tv1.y);
-			vertList[curFace.v[vx1]].b = (uint8)(255.0f * tv1.z);
-			vertList[curFace.v[vx1]].a = (uint8)(255.0f * ((tv1.x + tv1.y + tv1.z) / 3.0f));
-			vertList[curFace.v[vx2]].r = (uint8)(255.0f * tv2.x);
-			vertList[curFace.v[vx2]].g = (uint8)(255.0f * tv2.y);
-			vertList[curFace.v[vx2]].b = (uint8)(255.0f * tv2.z);
-			vertList[curFace.v[vx2]].a = (uint8)(255.0f * ((tv2.x + tv2.y + tv2.z) / 3.0f));
-		}
+		vertList[i] = ConvertPoint( vertList[i] );
 	}
 
 	// add the vertex list to the lta file
@@ -570,90 +461,115 @@ void MAXWorldExport::ExportNodeAsTriBrush( Mesh* mesh, Mtl* material, Matrix3& x
 	// add the faces to the mesh
 	for( i = 0; i < numFaces; i++ )
 	{
-		LTAPoly curPoly;
-
 		Face& curFace = mesh->faces[i];
+		bool goodTex;
+
+		// find the texture for this face
+		if( hasTVerts && exportUVs )
+		{
+			goodTex = true;
+
+			Mtl* mtl = material;
+			if( mtl && (mtl->NumSubMtls() != 0) && (mtl->ClassID() == Class_ID(MULTI_CLASS_ID,0)) )
+				mtl = mtl->GetSubMtl( curFace.getMatID() % mtl->NumSubMtls() );
+
+			bool foundTex = false;
+			if( mtl && (mtl->ClassID() == Class_ID(DMTL_CLASS_ID,0)) )
+			{
+				Texmap* tex = mtl->GetSubTexmap( ID_DI );
+				if( tex && (tex->ClassID() == Class_ID(BMTEX_CLASS_ID,0)) )
+				{
+					BitmapTex* bmTex = (BitmapTex*)tex;
+					TCHAR* mapName = bmTex->GetMapName();
+					Bitmap* bitmap = bmTex->GetBitmap( 0 );
+					if( bitmap )
+					{
+						width = bitmap->Width();
+						height = bitmap->Height();
+						bmTex->GetUVGen()->GetUVTransform( uvXForm );
+
+						if( mapName && (width > 0) && (height > 0) )
+						{
+							texName = mapName;
+							foundTex = GenerateTextureName( texName );
+						}
+					}
+				}
+			}
+
+			if( !foundTex )
+			{
+				goodTex = false;
+				numImproperFaces++;
+			}
+		}
+		else
+		{
+			goodTex = false;
+			if( exportUVs )
+				numImproperFaces++;
+		}
 
 		// generate plane equation info
-		v0 = vertList[curFace.v[vx0]].pos;
-		v1 = vertList[curFace.v[vx1]].pos;
-		v2 = vertList[curFace.v[vx2]].pos;
+		v0 = vertList[curFace.v[vx0]];
+		v1 = vertList[curFace.v[vx1]];
+		v2 = vertList[curFace.v[vx2]];
 		if( negParity )
-			curPoly.n = CrossProd( (v1-v0), (v2-v0) );
+			n = CrossProd( (v1-v0), (v2-v0) );
 		else
-			curPoly.n = CrossProd( (v2-v0), (v1-v0) );
-		curPoly.n = Normalize( curPoly.n );
-		curPoly.d = DotProd( curPoly.n, v0 );
+			n = CrossProd( (v2-v0), (v1-v0) );
+		n = Normalize( n );
+		d = DotProd( n, v0 );
 
+		Point3 o, p, q;
+		o = Point3( 0.0f, 0.0f, 0.0f );
+		p = Point3( 1.0f, 0.0f, 0.0f );
+		q = Point3( 0.0f, 0.0f, 1.0f );
+
+		// add the texture info
+		if( goodTex )
+		{
+			tv0 = mesh->tVerts[mesh->tvFace[i].t[vx0]] * uvXForm;
+			tv1 = mesh->tVerts[mesh->tvFace[i].t[vx1]] * uvXForm;
+			tv2 = mesh->tVerts[mesh->tvFace[i].t[vx2]] * uvXForm;
+
+			GenerateOPQ( v0, v1, v2, tv0, tv1, tv2, width, height, o, p, q );
+		}
+		else
+			texName = "Default";
+
+		int indexList[3];
 		indexList[0] = curFace.v[vx0];
 		indexList[1] = curFace.v[vx1];
 		indexList[2] = curFace.v[vx2];
 
-		curPoly.indices = indexList;
-		curPoly.numVerts = 3;
-
-		// add the texture info
-		if( exportUVs )
-		{
-			MultiTextureInfo texInfo;
-			GetMultiTextureInfo( material, curFace.getMatID(), texInfo );
-
-			bool goodTexInfo = (texInfo.numTextures != 0);
-
-			TVFace* mapFaces[2];
-			UVVert* mapVerts[2];
-			mapFaces[0] = mapFaces[1] = NULL;
-			mapVerts[0] = mapVerts[1] = NULL;
-
-			if( texInfo.numTextures >= 1 )
-			{
-				if( mesh->mapSupport( texInfo.mapChannel[0] ) )
-				{
-					mapFaces[0] = mesh->mapFaces( texInfo.mapChannel[0] );
-					mapVerts[0] = mesh->mapVerts( texInfo.mapChannel[0] );
-				}
-
-				if( !(mapFaces[0] && mapVerts[0]) )
-					goodTexInfo = false;
-			}
-			if( texInfo.numTextures >= 2 )
-			{
-				if( mesh->mapSupport( texInfo.mapChannel[1] ) )
-				{
-					mapFaces[1] = mesh->mapFaces( texInfo.mapChannel[1] );
-					mapVerts[1] = mesh->mapVerts( texInfo.mapChannel[1] );
-				}
-
-				if( !(mapFaces[1] && mapVerts[1]) )
-					goodTexInfo = false;
-			}
-
-			for( int j = 0; goodTexInfo && (j < texInfo.numTextures); j++ )
-			{
-				tv0 = mapVerts[j][mapFaces[j][i].t[vx0]] * texInfo.uvXForm[j];
-				tv1 = mapVerts[j][mapFaces[j][i].t[vx1]] * texInfo.uvXForm[j];
-				tv2 = mapVerts[j][mapFaces[j][i].t[vx2]] * texInfo.uvXForm[j];
-
-				GenerateOPQ( v0, v1, v2, tv0, tv1, tv2, texInfo.mapWidth[j], texInfo.mapHeight[j], curPoly.o[j], curPoly.p[j], curPoly.q[j] );
-
-				curPoly.textureName[j] = texInfo.texName[j];
-			}
-		}
-
-		file.AddBrushPolygon( curPoly );
+		file.AddBrushPolygon( 3, indexList, n, d, o, p, q, texName );
 	}
 
 	delete [] vertList;
 }
 
+// talon: near (block placement), both builds. In 30 the code is instruction-for-
+// talon: instruction the shipped one, but VC6 places the cold block (Bitmap::Width()'s
+// talon: no-storage arm through GenerateTextureName) after the parity if's first
+// talon: arm, ours right after Width()'s first arm, so a few jumps change size.
+// talon: Not sensitive to the declaration count (0..63 typedefs). In 40 the
+// talon: register allocation differs as well (shipped 40 keeps no zero register),
+// talon: possibly the 4.2 SDK headers standing in for 4.0.
 void MAXWorldExport::ExportNodeAsBrush( Mesh* mesh, Mtl* material, Matrix3& xform, LTAFile& file )
 {
+	int i;
+
 	// variables used for exporting a face
 	Point3 v0, v1, v2;
 	Point3 tv0, tv1, tv2;
-	Point3 cv;
-	Point3 pos;
-	int i;
+	Point3 n;
+	float d;
+
+	// texture info for the current face
+	TSTR texName;
+	Matrix3 uvXForm;
+	int width, height;
 
 	// create the connectivity mesh
 	MNMesh topoMesh( *mesh );
@@ -667,36 +583,17 @@ void MAXWorldExport::ExportNodeAsBrush( Mesh* mesh, Mtl* material, Matrix3& xfor
 	bool negParity = xform.Parity() > 0;
 
 	// list of vertex positions to add to the lta file
-	LTAVert* vertList = new LTAVert[topoMesh.VNum()];
+	Point3* vertList = new Point3[topoMesh.VNum()];
 
 	// fill in the vertlist from the mesh
 	for( i = 0; i < topoMesh.VNum(); i++ )
 	{
-		pos = topoMesh.P( i );
+		vertList[i] = topoMesh.P( i );
 
 		if( !objectSpace )
-			pos = pos * xform;
+			vertList[i] = vertList[i] * xform;
 
-		vertList[i].pos = ConvertPoint( pos );
-		vertList[i].r = vertList[i].g = vertList[i].b = vertList[i].a = 255;
-	}
-
-	// fill in vertex color info if it exists
-	for( i = 0; i < topoMesh.FNum(); i++ )
-	{
-		if( MNMapFace* colorFace = topoMesh.MF( 0, i ) )
-		{
-			MNFace* curFace = topoMesh.F( i );
-			
-			for( int j = 0; j < curFace->deg; j++ )
-			{
-				cv = topoMesh.MV( 0, colorFace->tv[j] );
-				vertList[curFace->vtx[j]].r = (uint8)(255.0f * cv.x);
-				vertList[curFace->vtx[j]].g = (uint8)(255.0f * cv.y);
-				vertList[curFace->vtx[j]].b = (uint8)(255.0f * cv.z);
-				vertList[curFace->vtx[j]].a = (uint8)(255.0f * ((cv.x + cv.y + cv.z) / 3.0f));
-			}
-		}
+		vertList[i] = ConvertPoint( vertList[i] );
 	}
 
 	// add the vertex list to the lta file
@@ -708,62 +605,95 @@ void MAXWorldExport::ExportNodeAsBrush( Mesh* mesh, Mtl* material, Matrix3& xfor
 	// add the faces in the mesh
 	for( i = 0; i < topoMesh.FNum(); i++ )
 	{
-		LTAPoly curPoly;
-
 		MNFace* curFace = topoMesh.F( i );
+		MNMapFace* tvFace = topoMesh.MF( 1, i );
+		bool goodTex;
 
-		// generate plane equation info
-		v0 = vertList[curFace->vtx[0]].pos;
-		v1 = vertList[curFace->vtx[1]].pos;
-		v2 = vertList[curFace->vtx[2]].pos;
-		if( negParity )
-			curPoly.n = CrossProd( (v1-v0), (v2-v0) );
-		else
-			curPoly.n = CrossProd( (v2-v0), (v1-v0) );
-		curPoly.n = Normalize( curPoly.n );
-		curPoly.d = DotProd( curPoly.n, v0 );
-
-		// add the texture info
-		if( exportUVs )
+		// find the texture for this face
+		if( tvFace && exportUVs )
 		{
-			MultiTextureInfo texInfo;
-			GetMultiTextureInfo( material, curFace->material, texInfo );
+			goodTex = true;
 
-			bool goodTexInfo = (texInfo.numTextures != 0);
+			Mtl* mtl = material;
+			if( mtl && (mtl->NumSubMtls() != 0) && (mtl->ClassID() == Class_ID(MULTI_CLASS_ID,0)) )
+				mtl = mtl->GetSubMtl( curFace->material % mtl->NumSubMtls() );
 
-			MNMapFace* mapFace[2];
-			mapFace[0] = mapFace[1] = NULL;
-
-			if( texInfo.numTextures >= 1 )
+			if( !mtl || (mtl->ClassID() != Class_ID(DMTL_CLASS_ID,0)) )
+				goodTex = false;
+			else
 			{
-				mapFace[0] = topoMesh.MF( texInfo.mapChannel[0], i );
-				if( !mapFace[0] )
-					goodTexInfo = false;
-			}
-			if( texInfo.numTextures >= 2 )
-			{
-				mapFace[1] = topoMesh.MF( texInfo.mapChannel[1], i );
-				if( !mapFace[1] )
-					goodTexInfo = false;
+				Texmap* tex = mtl->GetSubTexmap( ID_DI );
+				if( !tex || (tex->ClassID() != Class_ID(BMTEX_CLASS_ID,0)) )
+					goodTex = false;
+				else
+				{
+					BitmapTex* bmTex = (BitmapTex*)tex;
+					TCHAR* mapName = bmTex->GetMapName();
+					Bitmap* bitmap = bmTex->GetBitmap( 0 );
+					if( !bitmap )
+						goodTex = false;
+					else
+					{
+						width = bitmap->Width();
+						height = bitmap->Height();
+						bmTex->GetUVGen()->GetUVTransform( uvXForm );
+
+						if( !mapName || (width <= 0) || (height <= 0) )
+							goodTex = false;
+						else
+						{
+							texName = mapName;
+							if( !GenerateTextureName( texName ) )
+								goodTex = false;
+						}
+					}
+				}
 			}
 
-			for( int j = 0; goodTexInfo && (j < texInfo.numTextures); j++ )
-			{
-				tv0 = topoMesh.MV( texInfo.mapChannel[j], mapFace[j]->tv[0] ) * texInfo.uvXForm[j];
-				tv1 = topoMesh.MV( texInfo.mapChannel[j], mapFace[j]->tv[1] ) * texInfo.uvXForm[j];
-				tv2 = topoMesh.MV( texInfo.mapChannel[j], mapFace[j]->tv[2] ) * texInfo.uvXForm[j];
-
-				GenerateOPQ( v0, v1, v2, tv0, tv1, tv2, texInfo.mapWidth[j], texInfo.mapHeight[j], curPoly.o[j], curPoly.p[j], curPoly.q[j] );
-
-				curPoly.textureName[j] = texInfo.texName[j];
-			}
+			if( !goodTex )
+				numImproperFaces++;
+		}
+		else
+		{
+			goodTex = false;
+			if( exportUVs )
+				numImproperFaces++;
 		}
 
-		// dynamically create the index list if there are too many verts
-		if( curFace->deg > STATIC_VERT_INDEX_SIZE )
-			curPoly.indices = new int[curFace->deg];
+		// generate plane equation info
+		v0 = vertList[curFace->vtx[0]];
+		v1 = vertList[curFace->vtx[1]];
+		v2 = vertList[curFace->vtx[2]];
+		if( negParity )
+			n = CrossProd( (v1-v0), (v2-v0) );
 		else
-			curPoly.indices = fixedIndexList;
+			n = CrossProd( (v2-v0), (v1-v0) );
+		n = Normalize( n );
+		d = DotProd( n, v0 );
+
+		Point3 o, p, q;
+		o = Point3( 0.0f, 0.0f, 0.0f );
+		p = Point3( 1.0f, 0.0f, 0.0f );
+		q = Point3( 0.0f, 0.0f, 1.0f );
+
+		// add the texture info
+		if( goodTex )
+		{
+			tv0 = topoMesh.MV( 1, tvFace->tv[0] ) * uvXForm;
+			tv1 = topoMesh.MV( 1, tvFace->tv[1] ) * uvXForm;
+			tv2 = topoMesh.MV( 1, tvFace->tv[2] ) * uvXForm;
+
+			GenerateOPQ( v0, v1, v2, tv0, tv1, tv2, width, height, o, p, q );
+		}
+		else
+			texName = "Default";
+
+		// dynamically create the index list if there are too many verts
+		int* indices;
+		if( curFace->deg > STATIC_VERT_INDEX_SIZE )
+			indices = new int[curFace->deg];
+		else
+			indices = fixedIndexList;
 
 		// setup the order we index the verts in based on transform parity
 		int curIndex, indexDelta;
@@ -781,18 +711,16 @@ void MAXWorldExport::ExportNodeAsBrush( Mesh* mesh, Mtl* material, Matrix3& xfor
 		// add indices to the index list
 		for( int j = 0; j < curFace->deg; j++ )
 		{
-			curPoly.indices[curIndex] = curFace->vtx[j];
+			indices[curIndex] = curFace->vtx[j];
 			curIndex += indexDelta;
 		}
 
-		curPoly.numVerts = curFace->deg;
-
 		// add the polygon to the lta file
-		file.AddBrushPolygon( curPoly );
+		file.AddBrushPolygon( curFace->deg, indices, n, d, o, p, q, texName );
 
 		// delete dynamically allocated index list
 		if( curFace->deg > STATIC_VERT_INDEX_SIZE )
-			delete [] curPoly.indices;
+			delete [] indices;
 	}
 
 	delete [] vertList;
@@ -1053,24 +981,7 @@ bool MAXWorldExport::ExportAnimNode( AnimNode* animNode, LTAFile& file, TSTR& ke
 	
 	keyBaseName = baseName + "Key";
 
-	TSTR keyFramerKeyBaseName;
-	TSTR keyFramerWorldModelName;
-
-	if( asPrefab )
-	{
-		keyFramerWorldModelName = TSTR("#.") + worldModelName;
-		if( !externalKeyFile )
-			keyFramerKeyBaseName = TSTR("#.") + keyBaseName;
-		else
-			keyFramerKeyBaseName = keyBaseName;
-	}
-	else
-	{
-		keyFramerKeyBaseName = keyBaseName;
-		keyFramerWorldModelName = worldModelName;
-	}
-
-	file.AddKeyFramer( keyFramerName, keyFramerWorldModelName, keyFramerKeyBaseName, keyFilePath, nodePos );
+	file.AddKeyFramer( keyFramerName, worldModelName, keyBaseName, keyFilePath, nodePos );
 
 	int curKeyNum = 0;
 	TSTR curKeyName;
@@ -1165,9 +1076,6 @@ bool MAXWorldExport::ExportKeyFramerGroups( LTAFile& file )
 			AnimNode* curAnimNode = *it;
 			TSTR baseName( curAnimNode->objNode->GetName() );
 			TSTR keyFramerName = baseName + "KF";
-
-			if( asPrefab )
-				keyFramerName = TSTR("#.") + keyFramerName;
 
 			keyFramerNames.push_back( keyFramerName );
 		}

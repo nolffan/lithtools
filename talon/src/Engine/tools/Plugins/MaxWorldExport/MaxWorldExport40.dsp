@@ -47,8 +47,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\..\built\Release\tools\Plugins\MaxWorldExport40"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maxsdk-4.0\include" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX4_SDK" /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maxsdk-4.0\include" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX4_SDK" /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\..\..\LT2\lithshared\stl" /I "t:\maxsdk-4.0\include" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX4_SDK" /Gy /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "..\..\..\..\LT2\lithshared\stl" /I "t:\maxsdk-4.0\include" /I "..\..\..\sdk\inc" /I "..\..\..\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "USES_MAX4_SDK" /Gy /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -57,8 +57,8 @@ BSC32=bscmake.exe
 # ADD BASE BSC32 /nologo
 # ADD BSC32 /nologo
 LINK32=link.exe
-# ADD BASE LINK32 comctl32.lib maxutil.lib core.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldExport40.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldExport\MaxWorldExport40.dle" /libpath:"t:\maxsdk-4.0\lib"
-# ADD LINK32 comctl32.lib maxutil.lib core.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldExport40.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldExport\MaxWorldExport40.dle" /libpath:"t:\maxsdk-4.0\lib"
+# ADD BASE LINK32 comctl32.lib kernel32.lib user32.lib maxutil.lib core.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldExport40.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldExport\MaxWorldExport40.dle" /libpath:"t:\maxsdk-4.0\lib"
+# ADD LINK32 comctl32.lib kernel32.lib user32.lib maxutil.lib core.lib geom.lib bmm.lib mesh.lib paramblk2.lib mnmath.lib /nologo /subsystem:windows /dll /machine:I386 /nodefaultlib:"libcmt.lib" /nodefaultlib:"libc.lib" /def:".\MaxWorldExport40.def" /out:"..\..\..\built\Release\tools\Plugins\MaxWorldExport\MaxWorldExport40.dle" /libpath:"t:\maxsdk-4.0\lib"
 
 !ENDIF 
 

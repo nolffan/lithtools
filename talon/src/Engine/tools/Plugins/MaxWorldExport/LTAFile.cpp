@@ -58,7 +58,7 @@ LTAFile::LTAFile( bool externalKeys )
 		N(),
 			A(
 			N(),
-				N("versioncode 2")
+				N("versioncode 1")
 			)
 		)
 	);
@@ -1139,7 +1139,7 @@ void LTAFile::AddKeyWorldFile( const char* name, float time, const Point3& pos, 
 	if( strlen( command ) )
 		propCommand.printf( "string \"Command\" (notifychange) (data \"%s\")", command );
 	else
-		propCommand = "string \"Command\" (notifychange)";
+		propCommand = "string \"Command\" (notifychange) ()";
 
 	// add the property to the property tree
 	A(
@@ -1267,6 +1267,10 @@ void LTAFile::AddKeyWorldFile( const char* name, float time, const Point3& pos, 
 	);
 }
 
+// talon: near (declaration count), both builds: size-exact, only the order of two
+// talon: loads at the loop head (ecx/edx) differs. A typedef sweep at the top of this
+// talon: file matches it at many residues (+1, +3, +7, +14, +27..31, +36..53 mod 64),
+// talon: so it moves with the shared headers (ltamgr, sdk/inc); recheck once they settle.
 // add a new group object as a child, and sets the root to that object
 void LTAFile::AddKeyFramerGroup( const char* name, std::vector<TSTR>& keyFramerNames )
 {
@@ -1633,37 +1637,32 @@ void LTAFile::AscendTree( void )
 }
 
 // add polygon info to the current polyhedron
-void LTAFile::AddBrushPolygon( const LTAPoly& poly )
+void LTAFile::AddBrushPolygon( int numVerts, const int* indices, const Point3& n, float d, const Point3& o, const Point3& p, const Point3& q, const TSTR& textureName )
 {
-	assert( poly.numVerts && poly.indices );
+	assert( numVerts && indices );
 
-	TSTR sf, sn, sd, so[2], sp[2], sq[2];
-	TSTR stex[2];
+	TSTR sf, sn, sd, so, sp, sq;
+	TSTR stex;
 	TSTR sbrushindex;
 	TSTR snodeid;
 
 	// setup the vert index string
 	TSTR sIndex;
 	sf.printf( "f" );
-	for( int i = 0; i < poly.numVerts; i++ )
+	for( int i = 0; i < numVerts; i++ )
 	{
-		sIndex.printf( " %d", poly.indices[i] );
+		sIndex.printf( " %d", indices[i] );
 		sf += sIndex;
 	}
 
 	// setup strings for the polygon
-	sn.printf( "n %f %f %f", poly.n.x, poly.n.y, poly.n.z );
-	sd.printf( "dist %f", poly.d );
+	sn.printf( "n %f %f %f", n.x, n.y, n.z );
+	sd.printf( "dist %f", d );
 
-	so[0].printf( "%f %f %f", poly.o[0].x, poly.o[0].y, poly.o[0].z );
-	sp[0].printf( "%f %f %f", poly.p[0].x, poly.p[0].y, poly.p[0].z );
-	sq[0].printf( "%f %f %f", poly.q[0].x, poly.q[0].y, poly.q[0].z );
-	stex[0].printf( "name \"%s\"", poly.textureName[0] );
-
-	so[1].printf( "%f %f %f", poly.o[1].x, poly.o[1].y, poly.o[1].z );
-	sp[1].printf( "%f %f %f", poly.p[1].x, poly.p[1].y, poly.p[1].z );
-	sq[1].printf( "%f %f %f", poly.q[1].x, poly.q[1].y, poly.q[1].z );
-	stex[1].printf( "name \"%s\"", poly.textureName[1] );
+	so.printf( "%f %f %f", o.x, o.y, o.z );
+	sp.printf( "%f %f %f", p.x, p.y, p.z );
+	sq.printf( "%f %f %f", q.x, q.y, q.z );
+	stex.printf( "name \"%s\"", textureName );
 
 	// add the editpoly node
 	A(
@@ -1673,9 +1672,6 @@ void LTAFile::AddBrushPolygon( const LTAPoly& poly )
 		A(
 		A(
 		A(
-		 A(
-		 A(
-		 A(
 		 A(
 		 A(
 		N(),
@@ -1707,17 +1703,17 @@ void LTAFile::AddBrushPolygon( const LTAPoly& poly )
 			),
 				A(
 				N(),
-					N(so[0])
+					N(so)
 				)
 			),
 				A(
 				N(),
-					N(sp[0])
+					N(sp)
 				)
 			),
 				A(
 				N(),
-					N(sq[0])
+					N(sq)
 				)
 			),
 				A(
@@ -1727,7 +1723,7 @@ void LTAFile::AddBrushPolygon( const LTAPoly& poly )
 			),
 				A(
 				N(),
-					N(stex[0])
+					N(stex)
 				)
 			)
 		),
@@ -1740,72 +1736,12 @@ void LTAFile::AddBrushPolygon( const LTAPoly& poly )
 			N(),
 				N("shade 0 0 0")
 			)
-		),
-			A(
-			N(),
-				N("physicsmaterial \"Default\"")
-			)
-		),
-			A(
-			N(),
-				N("surfacekey \"\"")
-			)
-		),
-			A(
-			A(
-			N(),
-				N("textures")
-			),
-				A(
-				N(),
-					A(
-					A(
-					N(),
-						N("1")
-					),
-						A(
-						A(
-						A(
-						A(
-						A(
-						A(
-						N(),
-							N("textureinfo")
-						),
-							A(
-							N(),
-								N(so[1])
-							)
-						),
-							A(
-							N(),
-								N(sp[1])
-							)
-						),
-							A(
-							N(),
-								N(sq[1])
-							)
-						),
-							A(
-							N(),
-								N("sticktopoly 1")
-							)
-						),
-							A(
-							N(),
-								N(stex[1])
-							)
-						)
-					)
-				)
-			)
 		)
 	);
 }
 
 // add vertex info to the current polyhedron
-void LTAFile::AddBrushVertices( int numVerts, const LTAVert* verts )
+void LTAFile::AddBrushVertices( int numVerts, const Point3* verts )
 {
 	// add the pointlist node
 	A(
@@ -1817,7 +1753,7 @@ void LTAFile::AddBrushVertices( int numVerts, const LTAVert* verts )
 	for( int i = 0; i < numVerts; i++ )
 	{
 		TSTR vertOut;
-		vertOut.printf( "%f %f %f %d %d %d %d", verts[i].pos.x, verts[i].pos.y, verts[i].pos.z, verts[i].r, verts[i].g, verts[i].b, verts[i].a );
+		vertOut.printf( "%f %f %f", verts[i].x, verts[i].y, verts[i].z );
 		
 		A(
 		curPointList,
@@ -1842,17 +1778,3 @@ int LTAFile::Output( const TSTR& fileName, const TSTR& keyFileName )
 	return success;
 }
 
-
-LTAPoly::LTAPoly()
-{
-	numVerts = 0;
-	indices = NULL;
-	n = Point3( 0.0f, 0.0f, 0.0f );
-	d = 0.0f;
-
-	o[0] = o[1] = Point3( 0.0f, 0.0f, 0.0f );
-	p[0] = p[1] = Point3( 1.0f, 0.0f, 0.0f );
-	q[0] = q[1] = Point3( 0.0f, 0.0f, 1.0f );
-
-	textureName[0] = textureName[1] =  _T("Default");
-}

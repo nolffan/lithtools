@@ -17,7 +17,7 @@ using std::max;
 
 // config filename and version
 #define CFG_FILENAME	"MAXWorldExport.cfg"
-#define CFG_VERSION		7
+#define CFG_VERSION		6
 
 
 // number of verts we use a static index array for, any over this switch to dynamic
@@ -35,7 +35,6 @@ extern ClassDesc* GetMAXWorldExportDesc();
 
 // forward declarations
 struct AnimNode;
-struct MultiTextureInfo;
 
 
 // the actual exporter class definition
@@ -45,7 +44,6 @@ public:
 	// dialog options
 	bool objectSpace;				// true if object pivot points are placed at the DEdit origin
 	bool exportAnimations;			// true if animated objects are exported as keyframed worldmodels
-	bool asPrefab;					// true if keyframers should be setup for use in a prefab
 	bool forceKeys;					// true if animated objects have keyframes forced at even intervals
 	bool includeDefinedKeys;		// true if defined keys should be used in addition to forced keys
 	bool externalKeyFile;			// true if keys should be placed in an external file (no key objects will be created)
@@ -119,8 +117,6 @@ private:
 	bool GenerateTextureName( TSTR& name );
 	TSTR LowercaseFileExtension( const TCHAR* name );
 	void ExternalKeyFileName( const TCHAR* name, TSTR& projectRelative, TSTR& fullPath, TSTR& fullPathDir );
-	void GetMultiTextureInfo( Mtl* material, int matID, MultiTextureInfo& texInfo );
-	bool GetTextureInfo( BitmapTex* tex, int texNum, MultiTextureInfo& texInfo );
 
 	// export the animated brushes
 	bool ExportAnimNodes( LTAFile& file, TSTR& keyFilePath );
@@ -156,13 +152,3 @@ struct AnimNode
 	std::map<TimeValue,TSTR> noteKeys;	// times with associated key strings
 };
 
-
-struct MultiTextureInfo
-{
-	int numTextures;
-	TSTR texName[2];
-	int mapWidth[2];
-	int mapHeight[2];
-	Matrix3 uvXForm[2];
-	int mapChannel[2];
-};

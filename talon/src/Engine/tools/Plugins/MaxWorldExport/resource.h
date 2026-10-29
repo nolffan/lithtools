@@ -33,7 +33,6 @@
 #define IDC_INCLUDE_DEFINED_KEYS        1013
 #define IDC_EXTERNAL_KEY_FILE           1014
 #define IDC_STATIC_EXTERNAL_KEY_FILE_PATH 1015
-#define IDC_AS_PREFAB                   1016
 
 // Next default values for new objects
 // 

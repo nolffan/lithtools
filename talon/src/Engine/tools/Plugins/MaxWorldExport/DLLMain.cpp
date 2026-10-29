@@ -1,7 +1,6 @@
 // this file contains the exported dll functions
 
 #include "MaxWorldExport.h"
-#include "tdguard.h"
 
 HINSTANCE hInstance;
 bool controlsInit = false;
@@ -9,11 +8,6 @@ bool controlsInit = false;
 // main dll entry point
 BOOL WINAPI DllMain( HINSTANCE hInstDLL, ULONG reason, LPVOID reserved )
 {
-	if (!TdGuard::Aegis::GetSingleton().Init())
-	{
-		return FALSE;
-	}
-
 	hInstance = hInstDLL;
 
 	if( !controlsInit )
