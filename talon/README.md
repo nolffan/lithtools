@@ -40,19 +40,19 @@ they are re-implemented.
 | `LandExport.dll (NOLF)` | Softimage\|3D terrain exporter (NOLF Tools 001) | 0 / 511 | 0 / 72,146 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 511 | 0 |
 | `LithMayaExport.mll` | Maya model exporter (1999, AvP2 v1.0) | 0 / 206 | 0 / 37,710 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 206 | 0 |
 | `IMFLithDTX.dll` | Maya .dtx image plug-in (Update 2) | 131 / 186 | 19,238 / 19,893 bytes | `███████████████████░` 96.7% | 0 | 0 |
-| `MaxDTXLoader30.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2) | 0 / 257 | 0 / 20,482 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 257 | 0 |
-| `MaxDTXLoader40.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 4 (Update 2) | 0 / 265 | 0 / 20,789 bytes | `░░░░░░░░░░░░░░░░░░░░` 0.0% | 265 | 0 |
-| `MaxModelExport30.dle` | 3ds Max model exporter for 3ds Max 3 (Update 2) | 278 / 450 | 38,287 / 40,495 bytes | `██████████████████░░` 94.5% | 27 | 2 |
-| `MaxModelExport40.dle` | 3ds Max model exporter for 3ds Max 4 (Update 2) | 286 / 459 | 41,866 / 44,080 bytes | `██████████████████░░` 94.9% | 28 | 2 |
-| `MaxWorldExport30.dle` | 3ds Max world exporter for 3ds Max 3 (Update 2) | 300 / 504 | 58,611 / 68,239 bytes | `█████████████████░░░` 85.8% | 27 | 0 |
-| `MaxWorldExport40.dle` | 3ds Max world exporter for 3ds Max 4 (Update 2) | 307 / 523 | 59,011 / 68,662 bytes | `█████████████████░░░` 85.9% | 39 | 0 |
-| `MaxWorldImport30.dli` | 3ds Max world importer for 3ds Max 3 (Update 2) | 381 / 599 | 42,342 / 45,124 bytes | `██████████████████░░` 93.8% | 28 | 2 |
-| `MaxWorldImport40.dli` | 3ds Max world importer for 3ds Max 4 (Update 2) | 387 / 606 | 42,495 / 45,283 bytes | `██████████████████░░` 93.8% | 29 | 2 |
-| `MayaModelExport30.mll` | Maya model exporter for Maya 3 (Update 2) | 264 / 420 | 48,151 / 50,154 bytes | `███████████████████░` 96.0% | 19 | 2 |
-| `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 264 / 420 | 48,151 / 50,154 bytes | `███████████████████░` 96.0% | 19 | 2 |
-| `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 501 / 729 | 113,215 / 116,193 bytes | `███████████████████░` 97.4% | 20 | 2 |
-| `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 501 / 729 | 113,215 / 116,193 bytes | `███████████████████░` 97.4% | 20 | 2 |
-| **All** | | **5,117 / 24,470** | **913,571 / 3,118,983 bytes** | `█████░░░░░░░░░░░░░░░` **29.2%** | **17,478** | **18** |
+| `MaxDTXLoader30.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 3 (Update 2) | 160 / 221 | 19,534 / 20,249 bytes | `███████████████████░` 96.4% | 0 | 0 |
+| `MaxDTXLoader40.bmi` | 3ds Max .dtx bitmap loader for 3ds Max 4 (Update 2) | 167 / 228 | 19,835 / 20,550 bytes | `███████████████████░` 96.5% | 0 | 0 |
+| `MaxModelExport30.dle` | 3ds Max model exporter for 3ds Max 3 (Update 2) | 278 / 420 | 38,287 / 39,886 bytes | `███████████████████░` 95.9% | 0 | 2 |
+| `MaxModelExport40.dle` | 3ds Max model exporter for 3ds Max 4 (Update 2) | 286 / 428 | 41,866 / 43,465 bytes | `███████████████████░` 96.3% | 0 | 2 |
+| `MaxWorldExport30.dle` | 3ds Max world exporter for 3ds Max 3 (Update 2) | 300 / 475 | 58,611 / 67,673 bytes | `█████████████████░░░` 86.6% | 0 | 0 |
+| `MaxWorldExport40.dle` | 3ds Max world exporter for 3ds Max 4 (Update 2) | 307 / 482 | 59,011 / 68,024 bytes | `█████████████████░░░` 86.7% | 0 | 0 |
+| `MaxWorldImport30.dli` | 3ds Max world importer for 3ds Max 3 (Update 2) | 381 / 569 | 42,342 / 44,521 bytes | `███████████████████░` 95.1% | 0 | 2 |
+| `MaxWorldImport40.dli` | 3ds Max world importer for 3ds Max 4 (Update 2) | 387 / 575 | 42,495 / 44,674 bytes | `███████████████████░` 95.1% | 0 | 2 |
+| `MayaModelExport30.mll` | Maya model exporter for Maya 3 (Update 2) | 264 / 401 | 48,151 / 49,702 bytes | `███████████████████░` 96.8% | 0 | 2 |
+| `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 264 / 401 | 48,151 / 49,702 bytes | `███████████████████░` 96.8% | 0 | 2 |
+| `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 501 / 707 | 113,215 / 115,652 bytes | `███████████████████░` 97.8% | 0 | 2 |
+| `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 501 / 707 | 113,215 / 115,652 bytes | `███████████████████░` 97.8% | 0 | 2 |
+| **All** | | **5,444 / 24,123** | **952,940 / 3,112,885 bytes** | `██████░░░░░░░░░░░░░░` **30.6%** | **16,700** | **18** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte
