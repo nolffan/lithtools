@@ -51,7 +51,6 @@ private:
 	double scale;						// scale value for converting from Maya units to LithTech units
 	bool usePlaybackRange;				// true if the animation playback range should be used
 	bool ignoreBindPose;				// true if the shape is taken from the first frame rather than the bind pose (also allows post-deformer tweaks)
-	bool exportNormals;					// true if normals should be written to the file
 	bool exportWorldNode;				// true if a world node should be added at the top of the hierarchy (good for multiple skeletons, etc.)
 	bool appendAnim;					// true if we are appending an animation to the file
 	bool selectedOnly;					// true if we are exporting selected nodes only
@@ -171,8 +170,6 @@ private:
 
 	// write out a list of keyframes to the lta file (adjusts times to 0 based times)
 	bool WriteFrameList( list<double>& frameList );
-	// helper when bad things happen
-	bool ExportPieceMeshHelper( MStatus mstatus, int poly, int vert );
 
 
 };

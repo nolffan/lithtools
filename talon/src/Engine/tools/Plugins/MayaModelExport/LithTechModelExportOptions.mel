@@ -36,7 +36,6 @@ global proc int LithTechModelExportOptions ( string $parent, string $action, str
 			textFieldGrp -label "Animation Name:" -text "baseAnim" animName;
 			floatFieldGrp -label "Scale Modifier:" -value1 1.0 -precision 3 scale;
 			checkBox -label "Ignore Bind Pose" -align "left" -value off ignoreBindPose;
-			checkBox -label "Export Normals" -align "left" -value on exportNormals;
 			checkBox -label "Export World Node" -align "left" -value on exportWorldNode;
 			checkBox -label "Use Playback Range" -align "left" -value on usePlaybackRange;
 			checkBox -label "Use Maya Texture Information" -align "left" -value off -onCommand "textFieldButtonGrp -edit -enable true baseTexPath" -offCommand "textFieldButtonGrp -edit -enable false baseTexPath" useTextureInfo;
@@ -93,14 +92,6 @@ global proc int LithTechModelExportOptions ( string $parent, string $action, str
 						checkBox -edit -value on ignoreBindPose;
 				}
 
-				if( $optionBreakDown[0] == "exportNormals" )
-				{
-					if( $optionBreakDown[1] == "0" )
-						checkBox -edit -value off exportNormals;
-					else
-						checkBox -edit -value on exportNormals;
-				}
-
 				if( $optionBreakDown[0] == "exportWorldNode" )
 				{
 					if( $optionBreakDown[1] == "0" )
@@ -134,7 +125,6 @@ global proc int LithTechModelExportOptions ( string $parent, string $action, str
 		$currentOptions += ( ";animName=" + `textFieldGrp -query -text animName` );
 		$currentOptions += ( ";usePlaybackRange=" + `checkBox -query -value usePlaybackRange` );
 		$currentOptions += ( ";ignoreBindPose=" + `checkBox -query -value ignoreBindPose` );
-		$currentOptions += ( ";exportNormals=" + `checkBox -query -value exportNormals` );
 		$currentOptions += ( ";exportWorldNode=" + `checkBox -query -value exportWorldNode` );
 
 		eval( $resultCallback + " \"" + $currentOptions + "\"" );

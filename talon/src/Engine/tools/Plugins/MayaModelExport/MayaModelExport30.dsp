@@ -24,7 +24,10 @@ CFG=MayaModelExport30 - Win32 Release
 # talon: built 2002-03-28), written for this project from Build 69's MayaModelExport.vcproj,
 # talon: "Release Maya30": the Maya 3.0 developer kit (toolchains/maya-3.0-devkit), /MD,
 # talon: /Ob1, no TdGuard.lib (Touchdown's, later); VC6 SP5's compiler (8966) and
-# talon: linker.
+# talon: linker. As shipped (2002), not as Build 69: STLport (LT2 lithshared's, threads
+# talon: on) ahead of the compiler's STL, /YX (header inline functions compiled at the
+# talon: end of the file, which drops ~SkinNode's vector EH state), and no /GF
+# talon: (string literals in .data).
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -47,8 +50,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\..\built\Release\tools\Plugins\MayaModelExport30"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /GF /Gy /FD /c
-# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /GF /Gy /FD /c
+# ADD BASE CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /Gy /YX /FD /c
+# ADD CPP /nologo /MD /W3 /GX /O2 /Ob1 /I "t:\maya-3.0-devkit\include" /I "..\..\..\..\LT2\lithshared\stl" /I "..\..\..\libs\ltamgr" /I "..\..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "NT_PLUGIN" /D "USES_MAYA3_SDK" /Gy /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"

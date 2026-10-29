@@ -46,7 +46,6 @@ MStatus ModelFileTranslator::writer( const MFileObject& file, const MString& opt
 	int cmdResult = 0;
 
 	bool ignoreBindPose = false;
-	bool exportNormals = false;
 	bool exportWorldNode = false;
 	bool usePlaybackRange = false;
 	bool useTextureInfo = false;
@@ -85,11 +84,6 @@ MStatus ModelFileTranslator::writer( const MFileObject& file, const MString& opt
 				if( curOption[1].asInt() > 0 )
 					ignoreBindPose = true;
 			}
-			else if( curOption[0] == MString( "exportNormals" ) )
-			{
-				if( curOption[1].asInt() > 0 )
-					exportNormals = true;
-			}
 			else if( curOption[0] == MString( "exportWorldNode" ) )
 			{
 				if( curOption[1].asInt() > 0 )
@@ -125,9 +119,6 @@ MStatus ModelFileTranslator::writer( const MFileObject& file, const MString& opt
 
 	if( ignoreBindPose )
 		cmdString += "-ignoreBindPose ";
-
-	if( exportNormals )
-		cmdString += "-exportNormals ";
 
 	if( exportWorldNode )
 		cmdString += "-exportWorldNode ";

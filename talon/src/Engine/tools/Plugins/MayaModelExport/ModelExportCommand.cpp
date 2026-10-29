@@ -18,7 +18,6 @@
 #include <maya/MFnMatrixData.h>
 #include "ltautil.h"
 #include "ModelExportCommand.h"
-#include "tdguard.h"
 
 #pragma warning(disable : 4244 4018)
 
@@ -63,7 +62,6 @@ ModelExportCommand::ModelExportCommand()
 	usePlaybackRange = false;
 	appendAnim = false;
 	ignoreBindPose = false;
-	exportNormals = false;
 	exportWorldNode = false;
 	selectedOnly = true;
 
@@ -99,7 +97,6 @@ MSyntax ModelExportCommand::newSyntax( void )
 	syntax.addFlag( "sc", "scale", MSyntax::kDouble );
 	syntax.addFlag( "pr", "usePlaybackRange" );
 	syntax.addFlag( "ib", "ignoreBindPose" );
-	syntax.addFlag( "en", "exportNormals" );
 	syntax.addFlag( "wn", "exportWorldNode" );
 	syntax.addFlag( "ap", "append" );
 
@@ -173,12 +170,6 @@ MStatus ModelExportCommand::parseArgs( const MArgList& args )
 		ignoreBindPose = true;
 	}
 
-	// should normals be exported
-	if( argData.isFlagSet( "en" ) )
-	{
-		exportNormals = true;
-	}
-
 	// should the world node be added to the model node hierarchy
 	if( argData.isFlagSet( "wn" ) )
 	{
@@ -221,11 +212,6 @@ MStatus ModelExportCommand::parseArgs( const MArgList& args )
 
 MStatus ModelExportCommand::doIt( const MArgList& args )
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		return MStatus::kFailure;
-	}
-
 	MStatus status;
 
 	// default to failure
@@ -871,16 +857,13 @@ bool ModelExportCommand::ExportPieceMesh( ExpNode* expNode, const MDagPath& path
 	char tmpStr[256];
 	MStatus status;
 	MPoint curVert;
-	MFloatVector curNormal;
 
 #ifdef USES_MAYA3_SDK
 	long textureIndices[4];
 	long renderStyleIndex;
-	long renderPriority;
 #else
 	int textureIndices[4];
 	int renderStyleIndex;
-	int renderPriority;
 #endif
 
 	CheckError( ltaWriter.IsValid() );
@@ -924,49 +907,6 @@ bool ModelExportCommand::ExportPieceMesh( ExpNode* expNode, const MDagPath& path
 
 		ltaWriter.EndNode();	// pop vertex list node
 		ltaWriter.EndNode();	// pop vertex parent node
-	}
-
-	// calculate vertex normals (multiple normals at one vert will overwrite each other since normals are one-to-one with verts)
-	MFloatVectorArray normals( numVerts );
-
-	MFloatVectorArray polyVertNormals;
-	status = mesh.getNormals( polyVertNormals, MSpace::kWorld );
-	CheckError( status );
-	MItMeshPolygon polyIter( mesh.object() );
-
-	for( ; !polyIter.isDone(); polyIter.next() )
-	{
-		MIntArray polyVerts;
-		polyIter.getVertices( polyVerts );
-
-		for( int curPolyVert = 0; curPolyVert < polyVerts.length(); ++curPolyVert )
-		{
-			int normalIndex = polyIter.normalIndex( curPolyVert );
-			normals[polyVerts[curPolyVert]] = polyVertNormals[normalIndex];
-			normals[polyVerts[curPolyVert]].normalize();
-		}
-	}
-
-	// print out normal info
-	if( (numVerts > 0) && exportNormals )
-	{
-		ltaWriter.BeginNode();	// push normals parent node
-		ltaWriter.Write( "normals" );
-
-		ltaWriter.BeginNode();	// push normals list node
-
-		// write the normal data
-		for( i = 0; i < numVerts; ++i )
-		{
-			ltaWriter.BeginNode();	// push current normal node
-			curNormal = normals[i];
-			sprintf( tmpStr, "%f %f %f", -curNormal.x, curNormal.y, curNormal.z );
-			ltaWriter.Write( tmpStr );
-			ltaWriter.EndNode();	// pop current normal node
-		}
-
-		ltaWriter.EndNode();	// pop normals list node
-		ltaWriter.EndNode();	// pop normals parent node
 	}
 
 	// print out uv info
@@ -1041,22 +981,9 @@ bool ModelExportCommand::ExportPieceMesh( ExpNode* expNode, const MDagPath& path
 
 			for( int j = 0; j < numPolyVerts-2; j++ )
 			{
-
-				if ( !ExportPieceMeshHelper( mesh.getPolygonUVid( i, 0, curUVids[0]), i, 0 ) )
-				{
-					return false;
-				}
-
-				if ( !ExportPieceMeshHelper( mesh.getPolygonUVid( i, j+2, curUVids[1]), i, j+2 ) )
-				{
-					return false;
-				}
-
-				if ( !ExportPieceMeshHelper( mesh.getPolygonUVid( i, j+1, curUVids[2]), i, j+1 ) )
-				{
-					return false;
-				}
-
+				mesh.getPolygonUVid( i, 0, curUVids[0] );
+				mesh.getPolygonUVid( i, j+2, curUVids[1] );
+				mesh.getPolygonUVid( i, j+1, curUVids[2] );
 				sprintf( tmpStr, "%d %d %d", curUVids[0], curUVids[1], curUVids[2] );
 				ltaWriter.Write( tmpStr );
 				ltaWriter.BreakLine();
@@ -1122,18 +1049,6 @@ bool ModelExportCommand::ExportPieceMesh( ExpNode* expNode, const MDagPath& path
 		sprintf( tmpStr, "%d", renderStyleIndex );
 		ltaWriter.Write( tmpStr );
 		ltaWriter.EndNode();	// pop renderstyle-index node
-	}
-
-	// check for renderpriority custom attribute
-	plug = dagNode.findPlug( "RenderPriority", &status );
-
-	if( status && plug.getValue( renderPriority ) )
-	{
-		ltaWriter.BeginNode();	// push render-priority node
-		ltaWriter.Write( "render-priority" );
-		sprintf( tmpStr, "%d", renderPriority );
-		ltaWriter.Write( tmpStr );
-		ltaWriter.EndNode();	// pop render-priority node
 	}
 
 	ltaWriter.EndNode();	// pop shape node
@@ -2153,33 +2068,4 @@ bool ModelExportCommand::WriteFrameList( list<double>& frameList )
 	ltaWriter.EndNode();	// pop outer keyframe node
 
 	return true;
-}
-
-// helper when bad things happen
-bool ModelExportCommand::ExportPieceMeshHelper( MStatus mstatus, int poly, int vert )
-{
-	char szTemp[256];
-	sprintf(szTemp,"PolyId:%d VertIndex:%d ", poly , vert );
-
-	if ( mstatus != MS::kSuccess )
-	{
-		if (mstatus == MS::kInvalidParameter)
-		{
-			strcat ( szTemp, "getPolygonUVid() Invalid polygonId or vertexIndex specified. Need to remap UV's?" );
-		}
-		else
-		{
-			strcat ( szTemp,"getPolygonUVid() failure. Need to remap UV's?");
-		}
-
-		CheckErrorMsg(false, szTemp );
-
-
-		return false;
-	}
-	else
-	{
-		return true;
-	}
-
 }

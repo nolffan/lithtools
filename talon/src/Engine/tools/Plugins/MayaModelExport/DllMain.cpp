@@ -2,7 +2,6 @@
 #include <maya\MStatus.h>
 #include "ModelExportCommand.h"
 #include "ModelFileTranslator.h"
-#include "tdguard.h"
 
 // verify that we are compiling against the correct Maya SDK
 #if !defined(MAYA_API_VERSION)
@@ -43,11 +42,6 @@
 // make the plugin visible to maya
 __declspec(dllexport) MStatus initializePlugin( MObject obj )
 {
-	if (!TdGuard::Aegis::GetSingleton().Init())
-	{
-		return MStatus::kFailure;
-	}
-
 	MFnPlugin plugin( obj, "LithTech, Inc.", "3.2", "Any" );
 
 	// register the lithtechModelExport command
