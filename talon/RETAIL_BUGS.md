@@ -396,3 +396,14 @@ other export path's `DeleteThis()`: across the plug-in/Max heap boundary
 that can corrupt Max's heap.
 
 Not fixed yet.
+
+### The Max DTX loader reports success when it fails to store the pixels
+
+MaxDTXLoader30/40.bmi 0x10002030 (DTXLoader::Load,
+src/Engine/tools/Plugins/MaxDTXLoader/MaxDTXLoader.cpp; identical). When
+`BitmapStorage::PutPixels` fails for a row, Load jumps to its cleanup and
+returns NULL, but `*status` is still the BMMRES_SUCCESS it set on entry:
+Max is told the load succeeded and handed no storage. Every other failure
+path sets `*status` through ProcessImageIOError first.
+
+Not fixed yet.
