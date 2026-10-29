@@ -71,8 +71,24 @@ TARGETS = [
                        "src/LT2/lithshared/built/Release/RegMgr/regmgr.lib"],
          app=[(0x00401000, 0x00456750)]),
     dict(label="Processor.exe (NOLF)", what="world processor, NOLF (Tools 001)", kind="image",
-         shipped=NOLF + "/Processor.exe", stem="Processor-nolf", built=None, optional=True,
-         app=[(0x00401000, 0x00469103)]),
+         shipped=NOLF + "/Processor.exe", stem="Processor-nolf",
+         # src/LT2/tools/PreProcessorNOLF/Processor.dsw: its own objects
+         # Intel C/C++ 4.0 /O1, but PreWorld.cpp VC6 SP3 /O1
+         # (0x442f08..0x44ce10); the LT2 libraries, MFC and the C runtime
+         # VC6 SP3's (progress/Processor-nolf-map.md). Its own code
+         # 0x00401000..0x00460f00, then StdLith (l_allocator.obj's
+         # initializers first), zlib 1.0.4 from 0x00463390 and RegMgr
+         # 0x00468d90..0x00469000 (Monolith's, ours to build, so inside the
+         # range); from 0x00469000 MFC's inline functions (CMemoryException's
+         # and CNotSupportedException's constructors and destructors,
+         # AfxGetMainWnd, ??_9 vcall thunks), from 0x00469103 nafxcw.lib's
+         # wincore.obj
+         built="src/LT2/built/Release/tools/ProcessorNOLF/Processor.exe", optional=True,
+         partial_objs=["src/LT2/built/Release/tools/ProcessorNOLF/*.obj",
+                       "src/LT2/lithshared/built/ReleaseNOLF/Lib_StdLith/Lib_StdLith.lib",
+                       "src/LT2/lithshared/built/ReleaseNOLF/Lib_ZLib/Lib_ZLib.lib",
+                       "src/LT2/lithshared/built/ReleaseNOLF/RegMgr/regmgr.lib"],
+         app=[(0x00401000, 0x00469000)]),
     # ---- the resource packer ---------------------------------------------
     # LithRez 1.00 (Nov-6-1998), shipped unchanged in AvP2 Tools v1.0 and
     # NOLF Tools 001 (same SHA-256). Linker 5.10 and no Rich header: Visual

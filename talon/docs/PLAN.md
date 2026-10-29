@@ -347,8 +347,21 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     world properties and texture flags (0x411690..), lighting (0x415cb0..),
     physics and terrain (0x425d20..), the MFC application and its dialogs,
     the main processing driver and DAT output (0x42f900.., 0x43e7e0..).
-- [ ] **Processor.exe (NOLF)**, cl 12.00.8447, 415 KB: 85% the same
-  strings as AvP2's; after AvP2's, as its diff.
+- [ ] **Processor.exe (NOLF)**, 415 KB: 85% the same strings as AvP2's;
+  after AvP2's, as its diff. `progress/Processor-nolf-map.md` is the map.
+  - [x] What built it (2026-10-29): its own code is **Intel C/C++ 4.0**
+    `/O1` (the Rich header's 82 objects without `@comp.id`; icl's frames,
+    padding and `.data1`), but PreWorld.cpp, VC6 SP3 (8447) `/O1`; the LT2
+    libraries, MFC (nafxcw.lib) and the C runtime VC6 SP3's, statically
+    linked. build.mk: `ENV_ICL40`, the NOLF_* library projects, a per-source
+    compiler (`CL_<project>__<source>`, tools/dsp2mk.py).
+  - [x] The project (2026-10-29): `src/LT2/tools/PreProcessorNOLF/
+    Processor.dsw`, a copy of AvP2's with the shared code in
+    `src/LT2/tools/sharedNOLF`, in the image's module order. Links with
+    nothing unresolved. Brought back so far: DAT version 66, no AI volumes,
+    no light groups, NOLF's option names, its resources (decompiled). First
+    score: 1,058 identical of 2,633 (34.8%).
+  - [ ] The modules, by source file (the map's table and differences).
 
 ## 2b. The other tools (on the scoreboard since 2026-10-24)
 
