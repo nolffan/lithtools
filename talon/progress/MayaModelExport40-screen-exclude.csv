@@ -1,0 +1,10 @@
+addr,reason
+0x1000b850,"not game code: the linker's import thunk for ?hasSyntax@MPxCommand@@UBE_NXZ (OpenMaya.dll), jmp [__imp_]"
+0x1000b856,"not game code: the linker's import thunk for ?redoIt@MPxCommand@@UAE?AVMStatus@@XZ (OpenMaya.dll), jmp [__imp_]"
+0x1000b85c,"not game code: the linker's import thunk for ?undoIt@MPxCommand@@UAE?AVMStatus@@XZ (OpenMaya.dll), jmp [__imp_]"
+0x1000b862,"not game code: the linker's import thunk for ?objectChanged@MFnBase@@MAE_NW4Type@MFn@@PAVMStatus@@@Z (OpenMaya.dll), jmp [__imp_]"
+0x1000b868,"not game code: the linker's import thunk for ?setObject@MFnBase@@UAE?AVMStatus@@AAVMObject@@@Z (OpenMaya.dll), jmp [__imp_]"
+0x1000b86e,"not game code: the linker's import thunk for ?setObject@MFnBase@@UAE?AVMStatus@@ABVMObject@@@Z (OpenMaya.dll), jmp [__imp_]"
+0x1000b874,"not game code: the linker's import thunk for ?reader@MPxFileTranslator@@UAE?AVMStatus@@ABVMFileObject@@ABVMString@@W4FileAccessMode@1@@Z (OpenMaya.dll), jmp [__imp_]"
+0x1000b87a,"not game code: the linker's import thunk for ?className@MFnSkinCluster@@MBEPBDXZ (OpenMayaAnim.dll), jmp [__imp_]"
+0x1000b880,"not game code: the linker's import thunk for ?type@MFnSkinCluster@@UBE?AW4Type@MFn@@XZ (OpenMayaAnim.dll), jmp [__imp_]"

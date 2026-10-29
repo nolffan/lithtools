@@ -1,0 +1,6 @@
+addr,reason
+0x1001a470,"not game code: the linker's import thunk for ?hasSyntax@MPxCommand@@UBE_NXZ (OpenMaya.dll), jmp [__imp_]"
+0x1001a476,"not game code: the linker's import thunk for ?redoIt@MPxCommand@@UAE?AVMStatus@@XZ (OpenMaya.dll), jmp [__imp_]"
+0x1001a47c,"not game code: the linker's import thunk for ?undoIt@MPxCommand@@UAE?AVMStatus@@XZ (OpenMaya.dll), jmp [__imp_]"
+0x1001a482,"not game code: the linker's import thunk for ?reader@MPxFileTranslator@@UAE?AVMStatus@@ABVMFileObject@@ABVMString@@W4FileAccessMode@1@@Z (OpenMaya.dll), jmp [__imp_]"
+0x1001a488,"not game code: the linker's import thunk for ?writer@MPxFileTranslator@@UAE?AVMStatus@@ABVMFileObject@@ABVMString@@W4FileAccessMode@1@@Z (OpenMaya.dll), jmp [__imp_]"
