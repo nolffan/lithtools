@@ -14,7 +14,10 @@ with VC6 SP5, and bring it back.
 - [x] **IMFLithDTX.dll** (Maya DTX image plug-in): done. Build 69's source,
   build 51's libraries and SDK headers, no TdGuard, StdLith and MFC's
   import library linked: 105 functions identical, 81 small, none left.
-- [ ] **MaxDTXLoader30/40**: not started (the same set-up as below).
+- [x] **MaxDTXLoader30/40** (2026-10-29): every function identical in
+  both (160, 167), Rich headers and resources too. Build 69's source
+  without TdGuard or its MFC block; its defines kept; /YX, no /GF, no
+  /G6; Lib_StdLith as IMFLithDTX has it.
 - [x] **MaxModelExport30/40**, **MaxWorldExport30/40**,
   **MaxWorldImport30/40**, **MayaModelExport30/40**,
   **MayaWorldExport30/40** (2026-10-29): Build 69's source brought back,
@@ -29,10 +32,10 @@ with VC6 SP5, and bring it back.
   declaration count). What the 2002 builds were: VC6 SP5, STLport 4.0
   first in the includes (the LT2 copy, with threads and old iostreams:
   MSVCIRT.dll), /YX, no /GF (string literals in .data); /G6 for the model
-  exporter only (it halves the world plug-ins' match). Left: the rows
-  still counted unwritten (function-table pieces of matched functions,
-  catch blocks, static initializers: screen them as the Processor's
-  were); the link's folding picks other copies of identical functions
+  exporter only (it halves the world plug-ins' match). The scored
+  ranges end at msvcprt's delop_s.obj (the runtime) and the linker's
+  import-thunk runs are screened out: nothing is left unwritten. Left:
+  the link's folding picks other copies of identical functions
   than Monolith's link, and import order differs; the assert strings name
   Monolith's paths (`..\sdkfiles\max30sdk\include\tab.h`,
   `C:\Jupiter_TO2_SDK\TO2_Build\...`): .data only. One stand-in (38
