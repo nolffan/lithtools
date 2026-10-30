@@ -23,7 +23,7 @@ CDragList::~CDragList()
 }
 
 
-BEGIN_MESSAGE_MAP(CDragList, CListCtrl)
+BEGIN_MESSAGE_MAP(CDragList, CLVEditList)
 	//{{AFX_MSG_MAP(CDragList)
 	ON_NOTIFY_REFLECT(LVN_BEGINDRAG, OnBeginDrag)
 	ON_WM_MOUSEMOVE()
@@ -92,12 +92,12 @@ void CDragList::OnMouseMove(UINT nFlags, CPoint point)
 		m_pDragImage->DragShowNolock(TRUE);
 	}
 	
-	CListCtrl::OnMouseMove(nFlags, point);
+	CLVEditList::OnMouseMove(nFlags, point);
 }
 
 void CDragList::OnLButtonUp(UINT nFlags, CPoint point) 
 {
-	CListCtrl::OnLButtonUp(nFlags, point);
+	CLVEditList::OnLButtonUp(nFlags, point);
 
 	// Drop the item
 	if (m_bDragging)

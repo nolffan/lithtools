@@ -7,6 +7,8 @@
 // DragList.h : header file
 //
 
+#include "LVEditList.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // Drop notification callback
 typedef void (CObject::*FDragListCallback)(int iDropIndex);
@@ -14,7 +16,7 @@ typedef void (CObject::*FDragListCallback)(int iDropIndex);
 /////////////////////////////////////////////////////////////////////////////
 // CDragList window
 
-class CDragList : public CListCtrl
+class CDragList : public CLVEditList	// talon: 2001's base (its ctor calls 0x415ee9 at 0x402463)
 {
 // Construction
 public:
