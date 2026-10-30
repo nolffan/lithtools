@@ -22,8 +22,9 @@ CFG=Talon_ButeMgr - Win32 Release
 
 # talon: ButeMgr as the Talon DEdit (2001-12-06) links it: compiled by VC6 SP5
 # talon: with the Processor Pack (cl 12.00.9044: build.mk's Talon_ButeMgr), /O2,
-# talon: with MFC (its strings are CStrings) linked statically and the LT2
-# talon: STLport (progress/DEdit-map.md). Build 51's sources, the 2001 ones'
+# talon: with MFC (its strings are CStrings) linked statically, the LT2
+# talon: STLport and the LT2 StdLith and Lith headers, which the 2001 DEdit
+# talon: links (progress/DEdit-map.md). Build 51's sources, the 2001 ones'
 # talon: near relatives.
 
 # Begin Project
@@ -46,7 +47,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\built\ReleaseTalon\ButeMgr"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\LT2\lithshared\stl" /I "..\stdlith" /I "..\cryptmgr" /I "..\lith" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\LT2\lithshared\stl" /I "..\..\LT2\lithshared\stdlith" /I "..\cryptmgr" /I "..\..\LT2\lithshared\lith" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /YX /FD /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
