@@ -1,8 +1,10 @@
-// talon: the 2001 lightmap maker (0x415770..0x41e020), written from the
-// image with Build 69's as a guide. Its layout is the constructor's
-// (0x415930, called in DoProcessing on a stack object of 0x19c bytes); the
-// names of members are ours where Build 69 has nothing like them, and
-// m_Unknown_* are members whose use is not known yet.
+// talon: the 2001 lightmap maker, written from the AvP2 image with Build
+// 69's as a guide; the addresses in the comments below are AvP2's
+// processor's. NOLF's (0x422720..0x42a770 in NOLF Tools 001's Processor.exe)
+// is older: its constructor (0x423950) lays it out as AvP2's without
+// m_VertNormals, so m_FrameCode is at 0x180 and m_MathLT at 0x184 (0x188
+// bytes). The names of members are ours where Build 69 has nothing like
+// them, and m_Unknown_* are members whose use is not known yet.
 
 #ifndef __LIGHTMAP_MAKER_H__
 #define __LIGHTMAP_MAKER_H__
@@ -13,8 +15,6 @@
 	#include "world_tree.h"
 	#include "iltprelight.h"
 	#include "prelightmap.h"
-	#include <map>
-	#include <string>
 	#include "worldtreehelper.h"
 
 	class CEditRegion;
@@ -52,11 +52,6 @@
 		BOOL			m_bDirectional;
 		CBaseEditObj	*m_pObject;
 	};
-
-
-	// Lights by name (0x484ee8, LightMapMaker_p1.cpp; the name is ours).
-	typedef std::map<std::string, CLightDef*> TLightNameMap;
-	extern TLightNameMap g_LightsByName;
 
 
 	// A world model as the lighting sees it: in the lightmap maker's world
@@ -157,17 +152,14 @@
 		// Marks every poly as in no light animation yet (0x418f80, the name is ours).
 		void				ClearPolyAnimRefs();
 
-		// m_VertNormals, for each world model (0x418fb0, the name is ours).
-		BOOL				SetupVertNormals();
-
-		// The poly's vertex colors, packed (0x419bd0, the name is ours).
-		BOOL				GetPolyVertexColors(CPrePoly *pPoly, CMoArray<uint32> &colors);
+		// talon: NOLF's vertex lighting, a pass of its own before the
+		// lightmaps (0x424ce0; "ERROR: SetVertexColors failed.", the name
+		// ours from it). AvP2 lights each poly's vertices in its thread
+		// (LightPolygon, GetPolyVertexColors) with averaged vertex normals.
+		BOOL				SetVertexColors();
 
 		// Adds a light for a texture light on pPoly at pos (0x419cf0).
 		void				AddLightDef(TLightDef *pLightDef, PVector pos, CPrePoly *pPoly);
-
-		// Lights the poly's vertices (0x419340).
-		BOOL				LightPolygon(CPrePoly *pPoly);
 
 		// The texture lights: a light for each LIGHTDEFS light on each poly
 		// (0x419e20).
@@ -279,13 +271,10 @@
 		CPreLightAnim			*m_pCurAnim;				// 0x174
 		CPreLightFrame			*m_pCurFrame;				// 0x178
 		PReal					m_fSunRayLength;			// 0x17c
-		// Each world model's vertex normals (the average of the normals of
-		// the polies on each point), by point index (the name is ours).
-		CMoArray< CMoArray<PVector> >	m_VertNormals;		// 0x180
 		// WorldTreeHelper.
-		uint32					m_FrameCode;				// 0x194
+		uint32					m_FrameCode;				// 0x180
 
-		CLTMath					m_MathLT;					// 0x198
+		CLTMath					m_MathLT;					// 0x184
 	};
 
 

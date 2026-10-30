@@ -4,8 +4,9 @@
 // These routines are used by the preprocessor, dedit, and the engine while
 // dealing with lightmap data.
 
-// talon: the 2001 one (0x414fb0..0x415200), written from the image: 32-bit
-// pixels, and shadow maps of on/off runs.
+// talon: NOLF's (0x422040..0x422270), written from the image: 16-bit
+// (5-5-5) pixels, and shadow maps of on/off runs. AvP2's (its 0x414fb0..)
+// has 32-bit pixels.
 
 #ifndef __LIGHTMAP_COMPRESS_H__
 #define __LIGHTMAP_COMPRESS_H__
@@ -16,15 +17,15 @@
 
 	// Each pixel is written as it is, or, starting a run of two or more,
 	// with its high bit set and followed by the run's length (a byte).
-	LTBOOL CompressLMData(uint32 *pData, uint32 width, uint32 height,
-		uint32 *pOut, uint32 &outLen);
+	LTBOOL CompressLMData(uint16 *pData, uint32 width, uint32 height,
+		uint16 *pOut, uint32 &outLen);
 
 	// pOut MUST be LIGHTMAP_MAX_TOTAL_PIXELS long.
-	LTBOOL DecompressLMData(uint32 *pCompressed, uint32 dataLen, uint32 *pOut);
+	LTBOOL DecompressLMData(uint16 *pCompressed, uint32 dataLen, uint16 *pOut);
 
 	// A shadow map is lengths (bytes) of runs of unlit and lit pixels, in
 	// turn, starting with unlit.
-	LTBOOL CompressShadowMap(uint32 *pData, uint32 width, uint32 height,
+	LTBOOL CompressShadowMap(uint16 *pData, uint32 width, uint32 height,
 		uint8 *pOut, uint32 &outLen);
 
 	// pOut MUST be LIGHTMAP_MAX_TOTAL_PIXELS long; lit pixels are 0xFF.
