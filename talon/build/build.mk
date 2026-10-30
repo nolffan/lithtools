@@ -256,16 +256,18 @@ $(error two sources compile to one object: $(dups))
 endif
 
 # Under Wine, a compile that uses a precompiled header now and then dies
-# with C1001 or C1060 while other compiles run; the same compile run again
-# succeeds, and gives the same object. Those two are retried, up to three
-# tries in all; any other error fails the build at once.
+# with C1001 or C1060 while other compiles run, and now and then wineserver
+# itself goes away under a parallel build ("wine client error: ...
+# Connection reset by peer"; the next wine starts a new one); the same
+# compile run again succeeds, and gives the same object. Those are retried,
+# up to three tries in all; any other error fails the build at once.
 $(OBJECTS):
 	@echo "   CC   $@"
 	@mkdir -p $(@D) && rm -f $@
 	@for try in 1 2 3; do \
 	  out=$$( { $(cmd_$@); } 2>&1 ); rc=$$?; \
-	  if [ $$rc = 0 ] || [ $$try = 3 ] || ! grep -qE 'error C10(01|60)' <<< "$$out"; then printf '%s\n' "$$out"; break; fi; \
-	  echo "   CC   $@: $$(grep -oE 'error C10(01|60)' <<< "$$out" | head -1), compiling it again"; rm -f $@; \
+	  if [ $$rc = 0 ] || [ $$try = 3 ] || ! grep -qE 'error C10(01|60)|wine client error' <<< "$$out"; then printf '%s\n' "$$out"; break; fi; \
+	  echo "   CC   $@: $$(grep -oE 'error C10(01|60)|wine client error' <<< "$$out" | head -1), compiling it again"; rm -f $@; \
 	done; exit $$rc
 	@test -f $@ || { echo "error: $@ was not built" >&2; exit 1; }
 	@printf '%s\n' '$(subst ','\'',$(cmd_$@))' > $@.cmd
