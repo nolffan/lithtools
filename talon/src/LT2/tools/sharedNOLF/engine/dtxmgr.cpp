@@ -123,18 +123,15 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 	uint32 textureDataSize;
 	uint8 *pOutData;
 
+	textureDataSize = 0;
 	width = baseWidth;
 	height = baseHeight;
-	textureDataSize = 0;
-	for(i=0; i < nMipmaps; i++)
+	for(i=0; i < nMipmaps; i++, width >>= 1, height >>= 1)
 	{
 		size = CalcImageSize(bpp, width, height);
 		if(bPlane2)
 			size += width * height;
 		textureDataSize += size;
-
-		width >>= 1;
-		height >>= 1;
 	}
 
 	pRet = new TextureData;
@@ -157,9 +154,9 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 	pRet->m_Header.m_BaseHeight = (uint16)baseHeight;
 	pRet->m_Header.m_Version = CURRENT_DTX_VERSION;
 	pRet->m_Header.m_CommandString[0] = 0;
+	pRet->m_AllocSize = sizeof(TextureData) + textureDataSize;
 	pRet->m_Link.m_pData = pRet;
 	pRet->m_pSections = LTNULL;
-	pRet->m_AllocSize = sizeof(TextureData) + textureDataSize;
 	pRet->m_Header.m_nSections = 0;
 	pRet->m_Header.m_ExtraLong[2] = 0;
 	pRet->m_Header.m_ExtraLong[1] = 0;
@@ -187,7 +184,8 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 		else
 			pMip->m_Pitch = 0;
 
-		pOutData += CalcImageSize(bpp, width, height);
+		size = CalcImageSize(bpp, width, height);
+		pOutData += size;
 
 		if(bPlane2)
 		{

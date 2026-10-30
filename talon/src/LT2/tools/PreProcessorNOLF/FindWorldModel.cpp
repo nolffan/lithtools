@@ -33,12 +33,14 @@ char GetBoolProp(CPropList *pList, const char *pName)
 
 void FindWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels)
 {
+	CWorldModelDef *pDef;
+
 	// Recurse and add brushes.. stop when you hit an object.
 	CMoArray<CEditBrush*> mainBrushes;
 	RecurseAndAddMainBrushes(&pRegion->m_RootNode, mainBrushes);
 	if(mainBrushes.GetSize() > 0)
 	{
-		CWorldModelDef *pDef = new CWorldModelDef;
+		pDef = new CWorldModelDef;
 		pDef->m_Brushes.CopyArray(mainBrushes);
 		pDef->m_WorldInfoFlags = WIF_MAINWORLD;
 		SAFE_STRCPY(pDef->m_WorldName, MAINWORLD_MODEL_NAME);
@@ -81,39 +83,42 @@ static void RecurseAndAddWorldModels(
 {
 	CWorldModelDef *pDef;
 	CMoArray<CEditBrush*> brushes;
+	CBaseEditObj *pObj;
 	brushes.SetCacheSize(4096);
 
+	// talon: through AsObject (0x41cd2a calls it) and its m_TypeName
+	// (0x41cdc2), not GetClassName.
 	if(pNode->m_Type == Node_Object)
 	{
+		pObj = pNode->AsObject();
+
+		CVectorProp *pProp = (CVectorProp*)pObj->m_PropList.GetProp("Pos");
+		if(pProp)
 		{
-			CVectorProp *pProp = (CVectorProp*)pNode->m_PropList.GetProp("Pos");
-			if(pProp)
+			GatherWorldModelBrushes(pNode, brushes);
+			if(brushes > 0)
 			{
-				GatherWorldModelBrushes(pNode, brushes);
-				if(brushes > 0)
+				// Make a WorldModel out of the brushes.
+				pDef = new CWorldModelDef;
+
+				if(stricmp(pObj->m_TypeName, "Terrain") == 0)
+					pDef->m_WorldInfoFlags |= WIF_TERRAIN;
+				else
+					pDef->m_WorldInfoFlags = WIF_MOVEABLE;
+
+				pDef->m_Brushes.CopyArray(brushes);
+
+				CStringProp *pNameProp = (CStringProp*)pObj->m_PropList.GetProp(g_NameName);
+				if(!pNameProp)
 				{
-					// Make a WorldModel out of the brushes.
-					pDef = new CWorldModelDef;
-
-					if(stricmp(pNode->GetClassName(), "Terrain") == 0)
-						pDef->m_WorldInfoFlags |= WIF_TERRAIN;
-					else
-						pDef->m_WorldInfoFlags = WIF_MOVEABLE;
-
-					pDef->m_Brushes.CopyArray(brushes);
-
-					CStringProp *pNameProp = (CStringProp*)pNode->m_PropList.GetProp(g_NameName);
-					if(!pNameProp)
-					{
-						DrawStatusText("ERROR: world model without a Name property found.");
-						return;
-					}
-
-					SAFE_STRCPY(pDef->m_WorldName, pNameProp->m_String);
-
-					worldModels.Append(pDef);
-					brushes.SetSize(0);
+					DrawStatusText("ERROR: world model without a Name property found.");
+					return;
 				}
+
+				SAFE_STRCPY(pDef->m_WorldName, pNameProp->m_String);
+
+				worldModels.Append(pDef);
+				brushes.SetSize(0);
 			}
 		}
 	}
@@ -170,78 +175,72 @@ uint32 CWorldModelDef::CalcNumPolies()
 
 uint32 GetBrushType(CEditBrush *pBrush)
 {
-	CPropList *pList;
 	uint32 brushType;
 
-	pList = &pBrush->m_PropList;
-
 	brushType = 0;
-	if(GetBoolProp(pList, "Solid"))
+	if(GetBoolProp(&pBrush->m_PropList, "Solid"))
 		brushType |= SURF_SOLID;
 
-	if(GetBoolProp(pList, "Nonexistant"))
+	if(GetBoolProp(&pBrush->m_PropList, "Nonexistant"))
 		brushType |= SURF_NONEXISTENT;
 
-	if(GetBoolProp(pList, "Invisible"))
+	if(GetBoolProp(&pBrush->m_PropList, "Invisible"))
 		brushType |= SURF_INVISIBLE;
 
-	if(GetBoolProp(pList, "Translucent"))
+	if(GetBoolProp(&pBrush->m_PropList, "Translucent"))
 		brushType |= SURF_TRANSPARENT;
 
-	if(GetBoolProp(pList, "SkyPortal"))
+	if(GetBoolProp(&pBrush->m_PropList, "SkyPortal"))
 		brushType |= SURF_SKY;
 
-	if(GetBoolProp(pList, "FullyBright"))
+	if(GetBoolProp(&pBrush->m_PropList, "FullyBright"))
 		brushType |= SURF_BRIGHT;
 
-	if(GetBoolProp(pList, "FlatShade"))
+	if(GetBoolProp(&pBrush->m_PropList, "FlatShade"))
 		brushType |= SURF_FLATSHADE;
 
-	if(GetBoolProp(pList, "GouraudShade"))
+	if(GetBoolProp(&pBrush->m_PropList, "GouraudShade"))
 		brushType |= SURF_GOURAUDSHADE;
 
-	if(GetBoolProp(pList, "LightMap"))
+	if(GetBoolProp(&pBrush->m_PropList, "LightMap"))
 		brushType |= SURF_LIGHTMAP;
 
-	if(!GetBoolProp(pList, "Subdivide"))
+	if(!GetBoolProp(&pBrush->m_PropList, "Subdivide"))
 		brushType |= SURF_NOSUBDIV;
 
-	if(GetBoolProp(pList, "HullMaker"))
+	if(GetBoolProp(&pBrush->m_PropList, "HullMaker"))
 		brushType |= SURF_HULLMAKER;
 
-	if(GetBoolProp(pList, "AlwaysLightMap"))
+	if(GetBoolProp(&pBrush->m_PropList, "AlwaysLightMap"))
 		brushType |= SURF_ALWAYSLIGHTMAP;
 
-	if(GetBoolProp(pList, "DirectionalLight"))
+	if(GetBoolProp(&pBrush->m_PropList, "DirectionalLight"))
 		brushType |= SURF_DIRECTIONALLIGHT;
 
-	if(GetBoolProp(pList, "Portal"))
+	if(GetBoolProp(&pBrush->m_PropList, "Portal"))
 		brushType |= SURF_PORTAL;
 
-	if(GetBoolProp(pList, "SkyPan"))
+	if(GetBoolProp(&pBrush->m_PropList, "SkyPan"))
 		brushType |= SURF_PANNINGSKY;
 
-	if(GetBoolProp(pList, "Additive"))
+	if(GetBoolProp(&pBrush->m_PropList, "Additive"))
 		brushType |= SURF_ADDITIVE;
 
-	if(GetBoolProp(pList, "TimeOfDay"))
+	if(GetBoolProp(&pBrush->m_PropList, "TimeOfDay"))
 		brushType |= SURF_TIMEOFDAY;
 
-	if(GetBoolProp(pList, "TerrainOccluder"))
+	if(GetBoolProp(&pBrush->m_PropList, "TerrainOccluder"))
 		brushType |= SURF_TERRAINOCCLUDER;
 
 	// A vis blocker makes hulls too.
-	if(GetBoolProp(pList, "VisBlocker"))
+	if(GetBoolProp(&pBrush->m_PropList, "VisBlocker"))
 		brushType |= SURF_VISBLOCKER | SURF_HULLMAKER;
 
-	if(GetBoolProp(pList, "NotAStep"))
+	if(GetBoolProp(&pBrush->m_PropList, "NotAStep"))
 		brushType |= SURF_NOTASTEP;
 
-	if(GetBoolProp(pList, "NoWallWalk"))
-		brushType |= SURF_NOWALLWALK;
-
-	if(!GetBoolProp(pList, "BlockLight"))
-		brushType |= SURF_NOBLOCKLIGHT;
+	// talon: NOLF's has no NoWallWalk or BlockLight surface flags (AvP2's):
+	// NotAStep is the last property read (0x41d401).
 
 	// Portals, hull makers and terrain occluders are only for the
 	// processor: never drawn or subdivided.
@@ -251,7 +250,7 @@ uint32 GetBrushType(CEditBrush *pBrush)
 	}
 	else if(brushType & SURF_HULLMAKER)
 	{
-		brushType = (brushType & SURF_VISBLOCKER) | SURF_HULLMAKER | SURF_NOSUBDIV | SURF_INVISIBLE;
+		brushType = SURF_HULLMAKER | SURF_NOSUBDIV | SURF_INVISIBLE | (brushType & SURF_VISBLOCKER);
 	}
 	else if(brushType & SURF_TERRAINOCCLUDER)
 	{

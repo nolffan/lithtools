@@ -49,7 +49,7 @@ static void _SetNumProp(GenericProp *pProp, float val)
 	sprintf(pProp->m_String, "%f", val);
 
 	pProp->m_Float = val;
-	pProp->m_Long = (uint32)val;
+	pProp->m_Long = (long)val;
 	pProp->m_Bool = (LTBOOL)val;
 }
 
