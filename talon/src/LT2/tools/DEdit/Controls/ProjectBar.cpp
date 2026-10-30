@@ -16,7 +16,6 @@
 #include "prefabdlg.h"
 #include "ltamgr.h"
 #include "optionsmisc.h"
-#include "renameresourcedlg.h"
 #include "optionsrun.h"
 
 #include <direct.h>		//for _mkdir
@@ -33,6 +32,8 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // CProjectBar
 
+// 2001's map (0x4d4d78): no thumbnail, icon, prefab-reference, cube/bump/normal
+// map, rename, 32P, batch-reload or scale-coordinates commands.
 BEGIN_MESSAGE_MAP(CProjectBar, CMRCSizeDialogBar)
 	//{{AFX_MSG_MAP(CProjectBar)
 	ON_WM_SIZE()
@@ -41,9 +42,6 @@ BEGIN_MESSAGE_MAP(CProjectBar, CMRCSizeDialogBar)
 	ON_COMMAND(ID_POPUP_IMPORTPCX, OnImportPcxFiles)
 	ON_COMMAND(ID_POPUP_IMPORTMIPPCX, OnImportMipPcxFiles)
 	ON_COMMAND(ID_IMPORT_TGA_FILES, OnImportTgaFiles)
-	ON_COMMAND(ID_IMPORT_BUMPMAP, OnImportBumpMap)
-	ON_COMMAND(ID_IMPORT_NORMALMAP, OnImportNormalMap)
-	ON_COMMAND(ID_IMPORT_CUBEMAP, OnImportCubeMap)
 	ON_COMMAND(ID_POPUP_IMPORTALPHAMASK, OnImportAlphaMask)
 	ON_COMMAND(ID_IMPORT_8BIT_ALPHA, OnImport8BitAlphaMask)
 	ON_COMMAND(ID_POPUP_CREATEALPHAFROMCOLOR, OnCreateAlphaFromColor)
@@ -51,50 +49,40 @@ BEGIN_MESSAGE_MAP(CProjectBar, CMRCSizeDialogBar)
 	ON_COMMAND(ID_POPUP_EXPORTPCX, OnExportPcxFile)
 	ON_COMMAND(ID_POPUP_TEXTUREPROP, OnTextureProperties)
 	ON_COMMAND(ID_POPUP_VIEWALLTEXTURES, OnViewAllTextures)
-	ON_COMMAND(ID_POPUP_BATCHRELOAD, OnBatchReload)
-	ON_COMMAND(ID_POPUP_SCALETEXTURECOORDS, OnScaleTextureCoords)
 	ON_COMMAND(ID_POPUP_IMPORTSOUNDS, OnImportSounds)
 	ON_COMMAND(ID_POPUP_IMPORTMODELS, OnImportModels)
 	ON_COMMAND(ID_POPUP_CREATENEWSPRITE, OnPopupCreateNewSprite)
 	ON_COMMAND(ID_POPUP_UPDATE, OnPopupUpdate)
 	ON_COMMAND(ID_WORLD_ADDDIR, OnAddDir)
-	ON_COMMAND(ID_PHYSICS_ADDDIRECTORY, OnAddDir)
 	ON_COMMAND(ID_PREFAB_OPEN, OnPrefabOpen)
-	ON_COMMAND(ID_REPLACE_SELECTED_PREFABS, OnReplaceSelectedPrefabs)
-	ON_COMMAND(ID_RENAME_PREFAB, OnRenamePrefab)
 	ON_WM_ERASEBKGND()
 	ON_COMMAND(ID_POPUP_ADDTOPALETTE, OnAddToPalette)
 	ON_COMMAND(ID_POPUP_EXPORTDTX8_24, OnExport8BitDTXFile)
 	ON_COMMAND(ID_POPUP_EXPORTDTX_ALL_AS_BPP32P, OnExportAllAsBPP_32P)
-	ON_COMMAND(ID_CONVERT_TO_32P, OnConvertTo32P)
-	ON_COMMAND(ID_RENAME_TEXTURE, OnRenameTexture)
 	ON_COMMAND(ID_POPUP_FINDTEXINWORLD, OnFindTextureInWorld)
-	ON_COMMAND(ID_POPUP_MAKETEXTUREWRITABLE, OnMakeTextureWritable)
-	ON_COMMAND(ID_POPUP_SHOWTHUMBNAILS, OnShowThumbnails)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_SHOWTHUMBNAILS, OnUpdateShowThumbnails)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 
 
+// The old model file's dims reader (0x42da61, "MonolithExport Model File v6").
+BOOL GetModelDimsFromFile(DStream *pStream, CVector *pDims);
+
+
 
 CProjectBar::CProjectBar()
+	: CMRCSizeDialogBar(SZBARF_STDMOUSECLICKS)
 {
 	m_pCurTextureSel		= NULL;
+	m_dwUnknown290			= 0;
 	m_ProjectFileName[0]	= 0;
 	m_TabInfo.SetSize(0);
-	m_pTabImagesBitmap		= new CBitmap;
-	m_bShowThumbnails		= true;
-	m_bShowIcons			= true;
 }
 
 
 CProjectBar::~CProjectBar()
 {
 	DeleteAndClearArray(m_TabInfo);
-
-	if(m_pTabImagesBitmap)
-		delete m_pTabImagesBitmap;
 }
 
 BOOL CProjectBar::Init(CMainFrame *pFrame)
@@ -102,8 +90,6 @@ BOOL CProjectBar::Init(CMainFrame *pFrame)
 	CRect			rect;
 	DWORD			i;
 	CString			str;
-
-	m_bShowThumbnails = true;
 
 	// Set the project bar for the tab control
 	m_Tabs.SetProjectBar(this);
@@ -134,8 +120,6 @@ BOOL CProjectBar::Init(CMainFrame *pFrame)
 	str.LoadString( IDS_PROJECTBAR_TITLE );
 	SetWindowText( str );
 
-	m_Style |= SZBARF_HIDE_ON_CLOSE; // We want this bar to hide instead of dock
-
 	// Setup all the tabs and stuff.
 	GetClientRect( &rect );
 
@@ -143,9 +127,7 @@ BOOL CProjectBar::Init(CMainFrame *pFrame)
 		this, IDC_PROJECTVIEW_TABS );
 
 	// Load tab images
-	m_TabImages.Create(20, 20, ILC_COLOR32 | ILC_MASK, 11, 1);
-	m_pTabImagesBitmap->LoadBitmap(IDB_PROJECT_ICONS);
-	m_TabImages.Add(m_pTabImagesBitmap, RGB(0,255,0));
+	m_TabImages.Create(IDB_PROJECT_ICONS, 20, 2, RGB(0,255,0));
 
 	m_Tabs.SetImageList( &m_TabImages );
 	m_Tabs.SetPadding( CSize(4,4) );
@@ -155,8 +137,6 @@ BOOL CProjectBar::Init(CMainFrame *pFrame)
 	m_Tabs.SetFont(pFrame->GetStatusBar()->GetFont());
 
 	m_ToolTips.Create( this, TTS_ALWAYSTIP );
-	//m_Tabs.SetTooltips( &m_ToolTips );
-	//m_Tabs.EnableToolTips( FALSE );
 
 
 	TC_ITEM item;
@@ -164,19 +144,13 @@ BOOL CProjectBar::Init(CMainFrame *pFrame)
 	item.mask = TCIF_TEXT | TCIF_IMAGE;
 	CString csTemp;
 
-	// Load Icon info
-	m_bShowIcons = GetApp()->GetOptions().GetMiscOptions()->GetShowIcons();
-
 	// Setup the tabs.
 	for(i=0; i < m_TabInfo; i++)
 	{
 		csTemp.LoadString(m_TabInfo[i]->m_TitleStringID);
 		item.pszText = csTemp.GetBuffer(0);
 		item.cchTextMax = csTemp.GetLength();
-		if (m_bShowIcons)
-			item.iImage = m_TabInfo[i]->m_ControlType;  // Specific icon for tab
-		else
-			item.iImage = CMainFrame::CB_LAST_CONTROL_INDEX;  // Neutral icon
+		item.iImage = 0;
 		m_Tabs.InsertItem( i, &item );
 
 		// Create the dialog.
@@ -213,15 +187,10 @@ BOOL CProjectBar::Init(CMainFrame *pFrame)
 
 void CProjectBar::Term()
 {
-	//we also need to make sure that the rename resource dialog is no longer visible
-	//so that user's can mix up resources going between projects
-	GetRenameResourceDlg()->FreeAllItems();
-	GetRenameResourceDlg()->ShowWindow(SW_HIDE);
-
 	m_pCurTextureSel = NULL;
 	ClearAll();
-	CloseAllRegionDocs( );
 	GetProject()->Term();
+	CloseAllRegionDocs( );
 }
 
 /************************************************************************/
@@ -235,195 +204,43 @@ void CProjectBar::DestroyControlWindows()
 	}
 }
 
-//this will take the specified resource identifier, and write it out as the
-//file specified
-bool CProjectBar::CreateFileFromResource(LPCTSTR pResourceID, LPCTSTR pResType, const char* pszFilename)
-{
-	//Note: I really feel like these resources should be freed, but all the MSDN
-	//documentation says that it is uneeded, and the functions to free the
-	//resources are under the obsolete section
-
-	//the resource handle we will be loading
-	HRSRC hRes = ::FindResource(GetApp()->m_hInstance, pResourceID, pResType);
-
-	//get the size of the resource
-	DWORD	nSize = ::SizeofResource(GetApp()->m_hInstance, hRes);
-
-	//check for failure
-	if(nSize == 0)
-	{
-		AfxMessageBox("There was an error getting the size of a resource");
-		return false;
-	}
-
-	//get the memory associated with the resource
-	HGLOBAL hGlob = ::LoadResource(GetApp()->m_hInstance, hRes);
-
-	LPVOID pData = ::LockResource(hGlob);
-
-	//check for failure
-	if(pData == NULL)
-	{
-		AfxMessageBox("There was an error getting the data of a resource");
-		return false;
-	}
-
-	//now we can write out the data to disk
-	FILE* pFile = fopen(pszFilename, "wb");
-
-	//make sure that we opened the file
-	if(pFile == NULL)
-	{
-		CString sError;
-		sError.Format("Unable to open up the file %s for writing", pszFilename);
-		AfxMessageBox(sError);
-		return false;
-	}
-
-	//alright, we have the file, so write it out
-	fwrite(pData, nSize, 1, pFile);
-
-	//close up and bail
-	fclose(pFile);
-
-	return true;
-}
-
-
-//utility struct for AutoExtractClassIcons
-struct SClassIconInfo
-{
-	const char* m_pszFilename;
-	DWORD		m_nResource;
-};
-
-
-//this will find the class icons directory that is specified, and if it does not
-//exist, it will create it, and add all the appropriate icons into it
-void CProjectBar::AutoExtractClassIcons()
-{
-	//first we need to find the directory that we will be checking
-	CString sFile(GetApp()->GetOptions().GetDisplayOptions()->GetClassIconsDir());
-
-	//make sure that we don't have a leading slash
-	sFile.TrimLeft("\\/");
-
-	//make sure we have a trailing slash
-	sFile.TrimRight("\\/");
-	if(!sFile.IsEmpty())
-	{
-		sFile += "\\";
-	}
-
-	//the current directory we are trying to add
-	CString sCurrDir(::dfm_GetBaseDir(GetFileMgr()));
-	sCurrDir += '\\';
-
-	//now we need to make sure that all the directories exist
-	CString sDirList(sFile);
-	while(1)
-	{
-		int32 nDirPos = sDirList.FindOneOf("\\/");
-
-		//see if there are any more directories
-		if(nDirPos == -1)
-		{
-			break;
-		}
-
-		//more directories
-		CString sDir = sDirList.Left(nDirPos + 1);
-		sDirList = sDirList.Mid(nDirPos + 1);
-
-		//tack on the directory to the end, and create it
-		sCurrDir += sDir;
-		_mkdir(sCurrDir);
-	}
-
-	//now we need to check each and every icon to see if it exists
-	SClassIconInfo Icons[] = {	{ "DemoSkyWorldModel.dtx", IDR_CICON_DEMOSKYWORLDMODEL },
-								{ "DirLight.dtx", IDR_CICON_DIRLIGHT },
-								{ "InsideDef.dtx", IDR_CICON_INSIDEDEF },
-								{ "Light.dtx", IDR_CICON_LIGHT },
-								{ "ObjectLight.dtx", IDR_CICON_OBJECTLIGHT },
-								{ "SkyPointer.dtx", IDR_CICON_SKYPOINTER },
-								{ "Terrain.dtx", IDR_CICON_TERRAIN } };
-
-	uint32 nNumIcons = sizeof(Icons) / sizeof(Icons[0]);
-
-	//now check each icon
-	for(uint32 nCurrIcon = 0; nCurrIcon < nNumIcons; nCurrIcon++)
-	{
-		//build the filename
-		CString sIconFile = sCurrDir + Icons[nCurrIcon].m_pszFilename;
-
-		//see if we can open it
-		FILE* pFile = fopen(sIconFile, "rb");
-		if(pFile)
-		{
-			//already exists
-			fclose(pFile);
-			continue;
-		}
-
-		//doesn't exist, lets make it
-		CreateFileFromResource(MAKEINTRESOURCE(Icons[nCurrIcon].m_nResource), "DTX", sIconFile);
-	}
-
-}
-
 BOOL CProjectBar::Open( const char *pFilename )
 {
 	CMoFileIO file;
-	char pathBuffer[MAX_PATH], fileBuffer[MAX_PATH], paletteFilename[MAX_PATH];
-	DStream *pStream;
-
-	CHelpers::ExtractPathAndFileName( pFilename, pathBuffer, fileBuffer );
+	char pathBuffer[256], fileBuffer[256];
 
 	BeginWaitCursor( );
 
 	Term( );
+
+	CHelpers::ExtractPathAndFileName( pFilename, pathBuffer, fileBuffer );
 
 	// Really load the project.
 	if( file.Open(pFilename, "rb") )
 	{
 		m_Project.LoadProjectFile( file );
 		file.Close();
-	}
-	else
-	{
-		AppMessageBox( IDS_ERR_OPENFILE, MB_OK );
-		return FALSE;
-	}
 
-	// Init the directory names in the project.
-	m_Project.OnOpenProject(pathBuffer);
+		// Init the directory names in the project.
+		m_Project.OnOpenProject(pathBuffer);
 
-	UpdateAll();
+		UpdateAll();
 
-	CString sentryFile = pathBuffer;
-
-	//add the class icons if we need to
-	if(GetApp()->GetOptions().GetMiscOptions()->IsAutoExtractIcons())
-	{
-		AutoExtractClassIcons();
-	}
-
-	// Load the layout file.
-	if(GetApp()->GetOptions().GetMiscOptions()->IsLoadLYTFile())
+		// Load the layout file.
 		LoadLayoutFile( pFilename );
 
-	strcpy( m_ProjectFileName, pFilename );
+		strcpy( m_ProjectFileName, pFilename );
 
-	// Try to load the project-based run options
-	GetApp()->GetOptions().GetRunOptions()->LoadFromOptionsFile();
+		// Finish up
+		UpdateAll();
 
-	// Finish up
-	UpdateAll();
+		EndWaitCursor( );
 
-	EndWaitCursor( );
+		return TRUE;
+	}
 
-	return TRUE;
+	AppMessageBox( IDS_ERR_OPENFILE, MB_OK );
+	return FALSE;
 }
 
 
@@ -442,18 +259,10 @@ BOOL CProjectBar::Save()
 		}
 
 		SaveLayoutFile( m_ProjectFileName );
-
-		// Close texture palette and save if necessary
-		if( IsWindow( GetTextureDlg()->m_AllTextureDlg.m_hWnd ))
-			GetTextureDlg()->m_AllTextureDlg.DestroyWindow(false);
-
-		// Save the project-based run options
-		GetApp()->GetOptions().GetRunOptions()->SaveToOptionsFile();
 	}
 
-	return true;
+	return TRUE;
 }
-
 
 BOOL CProjectBar::Close()
 {
@@ -565,7 +374,6 @@ void CProjectBar::ClearAll()
 	GetSoundDlg()->ClearAll();
 	GetSpriteDlg()->ClearAll();
 	GetPrefabDlg()->ClearAll();
-	GetClassListDlg()->ClearAll();
 }
 
 void CProjectBar::UpdateTextureDlg()
@@ -582,11 +390,6 @@ void CProjectBar::UpdatePropertiesDlg( )
 void CProjectBar::UpdateWorldsDlg()
 {
 	GetWorldsDlg()->UpdateDirectories( );
-}
-
-void CProjectBar::UpdateNodeView()
-{
-	GetNodeView()->Update( );
 }
 
 void CProjectBar::UpdateModelDlg()
@@ -661,7 +464,7 @@ void CProjectBar::SetTab(CMainFrame::ProjectControl controlType)
 
 /************************************************************************/
 // This undocks a tab and docks it to the mainframe
-void CProjectBar::UndockTab(int nIndex, CPoint position, bool bHide)
+void CProjectBar::UndockTab(int nIndex, CPoint position)
 {
 	// The info for thie index
 	CProjectControlBarInfo *pInfo=m_TabInfo[nIndex];
@@ -679,13 +482,7 @@ void CProjectBar::UndockTab(int nIndex, CPoint position, bool bHide)
 	CMainFrame *pFrame=GetMainFrame();
 
 	// Create the control bar
-	if (pFrame->CreateProjectControlBar(pInfo->m_ControlType) != pControlBar)
-	{
-		ASSERT(FALSE);
-	}
-
-	if (bHide)  // Make floating tab invisible
-		pFrame->ShowControlBar(pControlBar, FALSE, FALSE);
+	pFrame->CreateProjectControlBar(pInfo->m_ControlType);
 
 	// Dock the window to the mainframe
 	pFrame->FloatControlBar(pControlBar, position);
@@ -738,15 +535,10 @@ void CProjectBar::DockTab(CWnd *pWnd, CMainFrame::ProjectControl controlType)
 	SpecialCaseTabTerm(pControlBar, controlType);
 
 	// Destroy the control bar window
-	CWnd *pDestroyedWindow=GetMainFrame()->DestroyProjectControlBar(controlType);
-	ASSERT(pDestroyedWindow);
-	ASSERT(pDestroyedWindow == pControlBar);
+	GetMainFrame()->DestroyProjectControlBar(controlType);
 
 	// Add the tab info
 	CProjectControlBarInfo *pTabInfo=GetMainFrame()->AddProjectControlInfo(m_TabInfo, controlType);
-
-	// Make sure that the correct window was added
-	ASSERT(pTabInfo->m_pWnd->GetSafeHwnd() == pControlBar->GetSafeHwnd());
 
 	// Create a new control bar window and attach it to the tab dialog
 	pControlBar->Create(&m_Tabs, pTabInfo->m_DialogID, CBRS_NOALIGN, pTabInfo->m_SelectID);
@@ -766,20 +558,12 @@ void CProjectBar::DockTab(CWnd *pWnd, CMainFrame::ProjectControl controlType)
 	sTemp.LoadString(pTabInfo->m_TitleStringID);
 	item.pszText = sTemp.GetBuffer(0);
 	item.cchTextMax = sTemp.GetLength();
-
-	// Set the item's image index
-	if (m_bShowIcons)
-		item.iImage = m_TabInfo[nTabIndex]->m_ControlType;  // Specific icon for tab
-	else
-		item.iImage = CMainFrame::CB_LAST_CONTROL_INDEX;  // Neutral icon
+	item.iImage = 0;
 
 	m_Tabs.InsertItem(nTabIndex, &item );
 
 	// Resize the items
 	ResizeElements();
-
-	// Select tab
-	SetTab(m_TabInfo[nTabIndex]->m_ControlType);
 
 	// Redraw
 	Invalidate();
@@ -906,31 +690,6 @@ void CProjectBar::OnImportTgaFiles()
 }
 
 
-void CProjectBar::OnImportCubeMap()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoImportCubeMapOperation();
-	}
-}
-
-void CProjectBar::OnImportBumpMap()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoImportBumpMapOperation();
-	}
-}
-
-void CProjectBar::OnImportNormalMap()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoImportNormalMapOperation();
-	}
-}
-
-
 void CProjectBar::OnImportMipPcxFiles()
 {
 	if( VerifyProjectIsOpen() )
@@ -1001,22 +760,6 @@ void CProjectBar::OnExportAllAsBPP_32P()
 	}
 }
 
-void CProjectBar::OnConvertTo32P()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoConvertTo32P();
-	}
-}
-
-void CProjectBar::OnRenameTexture()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoRenameTexture();
-	}
-}
-
 void CProjectBar::OnTextureProperties()
 {
 	if( VerifyProjectIsOpen() )
@@ -1042,46 +785,6 @@ void CProjectBar::OnImportTextures()
 	}
 }
 
-void CProjectBar::OnShowThumbnails()
-{
-	m_bShowThumbnails = !m_bShowThumbnails;
-
-	GetApp()->GetOptions().GetMiscOptions()->SetShowThumbnails(m_bShowThumbnails);
-
-	//CMenu* pMenu = GetMenu();
-	//pMenu->CheckMenuItem(ID_POPUP_SHOWTHUMBNAILS, MF_CHECKED );
-
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoShowThumbnails(m_bShowThumbnails);
-		GetPrefabDlg()->DoShowThumbnails(m_bShowThumbnails);
-		GetSpriteDlg()->DoShowThumbnails(m_bShowThumbnails);
-	}
-}
-
-void CProjectBar::OnUpdateShowThumbnails(CCmdUI* pCmdUI)
-{
-	pCmdUI->SetCheck(m_bShowThumbnails);
-}
-
-void CProjectBar::OnBatchReload()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoBatchReload();
-	}
-}
-
-
-void CProjectBar::OnScaleTextureCoords()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoScaleTextureCoords();
-	}
-}
-
-
 void CProjectBar::OnImportModels()
 {
 	if( VerifyProjectIsOpen() )
@@ -1098,13 +801,13 @@ void CProjectBar::OnPopupCreateNewSprite()
 	DFileIdent *pIdent;
 	CMoFileIO file;
 	int status;
+	BOOL bCreate;		// RETAIL BUG: never set TRUE (0x403c9c tests a stale slot)
 
 
 	if( VerifyProjectIsOpen() )
 	{
 		dlg.m_bAllowNumbers = TRUE;
 		dlg.m_bAllowLetters = TRUE;
-		dlg.m_bAllowFile	= TRUE;
 		dlg.m_MaxStringLen = 70;
 
 		if( dlg.DoModal(IDS_NEWSPRITE, IDS_ENTERSPRITENAME) == IDOK )
@@ -1112,8 +815,6 @@ void CProjectBar::OnPopupCreateNewSprite()
 			extension.LoadString( IDS_SPRITE_EXTENSION );
 			fileName = dfm_BuildName(GetSpriteDlg()->m_csCurrentDir, dlg.m_EnteredText + extension);
 			fullName = dfm_GetFullFilename( GetFileMgr( ), fileName );
-
-			BOOL bCreate = TRUE;
 
 			// If the file already exist, ask if they want to overwrite...
 			if( dfm_OpenFileRelative( GetFileMgr(), fileName, file ))
@@ -1182,19 +883,6 @@ void CProjectBar::GetLayoutFilename( const char *pGetFrom, char *pOutput )
 	strcpy( pOutput, layoutFileName );
 }
 
-// talon: stand-in: Build 69's StdLith has CHelpers::IsFileAbsolute, the LT2
-// one hasn't. Its test: a colon before the first slash.
-static BOOL IsFileAbsolute(const char* pFilename)
-{
-	for(uint32 nCurrChar = 0; (pFilename[nCurrChar] != '\0') && (pFilename[nCurrChar] != '\\') && (pFilename[nCurrChar] != '/'); nCurrChar++)
-	{
-		if(pFilename[nCurrChar] == ':')
-			return TRUE;
-	}
-	return FALSE;
-}
-
-
 //------------------------------------------------------------------------------
 //
 //  CProjectBar::LoadLayoutFile()
@@ -1205,7 +893,7 @@ static BOOL IsFileAbsolute(const char* pFilename)
 //------------------------------------------------------------------------------
 void CProjectBar::LoadLayoutFile( const char *pPathName )
 {
-	char				layoutFilename[MAX_PATH], docName[MAX_PATH];
+	char				layoutFilename[256], docName[256];
 	CString				docFilename, ext;
 	CMoFileIO			file;
 
@@ -1227,12 +915,6 @@ void CProjectBar::LoadLayoutFile( const char *pPathName )
 	// Create layout name based on project name...
 	GetLayoutFilename( pPathName, layoutFilename );
 
-	//figure out what the path is for this project
-	char directoryName[MAX_PATH];
-	char fileName[MAX_PATH];
-	CHelpers::ExtractPathAndFileName( pPathName, directoryName, fileName );
-
-
 	if( file.Open(layoutFilename, "rb") )
 	{
 		// Read in all the Region docs and views.
@@ -1242,92 +924,78 @@ void CProjectBar::LoadLayoutFile( const char *pPathName )
 		for( i=0; i < nRegionDocs; i++ )
 		{
    			// Read document name...
-   			file.ReadString(docName, MAX_PATH);
+   			file.ReadString(docName, 256);
 
-			//if the file is relative, we need to prepend the directory name onto it
-			if(!IsFileAbsolute(docName))
+			// Open the region document...
+			pRegionDoc = OpenRegionDoc( docName );
+			if( pRegionDoc )
 			{
-				strncpy(docName, (const char*)dfm_BuildName(directoryName, docName), MAX_PATH);
-			}
-
-			//now figure out the filename and extension
- 			char filename[MAX_PATH];
- 			char filenameExt[MAX_PATH];
-			CHelpers::ExtractFileNameAndExtension( docName, filename, filenameExt );
-
- 			if( (stricmp(filenameExt, "lta") == 0) || (stricmp(filenameExt, "ltc") == 0) || (stricmp(filenameExt, "tbw") == 0) )
-   			{
-				// Open the region document...
-				pRegionDoc = OpenRegionDoc( docName );
-				if( pRegionDoc )
+				// Read all views...
+				pos = pRegionDoc->GetFirstViewPosition();
+				while(1)
 				{
-					// Read all views...
-					pos = pRegionDoc->GetFirstViewPosition();
-					while(1)
+					// Read status byte...
+					// This byte is '1' if there is another view for this document, or '0'
+					// if the last view was already read...
+					file >> statusByte;
+
+					// Handle condition when finished reading views...
+					if( statusByte == 0 )
 					{
-						// Read status byte...
-						// This byte is '1' if there is another view for this document, or '0'
-						// if the last view was already read...
-						file >> statusByte;
+						// Get the frame for the document...
+						pRegionFrame = ( CRegionFrame * )pRegionView->GetParent()->GetParent();
+						ASSERT( pRegionFrame );
 
-						// Handle condition when finished reading views...
-						if( statusByte == 0 )
+						// Read in the window placement...
+						WINDOWPLACEMENT wp;
+						DWORD temp;
+						wp.length = sizeof( WINDOWPLACEMENT );
+						file >> temp;  wp.flags = temp;
+						file >> temp;  wp.showCmd = temp;
+						file >> wp.ptMinPosition.x;
+						file >> wp.ptMinPosition.y;
+						file >> wp.ptMaxPosition.x;
+						file >> wp.ptMaxPosition.y;
+						file >> wp.rcNormalPosition.left;
+						file >> wp.rcNormalPosition.top;
+						file >> wp.rcNormalPosition.right;
+						file >> wp.rcNormalPosition.bottom;
+
+						pRegionFrame->SetWindowPlacement( &wp );
+
+						// Split the window panes evenly...
+						pRegionFrame->GetClientRect( &rect );
+						pSplitter = pRegionFrame->GetSplitter( );
+						ASSERT( pSplitter );
+						pSplitter->SetRowInfo( 0, rect.Height()/2, 10 );
+						pSplitter->SetColumnInfo( 0, rect.Width()/2, 10 );
+						pSplitter->RecalcLayout();
+						pRegionFrame->Invalidate( FALSE );
+						break;
+					}
+					// Handle condition when another view needs to be read...
+					else if( statusByte == 1 )
+					{
+						// Get pointer to view...
+						if( pos )
 						{
-							// Get the frame for the document...
-							pRegionFrame = ( CRegionFrame * )pRegionView->GetParent()->GetParent();
-							ASSERT( pRegionFrame );
-
-							// Read in the window placement...
-							WINDOWPLACEMENT wp;
-							DWORD temp;
-							wp.length = sizeof( WINDOWPLACEMENT );
-							file >> temp;  wp.flags = temp;
-							file >> temp;  wp.showCmd = temp;
-							file >> temp;	wp.ptMinPosition.x = temp;
-							file >> temp;	wp.ptMinPosition.y = temp;
-							file >> temp;	wp.ptMaxPosition.x = temp;
-							file >> temp;	wp.ptMaxPosition.y = temp;
-							file >> temp;	wp.rcNormalPosition.left = temp;
-							file >> temp;	wp.rcNormalPosition.top = temp;
-							file >> temp;	wp.rcNormalPosition.right = temp;
-							file >> temp;	wp.rcNormalPosition.bottom = temp;
-
-							pRegionFrame->SetWindowPlacement( &wp );
-
-							// Split the window panes evenly...
-							pRegionFrame->GetClientRect( &rect );
-							pSplitter = pRegionFrame->GetSplitter( );
-							ASSERT( pSplitter );
-							pSplitter->SetRowInfo( 0, rect.Height()/2, 10 );
-							pSplitter->SetColumnInfo( 0, rect.Width()/2, 10 );
-							pSplitter->RecalcLayout();
-							pRegionFrame->Invalidate( FALSE );
-							break;
-						}
-						// Handle condition when another view needs to be read...
-						else if( statusByte == 1 )
-						{
-							// Get pointer to view...
-							if( pos )
-							{
-								pObj = (CRegionView*)pRegionDoc->GetNextView( pos );
-							}
-							else
-							{
-								pObj = pRegionDoc->CreateNewRegionView();
-							}
-
-							// Load info about the view...
-							if( pObj->IsKindOf( RUNTIME_CLASS( CRegionView )))
-							{
-								pRegionView = (CRegionView*)pObj;
-
-								pRegionView->LoadProjFile( file );
-							}
+							pObj = (CRegionView*)pRegionDoc->GetNextView( pos );
 						}
 						else
-							return;
+						{
+							pObj = pRegionDoc->CreateNewRegionView();
+						}
+
+						// Load info about the view...
+						if( pObj->IsKindOf( RUNTIME_CLASS( CRegionView )))
+						{
+							pRegionView = (CRegionView*)pObj;
+
+							pRegionView->LoadProjFile( file );
+						}
 					}
+					else
+						return;
 				}
 			}
 		}
@@ -1346,9 +1014,7 @@ void CProjectBar::LoadLayoutFile( const char *pPathName )
 //------------------------------------------------------------------------------
 void CProjectBar::SaveLayoutFile( const char *pPathName )
 {
-	char			layoutFilename[MAX_PATH];
-	char			directoryName[MAX_PATH];
-	char			fileName[MAX_PATH];
+	char			layoutFilename[256];
 	CMoFileIO		file;
 	DWORD			i;
 	CRegionDoc		*pDoc;
@@ -1361,10 +1027,6 @@ void CProjectBar::SaveLayoutFile( const char *pPathName )
 	// Create layout file name based on project file name...
 	GetLayoutFilename( pPathName, layoutFilename );
 
-	//get the path and filename
-	CHelpers::ExtractPathAndFileName( pPathName, directoryName, fileName );
-
-
 	if( file.Open(layoutFilename, "wb") )
 	{
 		// Write out the CRegionDoc and view descriptions.
@@ -1373,21 +1035,8 @@ void CProjectBar::SaveLayoutFile( const char *pPathName )
 		{
 			pDoc = m_RegionDocs[i];
 
-
-			//make the files inside be relative to the path
-			CString sFilename = pDoc->m_FileName;
-
-			//if it starts up with the same directory, save it
-			uint32 nDirLen = strlen(directoryName);
-			if(sFilename.Left(nDirLen).CompareNoCase(directoryName) == 0)
-			{
-				sFilename = sFilename.Mid(nDirLen);
-				if(sFilename.GetLength() && ((sFilename[0] == '\\') || (sFilename[0] == '/')))
-					sFilename = sFilename.Mid(1);
-			}
-
 			// Write the filename of the doc...
-			file.WriteString( (char*)((const char*)sFilename) );
+			file.WriteString( (char*)((LPCTSTR)pDoc->m_FileName) );
 
 			// Write out info on views...
 			pos = pDoc->GetFirstViewPosition();
@@ -1449,7 +1098,7 @@ void CProjectBar::UpdateTextureIDs()
 }
 
 
-CRegionDoc* CProjectBar::OpenRegionDoc(const char* fullName, bool bForceSyncObjects, bool bAllowPropSync)
+CRegionDoc* CProjectBar::OpenRegionDoc( CString fullName )
 {
 	CRegionDoc			*pDoc;
 	CMultiDocTemplate	*pDocTemp = GetApp()->m_pWorldTemplate;
@@ -1466,7 +1115,7 @@ CRegionDoc* CProjectBar::OpenRegionDoc(const char* fullName, bool bForceSyncObje
 		for( docPos = pDocTemp->GetFirstDocPosition(); docPos != NULL; )
 		{
 			pDoc = ( CRegionDoc * )pDocTemp->GetNextDoc( docPos );
-			if( !pDoc->m_FileName.CompareNoCase(fullName))
+			if( !stricmp(pDoc->m_FileName, fullName))
 			{
 				POSITION pos;
 				CView *pView;
@@ -1495,7 +1144,7 @@ CRegionDoc* CProjectBar::OpenRegionDoc(const char* fullName, bool bForceSyncObje
 
 		// open an existing document
 		CWaitCursor wait;
-		if (!pDoc->InitDocument(fullName, bForceSyncObjects, bAllowPropSync))
+		if (!pDoc->OnOpenDocument(fullName))
 		{
 			// user has be alerted to what failed in OnOpenDocument
 			TRACE0("CDocument::OnOpenDocument returned FALSE.\n");
@@ -1504,10 +1153,14 @@ CRegionDoc* CProjectBar::OpenRegionDoc(const char* fullName, bool bForceSyncObje
 		}
 
 		pDoc->SetPathName(fullName, FALSE);
+		pDoc->m_Region.UpdatePolyTriangles();
 		pDocTemp->InitialUpdateFrame( pFrame, pDoc, TRUE );
 	}
 
-	pDoc->SetTitle(pDoc->IsModified());
+	pDoc->SetModifiedFlag(FALSE);
+	// talon: CRegionDoc::SetTitle(bool) hides CDocument's; 2001 calls the
+	// virtual one (0x4044fd). See the report to part 7.
+	((CDocument*)pDoc)->SetTitle(pDoc->m_WorldName);
 
 	m_RegionDocs.Append( pDoc );
 
@@ -1594,13 +1247,6 @@ void CProjectBar::GetCurrentTextureName( char *szTextureFilename, BOOL bUseSprit
 	}
 }
 
-//given the name this will find and select the prefab in the prefab pane
-bool CProjectBar::SelectPrefab(const char* pszPrefabName)
-{
-	return GetPrefabDlg()->SelectPrefab(pszPrefabName);
-}
-
-
 void CProjectBar::SetCurTextureSel(DFileIdent *pIdent)
 {
 	m_pCurTextureSel = pIdent;
@@ -1609,13 +1255,9 @@ void CProjectBar::SetCurTextureSel(DFileIdent *pIdent)
 void CProjectBar::FindCurTextureSel()
 {
 	GetTextureDlg()->FindTexture(m_pCurTextureSel);
-	// Update thumbnail images, since the list gets thrashed
-	GetTextureDlg()->DoShowThumbnails(GetProjectBar()->m_bShowThumbnails); 
 }
 
 static const TCHAR szProjectBarSection[] = _T("%s-ProjectBar");
-static const TCHAR szProjectBarDefaultCx[] = _T("Default.Cx");
-static const TCHAR szProjectBarDefaultCy[] = _T("Default.Cy");
 
 void CProjectBar::RestoreRegistryInfo( LPCTSTR lpszProfileName )
 {
@@ -1623,11 +1265,6 @@ void CProjectBar::RestoreRegistryInfo( LPCTSTR lpszProfileName )
 
 	TCHAR szSection[256];
 	wsprintf( szSection, szProjectBarSection, lpszProfileName);
-//	m_sizeDefault.cx = pApp->GetProfileInt( szSection, szProjectBarDefaultCx, m_sizeDefault.cx );
-//	m_sizeDefault.cy = pApp->GetProfileInt( szSection, szProjectBarDefaultCy, m_sizeDefault.cy );
-//	m_sizeDocked = m_sizeFloating = m_sizeDefault;
-
-	m_bShowThumbnails = GetApp()->GetOptions().GetMiscOptions()->GetShowThumbnails();
 }
  
 void CProjectBar::SaveRegistryInfo( LPCTSTR lpszProfileName )
@@ -1636,29 +1273,10 @@ void CProjectBar::SaveRegistryInfo( LPCTSTR lpszProfileName )
 
 	TCHAR szSection[256];
 	wsprintf( szSection, szProjectBarSection, lpszProfileName);
-//	pApp->WriteProfileInt( szSection, szProjectBarDefaultCx, m_sizeDocked.cx );
-//	pApp->WriteProfileInt( szSection, szProjectBarDefaultCy, m_sizeDocked.cy );
-
-	// Save Icons preferences
-	GetApp()->GetOptions().GetMiscOptions()->SetShowIcons(m_bShowIcons);
-
-	// Save Thumbnails preferences
-	GetApp()->GetOptions().GetMiscOptions()->SetShowThumbnails(m_bShowThumbnails);
 
 	// Save the settings in the registry
 	GetApp()->GetOptions().GetWindowsOptions()->SetBarControlArray(m_TabInfo);
 }
-
-void CProjectBar::OnReplaceSelectedPrefabs()
-{
-	GetPrefabDlg()->OnReplaceSelectedPrefabs();
-}
-
-void CProjectBar::OnRenamePrefab()
-{
-	GetPrefabDlg()->OnRenamePrefab();
-}
-
 
 void CProjectBar::OnPrefabOpen() 
 {
@@ -1691,50 +1309,50 @@ void CProjectBar::OnAddDir()
 }
 
 
-BOOL CProjectBar::GetModelDims( char *szModelFile, LTVector *pDims )
+// NEAR (194 of 194 bytes, funclets 0x404972 and 0x404998 too): the shipped
+// frame is four bytes bigger (sub $0xe0, ours $0xdc), every offset the same:
+// a dword below tempStr that no instruction touches. Tried: a BOOL result
+// local, DVector for vDims.
+BOOL CProjectBar::GetModelDims( char *szModelFile, CVector *pDims )
 {
-	Model *pModel;
-	DVector vDims;	 
+	DStream *pStream;
+	CVector vDims;
 	char tempStr[200];
 
-	ASSERT( pDims );
-	ASSERT( szModelFile );
 	if( !pDims || !szModelFile )
 		return FALSE;
 
 	// {MD 1/18/98: editor was treating sprite files like model files and hanging..}
 	strncpy(tempStr, szModelFile, sizeof(tempStr)-1);
 	strupr(tempStr);
-	if(strstr(tempStr, ".LTA") || strstr(tempStr, ".LTC"))
+	if(strstr(tempStr, ".ABC"))
 	{
-		CLTALoadOnlyAlloc Allocator(2048);
-		CLTAReader reader;  CLTANode *root, *node;
-		
-		if(!reader.Open(szModelFile, CLTAUtil::IsFileCompressed(szModelFile)))  return false;
+		pStream = streamsim_Open(szModelFile, "rb");
+		if(pStream)
+		{
+			LithTry
+			{
+				if(!GetModelDimsFromFile(pStream, &vDims))
+				{
+					pStream->Release();
+					return FALSE;
+				}
+			}
+			LithCatch(...)
+			{
+				pStream->Release();
+				return FALSE;
+			}
 
-		root = CLTANodeReader::LoadNode(&reader, "dims", &Allocator);
-
-		node = root->GetElement(1);
-
-		vDims.x = atof(node->GetElement(0)->GetValue()); 	
-		vDims.y = atof(node->GetElement(1)->GetValue());  	
-		vDims.z = atof(node->GetElement(2)->GetValue());
-
-		reader.Close();
-
-		Allocator.FreeNode(root);
-		Allocator.FreeAllMemory();
+			pStream->Release();
+			pDims->x = vDims.x;
+			pDims->y = vDims.y;
+			pDims->z = vDims.z;
+			return TRUE;
+		}
 	}
-	else
-	{
-		return false;
-	}
 
-	pDims->x = vDims.x;
-	pDims->y = vDims.y;
-	pDims->z = vDims.z;
-
-	return TRUE;
+	return FALSE;
 }
 
 void CProjectBar::OnAddToPalette() 
@@ -1745,111 +1363,6 @@ void CProjectBar::OnAddToPalette()
 	}
 }
  
-
-// load each world and adjust the OPQs for every poly that references
-// one of the changed textures in textureInfo
-bool CProjectBar::BatchTextureScale( const CMoArray<BatchTextureScaleInfo*>& textureInfo, const char* inputDir )
-{
-	// make sure directory name ends in a '\'
-	char dir[_MAX_PATH];
-	strcpy( dir, inputDir );
-	int dirLen = strlen( dir );
-	if( dir[dirLen-1] != '\\' )
-	{
-		dir[dirLen] = '\\';
-		dir[dirLen+1] = 0;
-		dirLen++;
-	}
-
-	// loop over all .lta files
-	WIN32_FIND_DATA findData;
-	HANDLE findHandle;
-	CString startDir;
-
-	startDir = dir;
-	startDir += "*.*";
-	findHandle = FindFirstFile( LPCTSTR(startDir), &findData );
-
-	if( findHandle != INVALID_HANDLE_VALUE )
-	{
-		do
-		{
-			if( findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
-			{
-				// ignore directories starting with .
-				if( findData.cFileName[0] != '.' )
-				{
-					// found a directory, recurse into it
-					CString newDir = dir;
-					newDir += findData.cFileName;
-					BatchTextureScale( textureInfo, newDir );
-				}
-			}
-			else
-			{
-				// it's a file, check the file type
-				char ext[_MAX_EXT];
-				char file[_MAX_FNAME];
-
-				_splitpath( findData.cFileName, NULL, NULL, file, ext );
-				CString resourcePath( dir );
-				resourcePath = resourcePath.Left( resourcePath.GetLength() - 1 );
-				resourcePath = resourcePath.Right( resourcePath.GetLength() - GetProject()->m_BaseProjectDir.GetLength() - 1 );
-
-				// make sure the extension is lower case
-				for( unsigned i = 0; i < strlen( ext ); i++ )
-				{
-					if( isupper( ext[i] ) )
-						ext[i] = tolower( ext[i] );
-				}
-
-				// found a world file, process it if it's in a world directory
-				if( ( (stricmp( ext, ".lta" ) == 0) || (stricmp( ext, ".ltc") == 0) || (stricmp( ext, ".tbw") == 0) ) && 
-					CResourceMgr::IsDirType( resourcePath, RESTYPE_WORLD ) )
-				{
-					CString inFile = dir;
-					inFile += file;
-					inFile += ext;
-					
-					// load the world if it's not already open
-					CRegionDoc* regionDoc;
-					bool alreadyOpen = false;
-					for( int i = 0; i < m_RegionDocs; i++ )
-					{
-						if( !inFile.CompareNoCase( m_RegionDocs[i]->GetPathName() ) )
-						{
-							alreadyOpen = true;
-							regionDoc = m_RegionDocs[i];
-						}
-					}
-					if( !alreadyOpen )
-						regionDoc = OpenRegionDoc( inFile );
-
-					// process the world
-					regionDoc->TextureScale( textureInfo );
-
-					// save and close the world
-					regionDoc->OnSaveDocument( inFile );
-					if( !alreadyOpen )
-						regionDoc->OnCloseDocument();
-				}
-			}
-		}
-		while( FindNextFile( findHandle, &findData ) );
-
-		FindClose( findHandle );
-	}
-
-	return true;
-}
-
-void CProjectBar::OnMakeTextureWritable()
-{
-	if( VerifyProjectIsOpen() )
-	{
-		GetTextureDlg()->DoMakeTextureWritable();
-	}
-}
 
 void CProjectBar::OnFindTextureInWorld() 
 {
@@ -1866,164 +1379,3 @@ void CProjectBar::OnFindTextureInWorld()
 	pDoc->SelectBrushesByTexture(m_pCurTextureSel->m_Filename);
 }
 
-void CProjectBar::OnHideCurrent()
-{
-	// Get the currently selected tab
-	int nIndex = m_Tabs.GetCurSel(); 
-
-	// Check for no selection
-	if (nIndex == -1)  return;
-
-	// Undock and hide tab
-	UndockTab(nIndex, CPoint(200,200), true);
-}
-
-void CProjectBar::OnUnhideAll()
-{
-	CFrameWnd* pFrameWnd;
-
-	// Properties dialog
-	if (!IsTabPresent(CMainFrame::CB_PROPERTIESVIEW) && !GetPropertiesDlg()->IsWindowVisible())
-	{		
-		pFrameWnd = GetPropertiesDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetPropertiesDlg(), CPoint(0,0));
-		DockTab(GetPropertiesDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_PROPERTIESVIEW);
-	}
-	// Class dialog
-	if (!IsTabPresent(CMainFrame::CB_CLASSVIEW) && !GetClassListDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetClassListDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetClassListDlg(), CPoint(0,0));
-		DockTab(GetClassListDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_CLASSVIEW);
-	}
-	// Texture dialog
-	if (!IsTabPresent(CMainFrame::CB_TEXTUREVIEW) && !GetTextureDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetTextureDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetTextureDlg(), CPoint(0,0));
-		DockTab(GetTextureDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_TEXTUREVIEW);
-	}
-	// Model dialog
-	if (!IsTabPresent(CMainFrame::CB_MODELVIEW) && !GetModelDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetModelDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetModelDlg(), CPoint(0,0));
-		DockTab(GetModelDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_MODELVIEW);
-	}
-	// Worlds dialog
-	if (!IsTabPresent(CMainFrame::CB_WORLDSVIEW) && !GetWorldsDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetWorldsDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetWorldsDlg(), CPoint(0,0));
-		DockTab(GetWorldsDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_WORLDSVIEW);
-	}
-	// Sound dialog
-	if (!IsTabPresent(CMainFrame::CB_SOUNDVIEW) && !GetSoundDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetSoundDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetSoundDlg(), CPoint(0,0));
-		DockTab(GetSoundDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_SOUNDVIEW);
-	}
-	// Sprite dialog
-	if (!IsTabPresent(CMainFrame::CB_SPRITEVIEW) && !GetSpriteDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetSpriteDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetSpriteDlg(), CPoint(0,0));
-		DockTab(GetSpriteDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_SPRITEVIEW);
-	}
-	// Nodeview dialog
-	if (!IsTabPresent(CMainFrame::CB_NODESVIEW) && !GetNodeView()->IsWindowVisible())
-	{
-		pFrameWnd = GetNodeView()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetNodeView(), CPoint(0,0));
-		DockTab(GetNodeView(), (CMainFrame::ProjectControl)CMainFrame::CB_NODESVIEW);
-	}
-	// Prefab dialog
-	if (!IsTabPresent(CMainFrame::CB_PREFABVIEW) && !GetPrefabDlg()->IsWindowVisible())
-	{
-		pFrameWnd = GetPrefabDlg()->GetParentFrame();
-		ASSERT(pFrameWnd);
-
-		pFrameWnd->FloatControlBar(GetPrefabDlg(), CPoint(0,0));
-		DockTab(GetPrefabDlg(), (CMainFrame::ProjectControl)CMainFrame::CB_PREFABVIEW);
-	}
-}
-
-
-bool CProjectBar::IsTabPresent(CMainFrame::ProjectControl tabType)
-{
-	for (int32 i=0; i<m_TabInfo; i++)
-	{
-		if (tabType == m_TabInfo[i]->m_ControlType)  return true;
-	}
-
-	return false;
-}
-
-void CProjectBar::OnShowIcons()
-{
-	TCITEM item;
-
-	m_bShowIcons = !m_bShowIcons;  // If we're showing, switch so we aren't and vice versa
-
-	GetApp()->GetOptions().GetMiscOptions()->SetShowIcons(m_bShowIcons);
-
-	// Setup the tabs.
-	for(uint16 i=0; i < m_TabInfo; i++)
-	{
-		if (m_Tabs.GetItem(i, &item))
-		{
-			// Set the item's image index
-			if (m_bShowIcons)
-				item.iImage = m_TabInfo[i]->m_ControlType;  // Specific icon for tab
-			else
-				item.iImage = CMainFrame::CB_LAST_CONTROL_INDEX;  // Neutral icon
-
-			item.mask |= TCIF_IMAGE;
-
-			// Set the item	
-			m_Tabs.SetItem(i, &item);
-		}			
-	}
-}
-
-
-
-
-/************************************************************************/
-// This gets called when the user selects "Dock" from the context menu or clicks 'X'
-void CProjectBar::OnButtonHide()
-{
-	CMRCSizeControlBar::OnButtonHide();
-
-	/*if (m_pDockBar != NULL)
-	{
-		ASSERT(m_pDockContext != NULL);
-
-		if ((m_dwDockStyle & CBRS_ALIGN_ANY) == 0)  // if we can't dock
-		{
-			OnToggleAllowDocking();	// re-enable docking...
-		}
-
-		m_pDockContext->ToggleDocking();
-
-		ResizeElements();
-		Invalidate();
-	}*/
-}

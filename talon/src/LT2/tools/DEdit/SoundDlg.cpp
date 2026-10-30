@@ -130,7 +130,8 @@ void CSoundDlg::OnContextMenu(CWnd* pWnd, CPoint point)
 		VERIFY(menu.LoadMenu(CG_IDR_POPUP_WORLDTREE));
 	else if(pWnd->m_hWnd == m_SoundList.m_hWnd)
 		VERIFY(menu.LoadMenu(CG_IDR_POPUP_SOUNDS_DLG));
-	else return;
+	// 2001: no 'else return' (retail bug: a right-click elsewhere tracks a NULL
+	// popup, OnContextMenu 0x4016a8 / 0x407c4a)
 
 	CMenu* pPopup = menu.GetSubMenu(0);
 	ASSERT(pPopup != NULL);

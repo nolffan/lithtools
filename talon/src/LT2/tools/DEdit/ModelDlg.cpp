@@ -33,7 +33,7 @@ CModelDlg::CModelDlg() : CBaseRezDlg()
 	m_pIconList=NULL;
 	m_pIconList2=NULL;
 
-	InitBaseRezDlg("lta;ltc", &m_ModelTree, &m_ModelList, RESTYPE_MODEL);
+	InitBaseRezDlg("abc", &m_ModelTree, &m_ModelList, RESTYPE_MODEL);
 }
 
 CModelDlg::~CModelDlg()
@@ -128,7 +128,8 @@ void CModelDlg::OnContextMenu(CWnd* pWnd, CPoint point)
 		VERIFY(menu.LoadMenu(CG_IDR_POPUP_WORLDTREE));
 	else if(pWnd->m_hWnd == m_ModelList.m_hWnd)
 		VERIFY(menu.LoadMenu(CG_IDR_POPUP_MODELS_DLG));
-	else return;
+	// 2001: no 'else return' (retail bug: a right-click elsewhere tracks a NULL
+	// popup, OnContextMenu 0x4016a8 / 0x407c4a)
 
 	CMenu* pPopup = menu.GetSubMenu(0);
 	ASSERT(pPopup != NULL);

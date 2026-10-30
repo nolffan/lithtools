@@ -21,18 +21,16 @@ enum node_image
 	NODE_NULL = 0,
 	NODE_BRUSH,
 	NODE_OBJECT,
-	NODE_PATH,
-	NODE_PREFABREF
+	NODE_PATH = 6			// 2001: CNodeViewTreeCtrl::SetNodeImage, 0x43cc32
 };
 
+// 2001: no frozen states (CNodeViewTreeCtrl::SetNodeImage, 0x43cc47..0x43cc61)
 enum node_image_mask
 {
 	NODE_MASK_UNSELECTED = 1,
 	NODE_MASK_SELECTED,
-	NODE_MASK_FROZEN,
 	NODE_MASK_HIDDEN,
-	NODE_MASK_SELECTED_AND_HIDDEN,
-	NODE_MASK_FROZEN_AND_HIDDEN
+	NODE_MASK_SELECTED_AND_HIDDEN
 };
 
 /////////////////////////////////////////////////////////////////////////////
@@ -138,8 +136,6 @@ protected:
 	// Repositions the controls
 	virtual void	RepositionControls();
 
-	void		RecurseDeleteEmptyContainers( CWorldNode *pNode );	
-	void		RecurseDeleteSuperfluousContainers( CWorldNode *pNode );	
 
 
 	// Generated message map functions
@@ -163,10 +159,6 @@ protected:
 	afx_msg void OnPopupRefresh();
 	afx_msg void OnGotoNextSelectedNode();
 	afx_msg void OnPopupCollapseChildren();
-	afx_msg void OnPopupDisconnectPrefab();
-	afx_msg void OnClose();
-	afx_msg void OnDeleteEmptyContainers();
-	afx_msg void OnDeleteCascadeContainers();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

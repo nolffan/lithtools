@@ -16,7 +16,6 @@
 #include "edit_actions.h"
 #include "projectbar.h"
 #include "node_ops.h"
-#include "optionsmisc.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -73,9 +72,6 @@ BEGIN_MESSAGE_MAP(CNodeView, CProjectTabControlBar)
 	ON_COMMAND(ID_POPUP_REFRESH, OnPopupRefresh)
 	ON_COMMAND(ID_GOTO_NEXT_SELECTED_NODE, OnGotoNextSelectedNode)
 	ON_COMMAND(ID_POPUP_COLLAPSE_CHILDREN, OnPopupCollapseChildren)
-	ON_COMMAND(ID_POPUP_DISCONNECT_PREFAB, OnPopupDisconnectPrefab)
-	ON_COMMAND(ID_DELETE_EMPTY_CONTAINERS, OnDeleteEmptyContainers)
-	ON_COMMAND(ID_DELETE_EMPTY_CONTAINER_CASCADE, OnDeleteCascadeContainers)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -195,42 +191,8 @@ int CALLBACK CNodeView::TreeSortFunc(LPARAM lParam1, LPARAM lParam2, LPARAM lPar
 		return 1;
 	}
 
-	//we need to do a custom string comparison here, so that way we can factor in
-	//the numbers at the end.
-	const char* pszLeft  = pNode1->GetName();
-	const char* pszRight = pNode2->GetName();
-
-	while(1)
-	{
-		//check for the end of strings
-		if(!*pszLeft)
-			return -1;
-
-		if(!*pszRight)
-			return 1;
-
-		//check for if we have hit a number
-		if(isdigit(*pszLeft) && isdigit(*pszRight))
-		{
-			//we have hit a digit....convert to integer and compare
-			int nLeft	= atoi(pszLeft);
-			int nRight	= atoi(pszRight);
-
-			//check and see if they are equal values, if so, we need to resolve
-			//descrepencies such as Tree01 and Tree1
-			if(nLeft == nRight)
-				return strcmp(pszLeft, pszRight);
-
-			//return the difference
-			return nLeft - nRight;
-		}
-
-		if(*pszLeft != *pszRight)
-			return *pszLeft - *pszRight;
-
-		pszLeft++;
-		pszRight++;
-	}
+	// 2001 (0x401dea): a plain comparison of the names
+	return strcmp(pNode1->GetName(), pNode2->GetName());
 }
 
 //------------------------------------------------------------------------------------------
@@ -604,12 +566,12 @@ BOOL CNodeView::OnInitDialogBar()
 	// Create the image list used in tree and list controls...
 	pimagelist = new CImageList();
 	ASSERT( pimagelist );
-	pimagelist->Create( IDB_NODE_ICONS, 20, 9, RGB(255,0,255) );
+	pimagelist->Create( IDB_NODE_ICONS, 20, 2, RGB(0,255,0) );
 	m_NodeViewTree.SetImageList( pimagelist, TVSIL_NORMAL );
 
 	pStateImageList = new CImageList( );
 	ASSERT( pStateImageList );
-	pStateImageList->Create( IDB_NODE_STATE_ICONS, 16, 2, RGB(0,255,0) );
+	pStateImageList->Create( IDB_NODE_STATE_ICONS, 8, 2, RGB(0,255,0) );
 	m_NodeViewTree.SetImageList( pStateImageList, TVSIL_STATE );
 
 	// Update the controls...
@@ -654,21 +616,16 @@ BOOL CNodeView::PreTranslateMessage(MSG* pMsg)
 void CNodeView::OnAddNullNode() 
 {
 	CRegionDoc *pDoc;
-	HTREEITEM hItem, hParentItem;
 	CWorldNode *pNode;
 
 	pDoc = GetDoc( );
-	if( pDoc == NULL )
-		return;	
-	
-	pNode = pDoc->GetRegion()->AddNullNode(GetSelectedNode());
-	ASSERT( pNode );
+	if( pDoc )
+	{
+		pNode = pDoc->GetRegion()->AddNullNode(GetSelectedNode());
 
-	// Select the node
-	HighlightNode(pNode);
-
-	//now allow the editing of the container name
-	OnPopupRename();
+		// Select the node
+		HighlightNode(pNode);
+	}
 }
 
 /************************************************************************/
@@ -730,56 +687,33 @@ void CNodeView::ChangeHiddenStatusOfSelection(BOOL bHide, BOOL bIncludeChildren)
 {
 	// Get the document
 	CRegionDoc *pDoc = GetDoc( );
-	if(!pDoc)
+	if(pDoc)
 	{
-		return;
-	}
-
-	// Get the selected node
-	CWorldNode *pNode=GetSelectedNode();
-	if (!pNode)
-	{
-		ASSERT(FALSE);
-		return;
-	}
-
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-	{
-		POSITION pos = pDoc->GetFirstViewPosition();
-		CRegionView* pView = (CRegionView *)pDoc->GetNextView(pos); 
-		ASSERT(pView);
-
-		if (bIncludeChildren)
+		// Get the selected node
+		CWorldNode *pNode=GetSelectedNode();
+		if (pNode)
 		{
-			PreActionList actionList;
-			pView->UndoHelper(&actionList, pNode);
-			pDoc->Modify(&actionList, TRUE);
-		}
-		else
-		{
-			pDoc->Modify(new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
+			// Setup the undo information 
+			pDoc->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pNode), FALSE);
+
+			if (bHide)
+			{
+				// Hide the node
+				pNode->HideNode(bIncludeChildren);
+			}
+			else
+			{
+				// Show the node
+				pNode->ShowNode(bIncludeChildren);
+			}	
+
+			// Update the node image
+			UpdateNodeImage(pNode);
+			
+			// Redraw the views
+			pDoc->RedrawAllViews( );
 		}
 	}
-	else
-		pDoc->Modify();
-
-	if (bHide)
-	{
-		// Hide the node
-		pNode->HideNode(bIncludeChildren);
-	}
-	else
-	{
-		// Show the node
-		pNode->ShowNode(bIncludeChildren);
-	}	
-
-	// Update the node image
-	UpdateNodeImage(pNode);
-	
-	// Redraw the views
-	pDoc->RedrawAllViews( );
 }
 
 /************************************************************************/
@@ -841,25 +775,6 @@ void CNodeView::OnUnhideAllNodes()
 
 	BeginWaitCursor();
 
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-	{
-		CRegionDoc *pDoc = GetDoc( );
-		if(pDoc)
-		{
-			POSITION pos = pDoc->GetFirstViewPosition();
-			CRegionView* pView = (CRegionView *)pDoc->GetNextView(pos); 
-			ASSERT(pView);
-
-			PreActionList actionList;
-			pView->UndoHelper(&actionList, pView->GetRegion()->GetRootNode());
-			pDoc->Modify(&actionList, TRUE);
-		}
-	}
-	else
-		GetDoc()->Modify();
-
-
 	RecurseHideAll(m_NodeViewTree.GetRootItem(), FALSE);
 	UpdateNodeImage(( CWorldNode * )m_NodeViewTree.GetItemData(m_NodeViewTree.GetRootItem()) );
 	EndWaitCursor();
@@ -869,31 +784,12 @@ void CNodeView::OnUnhideAllNodes()
 	GetDoc( )->RedrawAllViews( );
 }
 
-void CNodeView::OnPopupHideAllNodes() 
-{	
+void CNodeView::OnPopupHideAllNodes()
+{
 	CMainFrame* pFrame = (CMainFrame*)AfxGetMainWnd();
 	pFrame->UpdateStatusText(0,"Hiding all nodes...");
 
 	BeginWaitCursor();
-
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-	{
-		CRegionDoc *pDoc = GetDoc( );
-		if(pDoc)
-		{
-			POSITION pos = pDoc->GetFirstViewPosition();
-			CRegionView* pView = (CRegionView *)pDoc->GetNextView(pos); 
-			ASSERT(pView);
-
-			PreActionList actionList;
-			pView->UndoHelper(&actionList, pView->GetRegion()->GetRootNode());
-			pDoc->Modify(&actionList, TRUE);
-		}
-	}
-	else
-		GetDoc()->Modify();
-
 
 	RecurseHideAll(m_NodeViewTree.GetRootItem(), TRUE);
 	UpdateNodeImage(( CWorldNode * )m_NodeViewTree.GetItemData(m_NodeViewTree.GetRootItem()) );
@@ -901,7 +797,7 @@ void CNodeView::OnPopupHideAllNodes()
 
 	pFrame->UpdateStatusText(0,"Ready");
 
-	GetDoc( )->RedrawAllViews( );	
+	GetDoc( )->RedrawAllViews( );
 }
 
 void CNodeView::RecurseHideAll(HTREEITEM hItem, BOOL bHide)
@@ -927,46 +823,44 @@ void CNodeView::RecurseHideAll(HTREEITEM hItem, BOOL bHide)
 
 void CNodeView::OnSetPath()
 {
-	HTREEITEM hItem;
-	CWorldNode *pNode, *pParent;
-	GPOS pos;
-	CEditRegion *pRegion;
+	CRegionDoc *pDoc = GetDoc();
+	if(pDoc)
+	{
+		CWorldNode *pNode = ( CWorldNode * )m_NodeViewTree.GetItemData( m_NodeViewTree.GetSelectedItem( ) );
 
-	if(!GetDoc())
-		return;
+		// 2001 (0x402759): the path list is kept here, not by CEditRegion
+		CMoArray<CWorldNode*> &pathNodes = pDoc->GetRegion()->m_PathNodes;
+		if(pathNodes.FindElement(pNode) == BAD_INDEX)
+		{
+			pNode->EnableFlag(NODEFLAG_PATH);
+			pathNodes.Append(pNode);
+		}
 
-	pRegion = GetDoc()->GetRegion();
-	hItem = m_NodeViewTree.GetSelectedItem( );
-	pNode = ( CWorldNode * )m_NodeViewTree.GetItemData( hItem );
-	ASSERT( pNode );
-
-	pRegion->AddNodeToPath(pNode);
-
-	UpdateNodeImage(pNode);
-	GetDoc( )->RedrawAllViews( );
+		UpdateNodeImage(pNode);
+		GetDoc( )->RedrawAllViews( );
+	}
 }
 
 
 void CNodeView::OnUnsetPath()
 {
-	HTREEITEM hItem;
-	CWorldNode *pNode, *pParent;
-	GPOS pos;
-	CEditRegion *pRegion;
-	DWORD index;
+	CRegionDoc *pDoc = GetDoc();
+	if(pDoc)
+	{
+		CWorldNode *pNode = ( CWorldNode * )m_NodeViewTree.GetItemData( m_NodeViewTree.GetSelectedItem( ) );
 
-	if(!GetDoc())
-		return;
+		// 2001 (0x4027e8)
+		CMoArray<CWorldNode*> &pathNodes = pDoc->GetRegion()->m_PathNodes;
+		uint32 nIndex = pathNodes.FindElement(pNode);
+		if(nIndex != BAD_INDEX)
+		{
+			pNode->ClearFlag(NODEFLAG_PATH);
+			pathNodes.Remove(nIndex);
+		}
 
-	pRegion = GetDoc()->GetRegion();
-	hItem = m_NodeViewTree.GetSelectedItem( );
-	pNode = ( CWorldNode * )m_NodeViewTree.GetItemData( hItem );
-	ASSERT( pNode );
-
-	pRegion->RemoveNodeFromPath(pNode);
-
-	UpdateNodeImage(pNode);
-	GetDoc( )->RedrawAllViews( );
+		UpdateNodeImage(pNode);
+		GetDoc( )->RedrawAllViews( );
+	}
 }
 
 // ----------------------------------------------------------------------- //
@@ -1256,179 +1150,3 @@ BOOL CNodeView::OnControlBarClose()
 	// Call the base class
 	return CMRCSizeDialogBar::OnControlBarClose();
 }
-
-//callback for reporting errors while instantiating prefabs
-static void ReportPrefabError(const char* pszError)
-{
-	GetDebugDlg()->ShowWindow(SW_SHOW);
-	GetDebugDlg()->AddMessage(pszError);
-}
-
-void CNodeView::OnPopupDisconnectPrefab()
-{
-	CWorldNode *pNode = GetSelectedNode();
-
-	if (!pNode)
-		return;
-
-	if (pNode->m_Type != Node_PrefabRef)
-		return;
-
-	CPrefabRef *pPrefabRef = (CPrefabRef*)pNode;
-
-	PreActionList undoList;
-
-	CWorldNode *pNewRoot = pPrefabRef->InstantiatePrefab(GetDoc()->GetRegion(), ReportPrefabError, &undoList);
-
-	HighlightNode(pNewRoot);
-
-	undoList.AddTail(new CPreAction(ACTION_MODIFYNODE, pPrefabRef));
-	GetDoc()->Modify(&undoList);
-
-	no_DestroyNode(GetDoc()->GetRegion(), pPrefabRef, TRUE);
-
-	GetDoc()->GetRegion()->ClearSelections();
-	GetDoc()->GetRegion()->RecurseAndSelect(pNewRoot);
-
-	GetDoc()->UpdateSelectionBox();
-	GetDoc()->RedrawAllViews();
-}
-
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CNodeView::OnDeleteEmptyContainers
-//
-//	PURPOSE:	Recursive wrapper for RecurseDeleteEmptyContainers()
-//				that obtains a pointer to the currently selected node, and
-//				passes it into the function.  
-//				(Invoked from the NodeView Popup)
-//
-// ----------------------------------------------------------------------- //
-void CNodeView::OnDeleteEmptyContainers()
-{
-	CWorldNode *pNode = GetSelectedNode();
-
-	ASSERT(pNode != LTNULL);
-
-	RecurseDeleteEmptyContainers(pNode);
-
-	m_pDoc->NotifySelectionChange();
-	m_pDoc->SetModifiedFlag();
-
-}
-
-
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CNodeView::RecurseDeleteEmptyContainers
-//
-//	PURPOSE:	Given a node in the world tree, removes branches of empty
-//				container nodes.
-//
-// ----------------------------------------------------------------------- //
-void CNodeView::RecurseDeleteEmptyContainers( CWorldNode *pNode )
-{
-	GPOS pos;
-	for(pos=pNode->m_Children; pos; )
-	{
-		if(!pos)
-		{
-			return;
-		}
-
-		RecurseDeleteEmptyContainers(pNode->m_Children.GetNext(pos));
-	}
-
-	// Check to see if this node is a container
-	if(pNode->GetType() == Node_Null)
-	{
-		GPOS child;
-		child = pNode->m_Children;
-
-		// If the container node doesn't have children... BLAM!!!
-		if(!child)
-		{
-			// Remove this node from node view tree...
-			RemoveFromTree( pNode );
-			DeleteNode( pNode );
-
-			if( pNode->GetParent( ))
-			{
-				pNode->RemoveFromTree( );
-			}
-		}
-	}
-}
-
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CNodeView::OnDeleteCascadeContainers
-//
-//	PURPOSE:	Recursive wrapper for RecurseDeleteSuperfluousContainers()
-//				that obtains a pointer to the currently selected node, and
-//				passes it into the function.  
-//				(Invoked from the NodeView Popup)
-//
-// ----------------------------------------------------------------------- //
-void CNodeView::OnDeleteCascadeContainers()
-{
-	CWorldNode *pNode = GetSelectedNode();
-
-	ASSERT(pNode != LTNULL);
-
-	RecurseDeleteSuperfluousContainers(pNode);
-
-	m_pDoc->NotifySelectionChange();
-	m_pDoc->SetModifiedFlag();
-}
-
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CNodeView::RecurseDeleteSuperfluousContainers
-//
-//	PURPOSE:	Given a node in the world tree, removes all redundant
-//				container nodes (removes single child nodes that are 
-//				containers)
-//
-// ----------------------------------------------------------------------- //
-void CNodeView::RecurseDeleteSuperfluousContainers( CWorldNode *pNode )
-{
-	GPOS pos;
-	for(pos=pNode->m_Children; pos; )
-	{
-		if(!pos)
-		{
-			return;
-		}
-
-		RecurseDeleteSuperfluousContainers(pNode->m_Children.GetNext(pos));
-	}
-
-	// Check to see if this node is a container
-	if(pNode->GetType() == Node_Null)
-	{
-		// Make sure that we are not deleting a container that is a child of the root
-		CWorldNode * pParent = pNode->GetParent();
-		if((pParent) && (pParent != m_pDoc->GetRegion()->GetRootNode()))
-		{
-			// Make sure there is only one child of the current node
-			if(pNode->m_Children.GetCount() == 1)
-			{
-				// Make sure that the child is a container
-				CWorldNode * pChild = pNode->m_Children.GetTail();
-				if(pChild->GetType() == Node_Null)
-				{
-					//Remove this node!
-					RemoveFromTree(pNode);
-					DeleteNode(pNode);
-
-					if(pNode->GetParent())
-					{
-						pNode->RemoveFromTree();
-					}				
-				}
-			}
-		}
-	}
-}
-

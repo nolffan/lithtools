@@ -26,8 +26,9 @@ class CNotifier
 {
 	public:
 		
-		virtual void	NotifyPropertyChange( CBaseProp *pProp, bool bUpdateView )	{}
-		virtual void	NotifyPropertiesChange( bool bUpdateView )	{}
+		// 2001: BOOL, passed through unconverted (NotifyChange, 0x404e68)
+		virtual void	NotifyPropertyChange( CBaseProp *pProp, BOOL bUpdateView )	{}
+		virtual void	NotifyPropertiesChange( BOOL bUpdateView )	{}
 
 };
 
@@ -70,11 +71,6 @@ public:
 
 protected:
 
-	//handles custom updating for position and rotation props to allow updating to be applied
-	//on objects as the position changes
-	bool			HandlePosVectorProp(CVectorProp* pVecProp);
-	bool			HandleRotationProp(CRotationProp* pRotProp);
-
 	void			GetLabelRect( int iLabel, CRect &rect );
 	void			CreateControls();
 
@@ -111,6 +107,9 @@ protected:
 	CNotifier			*m_pNotifier;
 	CFont				*m_pFont;
 
+	// 2001 (0x6c): TRUE from InitMe (0x404c57); while FALSE, OnKillFocus
+	// (0x405ce0) hides the controls when the focus leaves them
+	BOOL				m_bNoHideOnKillFocus;
 
 	BOOL				m_bModal;
 
@@ -120,9 +119,6 @@ protected:
 
 	//the currently active property
 	CBaseProp			*m_pCurProp;
-
-	//keeps track of if the currently active string has been edited
-	bool				m_bStringModified;
 		
 	// The controls and the label controls
 	DWORD				m_nControls;

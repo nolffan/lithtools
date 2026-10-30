@@ -18,7 +18,6 @@
 #include "mainfrm.h"
 #include "vectorbutton.h"
 #include "rotationedit.h"
-#include "lightattenuation.h"
 #include "multilinestringdlg.h"
 #include "colorpicker.h"
 #include "edithelpers.h"
@@ -33,13 +32,11 @@
 #include "propeditstring.h"
 #include "propeditstringlist.h"
 #include "deditinternal.h"
-#include "eventeditordlg.h"
-#include "selecteffectgroupdlg.h"
 
 #define PROPDLG_ID_BASE			45000
 #define PROPDLG_STATIC_ID		100000
 
-#define PROPDLG_HORZ_PAD	5
+#define PROPDLG_HORZ_PAD	10	// 2001: Init 0x404d56, GetLabelRect 0x404e8c
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -125,11 +122,11 @@ void CPropertiesControls::InitMe()
 
 	m_pFont = new CFont;
 	m_pPopupNoteDlg=new CPopupNoteDlg;
-	m_pFont->CreatePointFont( 90, "Ariel" );
+	m_pFont->CreatePointFont( 90, "Courier New" );
 
 	m_pCurProp = NULL;
-	
-	m_bStringModified = false;
+
+	m_bNoHideOnKillFocus = TRUE;
 }
 
 
@@ -184,9 +181,6 @@ void CPropertiesControls::Term( BOOL bClear )
 	// in a bad state.
 	m_pNotifier = NULL;
 	m_pPropList = NULL;
-
-	m_pCurProp			= NULL;
-	m_bStringModified	= false;
 		
 	// Delete the controls
 	if( m_Controls )
@@ -237,22 +231,6 @@ void CPropertiesControls::NotifyChange( CBaseProp *pProp, BOOL bUpdateView )
 		else
 			m_pNotifier->NotifyPropertyChange( pProp, bUpdateView );
 	}
-
-	//now we need to tell all the objects themselves that their properties have
-	//changed so that they can have a chance to update internal state
-	CRegionDoc* pDoc = GetActiveRegionDoc();
-
-	if(pDoc)
-	{
-		CEditRegion* pRegion = &(pDoc->m_Region);
-
-		//run through all selected objects
-		for(uint32 nCurrObj = 0; nCurrObj < pRegion->m_Selections.GetSize(); nCurrObj++)
-		{
-			//update that this property changed
-			pRegion->m_Selections[nCurrObj]->OnPropertyChanged(pProp, true, NULL);
-		}
-	}
 }
 
 
@@ -274,6 +252,12 @@ void CPropertiesControls::GetControlRect( int iControl, CRect &rect )
 }
 
 
+// NEAR (1390 of 1387 bytes): one immediate's width. The shipped build masks
+// the combo box style's select with `and $0xc1,%al` (0x405181), ours with
+// `and $0xc1,%eax`; everything else is identical. Writing the ?: straight
+// into the Create call instead of through dwComboBoxStyle reorders the pushes;
+// an int local is the same
+// and is worse. Class: immediate width.
 void CPropertiesControls::CreateControls()
 {
 	CBaseProp		*pProp;
@@ -308,8 +292,8 @@ void CPropertiesControls::CreateControls()
 		}
 		
 		// Create the static label
-		CStatic *pStaticCtrl=CreateStaticLabel(pProp, m_nControls);						
-		m_ppLabelControls[m_nControls]=pStaticCtrl;
+		// 2001 (0x404f79): by property index, not control index
+		m_ppLabelControls[i]=CreateStaticLabel(pProp, i);
 
 		// Get the help for this control
 		m_sControlHelpArray.Add(GetPropHelpString(pProp));
@@ -340,8 +324,9 @@ void CPropertiesControls::CreateControls()
 
 						pPropEditStringList = new CPropEditStringList;
 
-						DWORD dwComboBoxStyle = (pProp->m_PropFlags & PF_STATICLIST) ? CBS_DROPDOWNLIST | CBS_AUTOHSCROLL : CBS_DROPDOWN | CBS_AUTOHSCROLL;
-						pPropEditStringList->Create( dwComboBoxStyle | WS_CHILD | WS_VSCROLL | WS_VISIBLE | WS_BORDER | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i );
+						// 2001 (0x40516b): static lists sorted, and a horizontal scroll bar
+						DWORD dwComboBoxStyle = (pProp->m_PropFlags & PF_STATICLIST) ? CBS_DROPDOWNLIST | CBS_SORT : CBS_DROPDOWN | CBS_AUTOHSCROLL;
+						pPropEditStringList->Create( dwComboBoxStyle | WS_CHILD | WS_VSCROLL | WS_HSCROLL | WS_VISIBLE | WS_BORDER | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i );
 						pPropEditStringList->SetFont( m_pFont );
 						pPropEditStringList->LimitText( MAX_STRINGPROP_LEN );
 
@@ -602,39 +587,56 @@ void CPropertiesControls::OnLButtonDown(UINT nFlags, CPoint point)
 // Returns the help string for a specific property
 CString CPropertiesControls::GetPropHelpString(CBaseProp *pProp)
 {
-	// Get the class names
-	CStringArray nameArray;
-	GetClassNamesFromProperty(pProp, nameArray);	
-	if (nameArray.GetSize() == 0)
+	// 2001 (0x4056c8): looks in the class help itself, then falls back to the
+	// property's own help string
+	CString sNotAvailable("Information not available.  Please check the classhlp.but file and restart DEdit.");
+
+	if (!pProp)
 	{
-		return "Information not available.  Please check the classhlp.but file and restart DEdit.";
+		return sNotAvailable;
 	}
 
-	// Get the base class names and add them to the property list
-	CStringArray baseClassNames;
-	GetBaseClassNames(nameArray, baseClassNames);
-
-	// Add the base class names to the name array
-	nameArray.Append(baseClassNames);
-
-	// Get the help string by trying each object name
-	int i;
-	for (i=0; i < nameArray.GetSize(); i++)
+	CButeMgr *pButeMgr=GetApp()->GetClassHelpButeMgr();
+	if (pButeMgr)
 	{
-		// Check to see if the string exists
-		CString sFoundString;
-		if (GetApp()->GetHelpString(nameArray[i], pProp->GetName(), sFoundString))
+		// Get the class names
+		CStringArray nameArray;
+		GetClassNamesFromProperty(pProp, nameArray);	
+		if (nameArray.GetSize() != 0)
 		{
-			sFoundString.Replace("\\n", "\n");
-			sFoundString.Replace("\\r", "\r");
+			// Get the base class names and add them to the property list
+			CStringArray baseClassNames;
+			GetBaseClassNames(nameArray, baseClassNames);
 
-			// Return the string from ButeMgr;
-			return sFoundString;			
+			// Add the base class names to the name array
+			nameArray.Append(baseClassNames);
+
+			// Get the help string by trying each object name
+			int i;
+			for (i=0; i < nameArray.GetSize(); i++)
+			{
+				// Check to see if the string exists
+				if (pButeMgr->Exist(nameArray[i], pProp->GetName()))
+				{
+					CString sFoundString=pButeMgr->GetString(nameArray[i], pProp->GetName());
+
+					sFoundString.Replace("\\n", "\n");
+					sFoundString.Replace("\\r", "\r");
+
+					// Return the string from ButeMgr;
+					return sFoundString;			
+				}
+			}
 		}
 	}
 
-	// The string wasn't found
-	return "";
+	// The property's own help
+	if (pProp->m_pPropDef && strlen(pProp->m_pPropDef->m_PropHelp))
+	{
+		return pProp->m_pPropDef->m_PropHelp;
+	}
+
+	return sNotAvailable;
 }
 
 /************************************************************************/
@@ -784,47 +786,38 @@ void CPropertiesControls::ReadControlValues()
 
 			case PT_STRING:
 			{
-				if (pProp)
+				// 2001 (0x405ba3): no handling of an empty list
+				if (pProp->m_pPropDef)
 				{
 					// { BL 11/08/99 }
 					// If it's a list, create the lists, and if it's static, force the matching
 					// of the prop's value to a list item. If we can't match something, then set
 					// the prop's value to the first thing in the list.
-					if ((pProp->m_PropFlags & (PF_STATICLIST | PF_DYNAMICLIST)) != 0)
+					DEditInternal* pDEditInternal = pProp->m_pPropDef->m_pDEditInternal;
+					if (pDEditInternal && (pProp->m_PropFlags & (PF_STATICLIST | PF_DYNAMICLIST)) != 0)
 					{
-						if(pProp->m_pPropDef && pProp->m_pPropDef->m_pDEditInternal)
+						m_Controls[i]->SetWindowText( ((CStringProp*)pProp)->m_String );
+						if ( pProp->m_pPropDef )
 						{
-							DEditInternal* pDEditInternal = pProp->m_pPropDef->m_pDEditInternal;
-							m_Controls[i]->SetWindowText( ((CStringProp*)pProp)->m_String );
-							if ( pProp->m_pPropDef )
+							CPropEditStringList* pList = (CPropEditStringList*)m_Controls[i];
+							for ( int iString = 0 ; iString < pDEditInternal->m_cStrings ; iString++ )
 							{
-								CPropEditStringList* pList = (CPropEditStringList*)m_Controls[i];
-								for ( int iString = 0 ; iString < pDEditInternal->m_cStrings ; iString++ )
+								pList->AddString(pDEditInternal->m_aszStrings[iString]);
+							}
+
+							if ( pProp->m_PropFlags & PF_STATICLIST )
+							{
+								int iSel = pList->FindStringExact(-1, ((CStringProp*)pProp)->m_String);
+
+								if ( iSel == CB_ERR )
 								{
-									pList->AddString(pDEditInternal->m_aszStrings[iString]);
+									pList->SetCurSel(0);
+									pList->GetLBText(0, ((CStringProp*)pProp)->m_String );
+									NotifyChange(pProp, TRUE);
 								}
-
-								if ( pProp->m_PropFlags & PF_STATICLIST )
+								else
 								{
-									int iSel = pList->FindStringExact(-1, ((CStringProp*)pProp)->m_String);
-
- 									if( pDEditInternal->m_cStrings <= 0 )
- 									{
- 										pList->SetCurSel( -1 );
- 										((CStringProp*)pProp)->SetString( "" );
-		 								NotifyChange( pProp, true );
- 									}
- 									else if ( iSel == CB_ERR )
-									{
-										pList->SetCurSel(0);
-										_ASSERT(pList->GetLBTextLen(0) < MAX_STRINGPROP_LEN );
-										pList->GetLBText(0, ((CStringProp*)pProp)->m_String );
-										NotifyChange(pProp, true);
-									}
-									else
-									{
-										pList->SetCurSel(iSel);
-									}
+									pList->SetCurSel(iSel);
 								}
 							}
 						}
@@ -841,12 +834,8 @@ void CPropertiesControls::ReadControlValues()
 			case PT_LONGINT:
 			case PT_FLAGS:
 			{
-				// don't update a group button
-				if( !(pProp->m_PropFlags & PF_GROUPOWNER) )
-				{
-					sprintf(str, "%d", (int)(((CRealProp*)pProp)->m_Value));
-					m_Controls[i]->SetWindowText(str);
-				}
+				sprintf(str, "%d", (int)(((CRealProp*)pProp)->m_Value));
+				m_Controls[i]->SetWindowText(str);
 				break;
 			}
 
@@ -901,179 +890,14 @@ void CPropertiesControls::OnPaint()
 void CPropertiesControls::OnKillFocus(CWnd* pNewWnd) 
 {
 	CDialog::OnKillFocus(pNewWnd);
+
+	// 2001 (0x405ce0)
+	if( !m_bNoHideOnKillFocus )
+	{
+		if( !pNewWnd || pNewWnd->GetOwner() != this )
+			ShowWindow( SW_HIDE );
+	}
 }
-
-//handles custom updating for position and rotation props to allow updating to be applied
-//on objects as the position changes
-static void PosVectorUpdateCallback(const LTVector& vPos, void* pUser)
-{
-	//get the property name
-	CVectorProp* pVecProp = (CVectorProp*)pUser;
-
-	CRegionDoc* pRegionDoc = GetActiveRegionDoc();
-	CEditRegion* pRegion = pRegionDoc->GetRegion();
-
-	//run through all the selections and update the positions
-	for(uint32 nCurrSel = 0; nCurrSel < pRegion->m_Selections.GetSize(); nCurrSel++)
-	{
-		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
-		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pVecProp->GetName());
-
-		if(pProp && (pProp->GetType() == PT_VECTOR))
-		{
-			((CVectorProp*)pProp)->SetVector(vPos);
-
-			//see if the object should search for its dims when it is rendered
-			if((pSel->GetType() == Node_Object) && (pVecProp->GetFlags() & (PF_DIMS | PF_LOCALDIMS)))
-			{
-				pSel->AsObject()->SetSearchForDims(true);
-			}
-		}
-	}
-
-	//update the selection box
-	pRegionDoc->UpdateSelectionBox();
-
-	//now redraw all the views
-	pRegionDoc->RedrawAllViews();
-}
-
-bool CPropertiesControls::HandlePosVectorProp(CVectorProp* pVecProp)
-{
-	CVectorEdit vectorDlg;
-	vectorDlg.SetVector(pVecProp->m_Vector);
-	vectorDlg.SetCallback(PosVectorUpdateCallback, pVecProp);
-
-	CRegionDoc* pRegionDoc = GetActiveRegionDoc();
-
-	if(!pRegionDoc)
-		return false;
-
-	CEditRegion* pRegion = pRegionDoc->GetRegion();
-
-	//save all the positions
-	CMoArray<LTVector>	OldVal;
-	OldVal.SetSize(pRegion->m_Selections.GetSize());
-
-	uint32 nCurrSel;
-	for(nCurrSel = 0; nCurrSel < pRegion->m_Selections.GetSize(); nCurrSel++)
-	{
-		CBaseProp* pProp = pRegion->m_Selections[nCurrSel]->GetPropertyList()->GetProp(pVecProp->GetName());
-
-		if(pProp && (pProp->GetType() == PT_VECTOR))
-			OldVal[nCurrSel] = ((CVectorProp*)pProp)->m_Vector;
-	}
-
-	bool bOK = ( vectorDlg.DoModal() == IDOK );
-
-	//restore all the values
-	for(nCurrSel = 0; nCurrSel < pRegion->m_Selections.GetSize(); nCurrSel++)
-	{
-		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
-		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pVecProp->GetName());
-
-		if(pProp && (pProp->GetType() == PT_VECTOR))
-			((CVectorProp*)pProp)->SetVector(OldVal[nCurrSel]);
-
-		//see if the object should search for its dims when it is rendered
-		if((pSel->GetType() == Node_Object) && (pVecProp->GetFlags() & (PF_DIMS | PF_LOCALDIMS)))
-		{
-			pSel->AsObject()->SetSearchForDims(true);
-		}
-	}
-
-	if(bOK)
-	{
-		pVecProp->m_Vector = vectorDlg.GetVector();
-		return true;
-	}
-	
-	//the user cancelled so update and invalidate
-	pRegionDoc->UpdateSelectionBox();
-	pRegionDoc->RedrawAllViews();
-
-	return false;
-}
-
-static void RotationUpdateCallback(const LTVector& vEuler, void* pUser)
-{
-	//get the property name
-	CRotationProp* pRotProp = (CRotationProp*)pUser;
-
-	CRegionDoc* pRegionDoc = GetActiveRegionDoc();
-	CEditRegion* pRegion = pRegionDoc->GetRegion();
-
-	//run through all the selections and update the positions
-	for(uint32 nCurrSel = 0; nCurrSel < pRegion->m_Selections.GetSize(); nCurrSel++)
-	{
-		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
-		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pRotProp->GetName());
-
-		if(pProp && (pProp->GetType() == PT_ROTATION))
-		{
-			((CRotationProp*)pProp)->SetEulerAngles(vEuler);
-		}
-	}
-
-	//update the selection box
-	pRegionDoc->UpdateSelectionBox();
-
-	//now redraw all the views
-	pRegionDoc->RedrawAllViews();
-}
-
-
-bool CPropertiesControls::HandleRotationProp(CRotationProp* pRotProp)
-{
-	CRotationEdit RotationDlg;
-	RotationDlg.m_EulerAngles = pRotProp->GetEulerAngles();
-	RotationDlg.SetUserCallback(RotationUpdateCallback, pRotProp);
-
-	CRegionDoc* pRegionDoc = GetActiveRegionDoc();
-
-	if(!pRegionDoc)
-		return false;
-
-	CEditRegion* pRegion = pRegionDoc->GetRegion();
-
-	//save all the positions
-	CMoArray<LTVector>	OldVal;
-	OldVal.SetSize(pRegion->m_Selections.GetSize());
-
-	uint32 nCurrSel;
-	for(nCurrSel = 0; nCurrSel < pRegion->m_Selections.GetSize(); nCurrSel++)
-	{
-		CBaseProp* pProp = pRegion->m_Selections[nCurrSel]->GetPropertyList()->GetProp(pRotProp->GetName());
-
-		if(pProp && (pProp->GetType() == PT_ROTATION))
-			OldVal[nCurrSel] = ((CRotationProp*)pProp)->GetEulerAngles();
-	}
-
-	bool bOK = ( RotationDlg.DoModal() == IDOK );
-
-	//restore all the values
-	for(nCurrSel = 0; nCurrSel < pRegion->m_Selections.GetSize(); nCurrSel++)
-	{
-		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
-		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pRotProp->GetName());
-
-		if(pProp && (pProp->GetType() == PT_ROTATION))
-			((CRotationProp*)pProp)->SetEulerAngles(OldVal[nCurrSel]);
-	}
-
-	if(bOK)
-	{
-		pRotProp->SetEulerAngles(RotationDlg.m_EulerAngles);
-		return true;
-	}
-	
-	//the user cancelled so update and invalidate
-	pRegionDoc->UpdateSelectionBox();
-	pRegionDoc->RedrawAllViews();
-
-	return false;
-}
-
 
 BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam) 
 {
@@ -1091,13 +915,11 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 	int	i, moveBack, len, selStart, selEnd;
 	char str[256];
 
-	RECT rect;
-
-	BOOL bVal;
 	BOOL bNotify = FALSE;
 	BOOL bApply = FALSE;
 	CPropList propList;
 	DWORD groupMask;
+	float fValue;
 					
 	// Get the document
 	CRegionDoc *pDoc=GetActiveRegionDoc();
@@ -1133,8 +955,6 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 			pProp = m_pPropList->m_Props[offset];
 			ASSERT( pProp );
 
-			// talon: no PF_COMPOSITETYPE (Build 69's light attenuation presets) in the LT2 SDK
-			// talon: no PF_EVENT (Build 69's event editor) in the LT2 SDK
 			if(pProp->m_PropFlags & PF_GROUPOWNER)
 			{
 				if(notifyCode == BN_CLICKED)
@@ -1143,12 +963,9 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 					groupMask = (pProp->m_PropFlags & PF_GROUPMASK);
 					for(i=0; i < m_pPropList->m_Props; i++)
 					{
-						if((m_pPropList->m_Props[i]->m_PropFlags & PF_GROUPMASK) == groupMask)
+						if((m_pPropList->m_Props[i]->m_PropFlags & groupMask) && !(m_pPropList->m_Props[i]->m_PropFlags & PF_GROUPOWNER))
 						{
-							if(!(m_pPropList->m_Props[i]->m_PropFlags & PF_GROUPOWNER))
-							{
-								propList.m_Props.Append(m_pPropList->m_Props[i]);
-							}
+							propList.m_Props.Append(m_pPropList->m_Props[i]);
 						}
 					}
 
@@ -1245,7 +1062,6 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 									}
 								}
 							}
-							// talon: no PF_TEXTUREEFFECT in the LT2 SDK
 							// If the string is a filename, then browse for a new file
 							else if (pProp->m_PropFlags & PF_FILENAME)
 							{
@@ -1262,9 +1078,6 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 								// Create a string editing dialog
 								CMultiLineStringDlg dlg;
 
-								CStringProp *pStringProp;
-								pStringProp = (CStringProp *)pProp;
-
 								dlg.m_Caption = pStringProp->m_Name;
 								dlg.m_String = pStringProp->m_String;
 								// { BL 11/08/99 }
@@ -1280,23 +1093,23 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 							}							
 						}
 
-						if((notifyCode == CBN_SETFOCUS) && m_pCurProp && (m_pCurProp != pProp))
+						if( ((notifyCode == CBN_SETFOCUS) || (notifyCode == CBN_KILLFOCUS)) && m_pCurProp )
 						{
-							m_bStringModified = false;
-							//bApply = TRUE;
+							bApply = TRUE;
 						}
 
-						if((notifyCode == CBN_KILLFOCUS) && (m_pCurProp == pProp) && m_bStringModified )
+						if( (notifyCode == CBN_EDITCHANGE) || (notifyCode == CBN_EDITUPDATE) )
 						{
-							//bApply = TRUE;
-							m_bStringModified = false;
-						}
-						
-						if(notifyCode == CBN_EDITCHANGE)
-						{
-							m_Controls[offset]->GetWindowText( ((CStringProp*)pProp)->m_String, MAX_STRINGPROP_LEN );
-							m_pCurProp			= pProp;
-							m_bStringModified	= true;
+							// 2001: a buffer of its own in each block (ebp-0x144)
+							char szText[MAX_STRINGPROP_LEN];
+							m_Controls[offset]->GetWindowText( szText, MAX_STRINGPROP_LEN );
+							if( strcmp(((CStringProp*)pProp)->m_String, szText) != 0 )
+							{
+								strncpy( ((CStringProp*)pProp)->m_String, szText, MAX_STRINGPROP_LEN );
+								((CStringProp*)pProp)->m_String[MAX_STRINGPROP_LEN] = 0;
+								m_pCurProp = pProp;
+							}
+							m_pCurProp = pProp;
 						}					
 
 						if( (notifyCode == CBN_SELENDCANCEL) )
@@ -1308,11 +1121,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 
 						if( (notifyCode == CBN_SELENDOK) || (notifyCode == CBN_SELCHANGE) )
 						{
-							m_bStringModified	= true;
-							bApply = TRUE;
-
 							int nCurSel = ((CComboBox*)m_Controls[offset])->GetCurSel();
-							_ASSERT(((CComboBox*)m_Controls[offset])->GetLBTextLen(nCurSel) < MAX_STRINGPROP_LEN );
 							((CComboBox*)m_Controls[offset])->GetLBText(nCurSel, ((CStringProp*)pProp)->m_String );
 							m_pCurProp = pProp;
 
@@ -1321,22 +1130,23 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 							Redraw();
 						}					
 
-						if(notifyCode == EN_SETFOCUS)
-						{
-							m_bStringModified = false;
-						}
-
-						if((notifyCode == EN_KILLFOCUS) && (m_pCurProp == pProp) && m_bStringModified )
+						if( ((notifyCode == EN_SETFOCUS) || (notifyCode == EN_KILLFOCUS)) && m_pCurProp )
 						{
 							bApply = TRUE;
-							m_bStringModified = false;
 						}
-						
-						if(notifyCode == EN_CHANGE)
+
+						if( (notifyCode == EN_CHANGE) || (notifyCode == EN_UPDATE) )
 						{
-							m_Controls[offset]->GetWindowText( ((CStringProp*)pProp)->m_String, MAX_STRINGPROP_LEN );
-							m_pCurProp = pProp;
-							m_bStringModified = true;
+							// 2001: a buffer of its own in each block (ebp-0x144)
+							char szText[MAX_STRINGPROP_LEN];
+							m_Controls[offset]->GetWindowText( szText, MAX_STRINGPROP_LEN );
+							char *pString = ((CStringProp*)pProp)->m_String;
+							if( strcmp(pString, szText) != 0 )
+							{
+								strncpy( pString, szText, MAX_STRINGPROP_LEN );
+								pString[MAX_STRINGPROP_LEN] = 0;
+								m_pCurProp = pProp;
+							}
 						}					
 						break;
 					}
@@ -1348,16 +1158,9 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 						pEdit = (CEdit*)m_Controls[offset];
 						pEdit->GetWindowText( str, 256 );
 
-						if((notifyCode == EN_SETFOCUS) && m_pCurProp && (m_pCurProp != pProp))
-						{
-							m_bStringModified = false;
-							bApply = TRUE;
-						}
-
-						if((notifyCode == EN_KILLFOCUS) && (m_pCurProp == pProp) && m_bStringModified )
+						if( ((notifyCode == EN_SETFOCUS) || (notifyCode == EN_KILLFOCUS)) && m_pCurProp )
 						{
 							bApply = TRUE;
-							m_bStringModified = false;
 						}
 
 						if( (notifyCode == EN_CHANGE) || (notifyCode == EN_UPDATE) )
@@ -1397,11 +1200,11 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 							}
 						
 							// Store the new number if it is a change
-							if(notifyCode == EN_CHANGE)
+							fValue = (float)atof(str);
+							if( fValue != ((CRealProp*)pProp)->m_Value )
 							{
-								((CRealProp*)pProp)->m_Value = (float)atof(str);
+								((CRealProp*)pProp)->m_Value = fValue;
 								m_pCurProp = pProp;
-								m_bStringModified = true;
 							}
 
 						}
@@ -1454,31 +1257,20 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 
 					case PT_VECTOR:
 					{
+						CVectorEdit vectorDlg;
+
 						if( notifyCode == BN_CLICKED )
 						{
 							pVectorProp = (CVectorProp*)pProp;
 
-							if( (stricmp(pVectorProp->GetName(), "Pos") == 0) || 
-								(pVectorProp->GetFlags() & (PF_DIMS | PF_LOCALDIMS)))
+							vectorDlg.SetVector(pVectorProp->m_Vector);
+							
+							if( vectorDlg.DoModal() == IDOK )
 							{
-								if(HandlePosVectorProp(pVectorProp))
-								{
-									m_pCurProp = pProp;
-									bApply = TRUE;
-								}
-							}
-							else
-							{							
-								CVectorEdit vectorDlg;
-								vectorDlg.SetVector(pVectorProp->m_Vector);
-								
-								if( vectorDlg.DoModal() == IDOK )
-								{
-									pVectorProp->m_Vector=vectorDlg.GetVector();
-										
-									m_pCurProp = pProp;
-									bApply = TRUE;
-								}
+								pVectorProp->m_Vector=vectorDlg.GetVector();
+									
+								m_pCurProp = pProp;
+								bApply = TRUE;
 							}
 						}
 						break;
@@ -1486,38 +1278,21 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 
 					case PT_ROTATION:
 					{
+						CRotationEdit rotationDlg;
+
 						if(notifyCode == BN_CLICKED)
 						{
-
 							CRotationProp *pRotationProp = (CRotationProp*)pProp;
 
-							if(stricmp(pRotationProp->GetName(), "Rotation") == 0)
+							rotationDlg.m_EulerAngles = pRotationProp->GetEulerAngles();
+							if(rotationDlg.DoModal() == IDOK)
 							{
-								if(HandleRotationProp(pRotationProp))
-								{
-									m_pCurProp = pProp;
-									bApply = TRUE;
-								}
-							}
-							else
-							{	
-								CRotationEdit rotationDlg;
-								rotationDlg.m_EulerAngles = pRotationProp->GetEulerAngles();
-								if(rotationDlg.DoModal() == IDOK)
-								{
-									pRotationProp->SetEulerAngles(rotationDlg.m_EulerAngles);
-									m_pCurProp = pProp;
-									bApply = TRUE;
-								}
+								pRotationProp->SetEulerAngles(rotationDlg.m_EulerAngles);
+								m_pCurProp = pProp;
+								bApply = TRUE;
 							}
 						}
 
-						break;
-					}
-
-					
-					default:
-					{
 						break;
 					}
 				}
@@ -1533,7 +1308,6 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 		if( bApply )
 		{
 			m_pCurProp			= NULL;
-			m_bStringModified	= false;
 		}
 	}
 
@@ -1547,13 +1321,19 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 //
 // Returns:	TRUE  - The file was succesfully found and copied into the property
 //			FALSE - An error occured or cancel was selected on the browse dialog box
+// NEAR (605 of 606 bytes): the shipped build leaves pProp in its parameter
+// slot (reloaded for the last store, 0x406915) and puts the second operator+
+// temporary in a frame slot (ebp-0x2c, frame 0x218); ours keeps pProp in ebx
+// and homes that temporary in pProp's dead slot (frame 0x214), with the
+// callee-saved registers rotated to match. Tried: m_String through a char*
+// local. Register allocation.
 BOOL CPropertiesControls::BrowseForFile(CStringProp *pProp)
 {
 	// The base project path
 	CString sBaseProjectPath=GetProject()->m_BaseProjectDir;
 
 	// The filter used for the file open dialog
-	CString sFilter("All files (*.*)|*.*|Model (*.lta,*.ltc)|*.lta,*.ltc|Texture (*.dtx)|*.dtx|Wave (*.wav)|*.wav||");
+	CString sFilter("All files (*.*)|*.*|Model (*.abc)|*.abc|Texture (*.dtx)|*.dtx|Wave (*.wav)|*.wav||");
 
 	// The current file
 	CString sCurrentFile;
@@ -1585,6 +1365,10 @@ BOOL CPropertiesControls::BrowseForFile(CStringProp *pProp)
 	int nBaseProjectLength=sBaseProjectPath.GetLength();
 	if ( nBaseProjectLength > 0)
 	{
+		// 2001 (0x406852): compared in lower case
+		sFilePath.MakeLower();
+		sBaseProjectPath.MakeLower();
+
 		// Compare the filename to the base project path
 		if (sFilePath.GetLength() < nBaseProjectLength ||
 			sFilePath.Left(nBaseProjectLength) != sBaseProjectPath)
@@ -1654,14 +1438,14 @@ BOOL CPropertiesControls::BrowseForObject(CStringProp *pStringProp)
 	// Display the dialog
 	if (objectDlg.DoModal() == IDOK)
 	{	
-		// Get the selected object
-		CString sObjName = objectDlg.GetSelectedName();
+		// Get the selected object (2001: 0x4069ca)
+		CBaseEditObj *pObject=objectDlg.GetSelectedObject();
 
 		// Check to see that we have a valid object
-		if (!sObjName.IsEmpty())
+		if (pObject)
 		{
 			// Update the string property
-			strncpy(pStringProp->m_String, sObjName, MAX_STRINGPROP_LEN );		
+			strncpy(pStringProp->m_String, pObject->GetName(), MAX_STRINGPROP_LEN );		
 		}	
 
 		// Save whether or not to group the objects by type		
@@ -1697,7 +1481,6 @@ void CPropertiesControls::OnOK()
 	{
 		NotifyChange( m_pCurProp, TRUE );
 		m_pCurProp			= NULL;
-		m_bStringModified	= false;
 	}
 }
 
@@ -1929,18 +1712,22 @@ BOOL CPropertiesDlg::Init( CPropList *pList, CNotifier *pNotifier, char *pClassN
 		m_dwVertPad = 10;
 
 	clientRect.top += m_dwVertPad;
-	m_pPropControls = new CPropertiesControls( );
+	m_pPropControls = new CPropertiesControls( NULL );
 	m_pPropControls->Create( IDD_PROPCONTROLS, this );
 	m_pPropControls->MoveWindow( &clientRect );
 	m_pPropControls->Init( pList, pNotifier );
 	m_pPropControls->ShowWindow( SW_SHOW );
 	
-	CString sHelp;
-	if(pClassName && GetApp()->GetHelpString(m_sClassName, "ClassDescription", sHelp))
+	// 2001 (0x406f60): the class help straight from the class help ButeMgr
+	if(pClassName && GetApp()->GetClassHelpButeMgr())
 	{
-		m_sCurrentClassHelp = sHelp;
-		m_sCurrentClassHelp.Replace("\\n", "\n");
-		m_sCurrentClassHelp.Replace("\\r", "\r");
+		CButeMgr *pButeMgr=GetApp()->GetClassHelpButeMgr();
+		if(pButeMgr && pButeMgr->Exist(m_sClassName, "ClassDescription"))
+		{
+			m_sCurrentClassHelp = pButeMgr->GetString(m_sClassName, "ClassDescription");
+			m_sCurrentClassHelp.Replace("\\n", "\n");
+			m_sCurrentClassHelp.Replace("\\r", "\r");
+		}
 	}
 
 	// Disable the "Change Class" button if there aren't any object nodes selected

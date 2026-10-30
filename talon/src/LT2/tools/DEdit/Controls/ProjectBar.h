@@ -38,13 +38,6 @@ public:
 
 CProjectBar();
 
-// Dialog Data
-	//{{AFX_DATA(CProjectBar)
-	bool	m_bShowThumbnails;  // Whether or not we want to show thumbnails in the texture view
-	//}}AFX_DATA
-
-
-
 // Custom CDEditView stuff.
 public:
 
@@ -77,7 +70,6 @@ public:
 	void			UpdatePropertiesDlg();
 	void			UpdateTextureIDs();
 	void			UpdateWorldsDlg( );
-	void			UpdateNodeView( );
 	void			UpdateModelDlg( );
 	void			UpdateSoundDlg( );
 	void			UpdateSpriteDlg( );			
@@ -94,12 +86,9 @@ public:
 	void			SetTab( CMainFrame::ProjectControl controlType );
 	int				FindTabBySelectID(DWORD id);
 
-	// This gets called when the "hide" button is pressed
-	virtual void OnButtonHide();
-
 	// This is called to open a region doc.
 	// pName must be a FULL filename.
-	CRegionDoc*		OpenRegionDoc(const char* fullName, bool bForceSyncObjects = false, bool bAllowPropSync = true);
+	CRegionDoc*		OpenRegionDoc( CString fullName );
 
 	BOOL			CloseAllRegionDocs( );
 
@@ -120,47 +109,20 @@ public:
 	// Finds and selects the currently selected texture in the tree/list
 	void			FindCurTextureSel();
 
-	// Loads every world file and adjusts the texture mapping coordinates based on new texture sizes
-	bool			BatchTextureScale( const CMoArray<BatchTextureScaleInfo*>& textureInfo, const char* inputDir );
-	
-	//given the name this will find and select the prefab in the prefab pane
-	bool			SelectPrefab(const char* pszPrefabName);
-
 	// Get the dims of the model...
 	BOOL			GetModelDims( char *szModelFile, CVector *pDims );
 
 	// This undocks a tab and docks it to the mainframe
-	void			UndockTab(int nIndex, CPoint position, bool bHide=false);
+	void			UndockTab(int nIndex, CPoint position);
 
 	// This takes an undocked control bar and inserts it into the tab dialog
 	void			DockTab(CWnd *pWnd, CMainFrame::ProjectControl controlType);
-
-	// This hides the currently selected tab
-	void			OnHideCurrent();
-
-	// This unhides all tabs
-	void			OnUnhideAll();
-
-	// This shows/hides the tab icons
-	void			OnShowIcons();
-
-	// Search for whether a given tab is present in the Project Bar
-	bool			IsTabPresent(CMainFrame::ProjectControl tabType);
-
-	//this will take the specified resource identifier, and write it out as the 
-	//file specified. For more information, see documentation on FindResource
-	static bool		CreateFileFromResource(LPCTSTR pResourceID, LPCTSTR pResourceType, const char* pszFilename);
-
-	//this will find the class icons directory that is specified, and if it does not
-	//exist, it will create it, and add all the appropriate icons into it
-	void			AutoExtractClassIcons();
 
 	// Currently selected texture in the views
 	struct DFileIdent_t	*m_pCurTextureSel;
 
 	// Any time a region doc is created, it's added to here.
 	CMoArray<CRegionDoc*>					m_RegionDocs;
-	CRegionDoc*								m_pNewRegionDoc;
 
 	// Info about the tab windows.
 	CMoArray<CProjectControlBarInfo *>		m_TabInfo;
@@ -170,7 +132,11 @@ public:
 	CEditProjectMgr		m_Project;
 
 	// The full filename of the Project File...
-	char				m_ProjectFileName[MAX_PATH];
+	char				m_ProjectFileName[256];
+
+	// talon: 2001's (0x290): the constructor zeroes it (0x402cdf) and no
+	// code of the image found so far reads it; its name is unknown.
+	DWORD				m_dwUnknown290;
 
 	// Tab dialog stuff.
 	CWnd				*m_pVisibleDlg;
@@ -178,7 +144,6 @@ public:
 	CDebugDlg			m_DebugDlg;
 	CProjectTabCtrl		m_Tabs;
 	CImageList			m_TabImages;
-	CBitmap*			m_pTabImagesBitmap;
 	CToolTipCtrl		m_ToolTips;
 							
 	CSpriteEditDlg		m_SpriteEditDlg;
@@ -208,9 +173,6 @@ protected:
 	afx_msg void OnImportPcxFiles();
 	afx_msg void OnImportMipPcxFiles();
 	afx_msg void OnImportTgaFiles();
-	afx_msg void OnImportCubeMap();
-	afx_msg void OnImportBumpMap();
-	afx_msg void OnImportNormalMap();
 	afx_msg void OnImportAlphaMask();
 	afx_msg void OnImport8BitAlphaMask();
 	afx_msg void OnCreateAlphaFromColor();
@@ -218,25 +180,16 @@ protected:
 	afx_msg void OnExportPcxFile();
 	afx_msg void OnTextureProperties();
 	afx_msg void OnViewAllTextures();
-	afx_msg void OnBatchReload();
-	afx_msg void OnScaleTextureCoords();
 	afx_msg void OnImportSounds();
 	afx_msg void OnImportModels();
 	afx_msg void OnPopupCreateNewSprite();
 	afx_msg void OnPopupUpdate();
 	afx_msg void OnAddDir();
 	afx_msg void OnPrefabOpen();
-	afx_msg void OnReplaceSelectedPrefabs();
-	afx_msg void OnRenamePrefab();
 	afx_msg void OnAddToPalette();
 	afx_msg void OnExport8BitDTXFile();
 	afx_msg void OnExportAllAsBPP_32P();
-	afx_msg void OnConvertTo32P();
-	afx_msg void OnRenameTexture();
 	afx_msg void OnFindTextureInWorld();
-	afx_msg void OnMakeTextureWritable();
-	afx_msg void OnShowThumbnails();
-	afx_msg void OnUpdateShowThumbnails(CCmdUI *pCmdUI);
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

@@ -46,10 +46,6 @@ public:
 // Implementation
 protected:
 
-	//gets the filename of the currently selected list item
-	CString GetSelectedItemFileName();
-
-
 	BOOL OnInitDialogBar();
 
 	// Generated message map functions
@@ -61,9 +57,6 @@ protected:
 	afx_msg void OnFileNewWorld();
 	afx_msg void OnWorldListOpen();
 	afx_msg void OnWorldDelete();
-	afx_msg void OnWorldCompress();
-	afx_msg void OnWorldDecompress();
-	afx_msg void OnWorldRun();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

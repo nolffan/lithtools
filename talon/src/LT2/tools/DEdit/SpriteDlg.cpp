@@ -14,7 +14,6 @@
 #include "mainfrm.h"
 #include "projectbar.h"
 #include "resnewdir.h"
-#include "texture.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -33,11 +32,22 @@ CSpriteDlg::CSpriteDlg()
 		// NOTE: the ClassWizard will add member initialization here
 	//}}AFX_DATA_INIT
 
+	m_pIconList=NULL;
+	m_pIconList2=NULL;
+
 	InitBaseRezDlg("spr", &m_SpriteTree, &m_SpriteList, RESTYPE_SPRITE);
 }
 
 CSpriteDlg::~CSpriteDlg()
 {
+	if (m_pIconList)
+	{
+		delete m_pIconList;
+	}
+	if (m_pIconList2)
+	{
+		delete m_pIconList2;
+	}
 }
 
 void CSpriteDlg::DoDataExchange(CDataExchange* pDX)
@@ -50,12 +60,11 @@ void CSpriteDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 
-BEGIN_MESSAGE_MAP(CSpriteDlg, CBaseImgDlg)
+BEGIN_MESSAGE_MAP(CSpriteDlg, CBaseRezDlg)
 	//{{AFX_MSG_MAP(CSpriteDlg)
 	ON_WM_CONTEXTMENU()
 	ON_WM_SIZE()
 	ON_NOTIFY(TVN_SELCHANGED, IDC_BASEREZ_TREE, OnSelchangedDirectory)
-	ON_NOTIFY(LVN_ITEMCHANGED, IDC_BASEREZ_LIST, OnListSelChanged)
 	ON_NOTIFY( NM_DBLCLK, IDC_BASEREZ_LIST, OnDblClkSprite )
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
@@ -66,9 +75,38 @@ END_MESSAGE_MAP()
 BOOL CSpriteDlg::OnInitDialogBar() 
 {
 	CMRCSizeDialogBar::OnInitDialogBar();
+	
+	// TODO: Add extra initialization here
+	char szSysPath[MAX_PATH];
+	char szIconDLL[MAX_PATH];
 
-	InitBaseImgDlg((CListCtrl*)GetDlgItem(IDC_BASEREZ_LIST), (CTreeCtrl*)GetDlgItem(IDC_BASEREZ_TREE), IDI_SPRITES_TAB_ICON);
+	GetSystemDirectory(szSysPath,MAX_PATH);
+	sprintf(szIconDLL,"%s\\shell32.dll",szSysPath);
 
+	if (m_pIconList)
+	{
+		delete m_pIconList;
+	}
+	if (m_pIconList2)
+	{
+		delete m_pIconList2;
+	}
+	m_pIconList=new CImageList;
+	m_pIconList2=new CImageList;
+
+	//tree control image list
+	m_pIconList->Create(16,16,ILC_COLOR16,10,5);
+	m_pIconList->SetBkColor(RGB(255,255,255));
+	m_pIconList->Add(ExtractIcon(AfxGetInstanceHandle(),szIconDLL,3));	//closed folder
+	m_pIconList->Add(ExtractIcon(AfxGetInstanceHandle(),szIconDLL,4));	//open folder
+	m_SpriteTree.SetImageList(m_pIconList,TVSIL_NORMAL);
+
+	//list control image list
+	m_pIconList2->Create(16,16,ILC_COLOR4,10,5);
+	m_pIconList2->SetBkColor(RGB(255,255,255));
+	m_pIconList2->Add(AfxGetApp()->LoadIcon(IDI_SPRITES_TAB_ICON));
+	m_SpriteList.SetImageList(m_pIconList2,LVSIL_SMALL);
+	
 	CRect rect;
 	m_SpriteList.GetClientRect( &rect );
 
@@ -100,7 +138,8 @@ void CSpriteDlg::OnContextMenu(CWnd* pWnd, CPoint point)
 
 		VERIFY(menu.LoadMenu(CG_IDR_POPUP_SPRITE_DLG));
 	}
-	else return;
+	// 2001: no 'else return' (0x408465; retail bug: a right-click elsewhere
+	// tracks a NULL popup)
 
 	CMenu* pPopup = menu.GetSubMenu(0);
 	ASSERT(pPopup != NULL);
@@ -165,165 +204,3 @@ void CSpriteDlg::OnDblClkSprite( NMHDR * pNMHDR, LRESULT * pResult )
 
 	*pResult = 0;
 }
-
-void CSpriteDlg::RepositionControls()
-{
-	if( ::IsWindow(m_hWnd))
-	{
-		CBaseImgDlg::RepositionControls();
-
-		// Adjust columns
-		if (m_SpriteList)
-		{
-			CRect rect;
-			m_SpriteList.GetClientRect( &rect );
-
-			m_SpriteList.SetColumnWidth(0,(rect.Width())/3);
-			m_SpriteList.SetColumnWidth(1,(rect.Width())/3);
-			m_SpriteList.SetColumnWidth(2,(rect.Width())/3);
-		}
-	}		
-}
-
-void CSpriteDlg::PopulateList()
-{
-	CBaseRezDlg::PopulateList();
-
-	if(GetProjectBar()->m_bShowThumbnails)
-		UpdateThumbnails();
-}
-
-//given an absolute sprite filename, it will open it up and find the name of the 
-//first texture used in the sprite
-static CString GetFirstSpriteTexture(const char* pszFile)
-{
-	CMoFileIO		File;
-	DWORD			nFrames, nJunk;
-	char			str[MAX_PATH];
-
-	CString			sRV;
-
-
-	if(dfm_OpenFileRelative(GetFileMgr(), pszFile, File))
-	{
-		if( File.GetLen() > 0 )
-		{
-			File >> nFrames;
-			File >> nJunk >> nJunk >> nJunk >> nJunk;	 //frame rate, transparent, translucent, key
-	
-			if(nFrames > 0)
-			{
-				if( File.ReadString(str, MAX_PATH) )
-				{
-					sRV = str;
-				}
-			}
-		}
-		
-		File.Close();
-	}
-
-	return sRV;
-}
-
-//this must be overridden by a derived class to render the icon for the appropriate
-//list item
-bool CSpriteDlg::RenderIcon(HDC BlitTo, uint32 nXOff, uint32 nImgSize, uint32 nItem)
-{
-	//get the name of the texture
-	CString sFile = GetFirstSpriteTexture(((DFileIdent*)m_SpriteList.GetItemData(nItem))->m_Filename);
-
-	if(sFile.IsEmpty())
-		return false;
-
-	DFileIdent* pFile;
-	::dfm_GetFileIdentifier(GetFileMgr(), sFile, &pFile);
-
-	CTexture* pTexture = dib_GetDibTexture(pFile);
-
-	if(!pTexture)
-		return false;
-
-	pTexture->m_pDib->Blt(BlitTo, nXOff, 0, nImgSize, nImgSize);
-
-	return true;
-}
-
-//this must be overridden by a derived class to render the large selected image
-void CSpriteDlg::RenderLargeImage()
-{
-	//setup the rectangle we are going to blit to
-	CRect InitialRect = CBaseImgDlg::InitLargeImageRect();
-	CRect DrawRect = InitialRect;
-
-	//get a DC
-	CDC *pDC = GetDC();
-	if(!pDC)
-		return;
-
-	//get the first selection
-	POSITION Pos = m_SpriteList.GetFirstSelectedItemPosition();
-	if(!Pos)
-		return;
-
-	int nItem = m_SpriteList.GetNextSelectedItem(Pos);
-
-	//get the name of the texture
-	CString sFile = GetFirstSpriteTexture(((DFileIdent*)m_SpriteList.GetItemData(nItem))->m_Filename);
-
-	if(sFile.IsEmpty())
-		return;
-
-	DFileIdent* pRez;
-	::dfm_GetFileIdentifier(GetFileMgr(), sFile, &pRez);
-
-	if(pRez == NULL)
-	{
-		ReleaseDC(pDC);
-		return;
-	}
-
-	CTexture *pTexture = dib_GetDibTexture(pRez);
-	if(!pTexture)
-	{
-		ReleaseDC(pDC);
-		return;
-	}
-
-	CDib *pDib = pTexture->m_pDib;
-	CRect texRect(0,0,pDib->GetWidth(),pDib->GetHeight());
-	texRect.right >>= pTexture->m_UIMipmapOffset;
-	texRect.bottom >>= pTexture->m_UIMipmapOffset;
-
-
-	//adjust the origin of the texture
-	int nTmp = (DrawRect.top + (DrawRect.bottom/6)) - (texRect.bottom/2);
-	if(nTmp > DrawRect.top)
-		DrawRect.top = nTmp;
-
-	DrawRect.left = (DrawRect.right/2) - (texRect.right/2);
-	
-	nTmp = DrawRect.top + texRect.bottom;
-	if(nTmp < DrawRect.bottom)
-		DrawRect.bottom = nTmp;
-
-	DrawRect.right = DrawRect.left + texRect.right;
-
-	// Blit the texture in.
-	SetStretchBltMode( pDC->m_hDC, COLORONCOLOR );
-	pDib->Blt( pDC->m_hDC, DrawRect.left, DrawRect.top, DrawRect.Width()+1, DrawRect.Height()+1 );
-	
-	// Draw the texture name.
-	char pszToPrint[MAX_PATH];
-	CHelpers::ExtractNames( ((DFileIdent*)m_SpriteList.GetItemData(nItem))->m_Filename, NULL, NULL, pszToPrint, NULL );
-
-	CBaseImgDlg::PrintLargeImageText(pDC->m_hDC, InitialRect, pszToPrint);
-
-	ReleaseDC(pDC);
-}
-
-void CSpriteDlg::OnListSelChanged(NMHDR* pNMHDR, LRESULT* pResult)
-{
-	RenderLargeImage();
-}
-

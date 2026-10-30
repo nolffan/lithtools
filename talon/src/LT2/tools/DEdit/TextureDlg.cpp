@@ -3,7 +3,6 @@
 
 #include "bdefs.h"
 #include "dedit.h"
-#include "butemgr.h"
 #include "texturedlg.h"
 #include "editprojectmgr.h"
 #include "edithelpers.h"
@@ -16,12 +15,8 @@
 #include "sysstreamsim.h"
 #include "stringdlg.h"
 #include "alphafromcolordlg.h"
-#include "ImportCubeMapDlg.h"
-#include "solidalphadlg.h"
 #include "dtxmgr.h"
 #include "s3tc_compress.h"
-#include "RenameResourceDlg.h"
-#include "ImportBumpMapDlg.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -284,224 +279,6 @@ BOOL TextureUtils::RestoreColorData(TextureData *pData)
 	return TRUE;
 }
 
-// MaxMipsForSize, given a size, it will determine how many additional mips can be generated
-// including the starting size. It will always return at least 1 for the base image
-uint32 MaxMipsForSize(uint32 nSize)
-{
-	static const uint32 knMinMipSize = 8;
-
-	uint32 nNumMips = 0;
-
-	do
-	{
-		nSize /= 2;
-		nNumMips++;
-	}
-	while(nSize >= knMinMipSize);
-
-	return nNumMips;
-}
-
-//Utility function for creating a new texture, creating the number of specified mip maps
-//and returning it
-TextureData* CreateNewMipTexture(uint8* pSrcData, uint32 nSrcPitch, uint32 nWidth, uint32 nHeight, BPPIdent Format, uint32 nNumMips)
-{
-	//alright, so now we need to discard all the previous mips by taking the source images and
-	//recreting N mips.
-	TextureData* pNewTexture = dtx_Alloc(	BPP_32, 
-											nWidth, nHeight,
-											nNumMips, NULL, NULL);
-
-	if(!pNewTexture)
-		return NULL;
-
-	// convert the data into this new texture
-	FMConvertRequest convert;
-	convert.m_pSrc = pSrcData;
-	convert.m_pSrcPalette = NULL;
-	dtx_SetupDTXFormat2(Format, convert.m_pSrcFormat);
-	convert.m_SrcPitch = nSrcPitch;
-
-	convert.m_pDest = pNewTexture->m_Mips[0].m_Data;
-	convert.m_pDestFormat->InitPValueFormat();
-	convert.m_DestPitch = pNewTexture->m_Mips[0].m_Pitch;
-
-	convert.m_Width = nWidth;
-	convert.m_Height = nHeight;
-	convert.m_Flags = 0;
-
-	//now generate the mipmaps for this texture
-	if(g_FormatMgr.ConvertPixels( &convert ) != LT_OK)
-	{
-		dtx_Destroy(pNewTexture);
-		return NULL;
-	}
-
-	// generate mipmaps
-	dtx_BuildMipmaps( pNewTexture );
-
-	return pNewTexture;
-}
-
-//--------------------------------------------------------------------------
-// RegenerateMipMaps
-// Handles regenerating mipmaps from a texture. It will preserver the flags
-// and compression of the original image, grab the first image of each surface
-// and then regenerate N mips. This mip number includes the base image as
-// well.
-TextureData* RegenerateMipMaps(TextureData* pTexture, uint32 nNumMips)
-{
-	//sanity check
-	if(!pTexture)
-		return NULL;
-
-	//make sure our mip count is reasonable
-	if(nNumMips == 0)
-		nNumMips = 1;
-
-	//only generate mips up to the a certain limit
-	uint32 nWidth = pTexture->m_Header.m_BaseWidth;
-	uint32 nHeight = pTexture->m_Header.m_BaseHeight;
-	uint32 nPitch = pTexture->m_Mips[0].m_Pitch;
-
-	nNumMips = LTMIN(nNumMips, LTMIN(MaxMipsForSize(nWidth), MaxMipsForSize(nHeight)));
-
-	//create our main texture
-	TextureData* pNewTexture = CreateNewMipTexture(pTexture->m_Mips[0].m_Data, nPitch, nWidth, nHeight, pTexture->m_Header.GetBPPIdent(), nNumMips);
-
-	//see if that worked
-	if(!pNewTexture)
-		return NULL;
-
-	//copy over any non-cube map data sections
-	DtxSection* pCurr = pTexture->m_pSections;
-	while(pCurr)
-	{
-		if(stricmp(pCurr->m_Header.m_Type, "CUBEMAPDATA") != 0)
-		{
-			//copy over this section
-			uint32 nSectionSize = (uint32)((sizeof(DtxSection)-1) + pCurr->m_Header.m_DataLen );
-			DtxSection* pNewSection = (DtxSection*)dalloc( (unsigned long)((sizeof(DtxSection)-1) + pCurr->m_Header.m_DataLen ) );
-
-			if(!pNewSection)
-			{
-				dtx_Destroy(pNewTexture);
-				return NULL;
-			}
-
-			memcpy(pNewSection, pCurr, nSectionSize);
-
-			//add the section onto the head of the list
-			pNewSection->m_pNext = pNewTexture->m_pSections;
-			pNewTexture->m_pSections = pNewSection;
-			pNewTexture->m_Header.m_nSections++;
-		}
-
-		pCurr = pCurr->m_pNext;
-	}
-
-
-	//see if this is a cube map and we need to generate each cube side
-	if(pTexture->m_Header.m_IFlags & DTX_CUBEMAP)
-	{
-		DtxSection* pCubeData = dtx_FindSection(pTexture, "CUBEMAPDATA");
-
-		if(!pCubeData)
-		{
-			dtx_Destroy(pNewTexture);
-			return NULL;
-		}
-
-		//for each face create a texture, build the mips, and skip over the other data
-
-		//calculate how large each cube map chunk is
-		uint32 nSrcCubeMapChunkSize = 0;
-		uint32 nDestCubeMapChunkSize = 0;
-
-		uint32 nCurrMip;
-		for(nCurrMip = 0; nCurrMip < pTexture->m_Header.m_nMipmaps; nCurrMip++)
-		{
-			nSrcCubeMapChunkSize += CalcImageSize(pTexture->m_Header.GetBPPIdent(), pTexture->m_Mips[nCurrMip].m_Width, pTexture->m_Mips[nCurrMip].m_Height);
-		}
-
-		for(nCurrMip = 0; nCurrMip < nNumMips; nCurrMip++)
-		{
-			nDestCubeMapChunkSize += CalcImageSize(pNewTexture->m_Header.GetBPPIdent(), pNewTexture->m_Mips[nCurrMip].m_Width, pNewTexture->m_Mips[nCurrMip].m_Height);
-		}
-
-		//now we need to copy this all into a new section for the DTX
-		DtxSection* pNewSection = (DtxSection*)dalloc( (unsigned long)((sizeof(DtxSection)-1) + nDestCubeMapChunkSize * 5 ) );
-
-		if(!pNewSection)
-		{
-			dtx_Destroy(pNewTexture);
-			return NULL;
-		}
-
-		pNewSection->m_Header.m_DataLen = nDestCubeMapChunkSize * 5;
-		strcpy( pNewSection->m_Header.m_Type, "CUBEMAPDATA" );
-		strcpy( pNewSection->m_Header.m_Name, "" );
-		pNewSection->m_pNext = pNewTexture->m_pSections;
-		pNewTexture->m_pSections = pNewSection;
-		pNewTexture->m_Header.m_nSections++;
-
-		//alright, lets proceed
-		uint8* pCurrCubeData = (uint8*)pCubeData->m_Data;
-		for(uint32 nCurrFace = 0; nCurrFace < 5; nCurrFace++)
-		{
-			//build up the face texture
-			TextureData* pFace = CreateNewMipTexture(pCurrCubeData, nPitch, nWidth, nHeight, pTexture->m_Header.GetBPPIdent(), nNumMips);
-
-			//see if we failed
-			if(!pFace)
-			{
-				//clean up any existing faces
-				dtx_Destroy(pNewTexture);
-				dtx_Destroy(pFace);
-				dfree(pNewSection);
-				return NULL;
-			}
-
-			pCurrCubeData += nSrcCubeMapChunkSize;
-
-			// copy the texture data into the section data
-			memcpy( pNewSection->m_Data + nCurrFace * nDestCubeMapChunkSize, pFace->m_pDataBuffer, nDestCubeMapChunkSize );
-
-			//we don't need this face any more
-			dtx_Destroy(pFace);
-		}
-	}
-
-	//now we need to preserve all settings from the original texture in this new texture
-	strcpy(pNewTexture->m_Header.m_CommandString, pTexture->m_Header.m_CommandString);
-	pNewTexture->m_Header.m_IFlags = pTexture->m_Header.m_IFlags;
-	pNewTexture->m_Header.m_UserFlags = pTexture->m_Header.m_UserFlags;
-
-	//copy over the 'extra' fields. Wow was that a good design decision.
-	pNewTexture->m_Header.m_Extra[0] = pTexture->m_Header.m_Extra[0];
-	pNewTexture->m_Header.m_Extra[1] = nNumMips;
-	pNewTexture->m_Header.m_Extra[4] = pTexture->m_Header.m_Extra[4];
-
-	pNewTexture->m_Header.SetTexturePriority(pTexture->m_Header.GetTexturePriority());
-	pNewTexture->m_Header.SetNonS3TCMipmapOffset(pTexture->m_Header.GetNonS3TCMipmapOffset());
-	pNewTexture->m_Header.SetDetailTextureScale(pTexture->m_Header.GetDetailTextureScale());
-	pNewTexture->m_Header.SetDetailTextureAngle(pTexture->m_Header.GetDetailTextureAngle());
-
-	//we now have a copy of the texture with our number of mip maps. We now need to make sure
-	//that the formats match
-	if(pTexture->m_Header.GetBPPIdent() != pNewTexture->m_Header.GetBPPIdent())
-	{
-		if(!ConvertTextureData(pNewTexture, pTexture->m_Header.GetBPPIdent()))
-		{
-			//we failed
-			dtx_Destroy(pNewTexture);
-			return NULL;
-		}
-	}
-
-	//success
-	return pNewTexture;
-}
 
 /////////////////////////////////////////////////////////////////////////////
 // CTextureDlg dialog
@@ -513,7 +290,10 @@ CTextureDlg::CTextureDlg()
 		// NOTE: the ClassWizard will add member initialization here
 	//}}AFX_DATA_INIT
 
-	m_hCurrentItem		= NULL;
+	m_pIconList				= NULL;
+	m_pIconList2			= NULL;
+	m_hFont					= NULL;
+	m_hCurrentItem			= NULL;
 	m_hCurrentTextureDir	= 0;
 	m_nCurrentTextureIndex	= -1;
 	InitBaseRezDlg("dtx", &m_TextureTree, &m_TextureList, RESTYPE_TEXTURE);
@@ -521,6 +301,14 @@ CTextureDlg::CTextureDlg()
 
 CTextureDlg::~CTextureDlg()
 {
+	if (m_pIconList)
+	{
+		delete m_pIconList;
+	}
+	if (m_pIconList2)
+	{
+		delete m_pIconList2;
+	}
 }
 
 void CTextureDlg::DoDataExchange(CDataExchange* pDX)
@@ -533,7 +321,7 @@ void CTextureDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 
-BEGIN_MESSAGE_MAP(CTextureDlg, CBaseImgDlg)
+BEGIN_MESSAGE_MAP(CTextureDlg, CMRCSizeDialogBar)
 	//{{AFX_MSG_MAP(CTextureDlg)
 	ON_WM_CONTEXTMENU()
 	ON_WM_SIZE()
@@ -541,6 +329,7 @@ BEGIN_MESSAGE_MAP(CTextureDlg, CBaseImgDlg)
 	ON_NOTIFY( NM_DBLCLK, IDC_BASEREZ_LIST, OnOpenTexture )
 	ON_NOTIFY(LVN_KEYDOWN, IDC_BASEREZ_LIST, OnKeySelTexture)
 	ON_NOTIFY(TVN_SELCHANGED, IDC_BASEREZ_TREE, OnSelchangedDirectory)
+	ON_WM_PAINT()
 	ON_WM_DESTROY()
 	ON_NOTIFY(TVN_ITEMEXPANDING, IDC_BASEREZ_TREE, OnItemexpandingBaserezTree)
 	//}}AFX_MSG_MAP
@@ -553,14 +342,42 @@ BOOL CTextureDlg::OnInitDialogBar()
 {
 	CMRCSizeDialogBar::OnInitDialogBar();
 	
-	InitBaseImgDlg((CListCtrl*)GetDlgItem(IDC_BASEREZ_LIST), (CTreeCtrl*)GetDlgItem(IDC_BASEREZ_TREE), IDI_TEXTURE_TAB_ICON);
+	// TODO: Add extra initialization here
+	char szSysPath[MAX_PATH];
+	char szIconDLL[MAX_PATH];
+
+	GetSystemDirectory(szSysPath,MAX_PATH);
+	sprintf(szIconDLL,"%s\\shell32.dll",szSysPath);
+
+	if (m_pIconList)
+	{
+		delete m_pIconList;
+	}
+	if (m_pIconList2)
+	{
+		delete m_pIconList2;
+	}
+	m_pIconList=new CImageList;
+	m_pIconList2=new CImageList;
+
+	//tree control image list
+	m_pIconList->Create(16,16,ILC_COLOR16,10,5);
+	m_pIconList->SetBkColor(RGB(255,255,255));
+	m_pIconList->Add(ExtractIcon(AfxGetInstanceHandle(),szIconDLL,3));	//closed folder
+	m_pIconList->Add(ExtractIcon(AfxGetInstanceHandle(),szIconDLL,4));	//open folder
+	m_TextureTree.SetImageList(m_pIconList,TVSIL_NORMAL);
+
+	//list control image list
+	m_pIconList2->Create(16,16,ILC_COLOR4,10,5);
+	m_pIconList2->SetBkColor(RGB(255,255,255));
+	m_pIconList2->Add(AfxGetApp()->LoadIcon(IDI_TEXTURE_TAB_ICON));
+	m_TextureList.SetImageList(m_pIconList2,LVSIL_SMALL);
 	
 	CRect rect;
 	m_TextureList.GetClientRect( &rect );
 
-	m_TextureList.InsertColumn(0,"Name",LVCFMT_LEFT,rect.Width()/2,-1);
-	m_TextureList.InsertColumn(1,"Size",LVCFMT_RIGHT,rect.Width()/2,-1);
-
+	m_TextureList.InsertColumn(0,"Name",LVCFMT_LEFT,(rect.Width()-35)/2,-1);
+	m_TextureList.InsertColumn(1,"Size",LVCFMT_RIGHT,(rect.Width()-35)/2,-1);
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
@@ -574,20 +391,10 @@ void CTextureDlg::OnContextMenu(CWnd* pWnd, CPoint point)
 	if(!GetProjectBar()->IsProjectOpen())
 		return;
 
-	//also don't allow the menu to come up if no directory is selected
-	if(m_TextureTree.GetSelectedItem() == NULL)
-	{
-		MessageBox("You must select a directory above to perform texture operations in", "Please select a texture directory", MB_ICONEXCLAMATION | MB_OK);
-		return;
-	}
-
 	if(pWnd->m_hWnd == m_TextureTree.m_hWnd)
-		VERIFY(menu.LoadMenu(CG_IDR_POPUP_TEXTURETREE));
+		VERIFY(menu.LoadMenu(CG_IDR_POPUP_WORLDTREE));
 	else if(pWnd->m_hWnd == m_TextureList.m_hWnd)
-	{
 		VERIFY(menu.LoadMenu(CG_IDR_POPUP_TEXTURELIST));
-		menu.CheckMenuItem(ID_POPUP_SHOWTHUMBNAILS, GetProjectBar()->m_bShowThumbnails ? MF_CHECKED : MF_UNCHECKED );
-	}
 	else return;
 
 	CMenu* pPopup = menu.GetSubMenu(0);
@@ -613,31 +420,38 @@ void CTextureDlg::RepositionControls()
 {
 	if( ::IsWindow(m_hWnd))
 	{
-		CBaseImgDlg::RepositionControls();
+		CRect rect;
+		GetClientRect( &rect );
 
-		// Adjust columns
-		if (m_TextureList)
+		// Move the tree
+		CWnd *pWnd = GetDlgItem(IDC_BASEREZ_TREE);
+		if (pWnd)
 		{
-			CRect rect;
-			m_TextureList.GetClientRect( &rect );
+			pWnd->MoveWindow( 0, 0, rect.Width(), rect.Height()/3 );
+		}
 
-			m_TextureList.SetColumnWidth(0, rect.Width()/2);
-			m_TextureList.SetColumnWidth(1, rect.Width()/2);
+		// Move the list
+		pWnd = GetDlgItem(IDC_BASEREZ_LIST);
+		if (pWnd)
+		{
+			pWnd->MoveWindow( 0, rect.Height()/3, rect.Width(), rect.Height()/3 );
 		}
 	}		
+}
+
+void CTextureDlg::OnPaint() 
+{
+	CPaintDC dc(this); // device context for painting
+	
+	RenderLargeImage();
 }
 
 void CTextureDlg::OnSelchangedDirectory(NMHDR* pNMHDR, LRESULT* pResult) 
 {
 	NM_TREEVIEW* pNMTreeView = (NM_TREEVIEW*)pNMHDR;
 	// TODO: Add your control notification handler code here
-//	LPPOINT lpPoint=new POINT;
-//	UINT* pnFlags=new UINT;
 	DDirIdent *pIdent;
 
-//	GetCursorPos(lpPoint);
-//	m_TextureTree.ScreenToClient(lpPoint);
-//	HTREEITEM hItem=m_TextureTree.HitTest(*lpPoint,pnFlags);
 	HTREEITEM hItem=pNMTreeView->itemNew.hItem;
 
 	if(hItem)
@@ -658,20 +472,6 @@ void CTextureDlg::OnSelchangedDirectory(NMHDR* pNMHDR, LRESULT* pResult)
 		m_AllTextureDlg.NotifyDirChange();
 	}
 
-	// If we're showing thumbnails, load up the images for this directory
-	if (GetProjectBar()->m_bShowThumbnails)  
-	{
-		UpdateThumbnails();
-		m_TextureList.Update(0); // Update the first item, since its image data doesn't change
-	}
-
-	
-	RepositionControls(); // Update sizes of things, such as columns in the texture list
-
-	//cleanup
-//	delete lpPoint;
-//	delete pnFlags;
-
 	*pResult = 0;
 }
 
@@ -688,6 +488,7 @@ void CTextureDlg::OnSelTexture( NMHDR * pNMHDR, LRESULT * pResult )
 	if(nItem >= 0)
 	{
 		ChangeSelection(nItem, FALSE);
+		RenderLargeImage();
 	}
 
 	*pResult = 0;
@@ -793,6 +594,95 @@ void CTextureDlg::ChangeSelection(int nIndex, BOOL bClearSelect)
 	RenderLargeImage();	
 }
 
+// 2001's (0x409427): the bottom third of the dialog cleared, the texture
+// centred in it with a white pen selected, and its name under it.
+// NEAR (661 of 696 bytes): the shipped build keeps 0 in ebx and expands every
+// CGdiObject destructor, with one failure block of its own (0x409503) that
+// does not merge with the final ReleaseDC; ours spends the inline budget on
+// CRgn's constructor, keeps CPen's vtable in ebx and sends the failures to
+// the final ReleaseDC. Tried: Build 69's two separate failure returns (732
+// bytes: the two blocks don't merge either), a CRect copy for the name's
+// rectangle (worse).
+void CTextureDlg::RenderLargeImage()
+{
+	CPen Pen;
+
+	//get a DC
+	CDC *pDC = GetDC();
+	if(!pDC)
+		return;
+
+	CRect DrawRect;
+	GetClientRect( &DrawRect );
+	//bring the height down so we are dealing with just the bottom 1/3 of the dlg
+	DrawRect.top = DrawRect.bottom / 3 * 2;
+
+	//make a region to clear that covers the rect
+	CRgn Rgn;
+	Rgn.CreateRectRgn(DrawRect.left,DrawRect.top,DrawRect.right,DrawRect.bottom);
+
+	//clear the region
+	CBrush Brush(RGB(0,0,0));
+	pDC->FillRgn(&Rgn,&Brush);
+
+	DFileIdent	*pRez = NULL;
+
+	if(GetProjectBar()->IsProjectOpen())
+		pRez = GetProjectBar()->m_pCurTextureSel;
+
+	CTexture *pTexture;
+	if(pRez == NULL || (pTexture = dib_GetDibTexture(pRez)) == NULL)
+	{
+		ReleaseDC(pDC);
+		return;
+	}
+
+	CDib *pDib = pTexture->m_pDib;
+	CRect texRect(0,0,pDib->GetWidth(),pDib->GetHeight());
+	texRect.right >>= pTexture->m_UIMipmapOffset;
+	texRect.bottom >>= pTexture->m_UIMipmapOffset;
+
+	//adjust the origin of the texture
+	int nTmp = (DrawRect.top + (DrawRect.bottom/6)) - (texRect.bottom/2);
+	if(nTmp > DrawRect.top)
+		DrawRect.top = nTmp;
+
+	DrawRect.left = (DrawRect.right/2) - (texRect.right/2);
+	
+	nTmp = DrawRect.top + texRect.bottom;
+	if(nTmp < DrawRect.bottom)
+		DrawRect.bottom = nTmp;
+
+	DrawRect.right = DrawRect.left + texRect.right;
+
+	// Blit the texture in.
+	Pen.CreatePen(PS_SOLID, 0, RGB(255,255,255));
+	CPen *pOldPen = pDC->SelectObject(&Pen);
+
+	SetStretchBltMode( pDC->m_hDC, COLORONCOLOR );
+	pDib->Blt( pDC->m_hDC, DrawRect.left, DrawRect.top, DrawRect.Width()+1, DrawRect.Height()+1 );
+
+	pDC->SelectObject(pOldPen);
+	Pen.DeleteObject();
+
+	// Draw the texture name.
+	if( m_hFont )
+	{
+		CRect textRect(DrawRect.left, DrawRect.bottom, DrawRect.right, DrawRect.bottom + 20);
+		char pszToPrint[MAX_PATH];
+		CHelpers::ExtractNames( pRez->m_Filename, NULL, NULL, pszToPrint, NULL );
+
+		::SetBkMode( pDC->m_hDC, TRANSPARENT );
+		::SetTextColor( pDC->m_hDC, RGB(0,0,0) );
+
+		HFONT hOldFont = (HFONT)::SelectObject( pDC->m_hDC, m_hFont );
+		DrawText( pDC->m_hDC, pszToPrint, strlen(pszToPrint), &textRect, DT_SINGLELINE | DT_VCENTER );
+		::SelectObject( pDC->m_hDC, hOldFont );
+	}
+
+	ReleaseDC(pDC);
+}
+
 void CTextureDlg::SetListItemText(int nItem, CString &relativeFilename)
 {
 	DFileIdent *pIdent;
@@ -830,13 +720,9 @@ BOOL CTextureDlg::DoImportOperation(DWORD flags)
 	char			fileName[256], fileExt[256];
 	
 	int				status, item;
-	bool			success;
 	CMoFileIO		file;
 	CStringDlg stringDlg;
 	DWORD textureFlags;
-
-	CAbstractIO* pFile = NULL;
-	DWORD width, height; 
 
 	
 	// If no directory is selected, then we can't import anything.
@@ -897,27 +783,23 @@ BOOL CTextureDlg::DoImportOperation(DWORD flags)
 					// Copy the file.
 					if( flags & PCX_TO_TEXTURE )
 					{
-						success = CopyImageToTexture( ITYPE_PCX, pathName, targetFilename, textureFlags );
+						CopyImageToTexture( ITYPE_PCX, pathName, targetFilename, textureFlags );
 					}
 					else if(flags & TGA_TO_TEXTURE)
 					{
-						success = CopyImageToTexture( ITYPE_TGA, pathName, targetFilename, textureFlags );
+						CopyImageToTexture( ITYPE_TGA, pathName, targetFilename, textureFlags );
 					}
 					else
 					{
-						success = CopyFile( pathName, targetFilename, FALSE );
+						CopyFile( pathName, targetFilename, FALSE );
 					}
 
-					if(success) 
-					{
-						// Update the listbox and select the new texture.
-						if( GetProjectBar()->m_pCurTextureSel )
-							SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
-						item = AddFileToList(relativeTargetFilename);
-						GetProjectBar()->SetCurTextureSel((DFileIdent*)m_TextureList.GetItemData(item));
-						SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
-						DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
-					}
+					// Update the listbox and select the new texture.
+					if( GetProjectBar()->m_pCurTextureSel )
+						SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
+					item = AddFileToList(relativeTargetFilename);
+					GetProjectBar()->SetCurTextureSel((DFileIdent*)m_TextureList.GetItemData(item));
+					SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
 				}
 				else if( status == IDCANCEL )
 				{
@@ -929,34 +811,25 @@ BOOL CTextureDlg::DoImportOperation(DWORD flags)
 				// Copy the file.
 				if( flags & PCX_TO_TEXTURE )
 				{
-					success = CopyImageToTexture( ITYPE_PCX, pathName, targetFilename, textureFlags );
+					CopyImageToTexture( ITYPE_PCX, pathName, targetFilename, textureFlags );
 				}
 				else if(flags & TGA_TO_TEXTURE)
 				{
-					success = CopyImageToTexture( ITYPE_TGA, pathName, targetFilename, textureFlags );
+					CopyImageToTexture( ITYPE_TGA, pathName, targetFilename, textureFlags );
 				}
 				else
 				{
-					success = CopyFile( pathName, targetFilename, FALSE );
+					CopyFile( pathName, targetFilename, FALSE );
 				}
 
-				if(success) 
-				{
-					// Update the listbox and select the new texture.
-					if( GetProjectBar()->m_pCurTextureSel )
-						SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
-					item = AddFileToList(relativeTargetFilename);
-					GetProjectBar()->SetCurTextureSel((DFileIdent*)m_TextureList.GetItemData(item));
-					SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
-					DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
-				}
+				// Update the listbox and select the new texture.
+				if( GetProjectBar()->m_pCurTextureSel )
+					SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
+				item = AddFileToList(relativeTargetFilename);
+				GetProjectBar()->SetCurTextureSel((DFileIdent*)m_TextureList.GetItemData(item));
+				SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
 			}
 		}
-
-//		GetProjectBar( )->SetCurTextureSel( NULL );
-//		UpdateDirectories( );
-//		PopulateList();
-//		RenderLargeImage( );
 
 		EndWaitCursor( );
 		return TRUE;
@@ -965,452 +838,6 @@ BOOL CTextureDlg::DoImportOperation(DWORD flags)
 	return FALSE;
 }
 
-// opens the dialog to allow the user to enter data for the normal map
-bool CTextureDlg::DoImportNormalMapOperation()
-{
-	CImportBumpMapDlg Dlg(this);
-	Dlg.m_sLuminanceText = "Alpha Channel";
-
-	if(Dlg.DoModal() != IDOK)
-	{
-		//the user cancelled
-		return false;
-	}
-
-	//make sure that we can open up the file
-	BeginWaitCursor();
-
-	//break the list on the semicolon boundaries and process each file
-	CString sFilesLeft = Dlg.m_sImageFile;
-	
-	while(1)
-	{
-		CString sCurrFile = sFilesLeft;
-		int nSemiColonPos = sFilesLeft.Find(';');
-
-		if(nSemiColonPos != -1)
-		{
-			sCurrFile = sFilesLeft.Left(nSemiColonPos);
-			sFilesLeft = sFilesLeft.Mid(nSemiColonPos + 1);
-		}
-		else
-			sFilesLeft = "";
-
-		//cleanup
-		sFilesLeft.TrimLeft();
-		sFilesLeft.TrimRight();
-		sCurrFile.TrimLeft();
-		sCurrFile.TrimRight();
-
-		//see if we are done
-		if(sCurrFile.IsEmpty())
-		{
-			//see if this was just two semicolons in a row, creating an empty file
-			if(sFilesLeft.IsEmpty())
-			{
-				//nope, end of list
-				break;
-			}			
-			continue;
-		}
-
-		//determines if the file already existed
-		bool bFileExisted = false;
-
-		// build the full path of the output dtx file
-		char fileName[MAX_PATH], fileExt[MAX_PATH], fileTitle[MAX_PATH];
-		GetFileTitle( (LPCTSTR)sCurrFile, fileTitle, MAX_PATH );
-		CHelpers::ExtractFileNameAndExtension( fileTitle, fileName, fileExt );
-
-		CString newExtension( (LPCSTR)IDS_TEXTURE_EXTENSION );
-		CString relativeTargetFilename = dfm_BuildName( m_csCurrentDir, CString(fileName) + newExtension );
-		CString targetFilename = dfm_GetFullFilename( GetFileMgr(), relativeTargetFilename );
-
-		// check if the file exists already
-		CMoFileIO file;
-		if( file.Open( targetFilename, "rb" ) )
-		{
-			file.Close();
-
-			CString msg;
-			msg.FormatMessage( IDS_TEXTURE_ALREADY_EXISTS, fileName );
-			int status = MessageBox( msg, AfxGetAppName(), MB_YESNO );
-			if( status == IDNO )
-			{
-				continue;
-			}
-
-			//the file existed
-			bFileExisted = true;
-		}
-
-		// load the source tga
-		LoadedBitmap bitmap;
-		DStream* sourceFile;
-		bool success = true;
-		CString msg;
-
-		if( sourceFile = streamsim_Open( sCurrFile, "rb" ) )
-		{
-			if( tga_Create2( sourceFile, &bitmap ) )
-			{
-				if(!dtx_IsTextureSizeValid( bitmap.m_Width ) || !dtx_IsTextureSizeValid( bitmap.m_Height ))
-				{
-					// failed due to bad texture dimensions
-					msg.FormatMessage( IDS_INVALIDTEXTURESIZE, sCurrFile, bitmap.m_Width, bitmap.m_Height );
-					AppMessageBox( msg, MB_OK );
-					success = false;
-				}
-			}
-			else
-			{
-				// failed due to bad tga file
-				msg.FormatMessage( IDS_CANTLOADTGA, sCurrFile );
-				AppMessageBox( msg, MB_OK );
-				success = false;
-			}
-
-			sourceFile->Release();
-		}
-		else
-		{
-			// failed due to nonexistent file
-			msg.FormatMessage( IDS_CANTLOADTGA, sCurrFile );
-			AppMessageBox( msg, MB_OK );
-			success = false;
-		}
-
-		// create the normal map file
-		if( success )
-		{
-			DStream* destFile = streamsim_Open( targetFilename, "wb" );
-			if( destFile )
-			{
-				bool bAlpha = (Dlg.m_nLuminanceChannel != CImportBumpMapDlg::NONE);
-
-				SaveNormalMap( &bitmap, destFile, Dlg.m_nHeightChannel, bAlpha, Dlg.m_nLuminanceChannel, Dlg.m_fHeight );
-				destFile->Release();
-			}
-			else
-			{
-				msg.FormatMessage( IDS_ERRORSAVEDTX, targetFilename );
-				AppMessageBox( msg, MB_OK );
-			}
-		}
-
-		if( success )
-		{
-			// update the listbox and select the new texture if it didn't exist already
-			if(!bFileExisted)
-			{
-				if( GetProjectBar()->m_pCurTextureSel )
-					SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
-				int item = AddFileToList( relativeTargetFilename );
-				GetProjectBar()->SetCurTextureSel( (DFileIdent*)m_TextureList.GetItemData( item ) );
-				SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
-			}
-			
-		}
-	}
-
-	DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
-	EndWaitCursor();
-
-	return true;
-}
-
-
-// opens the dialog to allow the user to enter data for the bump map
-bool CTextureDlg::DoImportBumpMapOperation()
-{
-	CImportBumpMapDlg Dlg(this);
-
-	if(Dlg.DoModal() != IDOK)
-	{
-		//the user cancelled
-		return false;
-	}
-
-
-	//make sure that we can open up the file
-	BeginWaitCursor();
-
-	//break the list on the semicolon boundaries and process each file
-	CString sFilesLeft = Dlg.m_sImageFile;
-	
-	while(1)
-	{
-		CString sCurrFile = sFilesLeft;
-		int nSemiColonPos = sFilesLeft.Find(';');
-
-		if(nSemiColonPos != -1)
-		{
-			sCurrFile = sFilesLeft.Left(nSemiColonPos);
-			sFilesLeft = sFilesLeft.Mid(nSemiColonPos + 1);
-		}
-		else
-			sFilesLeft = "";
-
-		//cleanup
-		sFilesLeft.TrimLeft();
-		sFilesLeft.TrimRight();
-		sCurrFile.TrimLeft();
-		sCurrFile.TrimRight();
-
-		//see if we are done
-		if(sCurrFile.IsEmpty())
-		{
-			//see if this was just two semicolons in a row, creating an empty file
-			if(sFilesLeft.IsEmpty())
-			{
-				//nope, end of list
-				break;
-			}			
-			continue;
-		}
-
-		//determines if the file already existed
-		bool bFileExisted = false;
-
-		// build the full path of the output dtx file
-		char fileName[MAX_PATH], fileExt[MAX_PATH], fileTitle[MAX_PATH];
-		GetFileTitle( (LPCTSTR)sCurrFile, fileTitle, MAX_PATH );
-		CHelpers::ExtractFileNameAndExtension( fileTitle, fileName, fileExt );
-
-		CString newExtension( (LPCSTR)IDS_TEXTURE_EXTENSION );
-		CString relativeTargetFilename = dfm_BuildName( m_csCurrentDir, CString(fileName) + newExtension );
-		CString targetFilename = dfm_GetFullFilename( GetFileMgr(), relativeTargetFilename );
-
-		// check if the file exists already
-		CMoFileIO file;
-		if( file.Open( targetFilename, "rb" ) )
-		{
-			file.Close();
-
-			CString msg;
-			msg.FormatMessage( IDS_TEXTURE_ALREADY_EXISTS, fileName );
-			int status = MessageBox( msg, AfxGetAppName(), MB_YESNO );
-			if( status == IDNO )
-			{
-				continue;
-			}
-
-			//the file existed
-			bFileExisted = true;
-		}
-
-		// load the source tga
-		LoadedBitmap bitmap;
-		DStream* sourceFile;
-		bool success = true;
-		CString msg;
-
-		if( sourceFile = streamsim_Open( sCurrFile, "rb" ) )
-		{
-			if( tga_Create2( sourceFile, &bitmap ) )
-			{
-				if(!dtx_IsTextureSizeValid( bitmap.m_Width ) || !dtx_IsTextureSizeValid( bitmap.m_Height ))
-				{
-					// failed due to bad texture dimensions
-					msg.FormatMessage( IDS_INVALIDTEXTURESIZE, sCurrFile, bitmap.m_Width, bitmap.m_Height );
-					AppMessageBox( msg, MB_OK );
-					success = false;
-				}
-			}
-			else
-			{
-				// failed due to bad tga file
-				msg.FormatMessage( IDS_CANTLOADTGA, sCurrFile );
-				AppMessageBox( msg, MB_OK );
-				success = false;
-			}
-
-			sourceFile->Release();
-		}
-		else
-		{
-			// failed due to nonexistent file
-			msg.FormatMessage( IDS_CANTLOADTGA, sCurrFile );
-			AppMessageBox( msg, MB_OK );
-			success = false;
-		}
-
-		// create the bump map file
-		if( success )
-		{
-			DStream* destFile = streamsim_Open( targetFilename, "wb" );
-			if( destFile )
-			{
-				bool bLuminance = (Dlg.m_nLuminanceChannel != CImportBumpMapDlg::NONE);
-
-				SaveBumpMap( &bitmap, destFile, Dlg.m_nHeightChannel, bLuminance, Dlg.m_nLuminanceChannel, Dlg.m_fHeight );
-				destFile->Release();
-			}
-			else
-			{
-				msg.FormatMessage( IDS_ERRORSAVEDTX, targetFilename );
-				AppMessageBox( msg, MB_OK );
-			}
-		}
-
-		if( success )
-		{
-			// update the listbox and select the new texture if it didn't exist already
-			if(!bFileExisted)
-			{
-				if( GetProjectBar()->m_pCurTextureSel )
-					SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
-				int item = AddFileToList( relativeTargetFilename );
-				GetProjectBar()->SetCurTextureSel( (DFileIdent*)m_TextureList.GetItemData( item ) );
-				SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
-			}
-		}
-	}
-
-	DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
-	EndWaitCursor();
-
-	return true;
-}
-
-
-// brings up a dialog requesting 6 tga files and a resulting filename for a cube map
-bool CTextureDlg::DoImportCubeMapOperation( void )
-{
-	// can't import if no directory selected
-	if( !IsDirectorySelected() )
-		return false;
-
-	bool bFileExisted = false;
-
-	CImportCubeMapDlg dlg( this );
-
-	if( dlg.DoModal() == IDOK )
-	{
-		BeginWaitCursor();
-
-		// build the full path of the output dtx file
-		char fileName[MAX_PATH], fileExt[MAX_PATH], fileTitle[MAX_PATH];
-		GetFileTitle( (LPCTSTR)dlg.m_OutputName, fileTitle, MAX_PATH );
-		CHelpers::ExtractFileNameAndExtension( fileTitle, fileName, fileExt );
-		CString newExtension( (LPCSTR)IDS_TEXTURE_EXTENSION );
-		CString relativeTargetFilename = dfm_BuildName( m_csCurrentDir, CString(fileName) + newExtension );
-		CString targetFilename = dfm_GetFullFilename( GetFileMgr(), relativeTargetFilename );
-
-		// check if the file exists already
-		CMoFileIO file;
-		if( file.Open( targetFilename, "rb" ) )
-		{
-			file.Close();
-
-			CString msg;
-			msg.FormatMessage( IDS_TEXTURE_ALREADY_EXISTS, fileName );
-			int status = MessageBox( msg, AfxGetAppName(), MB_YESNO );
-			if( status == IDNO )
-			{
-				EndWaitCursor();
-				return false;
-			}
-			bFileExisted = true;
-		}
-
-		// load the source tga files
-		LoadedBitmap* bitmaps = new LoadedBitmap[6];
-		DStream* sourceFile;
-		bool success = true;
-		int mapWidth;
-		CString msg;
-
-		for( int i = 0; i < 6; i++ )
-		{
-			if( sourceFile = streamsim_Open( dlg.m_InputName[i], "rb" ) )
-			{
-				if( tga_Create2( sourceFile, &bitmaps[i] ) )
-				{
-					if( dtx_IsTextureSizeValid( bitmaps[i].m_Width ) && (bitmaps[i].m_Width == bitmaps[i].m_Height) )
-					{
-						// remember the dimensions of the PosX texture so we can test the rest
-						if( i == 0 )
-						{
-							mapWidth = bitmaps[i].m_Width;
-						}
-						else if( mapWidth != bitmaps[i].m_Width )
-						{
-							// failed due to a cube face being a different size
-							msg.FormatMessage( IDS_INVALIDTEXTURESIZE, dlg.m_InputName[i], bitmaps[i].m_Width, bitmaps[i].m_Height );
-							AppMessageBox( msg, MB_OK );
-							success = false;
-							break;
-						}
-					}
-					else
-					{
-						// failed due to bad texture dimensions
-						msg.FormatMessage( IDS_INVALIDTEXTURESIZE, dlg.m_InputName[i], bitmaps[i].m_Width, bitmaps[i].m_Height );
-						AppMessageBox( msg, MB_OK );
-						success = false;
-						break;
-					}
-				}
-				else
-				{
-					// failed due to bad tga file
-					msg.FormatMessage( IDS_CANTLOADTGA, dlg.m_InputName[i] );
-					AppMessageBox( msg, MB_OK );
-					success = false;
-					break;
-				}
-
-				sourceFile->Release();
-			}
-			else
-			{
-				// failed due to nonexistent file
-				msg.FormatMessage( IDS_CANTLOADTGA, dlg.m_InputName[i] );
-				AppMessageBox( msg, MB_OK );
-				success = false;
-				break;
-			}
-		}
-
-		// create the cube map file
-		if( success )
-		{
-			DStream* destFile = streamsim_Open( targetFilename, "wb" );
-			if( destFile )
-			{
-				SaveCubeMap( bitmaps, destFile );
-				destFile->Release();
-			}
-			else
-			{
-				msg.FormatMessage( IDS_ERRORSAVEDTX, targetFilename );
-				AppMessageBox( msg, MB_OK );
-			}
-		}
-
-		delete [] bitmaps;
-
-		if( success )
-		{
-			// update the listbox and select the new texture if it didn't already exist
-			if(!bFileExisted)
-			{
-				if( GetProjectBar()->m_pCurTextureSel )
-					SelectFileInList( GetProjectBar()->m_pCurTextureSel, FALSE );
-				int item = AddFileToList( relativeTargetFilename );
-				GetProjectBar()->SetCurTextureSel( (DFileIdent*)m_TextureList.GetItemData( item ) );
-				SelectFileInList( GetProjectBar()->m_pCurTextureSel, TRUE );
-			}
-			DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
-		}
-
-		EndWaitCursor();
-		return true;
-	}
-
-	return false;
-}
 
 // ----------------------------------------------------------------------- //
 //
@@ -1422,7 +849,7 @@ bool CTextureDlg::DoImportCubeMapOperation( void )
 
 BOOL CTextureDlg::DoImportMipPcxOperation( )
 {
-	static const uint32 knMaxMipMaps = 16;
+	static const int knMaxMipMaps = 4;
 
 	CString			importExt, fileMask, newExtension, newFileMask, sFileName;
 	CString			pathName[knMaxMipMaps], targetFilename, targetName, tempStr, relativeTargetFilename;
@@ -1436,9 +863,6 @@ BOOL CTextureDlg::DoImportMipPcxOperation( )
 	char			fileName[knMaxMipMaps][_MAX_FNAME+1];
 	char			fileExt[knMaxMipMaps][_MAX_EXT+1];
 
-	CAbstractIO* pFile = NULL;
-	DWORD width, height;
-
 
 	importExt.LoadString( IDS_TGA_EXTENSION );
 	fileMask.LoadString( IDS_TGA_FILEMASK );
@@ -1451,30 +875,29 @@ BOOL CTextureDlg::DoImportMipPcxOperation( )
 	while( nFileCount < knMaxMipMaps )
 	{
 		tempStr.FormatMessage( IDS_OPENMIPFILE, nFileCount + 1 );
-		sFileName = GetProject()->m_BaseProjectDir + "\\Tex\\*" + importExt;
-		CHelperFileDlg dlg( TRUE, importExt, (LPCTSTR)sFileName, OFN_FILEMUSTEXIST, fileMask, this );
+		sFileName = GetProject()->m_BaseProjectDir + "\\Textures\\*" + importExt;
+		CHelperFileDlg dlg( TRUE, importExt, (LPCTSTR)sFileName, OFN_ALLOWMULTISELECT, fileMask, this );
 		dlg.m_ofn.lpstrTitle = LPCTSTR( tempStr );
 
 		if( dlg.DoModal() == IDOK )
 		{
-
 			// Note: pPos is NOT used as the filename here!!!
-			pathName[nFileCount] = dlg.GetPathName();
-			GetFileTitle( (LPCTSTR)pathName[nFileCount], fileTitle[nFileCount], _MAX_PATH );
-			CHelpers::ExtractFileNameAndExtension( fileTitle[nFileCount], fileName[nFileCount], fileExt[nFileCount] );
+			pos = dlg.GetStartPosition();
+			while( pos != NULL && nFileCount < knMaxMipMaps )
+			{
+				pathName[nFileCount] = dlg.GetNextPathName( pos );
+				GetFileTitle( (LPCTSTR)pathName[nFileCount], fileTitle[nFileCount], _MAX_PATH );
+				CHelpers::ExtractFileNameAndExtension( fileTitle[nFileCount], fileName[nFileCount], fileExt[nFileCount] );
 
-			nFileCount++;
+				nFileCount++;
+			}
 		}
 		else
 		{
-			break;
+			return FALSE;
 		}
 	}
 
-	//make sure we got at least one file
-	if(nFileCount == 0)
-		return FALSE;
-	
 	// Get the dtx file outputname...
 	targetName = CString(fileName[0]) + newExtension;
 	targetFilename = dfm_BuildName(m_csCurrentDir, targetName);
@@ -1495,7 +918,7 @@ BOOL CTextureDlg::DoImportMipPcxOperation( )
 	BeginWaitCursor( );
 
 	// Copy the file.
-	if( !CopyMipTGAToTexture( pathName, nFileCount, targetFilename ))
+	if( !CopyMipTGAToTexture( pathName, targetFilename ))
 	{
 		EndWaitCursor( );
 		return FALSE;
@@ -1503,7 +926,6 @@ BOOL CTextureDlg::DoImportMipPcxOperation( )
 
 	//AddFileToList(relativeTargetFilename);
 	PopulateList(); // {MD 4/14/98} Do this instead because the file may not be in resource dirs.
-	DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
 
 	EndWaitCursor( );
 	return TRUE;
@@ -1581,151 +1003,6 @@ BOOL CTextureDlg::DoExportAllAsBPP_32POperation( )
 	return TRUE;
 }
 
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CTextureDlg::DoConvertTo32P
-//
-//	PURPOSE:	Convert the currently selected .dtx files to 32P
-//				This operation overwrites the existing .dtx file.
-//				Applicable header information is retained.
-//
-// ----------------------------------------------------------------------- //
-
-BOOL CTextureDlg::DoConvertTo32P( )
-{
-	CMoArray<DFileIdent*> files;		// list of selected textures
-	DStream* openFile;					// current file being read
-	TextureData* texData;				// image data of the existing file
-	uint8 bogusAlpha;					// unused parameter
-	CMoFileIO bogusFile;				// unused parameter
-
-	CString messageBoxTitle( "Convert to BPP_32P" );
-	CString error;
-
-	// get the selected textures
-	int i = -1;
-	while( -1 != (i = m_TextureList.GetNextItem( i, LVNI_ALL|LVNI_SELECTED )) )
-	{
-		files.Append( (DFileIdent*)m_TextureList.GetItemData( i ) );
-	}
-
-	if( files <= 0 )
-	{
-		MessageBox( "At least one texture must be selected to perform this operation.", messageBoxTitle, MB_OK|MB_ICONINFORMATION );
-		return TRUE;
-	}
-
-	if( MessageBox( "This operation will overwrite the selected textures.\n"
-					"Please make sure you have a backup before continuing.\n"
-					"Textures must have <= 256 RGBA color combinations\n"
-					"in order to convert correctly.",
-					 messageBoxTitle, MB_OKCANCEL|MB_ICONINFORMATION ) == IDCANCEL )
-	{
-		return TRUE;
-	}
-
-	BeginWaitCursor();
-
-	// convert each of the files
-	for( i = 0; i < files; i++ )
-	{
-		CString filename = dfm_GetFullFilename( GetFileMgr(), files[i]->m_Filename );
-
-		// open the original file
-		if( !(openFile = streamsim_Open( (LPCTSTR)filename, "rb" )) )
-		{
-			error.Format( "Couldn't open \"%s\" for reading.", filename );
-			if( MessageBox( error, messageBoxTitle, MB_OKCANCEL|MB_ICONEXCLAMATION ) == IDCANCEL )
-				break;
-			continue;
-		}
-
-		// get the image data out of the file
-		if( dtx_Create( openFile, &texData, FALSE ) != DE_OK )
-		{
-			openFile->Release();
-			error.Format( "Error reading \"%s\".", filename );
-			if( MessageBox( error, messageBoxTitle, MB_OKCANCEL|MB_ICONEXCLAMATION ) == IDCANCEL )
-				break;
-			continue;
-		}
-
-		openFile->Release();
-
-		// write to the existing file, keeping the header info
-		bool success = Write8BitDTX( bogusFile, texData, &filename, true );
-		dtx_Destroy( texData );
-
-		if( !success )
-		{
-			error.Format( "Error converting \"%s\".\nFile may be read only.", filename );
-			if( MessageBox( error, messageBoxTitle, MB_OKCANCEL|MB_ICONEXCLAMATION ) == IDCANCEL )
-				break;
-			continue;
-		}
-	}
-
-	DoShowThumbnails(GetProjectBar()->m_bShowThumbnails);
-	EndWaitCursor();
-
-	return TRUE;
-}
-
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CTextureDlg::DoRenameTexture
-//
-//	PURPOSE:	Brings up the rename resource dialog with this the currently
-//				selected texture filled in the dialog
-//
-// ----------------------------------------------------------------------- //
-
-BOOL CTextureDlg::DoRenameTexture( )
-{
-	int iItem = -1;
-	while((iItem = m_TextureList.GetNextItem(iItem, LVNI_ALL|LVNI_SELECTED)) != -1)
-	{
-		DFileIdent *pItemData = (DFileIdent *)m_TextureList.GetItemData(iItem);
-		GetRenameResourceDlg()->AddNewFile(pItemData->m_Filename);
-	}
-
-	GetRenameResourceDlg()->UpdateIcons();
-	GetRenameResourceDlg()->ShowWindow(SW_SHOW);
-
-	return TRUE;
-}
-
-// ----------------------------------------------------------------------- //
-//
-//	ROUTINE:	CTextureDlg::DoMakeTextureWritable
-//
-//	PURPOSE:	Makes the currently selected textures writable
-//
-// ----------------------------------------------------------------------- //
-
-BOOL CTextureDlg::DoMakeTextureWritable( )
-{
-	int iItem = -1;
-	while((iItem = m_TextureList.GetNextItem(iItem, LVNI_ALL|LVNI_SELECTED)) != -1)
-	{
-		DFileIdent *pItemData = (DFileIdent *)m_TextureList.GetItemData(iItem);
-
-		CString sFilename = dfm_GetFullFilename(GetFileMgr(), pItemData->m_Filename);
-
-		CFileStatus Status;
-		if(CFile::GetStatus(sFilename, Status))
-		{
-			if(Status.m_attribute & CFile::readOnly)
-			{
-				//ok, make the file writable
-				Status.m_attribute &= ~CFile::readOnly;
-				CFile::SetStatus(sFilename, Status);
-			}
-		}
-	}
-
-	return TRUE;
-}
 
 
 // ----------------------------------------------------------------------- //
@@ -1753,9 +1030,6 @@ BOOL CTextureDlg::DoExport8BitDTXOperation( )
 	
 	if(!GetProjectBar()->IsProjectOpen())
 		return false;
-
-	if(MessageBox("Are you sure you want to save\nall textures as 8-bit .dt8 files?",
-					"Convert Textures?", MB_ICONQUESTION | MB_YESNO) == IDNO)		return false;
 
 	iItem = -1;
 	while((iItem = m_TextureList.GetNextItem(iItem, LVNI_ALL|LVNI_SELECTED)) != -1)
@@ -1870,537 +1144,6 @@ BOOL CTextureDlg::DoExport8BitDTXOperation( )
 	}
 }
 
-
-//----------------------------
-// DoBatchReload stuff
-//----------------------------
-
-// dialog options for DoBatchReload
-struct BatchReloadOptions
-{
-	bool adjustMappings;		// should we adjust mappings in all the worlds in the project
-	bool noCompression;			// should new textures be compressed the same as the originals
-	char basePath[_MAX_PATH];	// base path for the new texture tree
-	int resourceBaseLen;		// length of the base path of the resources directory
-
-	BatchReloadOptions()
-	{
-		adjustMappings = true;
-		noCompression = false;
-		basePath[0] = 0;
-		resourceBaseLen = 0;
-	}
-};
-
-// process options from the dialog box for DoBatchReload
-void BatchReloadDialogAccepted( HWND hWnd, BatchReloadOptions* options )
-{
-	options->adjustMappings = SendDlgItemMessage( hWnd, IDC_ADJUSTMAPPINGS, BM_GETSTATE, 0, 0 ) > 0;
-	options->noCompression = SendDlgItemMessage( hWnd, IDC_NOCOMPRESSION, BM_GETSTATE, 0, 0 ) > 0;
-	GetWindowText( GetDlgItem( hWnd, IDC_BASEPATH ), options->basePath, _MAX_PATH );
-	int basePathLen = strlen( options->basePath );
-
-	// make sure path ends in a backslash
-	if( basePathLen && options->basePath[basePathLen-1] != '\\' )
-	{
-		options->basePath[basePathLen] = '\\';
-		options->basePath[basePathLen+1] = 0;
-		basePathLen++;
-	}
-
-	// make path lowercase
-	for( int i = 0; i < basePathLen; i++ )
-	{
-		if( isupper( options->basePath[i] ) )
-			options->basePath[i] = tolower( options->basePath[i] );
-	}
-}
-
-
-// dialog stuff for DoBatchReload
-static BOOL CALLBACK BatchReloadDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
-{
-	BatchReloadOptions* options = (BatchReloadOptions*)GetWindowLong( hWnd, GWL_USERDATA );
-	if( !options && (msg != WM_INITDIALOG) )
-		return FALSE;
-
-	switch( msg )
-	{
-	case WM_INITDIALOG:
-		options = (BatchReloadOptions*)lParam;
-		// setup dialog controls to match settings
-		SendDlgItemMessage( hWnd, IDC_ADJUSTMAPPINGS, BM_SETCHECK, options->adjustMappings ? BST_CHECKED : BST_UNCHECKED, 0 );
-		SendDlgItemMessage( hWnd, IDC_NOCOMPRESSION, BM_SETCHECK, options->noCompression ? BST_CHECKED : BST_UNCHECKED, 0 );
-		SetWindowText( GetDlgItem( hWnd, IDC_BASEPATH ), options->basePath );
-		// put a pointer to the options data in the user data
-		SetWindowLong( hWnd, GWL_USERDATA, lParam );
-		break;
-
-	case WM_DESTROY:
-		break;
-
-	case WM_COMMAND:
-		switch( LOWORD(wParam) )
-		{
-		case IDC_CANCEL:
-			EndDialog( hWnd, 1 );
-			break;
-
-		case IDC_OK:
-			BatchReloadDialogAccepted( hWnd, options );
-			EndDialog( hWnd, 0 );
-			break;
-		}
-		break;
-
-	default:
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-bool CTextureDlg::ProcessBatchReload( CMoArray<BatchTextureScaleInfo*>& textureInfo, const char* input, const char* output, const BatchReloadOptions& options )
-{
-	CString str;	// error messages
-
-	char inputDir[_MAX_PATH];
-	char outputDir[_MAX_PATH];
-
-	strcpy( inputDir, input );
-	strcpy( outputDir, output );
-
-	int inputLen = strlen( inputDir );
-	int outputLen = strlen( outputDir );
-
-	if( !inputLen || !outputLen )
-	{
-		AppMessageBox( IDS_TEXRELOAD_NODIRECTORIES, MB_OK );
-		return false;
-	}
-
-	if( inputDir[inputLen-1] != '\\' )
-	{
-		inputDir[inputLen] = '\\';
-		inputDir[inputLen+1] = 0;
-		inputLen++;
-	}
-
-	if( outputDir[outputLen-1] != '\\' )
-	{
-		outputDir[outputLen] = '\\';
-		outputDir[outputLen+1] = 0;
-		outputLen++;
-	}
-
-	// loop over all .tga and .pcx files in input directory and child directories
-	WIN32_FIND_DATA findData;
-	HANDLE findHandle;
-	CString startDir;
-
-	startDir = inputDir;
-	startDir += "*.*";
-	findHandle = FindFirstFile( LPCTSTR(startDir), &findData );
-
-	if( findHandle != INVALID_HANDLE_VALUE )
-	{
-		do
-		{
-			if( findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
-			{
-				// ignore directories starting with .
-				if( findData.cFileName[0] != '.' )
-				{
-					// found a directory, recurse into it
-					CString newInDir = inputDir;
-					newInDir += findData.cFileName;
-					CString newOutDir = outputDir;
-					newOutDir += findData.cFileName;
-
-					ProcessBatchReload( textureInfo, newInDir, newOutDir, options );
-				}
-			}
-			else
-			{
-				// it's a file, check the file type
-				char ext[_MAX_EXT];
-				char file[_MAX_FNAME];
-				bool isPcx;
-
-				_splitpath( findData.cFileName, NULL, NULL, file, ext );
-
-				// make sure the extension is lower case
-				for( unsigned i = 0; i < strlen( ext ); i++ )
-				{
-					if( isupper( ext[i] ) )
-						ext[i] = tolower( ext[i] );
-				}
-
-				// found a legit filetype, process it
-				if( (isPcx = !strcmp( ext, ".pcx" )) || !strcmp( ext, ".tga" ) )
-				{
-					CString inFile = inputDir;
-					inFile += file;
-					inFile += ext;
-					CString outFile = outputDir;
-					outFile += file;
-					outFile += ".dtx";
-
-					// texture rescaling info
-					BatchTextureScaleInfo* newTextureInfo = new BatchTextureScaleInfo;
-
-					if( !ProcessTextureReload( newTextureInfo, inFile, outFile, isPcx ) )
-					{
-						str.FormatMessage( IDS_TEXRELOAD_ERRORPROCESSING, inFile );
-						AppMessageBox( str, MB_OK );
-						FindClose( findHandle );
-						delete newTextureInfo;
-						return false;
-					}
-
-					// the texture name based off of the resource base path
-					newTextureInfo->texName = outFile.Right( outFile.GetLength() - options.resourceBaseLen );
-
-					// append the rescaling info
-					textureInfo.Append( newTextureInfo );
-				}
-			}
-		}
-		while( FindNextFile( findHandle, &findData ) );
-
-		FindClose( findHandle );
-	}
-
-	return true;
-}
-
-// replace the image data of out with in.  fills in textureInfo with the texture name
-// and new and old dimensions for use in rescaling mapping coordinates in the worlds
-bool CTextureDlg::ProcessTextureReload( BatchTextureScaleInfo* textureInfo, const CString& in, const CString& out, bool isPcx )
-{
-	DStream* outFile;
-	DStream* inFile;
-	CString str;	// error string
-
-	// open the destination file
-	outFile = streamsim_Open( out, "rb" );
-	if( !outFile )
-	{
-		str.FormatMessage( IDS_TEXRELOAD_NOTFOUND, out );
-		AppMessageBox( str, MB_OK );
-		return false;
-	}
-
-	// read the original dtx
-	TextureData* dtxData = NULL;
-	if( dtx_Create( outFile, &dtxData, true, false ) != LT_OK )
-	{
-		str.FormatMessage( IDS_TEXRELOAD_OPENERROR, out );
-		AppMessageBox( str, MB_OK );
-		outFile->Release();
-		return false;
-	}
-
-	// store the old texture size
-	textureInfo->oldX = dtxData->m_Header.m_BaseWidth;
-	textureInfo->oldY = dtxData->m_Header.m_BaseHeight;
-
-	outFile->Release();
-
-	// open the input file
-	inFile = streamsim_Open( in, "rb" );
-	if( !inFile )
-	{
-		str.FormatMessage( IDS_TEXRELOAD_OPENERROR, in );
-		AppMessageBox( str, MB_OK );
-		dtx_Destroy( dtxData );
-		return false;
-	}
-
-	// load the source file
-	LoadedBitmap bitmap;
-	bool createdBitmap;
-	if( isPcx )
-	{
-		// load the pcx file
-		createdBitmap = pcx_Create2( inFile, &bitmap );
-	}
-	else
-	{
-		// load the tga file
-		createdBitmap = tga_Create2( inFile, &bitmap );
-	}
-	inFile->Release();
-
-	if( !createdBitmap )
-	{
-		str.FormatMessage( IDS_TEXRELOAD_BADFORMAT, in );
-		AppMessageBox( str, MB_OK );
-		dtx_Destroy( dtxData );
-		return false;
-	}
-
-	bool success = true;
-
-	// store the new texture size
-	textureInfo->newX = bitmap.m_Width;
-	textureInfo->newY = bitmap.m_Height;
-
-	if( dtx_IsTextureSizeValid( bitmap.m_Width ) && dtx_IsTextureSizeValid( bitmap.m_Height ) )
-	{
-		outFile = streamsim_Open( out, "wb" );
-		if( outFile )
-		{
-			if( FillTextureWithPcx( &bitmap, dtxData ) )
-			{
-				if( LT_OK != dtx_Save( dtxData, outFile ) )
-				{
-					str.FormatMessage( IDS_TEXRELOAD_SAVEERROR, out );
-					AppMessageBox( str, MB_OK );
-					success = false;
-				}
-			}
-			else
-			{
-				str.FormatMessage( IDS_TEXRELOAD_CANTCONVERT, in );
-				AppMessageBox( str, MB_OK );
-				success = false;
-			}
-
-			outFile->Release();
-		}
-		else
-		{
-			str.FormatMessage( IDS_TEXRELOAD_CANTWRITE, out );
-			AppMessageBox( str, MB_OK );
-			success = false;
-		}
-	}
-	else
-	{
-		str.FormatMessage( IDS_TEXRELOAD_BADDIMS, in );
-		AppMessageBox( str, MB_OK );
-		success = false;
-	}
-
-	dtx_Destroy( dtxData );
-
-	return success;
-}
-
-// stuff new texture image data into a dtx, then go through all the worlds in the
-// project and resize the mapping to fit the new texture size
-bool CTextureDlg::DoBatchReload( void )
-{
-	BatchReloadOptions options;						// dialog box options
-	CMoArray<BatchTextureScaleInfo*> textureInfo;	// texture resizing info
-
-	// show the reload dialog
-	int res = DialogBoxParam( GetApp()->m_hInstance, MAKEINTRESOURCE(IDD_TEXTURE_BATCHRELOAD), m_hWnd, BatchReloadDialogProc, (LPARAM)&options );
-
-	// they canceled
-	if( res != 0 ) return false;
-
-	// get the base resource directory and it's length for stripping off of texture names
-	CString resourceBase = GetProject()->m_BaseProjectDir;
-	options.resourceBaseLen = resourceBase.GetLength();
-	if( options.resourceBaseLen && (resourceBase[options.resourceBaseLen - 1] != '\\') )
-		options.resourceBaseLen++;
-
-	BeginWaitCursor();
-
-	// reload any new texture image data that is available
-	if( !ProcessBatchReload( textureInfo, options.basePath, resourceBase, options ) )
-	{
-		EndWaitCursor();
-		return false;
-	}
-
-	// load each world in the project and rescale the mappings as appropriate
-	if( options.adjustMappings )
-	{
-		if( !GetProjectBar()->BatchTextureScale( textureInfo, resourceBase ) )
-		{
-			EndWaitCursor();
-			return false;
-		}
-	}
-
-	EndWaitCursor();
-
-	// delete all the texture info
-	for( int i = 0; i < textureInfo; i++ )
-	{
-		delete textureInfo[i];
-	}
-
-	// update the texture dialog
-	GetProjectBar()->SetCurTextureSel( NULL );
-	UpdateDirectories();
-	PopulateList();
-	RenderLargeImage();
-
-	return true;
-}
-
-
-//------------------------------
-// ScaleTextureCoords stuff
-//------------------------------
-
-// dialog options for DoScaleTextureCoords
-struct ScaleTextureCoordsOptions
-{
-	char basePath[_MAX_PATH];	// base path for the new texture tree
-	int resourceBaseLen;		// length of the base path of the resources directory
-
-	ScaleTextureCoordsOptions()
-	{
-		basePath[0] = 0;
-		resourceBaseLen = 0;
-	}
-};
-
-// process options from the dialog box for DoScaleTextureCoords
-void ScaleTextureCoordsDialogAccepted( HWND hWnd, ScaleTextureCoordsOptions* options )
-{
-	GetWindowText( GetDlgItem( hWnd, IDC_BASEPATH ), options->basePath, _MAX_PATH );
-	int basePathLen = strlen( options->basePath );
-
-	// make sure path ends in a backslash
-	if( basePathLen && options->basePath[basePathLen-1] != '\\' )
-	{
-		options->basePath[basePathLen] = '\\';
-		options->basePath[basePathLen+1] = 0;
-		basePathLen++;
-	}
-
-	// make path lowercase
-	for( int i = 0; i < basePathLen; i++ )
-	{
-		if( isupper( options->basePath[i] ) )
-			options->basePath[i] = tolower( options->basePath[i] );
-	}
-
-	options->resourceBaseLen = basePathLen;
-}
-
-
-// dialog stuff for DoScaleTextureCoords
-static BOOL CALLBACK ScaleTextureCoordsDialogProc( HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam )
-{
-	ScaleTextureCoordsOptions* options = (ScaleTextureCoordsOptions*)GetWindowLong( hWnd, GWL_USERDATA );
-	if( !options && (msg != WM_INITDIALOG) )
-		return FALSE;
-
-	switch( msg )
-	{
-	case WM_INITDIALOG:
-		options = (ScaleTextureCoordsOptions*)lParam;
-		// setup dialog controls to match settings
-		SetWindowText( GetDlgItem( hWnd, IDC_BASEPATH ), options->basePath );
-		// put a pointer to the options data in the user data
-		SetWindowLong( hWnd, GWL_USERDATA, lParam );
-		break;
-
-	case WM_DESTROY:
-		break;
-
-	case WM_COMMAND:
-		switch( LOWORD(wParam) )
-		{
-		case IDC_CANCEL:
-			EndDialog( hWnd, 1 );
-			break;
-
-		case IDC_OK:
-			ScaleTextureCoordsDialogAccepted( hWnd, options );
-			EndDialog( hWnd, 0 );
-			break;
-		}
-		break;
-
-	default:
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
-// go through all the worlds in the project and resize the mappings to fit the new texture size
-bool CTextureDlg::DoScaleTextureCoords( void )
-{
-	ScaleTextureCoordsOptions options;				// dialog box options
-	CMoArray<BatchTextureScaleInfo*> textureInfo;	// texture resizing info
-
-	// get the filename of the bute file containing scale information
-	CString buteFileName;
-	buteFileName = GetProject()->m_BaseProjectDir + "\\*.dcf";
-	CFileDialog fileDlg( TRUE, "dcf", (LPCTSTR)buteFileName, 0, "DCF File (*.dcf)|*.dcf||" );
-	if( fileDlg.DoModal() != IDOK )
-		return false;
-	buteFileName = fileDlg.GetFileName();
-
-	// show the scale dialog
-	int res = DialogBoxParam( GetApp()->m_hInstance, MAKEINTRESOURCE(IDD_TEXTURE_SCALETEXTURECOORDS), m_hWnd, ScaleTextureCoordsDialogProc, (LPARAM)&options );
-
-	// they canceled
-	if( res != 0 )
-		return false;
-
-	BeginWaitCursor();
-
-	// load the rescale info from the bute file
-	CButeMgr buteMgr;
-	CString curFileName;
-	CString curFileIndex;
-	CPoint curOldSize, curNewSize;
-	buteMgr.Init();
-
-	if( !buteMgr.Parse( buteFileName ) )
-	{
-		EndWaitCursor();
-		return false;
-	}
-
-	int numScaledFiles = buteMgr.GetInt( "General", "NumFiles", 0 );
-
-	// loop over the files in the bute and add the scaling info to textureInfo
-	for( int i = 0; i < numScaledFiles; i++ )
-	{
-		// load the scale info for this file
-		curFileIndex.Format( "File%d", i+1 );
-		curFileName = buteMgr.GetString( curFileIndex, "Path", CString("") );
-		curOldSize = buteMgr.GetPoint( curFileIndex, "OldSize", CPoint(256,256) );
-		curNewSize = buteMgr.GetPoint( curFileIndex, "NewSize", CPoint(256,256) );
-
-		// create texture rescaling info structure and add it to textureInfo
-		BatchTextureScaleInfo* newTextureInfo = new BatchTextureScaleInfo;
-		newTextureInfo->newX = curNewSize.x;
-		newTextureInfo->newY = curNewSize.y;
-		newTextureInfo->oldX = curOldSize.x;
-		newTextureInfo->oldY = curOldSize.y;
-		newTextureInfo->texName = curFileName.Right( curFileName.GetLength() - options.resourceBaseLen );
-		textureInfo.Append( newTextureInfo );
-	}
-
-	// load each world in the project and rescale the mappings as appropriate
-	if( !GetProjectBar()->BatchTextureScale( textureInfo, GetProject()->m_BaseProjectDir ) )
-	{
-		EndWaitCursor();
-		return false;
-	}
-
-	EndWaitCursor();
-
-	// delete all the texture info
-	for( i = 0; i < textureInfo; i++ )
-	{
-		delete textureInfo[i];
-	}
-
-	return true;
-}
 
 
 // ----------------------------------------------------------------------- //
@@ -2549,42 +1292,32 @@ BOOL CTextureDlg::DoExportPcxOperation( )
 //
 // ----------------------------------------------------------------------- //
 
+// 2001's (0x40ad24): one function, the selection gathered here, and the
+// texture's LIGHTDEFS section edited along with the header.
 BOOL CTextureDlg::DoTextureProperties( )
-{
-	if(!GetProjectBar()->IsProjectOpen())
-		return FALSE;
-
-	CMoArray<DFileIdent*> selections;
-
-	// Get the selections into an array.
-	int nIndex = -1;
-	while((nIndex = m_TextureList.GetNextItem(nIndex, LVNI_SELECTED)) != -1)
-	{
-		DFileIdent *pRez = (DFileIdent*)m_TextureList.GetItemData(nIndex);
-		if(pRez)
-			selections.Append(pRez);
-	}
-
-	return DoTextureProperties( selections );
-}
-
-
-BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 {
 	DFileIdent *pRez;
 	CString fullName, str;
-	int tempInt;
 	DStream *pStream;
 	TextureData *pTexture;
 	DRESULT dResult;
 	DtxSection *pSection;
-	int nIndex;
 	DWORD i;
+	CMoArray<DFileIdent*> selections;
 	CTextureProp dlgProp;
 
 
 	if(!GetProjectBar()->IsProjectOpen())
 		return FALSE;
+
+	// Get the selections into an array.
+	int nIndex = -1;
+	while((nIndex = m_TextureList.GetNextItem(nIndex, LVNI_SELECTED)) != -1)
+	{
+		pRez = (DFileIdent*)m_TextureList.GetItemData(nIndex);
+		if(pRez)
+			selections.Append(pRez);
+	}
 
 	if(selections.GetSize() == 0)
 		return FALSE;
@@ -2610,6 +1343,9 @@ BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 			return FALSE;
 		}
 
+		pSection = dtx_FindSection(pTexture, "LIGHTDEFS");
+		dlgProp.m_LightDefs = pSection ? pSection->m_Data : "";
+
 		if(pTexture->m_Header.m_Extra[1] == 0)
 			dlgProp.m_nMipmaps = 4;
 		else
@@ -2623,11 +1359,9 @@ BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 		dlgProp.m_AverageAlpha = pTexture->m_Header.m_Extra[3];
 
 		dlgProp.m_bFullBrights = !!(pTexture->m_Header.m_IFlags&DTX_FULLBRITE);
-		dlgProp.m_b32BitSysCopy = !!(pTexture->m_Header.m_IFlags&DTX_32BITSYSCOPY);
 		dlgProp.m_bPrefer4444 = !!(pTexture->m_Header.m_IFlags & DTX_PREFER4444);
 		dlgProp.m_bPrefer5551 = !!(pTexture->m_Header.m_IFlags & DTX_PREFER5551);
 		dlgProp.m_bPrefer16Bit = !!(pTexture->m_Header.m_IFlags & DTX_PREFER16BIT);
-		dlgProp.m_bNoSysCache = !!(pTexture->m_Header.m_IFlags & DTX_NOSYSCACHE);
 		dlgProp.m_TextureFlags = pTexture->m_Header.m_UserFlags;
 		dlgProp.m_TextureGroup = pTexture->m_Header.m_Extra[0];
 		dlgProp.m_BPPIdent = pTexture->m_Header.GetBPPIdent();
@@ -2668,6 +1402,27 @@ BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 				continue;
 			}
 
+			// Replace the light definitions.
+			if(dlgProp.m_ChangeFlags & TPROP_LIGHTDEFS)
+			{
+				pSection = dtx_FindSection(pTexture, "LIGHTDEFS");
+				if(pSection)
+					dtx_RemoveSection(pTexture, pSection);
+
+				const char *pLightDefs = dlgProp.m_LightDefs;
+				if(strlen(pLightDefs) > 0)
+				{
+					pSection = (DtxSection*)dalloc(sizeof(DtxSection) + strlen(pLightDefs));
+					strcpy(pSection->m_Header.m_Type, "LIGHTDEFS");
+					strcpy(pSection->m_Header.m_Name, "");
+					pSection->m_Header.m_DataLen = strlen(pLightDefs) + 1;
+					strcpy(pSection->m_Data, pLightDefs);
+
+					pSection->m_pNext = pTexture->m_pSections;
+					pTexture->m_pSections = pSection;
+				}
+			}
+
 			// Replace flags.
 			if(dlgProp.m_ChangeFlags & TPROP_FLAGS)
 			{
@@ -2681,13 +1436,8 @@ BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 
 			if(dlgProp.m_ChangeFlags & TPROP_NUMMIPMAPS)
 			{
-				TextureData* pNewTexture = RegenerateMipMaps(pTexture, (BYTE)DCLAMP(dlgProp.m_nMipmaps, 1, MAX_DTX_MIPMAPS));
-
-				if(pNewTexture)
-				{
-					dtx_Destroy(pTexture);
-					pTexture = pNewTexture;
-				}
+				pTexture->m_Header.m_Extra[1] = (BYTE)dlgProp.m_nMipmaps;
+				pTexture->m_Header.m_Extra[1] = (pTexture->m_Header.m_Extra[1] > 4) ? 4 : pTexture->m_Header.m_Extra[1];
 			}
 
 			if(dlgProp.m_ChangeFlags & TPROP_FULLBRITES)
@@ -2695,13 +1445,6 @@ BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 				pTexture->m_Header.m_IFlags &= ~DTX_FULLBRITE;
 				if(dlgProp.m_bFullBrights)
 					pTexture->m_Header.m_IFlags |= DTX_FULLBRITE;
-			}
-
-			if(dlgProp.m_ChangeFlags & TPROP_32BITSYSCOPY)
-			{
-				pTexture->m_Header.m_IFlags &= ~DTX_32BITSYSCOPY;
-				if(dlgProp.m_b32BitSysCopy)
-					pTexture->m_Header.m_IFlags |= DTX_32BITSYSCOPY;
 			}
 
 			if(dlgProp.m_ChangeFlags & TPROP_PREFER4444)
@@ -2723,13 +1466,6 @@ BOOL CTextureDlg::DoTextureProperties( CMoArray<DFileIdent*>& selections )
 				pTexture->m_Header.m_IFlags &= ~DTX_PREFER16BIT;
 				if(dlgProp.m_bPrefer16Bit)
 					pTexture->m_Header.m_IFlags |= DTX_PREFER16BIT;
-			}
-
-			if(dlgProp.m_ChangeFlags & TPROP_NOSYSCACHE)
-			{
-				pTexture->m_Header.m_IFlags &= ~DTX_NOSYSCACHE;
-				if(dlgProp.m_bNoSysCache)
-					pTexture->m_Header.m_IFlags |= DTX_NOSYSCACHE;
 			}
 
 			if(dlgProp.m_ChangeFlags & TPROP_COMMANDSTRING)
@@ -2820,7 +1556,6 @@ BOOL CTextureDlg::DoCreateAlphaMask(CAMType camType)
 	TextureMipData *pMip;
 	RPaletteColor *pColors;
 	AlphaFromColorDlg afcDlg;
-	SolidAlphaDlg saDlg;
 	float alphaScale, fVal;
 	int alphaOffset, sum, theValue;
 	DWORD aVal, rVal, gVal, bVal;
@@ -2834,22 +1569,18 @@ BOOL CTextureDlg::DoCreateAlphaMask(CAMType camType)
 	if(!pRez)
 		return FALSE;
 
-	if(camType == 0)
+	// 2001: the solid alpha is the alpha-from-color dialog preset to an
+	// offset of 255 and no scale (0x40b439); no SolidAlphaDlg.
+	if(camType == CAM_Solid)
 	{
-		saDlg.m_Scale = "50";
-		if(saDlg.DoModal() != IDOK)
-			return FALSE;
-
-		alphaScale = (float)atoi(saDlg.m_Scale) / 100.0f;
-		alphaOffset = 0;
+		afcDlg.m_Offset = "255";
+		afcDlg.m_Scale = "0";
 	}
-	else if(camType == 1)
+
+	if(camType == CAM_Solid || camType == CAM_FromColor)
 	{
 		if(afcDlg.DoModal() != IDOK)
 			return FALSE;
-
-		alphaScale = (float)atoi(afcDlg.m_Scale) / 100.0f;
-		alphaOffset = atoi(afcDlg.m_Offset);
 	}
 
 	fullName = dfm_GetFullFilename(GetFileMgr(), pRez->m_Filename);
@@ -2878,6 +1609,9 @@ BOOL CTextureDlg::DoCreateAlphaMask(CAMType camType)
 		AppMessageBox(str, MB_OK);
 		return FALSE;
 	}
+
+	alphaScale = (float)atoi(afcDlg.m_Scale) / 100.0f;
+	alphaOffset = atoi(afcDlg.m_Offset);
 
 
 	// Load the PCX file.
@@ -3113,13 +1847,14 @@ BOOL CTextureDlg::DoAddToPalette()
 //
 // ----------------------------------------------------------------------- //
 
-bool CTextureDlg::CopyImageToTexture( 
+// 2001's (0x40bd08) returns nothing, and says it can't load the PCX whatever
+// the image type (Build 69 says TGA for a TGA).
+void CTextureDlg::CopyImageToTexture( 
 	ImageType iType, const char *pPcxFilename, const char *pTextureFilename, DWORD textureFlags )
 {
 	LoadedBitmap bitmap;
 	CString str;
 	DStream *pStream, *pInFile;
-	bool rval = false;
 
 
 	if( pInFile = streamsim_Open(pPcxFilename, "rb") )
@@ -3133,7 +1868,6 @@ bool CTextureDlg::CopyImageToTexture(
 				{
 					SavePcxAsTexture(&bitmap, pStream, textureFlags);
 					pStream->Release();
-					rval = true;
 				}
 			}
 			else
@@ -3144,18 +1878,12 @@ bool CTextureDlg::CopyImageToTexture(
 		}
 		else
 		{
-			if (iType == ITYPE_PCX)
-				str.FormatMessage( IDS_CANTLOADPCX, pPcxFilename );
-			else
-				str.FormatMessage( IDS_CANTLOADTGA, pPcxFilename );
-
+			str.FormatMessage( IDS_CANTLOADPCX, pPcxFilename );
 			AppMessageBox( str, MB_OK );
 		}
 	
 		pInFile->Release();
 	}
-
-	return rval;
 }
 
 
@@ -3163,7 +1891,8 @@ bool CTextureDlg::CopyImageToTexture(
 //	ROUTINE:	CTextureDlg::CopyMipTGAToTexture
 //	PURPOSE:	Builds a DTX from the 4 input TGA files.
 // ----------------------------------------------------------------------- //
-BOOL CTextureDlg::CopyMipTGAToTexture( const CString *pFileNames, uint32 nNumImages, const char *outFilename )
+// 2001's: always four mipmaps (0x40be38: the loop to 4, dtx_Alloc's 4).
+BOOL CTextureDlg::CopyMipTGAToTexture( const CString *pFileNames, const char *outFilename )
 {
 	CMoFileIO outFile;
 	DStream *pInFile;
@@ -3200,12 +1929,12 @@ BOOL CTextureDlg::CopyMipTGAToTexture( const CString *pFileNames, uint32 nNumIma
 	}
 
 	// Create the DTX.
-	pDtx = dtx_Alloc(BPP_32, theTexture.m_Width, theTexture.m_Height, nNumImages, NULL, NULL);
+	pDtx = dtx_Alloc(BPP_32, theTexture.m_Width, theTexture.m_Height, 4, NULL, NULL);
 	if(!pDtx)
 		return FALSE;
 
 	// Convert the mipmaps.
-	for(i=0; i < nNumImages; i++)
+	for(i=0; i < 4; i++)
 	{
 		pMip = &pDtx->m_Mips[i];
 		
@@ -3427,6 +2156,19 @@ BOOL CTextureDlg::FastFindTexture(DFileIdent *pTexture)
 	return FALSE;
 }
 
+
+static void ExpandTreeChildren(CTreeCtrl &cTree, HTREEITEM hItem, UINT action);
+
+void CTextureDlg::OnItemexpandingBaserezTree(NMHDR* pNMHDR, LRESULT* pResult) 
+{
+	NM_TREEVIEW* pNMTreeView = (NM_TREEVIEW*)pNMHDR;
+
+	if (pNMTreeView->action == TVE_COLLAPSE)
+		ExpandTreeChildren(m_TextureTree, pNMTreeView->itemNew.hItem, TVE_COLLAPSE);
+	
+	*pResult = 0;
+}
+
 // Function to distribute an expansion action to a tree item's children because MFC is too lame
 //		to provide this functionality on its own.
 static void ExpandTreeChildren(CTreeCtrl &cTree, HTREEITEM hItem, UINT action)
@@ -3443,92 +2185,4 @@ static void ExpandTreeChildren(CTreeCtrl &cTree, HTREEITEM hItem, UINT action)
 	// Visit this node
 	if (cTree.GetChildItem(hItem))
 		cTree.Expand(hItem, action);
-}
-
-void CTextureDlg::OnItemexpandingBaserezTree(NMHDR* pNMHDR, LRESULT* pResult) 
-{
-	NM_TREEVIEW* pNMTreeView = (NM_TREEVIEW*)pNMHDR;
-
-	if (pNMTreeView->action == TVE_COLLAPSE)
-		ExpandTreeChildren(m_TextureTree, pNMTreeView->itemNew.hItem, TVE_COLLAPSE);
-	
-	*pResult = 0;
-}
-
-
-
-
-//this must be overridden by a derived class to render the icon for the appropriate
-//list item
-bool CTextureDlg::RenderIcon(HDC BlitTo, uint32 nXOff, uint32 nImgSize, uint32 nItem)
-{
-	CTexture* pTexture = dib_GetDibTexture((DFileIdent*)m_TextureList.GetItemData(nItem));
-
-	if (!pTexture)  
-		return false;
-
-	pTexture->m_pDib->Blt(BlitTo, nXOff, 0, nImgSize, nImgSize);
-	return true;
-}
-
-//this must be overridden by a derived class to render the large selected image
-void CTextureDlg::RenderLargeImage()
-{
-	//setup the rectangle we are going to blit to
-	CRect InitialRect = CBaseImgDlg::InitLargeImageRect();
-	CRect DrawRect = InitialRect;
-
-	//get a DC
-	CDC *pDC = GetDC();
-	if(!pDC)
-		return;
-
-	DFileIdent	*pRez = NULL;
-
-	if(GetProjectBar()->IsProjectOpen())
-		pRez = GetProjectBar()->m_pCurTextureSel;
-
-	if(pRez == NULL)
-	{
-		ReleaseDC(pDC);
-		return;
-	}
-
-	CTexture *pTexture = dib_GetDibTexture(pRez);
-	if(!pTexture)
-	{
-		ReleaseDC(pDC);
-		return;
-	}
-
-	CDib *pDib = pTexture->m_pDib;
-	CRect texRect(0,0,pDib->GetWidth(),pDib->GetHeight());
-	texRect.right >>= pTexture->m_UIMipmapOffset;
-	texRect.bottom >>= pTexture->m_UIMipmapOffset;
-
-
-	//adjust the origin of the texture
-	int nTmp = (DrawRect.top + (DrawRect.bottom/6)) - (texRect.bottom/2);
-	if(nTmp > DrawRect.top)
-		DrawRect.top = nTmp;
-
-	DrawRect.left = (DrawRect.right/2) - (texRect.right/2);
-	
-	nTmp = DrawRect.top + texRect.bottom;
-	if(nTmp < DrawRect.bottom)
-		DrawRect.bottom = nTmp;
-
-	DrawRect.right = DrawRect.left + texRect.right;
-
-	// Blit the texture in.
-	SetStretchBltMode( pDC->m_hDC, COLORONCOLOR );
-	pDib->Blt( pDC->m_hDC, DrawRect.left, DrawRect.top, DrawRect.Width()+1, DrawRect.Height()+1 );
-	
-	// Draw the texture name.
-	char pszToPrint[MAX_PATH];
-	CHelpers::ExtractNames( pRez->m_Filename, NULL, NULL, pszToPrint, NULL );
-
-	CBaseImgDlg::PrintLargeImageText(pDC->m_hDC, InitialRect, pszToPrint);
-
-	ReleaseDC(pDC);
 }

@@ -17,10 +17,6 @@
 #include "proppageoptionsd3d.h"
 #include "proppageoptionsrun.h"
 #include "proppageoptionsclipboard.h"
-#include "proppageoptionsmodels.h"
-#include "proppageoptionscontrols.h"
-#include "proppageoptionsmisc.h"
-#include "proppageoptionsprefabs.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // COptionsSheet
@@ -31,7 +27,6 @@ class COptionsSheet : public CPropertySheet
 
 // Construction
 public:
-	COptionsSheet(UINT nIDCaption, CWnd* pParentWnd = NULL, UINT iSelectPage = 0);
 	COptionsSheet(LPCTSTR pszCaption, CWnd* pParentWnd = NULL, UINT iSelectPage = 0);
 
 // Attributes
@@ -41,10 +36,6 @@ public:
 	CPropPageOptionsD3D			m_d3dPage;
 	CPropPageOptionsRun			m_runPage;
 	CPropPageOptionsClipboard	m_clipboardPage;
-	CPropPageOptionsModels		m_modelsPage;
-	CPropPageOptionsControls	m_controlsPage;
-	CPropPageOptionsMisc		m_miscPage;
-	CPropPageOptionsPrefabs		m_prefabsPage;
 
 // Operations
 public:
@@ -64,10 +55,6 @@ protected:
 		// NOTE - the ClassWizard will add and remove member functions here.
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
-
-private:
-
-	void CommonConstructor();
 };
 
 /////////////////////////////////////////////////////////////////////////////

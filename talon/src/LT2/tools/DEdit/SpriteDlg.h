@@ -8,12 +8,14 @@
 
 
 #include "resourcemgr.h"
-#include "baseimgdlg.h"
+#include "baserezdlg.h"
 
 /////////////////////////////////////////////////////////////////////////////
 // CSpriteDlg dialog
 
-class CSpriteDlg : public CBaseImgDlg
+// 2001: a CBaseRezDlg with its own icon lists, as CModelDlg (no CBaseImgDlg,
+// no thumbnails: CSpriteDlg::OnInitDialogBar, 0x408209)
+class CSpriteDlg : public CBaseRezDlg
 {
 // Construction
 public:
@@ -27,6 +29,9 @@ public:
 	CListCtrl	m_SpriteList;
 	//}}AFX_DATA
 
+	CImageList	*m_pIconList;
+	CImageList	*m_pIconList2;
+
 // Overrides
 	//{{AFX_VIRTUAL(CSpriteDlg)
 	protected:
@@ -37,24 +42,10 @@ public:
 protected:
 	BOOL OnInitDialogBar();
 
-	void			RepositionControls();
-
-
-	virtual void	PopulateList();
-
-	//this must be overridden by a derived class to render the icon for the appropriate
-	//list item
-	virtual bool	RenderIcon(HDC BlitTo, uint32 nXOff, uint32 nImgSize, uint32 nItem); 
-
-	//this must be overridden by a derived class to render the large selected image
-	virtual void	RenderLargeImage();
-
-
 	//{{AFX_MSG(CSpriteDlg)	
 	afx_msg void OnContextMenu(CWnd* pWnd, CPoint point);
 	afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnSelchangedDirectory(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnListSelChanged(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnDblClkSprite( NMHDR * pNMHDR, LRESULT * pResult );
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()

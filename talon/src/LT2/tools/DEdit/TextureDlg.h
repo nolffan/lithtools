@@ -4,7 +4,6 @@
 #include "resourcemgr.h"
 #include "baserezdlg.h"
 #include "alltexturedlg.h"
-#include "baseimgdlg.h"
 
 
 // (Create Alpha Mask type).
@@ -24,22 +23,15 @@ typedef enum
 } ImageType;
 
 
-// info used during a batch scale of texture data for rescaling mappings in worlds
-struct BatchTextureScaleInfo
-{
-	CString texName;	// name of the texture being rescaled
-	int oldX, oldY;		// dimensions of the old texture
-	int newX, newY;		// dimensions of the new texture
-};
-
-struct BatchReloadOptions;
-
-
-
 /////////////////////////////////////////////////////////////////////////////
 // CTextureDlg dialog
 
-class CTextureDlg : public CBaseImgDlg
+// 2001: a CBaseRezDlg of its own (no CBaseImgDlg, no thumbnails): the
+// constructor 0x408acc, the layout from its stores (m_TextureTree 0xec,
+// m_TextureList 0x128, m_pIconList 0x164, m_pIconList2 0x168, m_hFont 0x16c,
+// m_AllTextureDlg 0x170, m_hCurrentTextureDir 0x260,
+// m_nCurrentTextureIndex 0x264).
+class CTextureDlg : public CBaseRezDlg
 {
 // Construction
 public:
@@ -67,46 +59,27 @@ public:
 	int			m_nCurrentTextureIndex;
 	void		ChangeSelection(int nIndex, BOOL bClearSelect = TRUE);
 	BOOL		DoImportOperation(DWORD flags );
-	bool		DoImportCubeMapOperation( );
-	bool		DoImportBumpMapOperation( );
-	bool		DoImportNormalMapOperation( );
 	BOOL		DoImportMipPcxOperation( );
 	BOOL		DoExportPcxOperation( );
 	BOOL		DoExport8BitDTXOperation( );
 	BOOL		DoExportAllAsBPP_32POperation( );
-	BOOL		DoConvertTo32P( );
-	BOOL		DoRenameTexture( );
-	BOOL		DoMakeTextureWritable( );
 	BOOL		DoTextureProperties( );
-	BOOL		DoTextureProperties( CMoArray<DFileIdent*>& selections );
 
-	// batch texture reload stuff.  these replace image data in a texture
-	bool		ProcessTextureReload( BatchTextureScaleInfo* textureInfo, const CString& in, const CString& out, bool isPcx );
-	bool		ProcessBatchReload( CMoArray<BatchTextureScaleInfo*>& textureInfo, const char* input, const char* output, const BatchReloadOptions& options );
-	bool		DoBatchReload( );
-
-	// batch texture scale stuff.  this scales texture coordinates in the world based on a bute file
-	bool		DoScaleTextureCoords( );
-	
 	BOOL		DoCreateAlphaMask(CAMType type);
 	
 	BOOL		DoViewAllTextures();
 	BOOL		DoAddToPalette();
-	bool		CopyImageToTexture( ImageType iType,
+	void		CopyImageToTexture( ImageType iType,
 		const char *pPcxFilename, const char *pTextureFilename, DWORD textureFlags );
-	BOOL		CopyMipTGAToTexture( const CString *pTGAFilename, uint32 nNumImages, const char *pTextureFilename );
+	BOOL		CopyMipTGAToTexture( const CString *pTGAFilename, const char *pTextureFilename );
 
 	// Finds a specified texture in the list
 	BOOL		FindTexture(DFileIdent *pTexture, BOOL bRecurse = FALSE, HTREEITEM hBaseTree = 0);
 	// Tries to find a specified texture based on the filename instead of searching recursively
 	BOOL		FastFindTexture(DFileIdent *pTexture);
 
-	//this must be overridden by a derived class to render the icon for the appropriate
-	//list item
-	virtual bool	RenderIcon(HDC BlitTo, uint32 nXOff, uint32 nImgSize, uint32 nItem); 
-
-	//this must be overridden by a derived class to render the large selected image
-	virtual void	RenderLargeImage();
+	// Draws the selected texture in the bottom third of the dialog (0x409427).
+	void		RenderLargeImage();
 
 
 // Overrides
@@ -117,8 +90,6 @@ public:
 
 // Implementation
 protected:
-
-	CBitmap	*m_pThumbnails;
 
 	BOOL OnInitDialogBar();
 
@@ -133,6 +104,7 @@ protected:
 	afx_msg void OnOpenTexture( NMHDR * pNMHDR, LRESULT * pResult );
 	afx_msg void OnKeySelTexture(NMHDR * pnkd, LRESULT * pResult );
 	afx_msg void OnSelchangedDirectory(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnPaint();
 	afx_msg void OnDestroy();
 	afx_msg void OnItemexpandingBaserezTree(NMHDR* pNMHDR, LRESULT* pResult);
 	//}}AFX_MSG

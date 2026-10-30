@@ -28,11 +28,6 @@ public:
 	//{{AFX_DATA(CUndoPage)
 	enum { IDD = IDD_PROPPAGE_UNDO };
 	int		m_dwAutoSaveTime;
-	CString	m_sBackupPath;
-	int32	m_nNumBackups;
-	BOOL	m_bEnableAutoSave;
-	BOOL	m_bDeleteOnClose;
-	DWORD	m_dwUndos;
 	//}}AFX_DATA
 
 
@@ -47,24 +42,9 @@ public:
 protected:
 	// Generated message map functions
 	//{{AFX_MSG(CUndoPage)
-	virtual BOOL OnInitDialog();
-	afx_msg void OnEnableAutoSave();
-	afx_msg void OnDeltaPosSpinNumBackups(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnDeltaPosSpinSaveTime(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnNumUndo();
-	afx_msg void OnOK();
+		// NOTE: the ClassWizard will add member functions here
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
-
-	//enables/disables all items associated with auto saving
-	void EnableAutoSaveItems(BOOL bVal);
-
-	//updates an edit control when a spinner is activated,
-	//changes the number in the edit box by the delta, and ensures
-	//it is within the range of min to max
-	void UpdateOnSpin(int nControl, int nDelta, int nMin, int nMax);
-
-
 
 };
 
