@@ -6,10 +6,10 @@
 // ------------------------------------------------------------------------
 
 #include <assert.h>
+#include <stdio.h>
 #pragma warning (disable:4786)
 
 #include "ltaScene.h"
-#include "ltamgr.h"
 
 using namespace std;
 
@@ -49,7 +49,7 @@ Node::Node( string &name ){
 // ------------------------------------------------------------------------
 Node::~Node()
 {
-	for( int i = 0 ; i < (int)children.size() ;i++ )
+	for( uint32 i = 0 ; i < children.size() ;i++ )
 	{
 		Node *child = children[i] ;
 		delete child ;
@@ -65,7 +65,7 @@ Node *Node::FindName( const string & sname )
 		return this ;
 	else 
 	{
-		for( int i = 0 ;i < (int)children.size() ; i++ )
+		for( uint32 i = 0 ;i < children.size() ; i++ )
 		{
 			Node *node = children[i]->FindName(sname );
 			if( node != NULL )
@@ -80,9 +80,10 @@ Node *Node::FindName( const string & sname )
 ///////////////////////////////////////////////////////////////////////////
 
 
+// 0x4130a7
 CLTA_ABC_PC_MAT::CLTA_ABC_PC_MAT()
 	:m_specular_power(0), m_specular_scale(0), 
-	m_num_textures(0), CLTAMaterial( PC_MAT ) 
+	m_texture_index(0), m_envtex_index(-1), CLTAMaterial( PC_MAT ) 
 {
 		m_diffuse[0] = m_diffuse[1] = m_diffuse[2] = 0.8f ;
 		m_diffuse[3] = 1.0f ;
@@ -92,17 +93,7 @@ CLTA_ABC_PC_MAT::CLTA_ABC_PC_MAT()
 		m_shininess = 0.0f ;
 } 
 
-CLTARenderStyle::CLTARenderStyle() :CLTAMaterial(RENDERSTYLE) 
-	{
-		m_nNumTextures = 1;	// Defaults...
-		m_iTextures[0] = 0; m_iTextures[1] = 1; m_iTextures[2] = 2; m_iTextures[3] = 3;
-		m_iRenderStyle = 0;
-		m_nRenderPriority = 0;
-	}
-
-
-Shape::	Shape() :m_pAppearance(NULL)  {}
-Shape::~Shape() { if(m_pAppearance != NULL ) delete m_pAppearance; }
+Shape::	Shape() {}
 
 
 CAnimSet::~CAnimSet() {
@@ -114,33 +105,6 @@ CAnimSet::~CAnimSet() {
 	m_vAnims.clear();
 }
 
-MetaModel::MetaModel() 		:m_LastAnim(-1),rootNode(NULL) 
-	{}
-
-MetaModel::~MetaModel()
-	{
-		for( uint32 i = 0 ; i < shapes.size() ; i++ )
-		{
-			Shape * shape = shapes[i] ;
-			delete shape ;
-			shapes[i] = NULL;
-		}
-		shapes.resize(0);
-
-		for ( i = 0 ; i < m_vAnimSets.size() ; i++ )
-		{
-			CAnimSet *pAnimSet = m_vAnimSets[i];
-			delete pAnimSet ;
-			m_vAnimSets[i] = NULL ;
-		}
-		m_vAnimSets.resize(0);
-
-		if( rootNode != NULL )
-			delete rootNode ;
-	}
-
-
-	
 ///////////////////////////////////////////////////////////////////////////
 /*************************************************************************/
 ///////////////////////////////////////////////////////////////////////////
@@ -180,14 +144,14 @@ void KeyFrameTimeSlideToZero( CKeyFrame & kf )
 // ------------------------------------------------------------------------
 // ParseVector( ParseNode *vertex, float *array )
 // reads an lta node in ( x y z ... ) format into a float array.
-// array must be alloc'd & the same length as vrt->GetNumElements()
+// array must be alloc'd & the same length as vrt->getNumElements()
 // ------------------------------------------------------------------------
 void
-LTA::ParseVector( CLTANode *vrt, float * vert )
+LTA::ParseVector( CParseNode *vrt, float * vert )
 {
-	for( int i = 0 ; i < (int)vrt->GetNumElements() ; i++ )
+	for( int i = 0 ; i < (int)vrt->getNumElements() ; i++ )
 	{
-		vert[i] = (float)atof( vrt->GetElement(i)->GetValue());
+		vert[i] = (float)atof( vrt->getElement(i)->getValue());
 	}
 }
 
@@ -201,73 +165,75 @@ LTA::ParseVector( CLTANode *vrt, float * vert )
 //
 // ------------------------------------------------------------------------
 void
-ParseShapeNode( Shape *shape, CLTANode *pnroot )
+ParseShapeNode( Shape *shape, CParseNode *pnroot )
 {
-	CLTANode *tmp,*mesh ;
-	uint32 i ;
+	// talon: 2001's (0x412923): the pc-mat material, not Build 69's render
+	// style.
+	CParseNode *tmp,*mesh ;
+	int i ;
 	// tmp = (shape name ... 
-	shape->SetName( pnroot->GetElement(1)->GetValue()  );
-	CLTATranslStatus::AddToLog( " - " + shape->GetName() + "\r\n" );
-	tmp = CLTAUtil::ShallowFindList(pnroot,"parent" );	
+	shape->SetName( pnroot->getElement(1)->getValue()  );
+	CLTATranslStatus::AddToLog( shape->GetName() );
+	tmp = ShallowFindList(pnroot,"parent" );	
 	// tmp = (parent name)
 	if( tmp != NULL )
-		shape->SetParentName(tmp->GetElement(1)->GetValue());
+		shape->SetParentName(tmp->getElement(1)->getValue());
 
 
 	// ------------------------------------------------
-	tmp = CLTAUtil::ShallowFindList( pnroot , "geometry" );
+	tmp = ShallowFindList( pnroot , "geometry" );
 
 	// mesh = ( mesh name (vertex ... ) (tri-fs ... ))
-	mesh = CLTAUtil::ShallowFindList( tmp, "mesh");
+	mesh = ShallowFindList( tmp, "mesh");
 	
 	
 	// if there is no mesh skip
 	if( mesh != NULL )
 	{
 		// get the mesh name, if its there
-		if( mesh->GetElement(1)->IsAtom() )
-			shape->SetMeshName ( mesh->GetElement(1)->GetValue() );
+		if( mesh->getElement(1)->isAtom() )
+			shape->SetMeshName ( mesh->getElement(1)->getValue() );
 
 		
-		tmp = CLTAUtil::ShallowFindList( mesh , "vertex" );
+		tmp = ShallowFindList( mesh , "vertex" );
 		if(tmp )
 		{
 			// tmp = ( vertex ( (v1) (v2) .. )) 
-			tmp = tmp->GetElement(1);// tmp = ( (v2) (v2) .. )
+			tmp = tmp->getElement(1);// tmp = ( (v2) (v2) .. )
 
 			float vert[3] ;
 			// load up the vertex
-			for( i = 0 ;i < (int)tmp->GetNumElements() ; i++ )
+			for( i = 0 ;i < tmp->getNumElements() ; i++ )
 			{
 				
-				LTA::ParseVector( tmp->GetElement(i), vert );
+				LTA::ParseVector( tmp->getElement(i), vert );
 				// shape->vertex[i] = new vert
 				shape->GetMesh().vertex.push_back( 
 						LTVector(vert[0],vert[1],vert[2]));
 			}
 		}
 
-		tmp = CLTAUtil::ShallowFindList( mesh , "normals" );
+		tmp = ShallowFindList( mesh , "normals" );
 		
 		if(tmp )
 		{
 			// tmp = ( vertex ( (v1) (v2) .. )) 
-			tmp = tmp->GetElement(1);// tmp = ( (v2) (v2) .. )
+			tmp = tmp->getElement(1);// tmp = ( (v2) (v2) .. )
 			float vert[3] ;
 			// load up the vertex
-			for( i = 0 ;i < tmp->GetNumElements() ; i++ )
+			for( i = 0 ;i < tmp->getNumElements() ; i++ )
 			{	
-				LTA::ParseVector( tmp->GetElement(i), vert );
+				LTA::ParseVector( tmp->getElement(i), vert );
 				shape->GetMesh().normals.push_back(
 						LTVector(vert[0],vert[1],vert[2]));	
 			}
 
-			tmp = CLTAUtil::ShallowFindList( mesh, "nrm-fs") ;
+			tmp = ShallowFindList( mesh, "nrm-fs") ;
 			if(tmp){
-				tmp = tmp->GetElement(1) ; // get the list 
-				for( i = 0 ;i < (int)tmp->GetNumElements() ; i++ )
+				tmp = tmp->getElement(1) ; // get the list 
+				for( i = 0 ;i < tmp->getNumElements() ; i++ )
 				{
-					int val = atoi(tmp->GetElement(i)->GetValue());
+					int val = atoi(tmp->getElement(i)->getValue());
 					//shape->uv_fs.push_back( val );
 					shape->GetMesh().tri_NormSet.push_back( val );
 				}
@@ -275,38 +241,38 @@ ParseShapeNode( Shape *shape, CLTANode *pnroot )
 
 		}
 
-		tmp = CLTAUtil::ShallowFindList( mesh, "tri-fs");
+		tmp = ShallowFindList( mesh, "tri-fs");
 		if(tmp)
 		{
 			// tmp = ( 1 2 3... )
-			tmp = tmp->GetElement(1) ; // get the index list
-			for( i =  0 ; i < (int)tmp->GetNumElements() ; i++ )
+			tmp = tmp->getElement(1) ; // get the index list
+			for( i =  0 ; i < tmp->getNumElements() ; i++ )
 			{
-				int val = atoi( tmp->GetElement(i)->GetValue() ) ;
+				int val = atoi( tmp->getElement(i)->getValue() ) ;
 				//shape->triangles.push_back( val );
 				shape->GetMesh().tri_FaceSet.push_back( val ) ;
 			}
 		}
 
 		// get the uv coords 
-		tmp = CLTAUtil::ShallowFindList( mesh, "uvs" );
+		tmp = ShallowFindList( mesh, "uvs" );
 		if( tmp )
 		{
 			float vert[2];
-			tmp = tmp->GetElement(1) ; // get the param
-			for( i = 0 ; i < (int)tmp->GetNumElements() ; i++ )
+			tmp = tmp->getElement(1) ; // get the param
+			for( i = 0 ; i < tmp->getNumElements() ; i++ )
 			{
-				LTA::ParseVector( tmp->GetElement(i), vert );
+				LTA::ParseVector( tmp->getElement(i), vert );
 				shape->GetMesh().tcoords.push_back( LTVector( vert[0], vert[1], 0 ));
 			}
 		
 
-			tmp = CLTAUtil::ShallowFindList( mesh, "tex-fs") ;
+			tmp = ShallowFindList( mesh, "tex-fs") ;
 			if(tmp){
-				tmp = tmp->GetElement(1) ; // get the list 
-				for( i = 0 ;i < (int)tmp->GetNumElements() ; i++ )
+				tmp = tmp->getElement(1) ; // get the list 
+				for( i = 0 ;i < tmp->getNumElements() ; i++ )
 				{
-					int val = atoi(tmp->GetElement(i)->GetValue());
+					int val = atoi(tmp->getElement(i)->getValue());
 					//shape->uv_fs.push_back( val );
 					shape->GetMesh().tri_UVSet.push_back( val );
 				}
@@ -320,18 +286,18 @@ ParseShapeNode( Shape *shape, CLTANode *pnroot )
 			}
 		}
 
-		tmp = CLTAUtil::ShallowFindList( mesh , "colors" );
+		tmp = ShallowFindList( mesh , "colors" );
 		if(tmp )
 		{
 			// tmp = ( vertex ( (v1) (v2) .. )) 
-			tmp = tmp->GetElement(1);// tmp = ( (v2) (v2) .. )
+			tmp = tmp->getElement(1);// tmp = ( (v2) (v2) .. )
 
 			float vert[3] ;
 			// load up the vertex
-			for( i = 0 ;i < (int)tmp->GetNumElements() ; i++ )
+			for( i = 0 ;i < tmp->getNumElements() ; i++ )
 			{
 				
-				LTA::ParseVector( tmp->GetElement(i), vert );
+				LTA::ParseVector( tmp->getElement(i), vert );
 				// shape->vertex[i] = new vert
 				shape->GetMesh().colors.push_back( 
 						LTVector(vert[0],vert[1],vert[2]));
@@ -341,148 +307,80 @@ ParseShapeNode( Shape *shape, CLTANode *pnroot )
 
 	}// if there's a mesh node 
 
-	// Setup the appearance node.
-	CLTARenderStyle *pRS = new CLTARenderStyle ;
-	shape->SetAppearance( pRS );
-			
-  	tmp = CLTAUtil::ShallowFindList( pnroot , "appearance" );
-	if (tmp) 
+	// set up the appearance node.
+	CLTA_ABC_PC_MAT *mat = NULL ;
+  	tmp = ShallowFindList( pnroot , "appearance" );
+	if( tmp != NULL && (tmp = tmp->getElement(1)) != NULL )
 	{
-  		tmp = tmp->GetElement(1) ; // cdr the appearance pair
 		// we have a mat node
-		if (tmp) 
-		{ 
-			// if old style material node short circuit it.
-  			if( strcmp( tmp->GetElement(0)->GetValue(),  "material") == 0 || strcmp( tmp->GetElement(0)->GetValue() , "pc-mat") == 0) 
-			{
-				CLTANode* mat_attrib =  CLTAUtil::ShallowFindList( tmp, "texture-index");
-				if (mat_attrib) 
-				{
-					pRS->m_nNumTextures = 1;
-					pRS->m_iTextures[0] = atoi(mat_attrib->GetElement(1)->GetValue());
-					pRS->m_iTextures[1] = 1;
-					pRS->m_iTextures[2] = 2;
-					pRS->m_iTextures[3] = 3; 
-				} 
-			}
-			else if( strcmp( tmp->GetElement(0)->GetValue(), "render-style") == 0)
-			{
-				CLTANode* mat_attrib = CLTAUtil::ShallowFindList(pnroot, "texture-indices");
-				if (mat_attrib) 
-				{
-					mat_attrib = mat_attrib->GetElement( 1 );
-					pRS->m_nNumTextures = mat_attrib->GetNumElements();
-					assert( pRS->m_nNumTextures > 0 && pRS->m_nNumTextures <= 4 );
-					for( i = 0; i < pRS->m_nNumTextures; i++ ) 
-					{
-						pRS->m_iTextures[i] = atoi( mat_attrib->GetElement( i )->GetValue() ); 
-					}
-					for (;i<4;++i) 
-						pRS->m_iTextures[i] = i; 
-				}
-			}	
-		} 
-	}else // there is no appearance node 
-	{
-		CLTANode* mat_attrib = CLTAUtil::ShallowFindList(pnroot, "texture-indices");
-		if (mat_attrib) {
-			mat_attrib = mat_attrib->GetElement( 1 );
-			pRS->m_nNumTextures = mat_attrib->GetNumElements();
-			for( i = 0; i < pRS->m_nNumTextures; i++ ) {
-				pRS->m_iTextures[i] = atoi( mat_attrib->GetElement( i )->GetValue() ); }
-			for (;i<4;++i) pRS->m_iTextures[i] = i; }
-
-		// load the renderstyle index
-		CLTANode* rs_attrib = CLTAUtil::ShallowFindList(pnroot, "renderstyle-index");
-		if( rs_attrib )
-			pRS->m_iRenderStyle = atoi( rs_attrib->GetElement( 1 )->GetValue() );
-
-		// load the render priority
-		CLTANode* renderpriority = CLTAUtil::ShallowFindList(pnroot, "render-priority");
-		if( renderpriority )
-			pRS->m_nRenderPriority = max(0, min(255, atoi( renderpriority->GetElement( 1 )->GetValue() )));
-
-	}
-}
-
-// ------------------------------------------------------------------------
-// 
-// collect vertex animated orphans, create a node for them 
-// if a va shape does not have parent then we need to create one for them
-// b/c of the current setup in lt. this should not be inherent in lta. 
-// lta should just say this animation modifies this thing without reference
-// to how it is structured.
-// this should be called after the metaModel has been fully loaded.
-// ------------------------------------------------------------------------
-static 
-void FixVertexAnimatedOrphans( MetaModel & metaModel )
-{
-	std::vector< Shape *> orphans ;
-	std::vector< Shape *> &model_shapes = metaModel.shapes ;
-	Node *root_node = metaModel.rootNode ;
-
-	// for each shape in meta check if it has the name d_ something
-	// if there is no parent associated with the shape create one.
-	// create a new node from the root, calling the new node the same as the shape.
-	
-	for( uint32 i = 0 ;i < model_shapes.size() ;i++ )
-	// this is so that the animation has a place to go.
-	for( uint32 i = 0 ;i < model_shapes.size() ;i++ )
-	{
-		// if we don't have a parent name 
-		if( model_shapes[i]->GetParentName() == "" )
+		if( strcmp( tmp->getElement(0)->getValue(),  "material") == 0 || 
+			strcmp( tmp->getElement(0)->getValue() , "pc-mat") == 0) 
 		{
-			string & shape_name = model_shapes[i]->GetName() ;
+			mat = new CLTA_ABC_PC_MAT ;
+			shape->SetAppearance( mat );
 
-			if( shape_name.size() < 2 )
-				continue ;
-			
-			if( shape_name[0] == 'd' && shape_name[1] == '_' )
+			CParseNode *mat_attrib ;
+
+			mat_attrib = ShallowFindList( tmp, "specular-power");
+			if( mat_attrib )
+				mat->m_specular_power = (float)atof( mat_attrib->getElement(1)->getValue() );
+
+			mat_attrib = ShallowFindList( tmp, "specular-scale");
+			if( mat_attrib )
+				mat->m_specular_scale = (float)atof( mat_attrib->getElement(1)->getValue() );
+
+			mat_attrib = ShallowFindList( tmp, "texture-index");
+			if( mat_attrib )
+				mat->m_texture_index = atoi( mat_attrib->getElement(1)->getValue() );
+
+			mat_attrib = ShallowFindList( tmp, "envtex-index");
+			if( mat_attrib )
+				mat->m_envtex_index = atoi( mat_attrib->getElement(1)->getValue() );
+
+			mat_attrib = ShallowFindList( tmp, "diffuse");
+			if( mat_attrib )
 			{
-				Node *new_node = new Node( shape_name );
-				new_node = metaModel.FindNode( model_shapes[i]->GetName() );
-
-				// if one does not exist make one.
-				if( new_node == NULL ){
-					new_node = new Node( shape_name );
-					root_node->AddChild( new_node );
-				}
-
-				new_node->AddShape( model_shapes[i] );
+				char buf[1024];
+				LTA::ParseVector( mat_attrib->getElement(1), mat->m_diffuse );
+				// talon: formatted and never used (0x412fee)
+				sprintf( buf, "diffuse %f %f %f %f\n", 
+						 mat->m_diffuse[0], mat->m_diffuse[1], 
+						 mat->m_diffuse[2], mat->m_diffuse[3] );
 			}
+
+			mat_attrib = ShallowFindList( tmp, "ambient");
+			if( mat_attrib )
+				LTA::ParseVector( mat_attrib->getElement(1), mat->m_ambient );
+
+			mat_attrib = ShallowFindList( tmp, "emissive");
+			if( mat_attrib )
+				LTA::ParseVector( mat_attrib->getElement(1), mat->m_emissive );
+
+			mat_attrib = ShallowFindList( tmp, "specular");
+			if( mat_attrib )
+				LTA::ParseVector( mat_attrib->getElement(1), mat->m_specular );
+
+			mat_attrib = ShallowFindList( tmp, "shininess");
+			if( mat_attrib )
+				mat->m_shininess = (float)atof( mat_attrib->getElement(1)->getValue() );
+		}
+		else
+		{
+			CLTATranslStatus status ;
+			status << tmp->getElement(0)->getValue() ;
+			status << " is an unrecognized material for shape " ;
+			status << shape->GetName().c_str() ;
+			status << "\r\n" ;
+			status.OnError( NULL, 0 );
 		}
 	}
-
 }
-
-// ------------------------------------------------------------------------
-// GetShapesFromPN( metaModel, CLTANode )
-// get all the shapes from the ParseNode tree, stuff it into metaModel
-// ------------------------------------------------------------------------
- void 
-LTA::GetShapesFromPN( MetaModel & metaModel, CLTANode *pnroot )
-{
-	vector<CLTANode*> vshapes ;
-
-	CLTAUtil::FindAll( vshapes, pnroot, "shape" );
-
-	for( int i = 0 ;i < (int)vshapes.size() ; i++ )
-	{
-		ShapeFromPN( metaModel, vshapes[i] );
-		//Shape *shape = new Shape ;
-		//ParseShapeNode( shape, vshapes[i] );
-		//metaModel.hookShapeToParent( shape );
-		//metaModel.shapes.push_back(shape);
-	}
-
-}
-
 
 // ------------------------------------------------------------------------
 // ShapeFromPN
 // ------------------------------------------------------------------------
 void 
-LTA::ShapeFromPN( MetaModel & metaModel, CLTANode *pnroot )
+LTA::ShapeFromPN( MetaModel & metaModel, CParseNode *pnroot )
 {
 	Shape *shape = new Shape ;
 	ParseShapeNode( shape, pnroot );
@@ -492,216 +390,52 @@ LTA::ShapeFromPN( MetaModel & metaModel, CLTANode *pnroot )
 
 
 // ------------------------------------------------------------------------
-// GetLODGroupsFromPN
-// must be called after all the shapes are in.
-// ------------------------------------------------------------------------
-void 
-LTA::GetLODGroupsFromPN( MetaModel & metaModel, CLTANode *pnroot, CLTATranslStatus &status )
-{
-	vector<CLTANode*> create_lod_groups ;
-	CLTANode * finder = CLTAUtil::FindList(pnroot,"on-load-cmds");
-	if( finder )
-	{
-		finder = CLTAUtil::FindList(finder, "lod-groups");
-		if( finder )
-		{
-			finder = finder->GetElement(1) ; // get data-list from lod-groups node
-		
-			for ( uint32 i = 0 ; i < finder->GetNumElements() ; i++ )
-			{
-				LTA::LODGroupFromPN( metaModel, finder->GetElement(i),  status );
-			}
-		}
-	}
-}
-
-// ------------------------------------------------------------------------
-// AddOBBFromPN()  
-//	parses :
-//		(add-node-obb "node-name" 
-//			(pos ( x y z )) 
-//			(orientation ( a b c d))
-//			(size ( x y z )))
-// ------------------------------------------------------------------------
-static 
-void GetOBBFromPN( MetaModel & metaModel, CLTANode *add_obb_cmd, CLTATranslStatus &status)
-{
-	CLTANode *name = add_obb_cmd->GetElement(1); // (aoc "name" ... )
-	CLTANode *pos = CLTAUtil::ShallowFindList( add_obb_cmd,"position");
-	CLTANode *quat= CLTAUtil::ShallowFindList( add_obb_cmd,"orientation");
-	CLTANode *size = CLTAUtil::ShallowFindList( add_obb_cmd,"dimensions");
-	CLTANode *enabled= CLTAUtil::ShallowFindList( add_obb_cmd, "enabled");
-	CLTAOBB obb;
-	
-	obb.m_ParentNodeName = name->GetValue();
-	if(pos)
-	LTA::ParseVector( pos->GetElement(1), obb.m_Pos );
-	if(quat)
-	LTA::ParseVector( quat->GetElement(1),obb.m_Orientation);
-	if(size)
-	LTA::ParseVector( size->GetElement(1),obb.m_Size);
-
-	if(enabled){
-		if( strcmp(enabled->GetElement(1)->GetValue(),"false") == 0 )
-			obb.m_Enabled = false ;
-		else 
-			obb.m_Enabled = true ;
-	}
-
-
-	obb.m_pParentNode = metaModel.FindNode(obb.m_ParentNodeName );
-	metaModel.m_obbset.push_back( obb ); // add it to list
-}
-
-// ------------------------------------------------------------------------
-// get obbs from on-load-cmd
-// must be called after hierarchy is in.
-// ------------------------------------------------------------------------
-void
-LTA::GetOBBFromOnLoadCmdsPN( MetaModel & metaModel, CLTANode *pnroot, CLTATranslStatus &status)
-{
-	CLTANode * finder = CLTAUtil::FindList(pnroot,"on-load-cmds");
-	
-	if( finder && (finder->GetNumElements() > 1))
-	{
-		finder = finder->GetElement(1); // get the list.
-		finder = CLTAUtil::ShallowFindList(finder,"add-node-obb-list");
-		if( finder && (finder->GetNumElements() > 1) )
-		{
-			finder = finder->GetElement(1); // get the list from node 
-			for( uint32 add_obb = 0 ; add_obb < finder->GetNumElements(); add_obb++)
-			{
-				metaModel.m_obbset.reserve( finder->GetNumElements()) ;
-				GetOBBFromPN( metaModel, finder->GetElement(add_obb), status );
-			}
-		}
-	}
-}
-
-
-// ------------------------------------------------------------------------
-// (create-lod-group name 
-//		(min-max-offset 0 0 )
-//		(dists ( ... ) )
-//		(shapes ( ... ) ))
-// ------------------------------------------------------------------------
-void 
-LTA::LODGroupFromPN(  MetaModel &metaModel, CLTANode *create_lod_group, CLTATranslStatus &status )
-{
-	if( create_lod_group )
-	{
-		string name = "UNNAMED";
-		if( create_lod_group->GetElement(1)->IsAtom())
-			name = create_lod_group->GetElement(1)->GetValue();
-		else {
-			status.AddToLog("WARNING: create-lod-group without name \r");
-		}
-		
-		CLTANode *minmax= CLTAUtil::ShallowFindList( create_lod_group, "min-max-offset");
-		CLTANode *dists=  CLTAUtil::ShallowFindList( create_lod_group, "lod-dists");
-		CLTANode *shapes= CLTAUtil::ShallowFindList( create_lod_group, "shapes");
-
-		// make a lod set
-		metaModel.AddLODGroup( name );
-		// get min-max offsets
-		if( minmax && minmax->GetNumElements() >= 3)
-		{
-			int min,max ;
-			min = atoi(minmax->GetElement(1)->GetValue());
-			max = atoi(minmax->GetElement(2)->GetValue());
-
-			metaModel.AddMinMaxToLODGroup( name, min, max );
-		}
-
-		if( shapes || dists )
-		{
-			dists = dists->GetElement(1) ; // pop
-			shapes= shapes->GetElement(1); 
-
-			// get dist-shape relations
-			for( uint32 i = 0 ; i < shapes->GetNumElements() ; i++ )
-			{
-				string err_str ;
-				float dist = (float)atof(dists->GetElement(i)->GetValue());
-
-				string shape_name = shapes->GetElement(i)->GetValue() ;
-				
-				if(!metaModel.AddToLODGroup(name, shape_name, dist,err_str ))
-				{
-					status.AddToLog( string("ERROR : ") + err_str + "\r" );
-				}
-			}
-		}
-	}
-}
-
-// ------------------------------------------------------------------------
-// parse hierarchy node's children
-// types processed :
-/*
-children :
-	(children ( (children ()) (transform ... ))) 
-	would result in
-	null -> null 
-		 \> transform 
-
-transform :
-	(transform name 
-		(matrix ( () ()()() ) )
-		(children ( ... ) )
-		)
-shapes :
-	(transform name 
-		(matrix 
-		(children ( (shape ... ) (shape ... ) ))
-  */
-// ------------------------------------------------------------------------
 static int
-GetTransformFromPN( Node *node, CLTANode *pnroot )
+GetTransformFromPN( Node *node, CParseNode *pnroot )
 {
-	CLTANode *children=NULL, *matrix ;
+	CParseNode *children=NULL, *matrix ;
 
 	// set up node
 	node->mat.Identity();
 
 	// check if the list is a transform 
-	if( strcmp( pnroot->GetElement(0)->GetValue() , "transform" ) == 0)
+	if( strcmp( pnroot->getElement(0)->getValue() , "transform" ) == 0)
 	{
 		// get the transform's name if there is one
-		if( pnroot->GetNumElements() > 1 && pnroot->GetElement(1)->IsAtom() )
+		if( pnroot->getNumElements() > 1 && pnroot->getElement(1)->isAtom() )
 		{
-			node->SetName( pnroot->GetElement(1)->GetValue() );	
+			node->SetName( pnroot->getElement(1)->getValue() );	
 		}
 
 		// get the matrix from this transform
-		matrix = CLTAUtil::ShallowFindList( pnroot, "matrix" );
+		matrix = ShallowFindList( pnroot, "matrix" );
 
 		// plow through matrix list to get the basis
-		if( matrix != NULL && matrix->IsList())
+		if( matrix != NULL && matrix->isList())
 		{
-			matrix = matrix->GetElement(1) ;
+			matrix = matrix->getElement(1) ;
 			// matrix = ( (...) (...) (...) (...) ) 
 
 			LTMatrix mat;
 		
 			for( int i = 0 ; i < 4 ; i ++ )
 			{
-				LTA::ParseVector( matrix->GetElement(i),mat.m[i]);
+				LTA::ParseVector( matrix->getElement(i),mat.m[i]);
 			}
 		
 			node->mat  = mat ;
 		}
 		// get transform's children
-		children = CLTAUtil::ShallowFindList( pnroot, "children");
+		children = ShallowFindList( pnroot, "children");
 	}
 	// this node is a 'null' node 
-	else  	if(strcmp( pnroot->GetElement(0)->GetValue() , "children" ) == 0 )
+	else  	if(strcmp( pnroot->getElement(0)->getValue() , "children" ) == 0 )
 	{
 		node->SetName("null");
 		children = pnroot ;
 	}
 	// we have a child shape
-	else if( strcmp( pnroot->GetElement(0)->GetValue() , "shape" ) == 0 )
+	else if( strcmp( pnroot->getElement(0)->getValue() , "shape" ) == 0 )
 	{
 		CLTATranslStatus status;
 		status.m_msg = "Shapes in hier not tested ... " ;
@@ -714,18 +448,18 @@ GetTransformFromPN( Node *node, CLTANode *pnroot )
 	}
 
 	// if children 
-	if( children != NULL && children->GetNumElements() > 0)
+	if( children != NULL && children->getNumElements() > 0)
 	{
 		// pop the children list to the list of transforms
-		children = children->GetElement(1) ;// ( (t ...) (t ...) (t ...) )
+		children = children->getElement(1) ;// ( (t ...) (t ...) (t ...) )
 		int index = node->index +1;
-		for( int i = 0 ;i < (int)children->GetNumElements() ; i++ )
+		for( int i = 0 ;i < (int)children->getNumElements() ; i++ )
 		{
 			Node *chld = new Node ;
 			chld->parent = node ;
 			chld->index = index ;
 			
-			if(GetTransformFromPN(chld, children->GetElement(i) ))
+			if(GetTransformFromPN(chld, children->getElement(i) ))
 			{
 				node->children.push_back( chld );
 				index++;
@@ -749,12 +483,12 @@ GetTransformFromPN( Node *node, CLTANode *pnroot )
 //	         (value ( val val val )))
 // ------------------------------------------------------------------------
 static 
-void KeyFrameFromPN( CLTANode *kf , CKeyFrame & KF, CLTATranslStatus & status  )
+void KeyFrameFromPN( CParseNode *kf , CKeyFrame & KF, CLTATranslStatus & status  )
 {
 	// check that pn is a keyframe 
-	if( kf->GetElement(0)->IsAtom() )
+	if( kf->getElement(0)->isAtom() )
 	{
-		string name = kf->GetElement(0)->GetValue();
+		string name = kf->getElement(0)->getValue();
 		if( name != "keyframe" )
 		{
 			status = status.FAIL;
@@ -762,25 +496,25 @@ void KeyFrameFromPN( CLTANode *kf , CKeyFrame & KF, CLTATranslStatus & status  )
 			return ;
 		}else {
 			// get name if there's one ..
-			if( kf->GetElement(1)->IsAtom()  )
+			if( kf->getElement(1)->isAtom()  )
 			{
-				KF.SetName( kf->GetElement(1)->GetValue() );
+				KF.SetName( kf->getElement(1)->getValue() );
 			}
 		}
 
-		CLTANode *times = CLTAUtil::FindList( kf , "times" );
-		CLTANode *value = CLTAUtil::FindList( kf , "values");
+		CParseNode *times = FindList( kf , "times" );
+		CParseNode *value = FindList( kf , "values");
 
 		if( times  ) 
 		{		
 			// go through the times list
 			// the second element the times node is the value list
-			times = times->GetElement(1) ; 
+			times = times->getElement(1) ; 
 			
 
-			for( int i = 0 ; i < (int)times->GetNumElements() ; i++ )
+			for( int i = 0 ; i < (int)times->getNumElements() ; i++ )
 			{
-				int ival = atoi(times->GetElement(i)->GetValue()) ;
+				int ival = atoi(times->getElement(i)->getValue()) ;
 			 
 				KF.Add( ival, i  );
 			}
@@ -792,24 +526,24 @@ void KeyFrameFromPN( CLTANode *kf , CKeyFrame & KF, CLTATranslStatus & status  )
 		// parse (value ( ... ) )
 		if( value )
 		{
-			value = value->GetElement(1) ;
+			value = value->getElement(1) ;
 	
 			// cut out of func here if value is null ... 
 			if( value == NULL ) 
 				return ;
 
-			for( int i = 0 ; i < (int)value->GetNumElements() ; i++ )
+			for( int i = 0 ; i < (int)value->getNumElements() ; i++ )
 			{
 				
 				string str_val ;
 				
 				// if there's an associated value...
-				if( value->GetElement(i) != NULL && value->GetElement(i)->GetValue() != NULL )
+				if( value->getElement(i) != NULL && value->getElement(i)->getValue() != NULL )
 				{
-					const char *cval = value->GetElement(i)->GetValue();
+					const char *cval = value->getElement(i)->getValue();
 					
-					if( value && value->GetElement(i)->IsString() && strlen(cval) > 2 )
-						str_val = value->GetElement(i)->GetValue() ;
+					if( value && value->getElement(i)->isString() && strlen(cval) > 2 )
+						str_val = value->getElement(i)->getValue() ;
 				}
 			 
 				KF.AddValue( i , str_val );
@@ -828,28 +562,28 @@ void KeyFrameFromPN( CLTANode *kf , CKeyFrame & KF, CLTATranslStatus & status  )
 // deal with extra, unused data.
 // ------------------------------------------------------------------------
 static
-int AddAnimNodesToAnimSet(  CLTANode *anim, 
+int AddAnimNodesToAnimSet(  CParseNode *anim, 
 							CAnimSet  *pCurAnimSet,
 						    MetaModel & metaModel, 			   
 						    CLTATranslStatus & status )
 {
-	CLTANode *keyF, *frames , *parent;
+	CParseNode *keyF, *frames , *parent;
 	CAnim *pAnim ;
 	CAnimSet *pAnimSet = pCurAnimSet;
 	string animName ;
 	int    bHasFrameData=0 ; // t/f if there has been data read in
 
 	// get the animation name 
-	if( anim->GetElement(1)->IsAtom () )
+	if( anim->getElement(1)->isAtom () )
 	{
 		string name ;
-		animName = anim->GetElement(1)->GetValue();
+		animName = anim->getElement(1)->getValue();
 	}
 
 	// get the attribs
-	keyF =  CLTAUtil::ShallowFindList( anim, "keyframe");
-	frames= CLTAUtil::ShallowFindList( anim, "frames" );
-	parent= CLTAUtil::ShallowFindList( anim, "parent" );
+	keyF =  ShallowFindList( anim, "keyframe");
+	frames= ShallowFindList( anim, "frames" );
+	parent= ShallowFindList( anim, "parent" );
 
 	if( frames == NULL )
 	{
@@ -860,11 +594,11 @@ int AddAnimNodesToAnimSet(  CLTANode *anim,
 	
 	// get the frame attribs' data which is a list with its first element is the 
 	// type 
-	frames = frames->GetElement(1) ;// (frames (type ... )) => (type ... )
+	frames = frames->getElement(1) ;// (frames (type ... )) => (type ... )
 	if( frames != NULL )
 	{
-		assert( frames->GetElement(0) != NULL );
-		string type = frames->GetElement(0)->GetValue();
+		assert( frames->getElement(0) != NULL );
+		string type = frames->getElement(0)->getValue();
 	
 		if( type == "vertex" )
 		{
@@ -875,7 +609,7 @@ int AddAnimNodesToAnimSet(  CLTANode *anim,
 			// find the anim target 
 			if( parent != NULL )
 			{
-				string parent_name = parent->GetElement(1)->GetValue();
+				string parent_name = parent->getElement(1)->getValue();
 
 				shape = metaModel.FindShape( parent_name );
 				if ( shape == NULL )
@@ -894,28 +628,28 @@ int AddAnimNodesToAnimSet(  CLTANode *anim,
 			
 			
 			// fish out the vertex animations
-			CLTANode *tmp;
+			CParseNode *tmp;
 			// tmp = a list of list of vertex
-			tmp = frames->GetElement(1);// tmp = ( (v2) (v2) .. )
-			int tmpval = tmp->GetNumElements();
-			for( int nLists = 0 ; nLists < (int)tmp->GetNumElements() ; nLists++ )
+			tmp = frames->getElement(1);// tmp = ( (v2) (v2) .. )
+			int tmpval = tmp->getNumElements();
+			for( int nLists = 0 ; nLists < (int)tmp->getNumElements() ; nLists++ )
 			{
-				CLTANode *vecList = tmp->GetElement(nLists) ;
+				CParseNode *vecList = tmp->getElement(nLists) ;
 				
 				vector<LTVector> vVecs ;
 				float vert[3] ;
-				int tmpval2 = vecList->GetNumElements();
-				for( i = 0 ;i < (int)vecList->GetNumElements() ; i++ )
+				int tmpval2 = vecList->getNumElements();
+				for( i = 0 ;i < (int)vecList->getNumElements() ; i++ )
 				{
 					
-					LTA::ParseVector( vecList->GetElement(i), vert );
+					LTA::ParseVector( vecList->getElement(i), vert );
 					vVecs.push_back(LTVector(vert[0],vert[1],vert[2]));	
 				}
 				
 				pVtxAnim->AppendVertexList( vVecs );
 			}
 
-			if (tmp->GetNumElements() > 0 ) 
+			if (tmp->getNumElements() > 0 ) 
 				bHasFrameData = 1;
 
 			pAnim = pVtxAnim ;
@@ -927,7 +661,7 @@ int AddAnimNodesToAnimSet(  CLTANode *anim,
 
 			if( parent != NULL )
 			{
-				string parent_name = parent->GetElement(1)->GetValue();
+				string parent_name = parent->getElement(1)->getValue();
 				Node *node = metaModel.FindNode( parent_name );
 				if ( node == NULL )
 				{
@@ -945,23 +679,23 @@ int AddAnimNodesToAnimSet(  CLTANode *anim,
 			// read in pos-quats
 			float pos[3];
 			float quat[4];
-			CLTANode *tmp;
+			CParseNode *tmp;
 			// tmp = a list of list of vertex
-			tmp = frames->GetElement(1);// tmp = ( (v2) (v2) .. )
-			int tmpval = tmp->GetNumElements();
-			for( int nLists = 0 ; nLists < (int)tmp->GetNumElements() ; nLists++ )
+			tmp = frames->getElement(1);// tmp = ( (v2) (v2) .. )
+			int tmpval = tmp->getNumElements();
+			for( int nLists = 0 ; nLists < (int)tmp->getNumElements() ; nLists++ )
 			{
-				CLTANode *posQuatLst = tmp->GetElement(nLists) ;
+				CParseNode *posQuatLst = tmp->getElement(nLists) ;
 			
-				int tmpval2 = posQuatLst->GetNumElements();
+				int tmpval2 = posQuatLst->getNumElements();
 				
-				LTA::ParseVector( posQuatLst->GetElement(0), pos );
-				LTA::ParseVector( posQuatLst->GetElement(1), quat);
+				LTA::ParseVector( posQuatLst->getElement(0), pos );
+				LTA::ParseVector( posQuatLst->getElement(1), quat);
 	
 				pPQAnim->Append( pos, quat );
 			}
 
-			bHasFrameData = tmp->GetNumElements() > 0 ;
+			bHasFrameData = tmp->getNumElements() > 0 ;
 			pAnim = pPQAnim ;			
 			
 		} // pos quat anim
@@ -1005,11 +739,11 @@ int AddAnimNodesToAnimSet(  CLTANode *anim,
 // AnimSetFromAnimSetPN( meta-model, parse-tree = (animset ...), status 
 // --------------------------------------------
 void LTA::AnimSetFromPN( MetaModel & metaModel,
-							CLTANode *animsetPN,
+							CParseNode *animsetPN,
 							CLTATranslStatus & status )
 {
 		CAnimSet *pAnimSet = new CAnimSet ;
-		CLTANode *KFNode, *AnimList ;
+		CParseNode *KFNode, *AnimList ;
 		if( pAnimSet == NULL )
 		{
 			status = status.OUT_OF_MEM ;
@@ -1019,9 +753,9 @@ void LTA::AnimSetFromPN( MetaModel & metaModel,
 		// get the anim set name 
 		// if no name then anim + i 
 		string name ;
-		if( animsetPN->GetElement(1)->IsAtom() )
+		if( animsetPN->getElement(1)->isAtom() )
 		{
-			name = animsetPN->GetElement(1)->GetValue() ;
+			name = animsetPN->getElement(1)->getValue() ;
 			CLTATranslStatus::AddToLog( name.c_str() );
 			
 		}else 
@@ -1034,14 +768,14 @@ void LTA::AnimSetFromPN( MetaModel & metaModel,
 
 		pAnimSet->SetName( name );
 
-		KFNode = CLTAUtil::ShallowFindList( animsetPN, "keyframe" );
+		KFNode = ShallowFindList( animsetPN, "keyframe" );
 
 		if( KFNode != NULL )
 		{
 			CKeyFrame KeyFrame ;
 			CLTATranslStatus kfstatus ;
 			// KFNode = (keyframe (keyframe ... )  we want elem 2
-			KFNode = KFNode->GetElement(1) ;
+			KFNode = KFNode->getElement(1) ;
 			if( KFNode )
 				KeyFrameFromPN( KFNode, KeyFrame , kfstatus );
 			if( kfstatus != kfstatus.OK ){
@@ -1054,16 +788,16 @@ void LTA::AnimSetFromPN( MetaModel & metaModel,
 		}
 
 		// AnimList => (anims ( ... ) )
-		AnimList = CLTAUtil::ShallowFindList( animsetPN, "anims" );
+		AnimList = ShallowFindList( animsetPN, "anims" );
 		int bAddAnim = 0 ; // return value from AddAnimNodesToAnimSet
 		if( AnimList ){
 			//AnimList => ( (anim ... ) (anim ... ) )
-			AnimList = AnimList->GetElement(1) ;
+			AnimList = AnimList->getElement(1) ;
 
- 			for( int i = 0 ; i < (int)AnimList->GetNumElements() ; i++ )
+ 			for( int i = 0 ; i < (int)AnimList->getNumElements() ; i++ )
 			{
 				bAddAnim = 1;
-				AddAnimNodesToAnimSet( AnimList->GetElement(i), pAnimSet, metaModel, status );
+				AddAnimNodesToAnimSet( AnimList->getElement(i), pAnimSet, metaModel, status );
 			}
 		}
 
@@ -1078,93 +812,6 @@ void LTA::AnimSetFromPN( MetaModel & metaModel,
 		else delete pAnimSet ;
 	
 }
-// ------------------------------------------------------------------------
-// ProcessAnimSetFromPN( meta-model, parse-tree, status )
-// find all the anim sets from the parse tree, process their contents
-// (animset name
-//		(keyframe (keyframe ( ... ) ))
-//		(anims ( ... ) ))
-// ------------------------------------------------------------------------
-
-void LTA::ProcessAnimSetFromLTA( MetaModel & metaModel,
-									CLTANode *pnroot,
-								CLTATranslStatus & status )
-{
-	vector< CLTANode *> animsets ;
-	CLTAUtil::FindAll( animsets, pnroot, "animset" );
-
-	for( int i = 0 ; i < (int)animsets.size() ; i++ )
-	{
-		CAnimSet *pAnimSet = new CAnimSet ;
-		CLTANode *KFNode, *AnimList ;
-		if( pAnimSet == NULL )
-		{
-			status = status.OUT_OF_MEM ;
-			status.m_msg = " OUT OF MEMORY!!! ALLOC CAnimSet ";
-			return ;
-		}
-		// get the anim set name 
-		// if no name then anim + i 
-		string name ;
-		if( animsets[i]->GetElement(1)->IsAtom() )
-		{
-			name = animsets[i]->GetElement(1)->GetValue() ;
-			
-		}else 
-		{
-			char buf[34];
-			itoa( i , buf, 10 );
-			name = "base" ;
-			name += buf ;
-		}
-
-		pAnimSet->SetName( name );
-
-		KFNode = CLTAUtil::ShallowFindList( animsets[i], "keyframe" );
-
-		if( KFNode != NULL )
-		{
-			CKeyFrame KeyFrame ;
-			CLTATranslStatus kfstatus ;
-			// KFNode = (keyframe (keyframe ... )  we want elem 2
-			KFNode = KFNode->GetElement(1) ;
-			if( KFNode )
-				KeyFrameFromPN( KFNode, KeyFrame , kfstatus );
-			if( kfstatus != kfstatus.OK ){
-				//MessageBox(NULL, kfstatus.m_msg.c_str(), "AnimSetFromPN", MB_OK);
-				kfstatus.OnError("AnimSetFromPN");
-				status = kfstatus ;
-				return ;
-			}
-			pAnimSet->SetKeyFrame( KeyFrame );
-		}
-
-		// AnimList => (anims ( ... ) )
-		AnimList = CLTAUtil::ShallowFindList( animsets[i], "anims" );
-		int bAddAnim = 0 ; // return value from AddAnimNodesToAnimSet
-		if( AnimList ){
-			//AnimList => ( (anim ... ) (anim ... ) )
-			AnimList = AnimList->GetElement(1) ;
-
- 			for( int i = 0 ; i < (int)AnimList->GetNumElements() ; i++ )
-			{
-				bAddAnim = 1;
-				AddAnimNodesToAnimSet( AnimList->GetElement(i), pAnimSet, metaModel, status );
-			}
-		}
-
-		//if ( status != status.OK )
-		//{
-			//status.OnError("comming back from AddAnimNodeToAnimSet");
-			//	return ;//
-		//}
-
-		if( bAddAnim ) 
-			metaModel.AppendAnimSet( pAnimSet );
-		else delete pAnimSet ;
-	}
-}
-
 // ------------------------------------------------------------------------
 // HierarchyFromPN( 
 // get the hierarchy from the pn.
@@ -1180,15 +827,15 @@ void LTA::ProcessAnimSetFromLTA( MetaModel & metaModel,
 // ------------------------------------------------------------------------
  
 void LTA::HierarchyFromPN(	MetaModel & metaModel,
-							CLTANode *pnroot,
+							CParseNode *pnroot,
 							CLTATranslStatus & status )
 
 {
 	// build hier
 	// get heir.
 	// get children list from there for every child call GetTransformFromPN
-	CLTANode *lst ;
-	lst = CLTAUtil::FindList( pnroot, "hierarchy");
+	CParseNode *lst ;
+	lst = FindList( pnroot, "hierarchy");
 	if( lst == NULL )
 	{
 		status.m_status = status.FAIL ; 
@@ -1199,16 +846,16 @@ void LTA::HierarchyFromPN(	MetaModel & metaModel,
 
 	string hierName ;
 	// lst = (hier name (children (...)))
-	if( lst->GetElement(1)->IsAtom() )
+	if( lst->getElement(1)->isAtom() )
 	{
-		hierName = lst->GetElement(1)->GetValue();
+		hierName = lst->getElement(1)->getValue();
 	}else {
 		hierName = "node_root";
 	}
 	
-	CLTATranslStatus::AddToLog( " - " + hierName + "\r\n");
+	CLTATranslStatus::AddToLog( hierName );
 
-	lst = CLTAUtil::FindList( lst, "children");
+	lst = FindList( lst, "children");
 	if( lst == NULL )
 	{
 		status.m_status = status.FAIL ;
@@ -1218,31 +865,31 @@ void LTA::HierarchyFromPN(	MetaModel & metaModel,
 		return ;
 	}
 	
-	lst = lst->GetElement(1) ; // ( children ( ... ) )
+	lst = lst->getElement(1) ; // ( children ( ... ) )
 
 	// The hierarchy node is not a node in itself, its the 
 	// model.
 	// if there is more than one child, make a rootnode put children as node's childs
 	// else if one child then one child is root
-	if( lst->GetNumElements() > 0 )
+	if( lst->getNumElements() > 0 )
 	{
 		int index =0;
 		Node * rootN = new Node() ;
 		rootN->index = index;
 		rootN->SetName("root");
 		metaModel.rootNode = rootN ;
-		//status.errLog() << " root has : " << lst->GetNumElements() << " num children " << endl;
-		if( lst->GetNumElements() == 1 ){
-			GetTransformFromPN( rootN, lst->GetElement(0) );
+		//status.errLog() << " root has : " << lst->getNumElements() << " num children " << endl;
+		if( lst->getNumElements() == 1 ){
+			GetTransformFromPN( rootN, lst->getElement(0) );
 			
 		}else
 		{
-			for( int i = 0 ;i < (int)lst->GetNumElements() ; i++ )
+			for( int i = 0 ;i < (int)lst->getNumElements() ; i++ )
 			{
 				Node *newNode = new Node ;
 				newNode->index = index ;
 				rootN->children.push_back(newNode);
-				GetTransformFromPN( newNode ,  lst->GetElement(i) );
+				GetTransformFromPN( newNode ,  lst->getElement(i) );
 				index++;
 			}
 		}
@@ -1312,113 +959,3 @@ int LTA::CollectAndClassifyAnims( MetaModel & metaModel, CClassifiedAnimLst & Cl
 	return ClassifiedAnimLst.size();
 }
 
-// ------------------------------------------------------------------------
-// read in the tools-info node.
-// ------------------------------------------------------------------------
-void LTA::ToolsInfoNodeFromPN( MetaModel & metaModel,
-								CLTANode *pnroot)
-{
-	
-	CLTANode *lst ,*tex_bindlst;
-	lst = CLTAUtil::FindList( pnroot, "tools-info");
-	if( lst == NULL )
-	{
-		// ok no tools-info node. 
-		return ;
-	}
-
-	// get the list/arg to tools-info node.
-	lst = lst->GetElement(1) ;
-	
-	tex_bindlst = CLTAUtil::ShallowFindList( lst, "texture-bindings");
-	// ok, we got a texture-binding node
-	if( tex_bindlst != NULL )
-	{ 
-		// get the arg to the node.
-		tex_bindlst = tex_bindlst->GetElement(1);
-		if(tex_bindlst != NULL )
-		{
-			for( uint32 i = 0 ; i < tex_bindlst->GetNumElements() ;i++ )
-			{
-				CLTANode *pair = tex_bindlst->GetElement(i) ;
-				uint32 index = atoi(pair->GetElement(0)->GetValue());
-				string path  = pair->GetElement(1)->GetValue() ;
-				// 
-				metaModel.m_ToolsInfo.m_TextureBindingMap[index] = path ;
-			}
-		}
-	}
-
-	CLTANode *compile_opts = CLTAUtil::ShallowFindList( lst, "compile-options");
-
-	// defaults.
-	metaModel.m_ToolsInfo.m_CompressionType = 2;
-	metaModel.m_ToolsInfo.m_bExcludeGeom = false ;
-	
-	// get compile options.
-	if( compile_opts )
-	{
-		CLTANode *tmp ;
-		compile_opts = compile_opts->GetElement(1);
-
-		if( (tmp = CLTAUtil::ShallowFindList( compile_opts, "compression-type")) != NULL )
-		{
-			CLTANode *val = tmp->GetElement(1);
-			if( val )
-			{
-				metaModel.m_ToolsInfo.m_CompressionType = atoi(val->GetValue());
-			}
-		}
-	
-
-		if( (tmp = CLTAUtil::ShallowFindList( compile_opts, "exclude-geom")) != NULL )
-		{
-			CLTANode *val = tmp->GetElement(1);
-			if( val )
-			{
-				metaModel.m_ToolsInfo.m_bExcludeGeom = (bool)(atoi(val->GetValue())== 1);
-			}
-		}
-	}
-}
-
-
-// ------------------------------------------------------------------------
-// Starting point for creating an in-memory representation of a model 
-// lta file.
-// ------------------------------------------------------------------------
-	
-void LTA::InitMetaModelFromPN( MetaModel & metaModel, 
-								CLTANode *pnroot,
-								CLTATranslStatus &status 
-								)
-{
-
-	status.AddToLog("hierarchy\r\n ");
-		// build meta model from lta parse nodes.
-	LTA::HierarchyFromPN( metaModel, pnroot, status );
-	
-
-	// *** check status 
-	status.AddToLog("shapes\r\n");
-	LTA::GetShapesFromPN( metaModel, pnroot );
-	LTA::GetLODGroupsFromPN( metaModel, pnroot, status );
-	LTA::GetOBBFromOnLoadCmdsPN( metaModel, pnroot, status );
-
-	// *** check status
-	status.AddToLog( "animations\r\n " );
-
-	// get animation data from the parse tree
-	LTA::ProcessAnimSetFromLTA( metaModel, pnroot, status );
-
-	status.AddToLog("tools-info\r\n");
-	LTA::ToolsInfoNodeFromPN( metaModel, pnroot );
-
-	// collect vertex animated orphans, create a node for them 
-	// if a va shape does not have parent then we need to create one for them
-	// b/c of the current setup in lt. this should not be inherent in lta. 
-	// lta should just say this animation modifies this thing without reference
-	// to how it is structured.
-	FixVertexAnimatedOrphans( metaModel );
-
-}

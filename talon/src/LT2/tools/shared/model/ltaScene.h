@@ -25,7 +25,7 @@
 
 
 #include "ltbasetypes.h"
-#include "ltamgr.h"
+#include "ltaParseNode.h"
 
 // std c++
 #include <iostream>
@@ -111,37 +111,24 @@ class CLTA_ABC_PC_MAT : public CLTAMaterial {
 
 public :
 	// defaults
+	// talon: 2001's, 0x68 bytes (the constructor 0x4130a7, the 0x68 new
+	// in ParseShapeNode): one texture index and the environment texture's
+	// (-1, none), no texture array.
 	CLTA_ABC_PC_MAT();
 
 	// params for the specular map
-	float m_specular_power ;
-	float m_specular_scale ;
+	float m_specular_power ;	// 0x14
+	float m_specular_scale ;	// 0x18
 	
-	int   m_num_textures ;
-	int   m_textures[4];
+	int   m_texture_index ;		// 0x1c (texture-index)
+	int   m_envtex_index ;		// 0x20 (envtex-index)
 
 	// colors 
-	float m_diffuse[4];
-	float m_ambient[4] ;
-	float m_specular[4] ;
-	float m_emissive[4] ;
-	float m_shininess ;
-
-};
-
-
-// ------------------------------------------------------------------------
-// render style appearance
-// ------------------------------------------------------------------------
-class CLTARenderStyle : public CLTAMaterial {
-public :
-	CLTARenderStyle();
-
-
-	uint32			m_nNumTextures;	// Number of textures used, and their actual indices
-	int32			m_iTextures[4]; //MAX_PIECE_TEXTURES];
-	int32			m_iRenderStyle;	// RenderStyle index
-	uint8			m_nRenderPriority; //render priority, the order in which pieces are drawn
+	float m_diffuse[4];			// 0x24
+	float m_ambient[4] ;		// 0x34
+	float m_specular[4] ;		// 0x44
+	float m_emissive[4] ;		// 0x54
+	float m_shininess ;			// 0x64
 
 };
 
@@ -154,15 +141,32 @@ public :
 //			(geometry ( ... ))
 //          (appearance (...)))
 // ------------------------------------------------------------------------
+// ------------------------------------------------------------------------
+// the appearance of a shape: (appearance (material ...))
+// talon: 2001's Shape holds one at 0xc0, 0x14 bytes: a name nothing in the
+// image sets or reads and the material, which its constructor sets to NULL
+// (inline in Shape's, 0x4131c6..0x4131da) and nothing deletes. The class
+// name is ours.
+// ------------------------------------------------------------------------
+class CLTAAppearance : public ILTAObject {
+public :
+	CLTAAppearance() :m_pMaterial(NULL) {}
+
+	CLTAMaterial	*m_pMaterial ;
+};
+
+
+// talon: 2001's is 0xe4 bytes (the new in ShapeFromPN, 0x41289e; the
+// constructor 0x41317f, the destructor 0x40c13d): the appearance at 0xc0,
+// the parent name at 0xd4.
 class Shape  : public ILTAObject {
 	
-	CLTAGeometry	m_Geometry;
-	CLTAMaterial   *m_pAppearance ;
-	std::string		m_ParentName;
+	CLTAGeometry	m_Geometry;			// 0x10
+	CLTAAppearance	m_Appearance;		// 0xc0
+	std::string		m_ParentName;		// 0xd4
 	
 public:
 	Shape() ;
-	~Shape();
 
 	// accessors
 	void			SetParentName( const char *parent_name ) ;
@@ -178,7 +182,7 @@ public:
 
 
 // ------------------------------------------------------------------------
-// CLTANode 
+// CLTANode
 // A node is a hierarchy element. usually a transform
 // ------------------------------------------------------------------------
 class Node : public ILTAObject {
@@ -470,114 +474,60 @@ public :
 
 
 // ------------------------------------------------------------------------
-// lod-sets
-// lod group :
-// (distance - shape )
-// ------------------------------------------------------------------------
-class CLTALODGroup : public ILTAObject {
-
-	typedef std::map<float, Shape *> CLODMap ;
-	typedef std::map<float, Shape *>::iterator CLODMapIter ;
-
-	int32 m_MinMax[2] ;
-	CLODMap m_LODs ;
-public :
-	
-
-	CLTALODGroup() {}
-	CLTALODGroup( const std::string &name ) {
-		SetName(name);
-	}
-
-	void SetMinMax( int min, int max );
-	void GetMinMax( uint32 &min, uint32 &max )  ;
-
-	void AddLOD( Shape *shape, float dist );
-
-	// get lod based on index
-	Shape *GetLOD( uint32 index );
-	// get lod based on distance value
-	Shape *GetLOD( float dist );
-
-};
-
-class CLTAOBB {
-public :
-	CLTAOBB():m_pParentNode(NULL),m_Enabled(true) {
-	}
-
-	std::string m_ParentNodeName ;
-	Node	   *m_pParentNode;
-	float		m_Pos[3];
-	float		m_Orientation[4];
-	float		m_Size[3];
-	bool		m_Enabled ;
-};
-
-// ------------------------------------------------------------------------
-// Tools info node in the model db
-// ------------------------------------------------------------------------
-class CToolsInfo {
-public :
-	// class types 
-	typedef std::map<uint32,std::string> TextureBindingMap ;
-	typedef std::map<uint32,std::string>::iterator TextureBindingMapIter;
-
-
-	TextureBindingMap m_TextureBindingMap ;
-
-	// export parameters ;
-	int32 m_CompressionType ;
-	bool m_bExcludeGeom ;
-	
-};
-
-
-// ------------------------------------------------------------------------
 // CLTAMetaModel
 // Intermediary model, stores stuff read from lta.
 // ------------------------------------------------------------------------
+// talon: 2001's is 0x28 bytes (the new at 0x40bcf7; its constructor
+// 0x40bf5c and destructor 0x40bf8a are inline, emitted in ltaModel): the
+// anim sets, the last anim, the hierarchy, the shapes. No LOD groups, OBBs
+// or tools info.
 class MetaModel {
 
-	typedef std::map<std::string, CLTALODGroup>::iterator CLTALODGroupIterator ;
-	std::map<std::string, CLTALODGroup> m_LODGroups ;
-
 public :
-	std::vector<CAnimSet*> m_vAnimSets ;
-	int m_LastAnim ;
+	std::vector<CAnimSet*> m_vAnimSets ;	// 0x00
+	int m_LastAnim ;						// 0x10
 
-	std::vector< CLTAOBB > m_obbset;
-
-
-	Node *rootNode ;		// hierarchy
-	std::vector<Shape*> shapes ;
-
-	CToolsInfo     m_ToolsInfo ; // extra information for the tools
+	Node *rootNode ;		// hierarchy	// 0x14
+	std::vector<Shape*> shapes ;			// 0x18
 
 // METHODS 
 
 	// constructors/
-	MetaModel() ;
-	~MetaModel();
+	MetaModel() :m_LastAnim(-1),rootNode(NULL) {}
+	~MetaModel()
+	{
+		for( uint32 i = 0 ; i < shapes.size() ; i++ )
+		{
+			Shape * shape = shapes[i] ;
+			delete shape ;
+			shapes[i] = NULL;
+		}
+		shapes.resize(0);
+
+		for ( i = 0 ; i < m_vAnimSets.size() ; i++ )
+		{
+			CAnimSet *pAnimSet = m_vAnimSets[i];
+			delete pAnimSet ;
+			m_vAnimSets[i] = NULL ;
+		}
+		m_vAnimSets.resize(0);
+
+		if( rootNode != NULL )
+			delete rootNode ;
+	}
 
 	
 	// ------------------------------------------------------------------------
 	// animation set access
-	// CreateAnimSet()    create a new set, optional name
-	// getLastAnimSet()   returns the last animset created.
-	// numAnimSets()      returns the number of animation sets
-	// getAnimSet(index)  gets an animation set
 	// ------------------------------------------------------------------------
 	
 	// Create a new animations set. 
 	// metaModel is responsible for creating sets
 	CAnimSet * CreateAnimSet();
 	
-
 	// create named animation set.
 	CAnimSet * CreateAnimSet(std::string & name );
 	
-
 	// add an anim set.
 	void AppendAnimSet( CAnimSet *newAnimSet );
 	
@@ -603,25 +553,6 @@ public :
 	
 	// sum up the number of verts in all the shapes .
 	int CalcNumVertex() ;
-	
-	// add a lod set with name to meta model
-	void AddLODGroup( const std::string &name );
-
-	// add information to a lod set.
-	bool AddToLODGroup( const std::string &lod_name, 
-					  const std::string &shape_name, 
-					  float dist, 
-					  std::string &err_str );
-	
-	// add min max lod offset to a lod-group
-	void AddMinMaxToLODGroup( const std::string &lod_name, int min, int max );
-	
-	// get a lod 
-	Shape *GetLOD( uint32 piece_index, float dist );
-	
-	// get numpieces
-	uint32 GetNumLODGroups();
-
 };
 
 
@@ -690,51 +621,35 @@ public :
 	// Interpret Parse nodes' hierarchy node, put result into meta-model.
 	static 
 	void HierarchyFromPN(	MetaModel & metaModel,		// data container
-							CLTANode *pnroot,			// parse node tree
+							CParseNode *pnroot,			// parse node tree
 							CLTATranslStatus & status   // error reporting
 							); 
 
 	
 	// Evaluate the parse tree for shapes.
 	// fill the metamodel container with new data.
-	static
-	void GetShapesFromPN( MetaModel & metaModel, CLTANode *pnroot );
+	
 
-	static 
-	void GetLODGroupsFromPN( MetaModel & metaModel, 
-							 CLTANode *pnroot,
-							 CLTATranslStatus & status );
+	
 
-	static 
-	void LODGroupFromPN( MetaModel &metaModel,
-				         CLTANode *create_lod_group, 
-						 CLTATranslStatus & status );
+	
 
-	static 
-	void
-	GetOBBFromOnLoadCmdsPN( MetaModel & metaModel, 
-							CLTANode *pnroot, 
-							CLTATranslStatus &status);
+	
 
 	// process & add parsenode that reps a shape node into metamodel
 	static 
-	void ShapeFromPN( MetaModel & metaModel, CLTANode *pnroot );
+	void ShapeFromPN( MetaModel & metaModel, CParseNode *pnroot );
 
 	// ------------------------------------------------------------------------
 	// Get the tools info node from the lta and associate it with the meta model.
 	// ------------------------------------------------------------------------
-	static 
-	void ToolsInfoNodeFromPN( MetaModel &metaModel, CLTANode *pnroot );
+	
 
 	// ------------------------------------------------------------------------
 	// Starting point for creating an in-memory representation of a model 
 	// lta file.
 	// ------------------------------------------------------------------------
-	static 
-	void InitMetaModelFromPN( MetaModel & new_MetaModel, 
-								CLTANode *pnroot,
-								CLTATranslStatus &status 
-								);
+	
 
 
 
@@ -771,22 +686,19 @@ public :
 	// pn-list => ( a b c ) = destination-vector[] = { a, b, c };
 	// ------------------------------------------------------------------------
 	static
-	void ParseVector( CLTANode *vrt, float * vert );
+	void ParseVector( CParseNode *vrt, float * vert );
 
 	// ------------------------------------------------------------------------
 	// finds all the animsets in the parsenode tree and processes them.
 	// ------------------------------------------------------------------------
-	static
-	void ProcessAnimSetFromLTA( MetaModel & metaModel,
-								CLTANode *pnroot,
-								CLTATranslStatus & status );
+	
 
 	// AnimSetFromPN ( MetaModel, start-parse-node, return-status )
 	// Evaluate parsenode for anim-set information,
 	// put result into metaModel .
 	static
 	void AnimSetFromPN( MetaModel & metaModel,          // data container
-						CLTANode *pnroot,				// parse node tree = (animset
+						CParseNode *pnroot,				// parse node tree = (animset
 						CLTATranslStatus & status		// error reporting
 					);
 
@@ -827,14 +739,14 @@ inline	void Shape::SetMeshName  ( const char *mesh_name   ) { m_Geometry.m_Mesh.
 inline	const std::string& Shape::GetParentName() { return m_ParentName ; } 
 inline	const std::string& Shape::GetMeshName()   { return m_Geometry.m_Mesh.GetName() ; } 
 inline	CLTAMesh&		Shape::GetMesh()			{ return m_Geometry.m_Mesh ; }
-inline	CLTAMaterial*	Shape::GetAppearance()		{ return m_pAppearance  ; }
+inline	CLTAMaterial*	Shape::GetAppearance()		{ return m_Appearance.m_pMaterial  ; }
 
-inline void Shape::SetAppearance(CLTAMaterial *val) { if (m_pAppearance != NULL ) delete m_pAppearance; m_pAppearance = val ;}
+inline void Shape::SetAppearance(CLTAMaterial *val) { m_Appearance.m_pMaterial = val ; }
 
 
 
 // ------------------------------------------------------------------------
-// CLTANode 
+// CLTANode
 // A node is a hierarchy element. usually a transform
 // ------------------------------------------------------------------------	
 	
@@ -1131,44 +1043,6 @@ inline	int CAnimSet::GetAnimType() {
 // ------------------------------------------------------------------------
 
 	
-inline void CLTALODGroup::SetMinMax( int min, int max ) { m_MinMax[0] = min ; m_MinMax[1] = max ; }
-inline void CLTALODGroup::GetMinMax( uint32 &min, uint32 &max ) { min =m_MinMax[0] ;max = m_MinMax[1];  }
-
-inline void CLTALODGroup::AddLOD( Shape *shape, float dist )
-{
-	m_LODs[dist] = shape ;
-}
-
-inline	Shape *CLTALODGroup::GetLOD( uint32 index )
-{
-	CLODMapIter it = m_LODs.begin();
-	// check index's range?
-	while( index-- ) it++ ;
-	return (*(it)).second;
-}
-
-	
-inline	Shape *CLTALODGroup::GetLOD( float dist )
-{ 
-	CLODMapIter it = m_LODs.lower_bound( dist );
-	return (*it).second ;
-}
-
-
-
-// ------------------------------------------------------------------------
-// CMetaModel
-// ------------------------------------------------------------------------
-// ------------------------------------------------------------------------
-// animation set access
-// CreateAnimSet()    create a new set, optional name
-// getLastAnimSet()   returns the last animset created.
-// numAnimSets()      returns the number of animation sets
-// getAnimSet(index)  gets an animation set
-// ------------------------------------------------------------------------
-
-// Create a new animations set. 
-// metaModel is responsible for creating sets
 inline CAnimSet * MetaModel::CreateAnimSet()
 {
 	
@@ -1275,63 +1149,6 @@ inline int MetaModel::CalcNumVertex()
 }
 
 // add a lod set with name to meta model
-inline void MetaModel::AddLODGroup( const std::string &name ) {
-	m_LODGroups[ name ] =  CLTALODGroup(name) ;
-}
-
-// add information to a lod set.
-inline bool MetaModel::AddToLODGroup( const std::string &lod_name, 
-				  const std::string &shape_name, 
-				  float dist, 
-				  std::string &err_str )
-{
-	Shape * shape = FindShape( shape_name );
-	if( shape != NULL)
-	{
-		m_LODGroups[ lod_name ].AddLOD( shape, dist );
-		//m_LODGroups[ lod_name ].m_LODs[ dist ] = shape ;
-	}
-	else if(strcmp(shape_name.c_str(), "NULL") != 0)
-	{
-		err_str += " could not find shape " + shape_name ;
-		err_str += " for lod group named : " + lod_name ; 
-
-		return false ;
-	}
-	return true ;
-}
-
-// add min max lod offset to a lod-group
-inline void MetaModel::AddMinMaxToLODGroup( const std::string &lod_name, int min, int max )
-{
-	m_LODGroups[ lod_name ].SetMinMax( min, max );
-}
-
-// get a lod 
-inline Shape *MetaModel::GetLOD( uint32 piece_index, float dist )
-{
-	CLTALODGroupIterator &iter = m_LODGroups.begin();
-
-	if( m_LODGroups.end() == iter )
-	{
-		return (*iter).second.GetLOD( dist );
-	}
-}
-
-// get numpieces
-inline uint32 MetaModel::GetNumLODGroups() {
-	m_LODGroups.size();
-}
-
-
-
-
-// ------------------------------------------------------------------------
-// CLTATranslStatus
-// ------------------------------------------------------------------------
-
-
-// call this to announce an error has occured.
 inline void CLTATranslStatus::OnError( char *ErrorTitle, int bShowErrWin ) 
 {	
 	std::string msg ;

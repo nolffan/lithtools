@@ -11,6 +11,7 @@
 
 
 #include "ltaScene.h"
+#include <istream>
 
 
 // ------------------------------------------------------------------------
@@ -19,8 +20,10 @@
 // bChildRefs is set to true, child models data will not be loaded, the model
 // data base will have a reference to the child model localtion 
 // ------------------------------------------------------------------------
-Model*  ltaModelLoad( CLTAReader& InFile , LAllocCount & allocCount, bool bChildRefs = false );
-Model*  ltaModelLoad( const char * filename, LAllocCount & allocCount, bool bChildRefs= false );
+// talon: 2001's reads a std::istream (0x40bcba; ModelEditDlg's load thread
+// calls it at 0x41709c with the stream, the allocator and false). Build 69's
+// CLTAReader and filename overloads are not in the image.
+Model*  ltaModelLoad( std::istream& is, LAllocCount & allocCount, bool bChildRefs = false );
 
 // ------------------------------------------------------------------------
 // ltaLoadChildModel

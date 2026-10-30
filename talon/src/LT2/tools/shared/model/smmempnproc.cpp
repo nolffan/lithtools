@@ -16,6 +16,8 @@
 #include <vector>
 #include <map>
 
+using namespace std;
+
 
 int g_byte_cnt = 0;
 
@@ -57,7 +59,7 @@ public :
 		CLTATranslStatus status ;
 		status.AddToLog( "animset:");
 		
-		//LTA::AnimSetFromPN(	*m_MetaModel, pn, status );
+		LTA::AnimSetFromPN(	*m_MetaModel, pn, status );
 		pn->deleteChildren();
 		status.AddToLog( status.m_msg );
 		status.AddToLog("\r\n");
@@ -75,7 +77,7 @@ public :
 		
 		status.AddToLog( "hierarchy:");
 		
-		//LTA::HierarchyFromPN( *m_MetaModel, pn, status );
+		LTA::HierarchyFromPN( *m_MetaModel, pn, status );
 		pn->deleteChildren();
 		status.AddToLog( status.m_msg );
 		status.AddToLog("\r\n");
@@ -91,7 +93,7 @@ public :
 	{
 		CLTATranslStatus status ;
 			status.AddToLog( "shape:");
-			//LTA::ShapeFromPN( *m_MetaModel, pn );
+			LTA::ShapeFromPN( *m_MetaModel, pn );
 		status.AddToLog( status.m_msg );
 		status.AddToLog("\r\n");
 		
@@ -324,12 +326,3 @@ void SmInitMetaModelFromPN( ILTAStream *strm , MetaModel &metaModel,
 	__BuildParseTree( strm,  pnroot );
 	end_time();
 }
-
-
-
-void PostCC()
-{
-	end_time();
-	cout << " ok " << g_byte_cnt << endl;
-}
-
