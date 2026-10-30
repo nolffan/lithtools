@@ -170,11 +170,6 @@ void CEditPlane::SplitPoly( CBasePoly *pToSplit, CBasePoly *sides[2], CEditVertA
 
 		newPt = A + ( (B - A) * t );
 
-		newPt.m_nA = (uint8)((float)A.m_nA + ((B.m_nA - A.m_nA) * t));
-		newPt.m_nR = (uint8)((float)A.m_nR + ((B.m_nA - A.m_nR) * t));
-		newPt.m_nG = (uint8)((float)A.m_nG + ((B.m_nA - A.m_nG) * t));
-		newPt.m_nB = (uint8)((float)A.m_nB + ((B.m_nA - A.m_nB) * t));
-
 		vertSides[0]->Append( newPt );
 		vertSides[1]->Append( newPt );
 		

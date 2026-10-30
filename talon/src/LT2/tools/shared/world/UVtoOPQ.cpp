@@ -48,9 +48,9 @@ bool ConvertUVToOPQ(	LTVector *pos, const float* coords,
 	const LTVector bcQ = BaryCoords( tv0, tv1, tv2, LTVector(0.0f,1.0f,0.0f) );
 
 	// calculate OPQ in world space
-	O = bcO.x * v0 + bcO.y * v1 + bcO.z * v2;
-	P = bcP.x * v0 + bcP.y * v1 + bcP.z * v2;
-	Q = bcQ.x * v0 + bcQ.y * v1 + bcQ.z * v2;
+	O = v0 * bcO.x + v1 * bcO.y + v2 * bcO.z;
+	P = v0 * bcP.x + v1 * bcP.y + v2 * bcP.z;
+	Q = v0 * bcQ.x + v1 * bcQ.y + v2 * bcQ.z;
 	P = P - O;
 	Q = Q - O;
 
@@ -62,8 +62,8 @@ bool ConvertUVToOPQ(	LTVector *pos, const float* coords,
 	tq *= 1.0f / (float)texHeight;
 	tq = 1.0f / tq;
 
-	P.Normalize();
-	Q.Normalize();
+	P.Norm();
+	Q.Norm();
 
 	// fix up p and q to be what DEdit really wants
 	LTVector R = Q.Cross( P );
@@ -71,8 +71,8 @@ bool ConvertUVToOPQ(	LTVector *pos, const float* coords,
 	LTVector QNew = P.Cross( R );
 
 	// fix up scale factors for new p and q
-	PNew.Normalize();
-	QNew.Normalize();
+	PNew.Norm();
+	QNew.Norm();
 	float pscale = 1.0f / P.Dot( PNew );
 	float qscale = 1.0f / Q.Dot( QNew );
 
@@ -82,9 +82,9 @@ bool ConvertUVToOPQ(	LTVector *pos, const float* coords,
 	QNew *= tq * qscale;
 
 	// orthogonalize P and Q
-	R.Normalize();
+	R.Norm();
 	P = PNew + R;
-	Q = QNew - (PNew.Dot( QNew ) * R);
+	Q = QNew - (R * PNew.Dot( QNew ));
 
 	return true;
 }
