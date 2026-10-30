@@ -201,6 +201,8 @@ CMeshShapeList*	LoadShapeList(const char* pszFilename, CModelMgr* pModelMgr)
 	return NULL;
 }
 
+#define MODEL_MGR_THREAD_DELAY		10
+
 DWORD WINAPI ModelMgrThreadMain(void* pParam)
 {
 	ASSERT(pParam);

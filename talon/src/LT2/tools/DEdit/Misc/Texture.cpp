@@ -21,11 +21,11 @@
 #include "pixelformat.h"
 #include "LTTexture.h"
 
-extern int g_MipMapOffset;
+extern SDWORD g_MipMapOffset;	// talon: as dedit_concommand.cpp defines it
 extern void d3d_UnbindFromTexture(void *pBinding);
 
 
-extern int g_CV_MaxTextureMemory;
+extern SDWORD g_CV_MaxTextureMemory;
 DECLARE_DLINK(g_Textures);
 DWORD g_TextureMemory = 0;
 

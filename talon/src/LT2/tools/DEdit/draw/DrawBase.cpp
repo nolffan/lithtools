@@ -491,12 +491,12 @@ void DrawBase::DrawPolyLines(CEditPoly *pPoly, int xOffset, int yOffset, DWORD l
 		WORD* pStart = pPoly->m_Indices.GetArray();	// talon: WORDs in 2001
 		WORD* pEnd = pStart + pPoly->NumVerts();
 
-		uint32* pPrevIndex = pEnd - 1;
+		WORD* pPrevIndex = pEnd - 1;
 
 		uint32 minIndex, maxIndex;
 		CPointConnections* pPos;
 		
-		for(uint32* pIndex = pStart; pIndex < pEnd; pPrevIndex = pIndex, pIndex++)
+		for(WORD* pIndex = pStart; pIndex < pEnd; pPrevIndex = pIndex, pIndex++)
 		{
 			//see if we can early out if both points are clipped out by a similar plane
 			if(pVerts[*pPrevIndex].m_nClipPlanes & pVerts[*pIndex].m_nClipPlanes)

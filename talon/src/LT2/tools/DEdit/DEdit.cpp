@@ -1288,13 +1288,6 @@ void CDEditApp::SetClassHelpButeAgg(CButeMgr* pMgr)
 	m_pClassHelpButeAgg = pMgr;
 }
 
-// Hook Stdlith's base allocators.
-void* DefStdlithAlloc(uint32 size)
-{
-	return malloc(size);
-}
-
-void DefStdlithFree(void *ptr)
-{
-	free(ptr);
-}
+// talon: no DefStdlithAlloc and DefStdlithFree here: the 2001 StdLith
+// (its allocator-override build, as ModelEdit's) has them, in l_allocator
+// (0x00489640, 0x00489660).

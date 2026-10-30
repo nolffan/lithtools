@@ -145,7 +145,8 @@ struct SInstantiateParams
 			char pszBuffer[1024];
 			va_list marker;
 			va_start(marker, pszString);
-			LTVSNPrintF(pszBuffer, sizeof(pszBuffer), pszString, marker);
+			_vsnprintf(pszBuffer, sizeof(pszBuffer) - 1, pszString, marker);	// talon: Build 69's LTVSNPrintF
+			pszBuffer[sizeof(pszBuffer) - 1] = '\0';
 			va_end(marker);
 
 			m_ErrorCallback(pszBuffer);
@@ -474,91 +475,7 @@ void CPrefabRef::OnPropertyChanged( CBaseProp* pProperty, bool bNotifyGame, cons
 			
 			CBaseProp *pRefProp = pProps->GetAt(nCurrProp);
 
-			if( pRefProp->m_PropFlags & PF_NOTIFYCHANGE )
-			{
-				ClassDef *pDef = GetProject()->FindClassDef( pObject->GetClassName() );
-				IObjectPlugin* pPlugin = LTNULL;
-
-				while( pDef )
-				{
-					if( pDef->m_PluginFn )
-					{			
-						pPlugin = pDef->m_PluginFn();
-						if( pPlugin )
-						{
-							GenericProp	gpPropValue;
-							
-							// Create a new property of the same type so we can change the new property's values instead of the originals...
-
-							CBaseProp	*pTempProp = pRefProp->CreateSameKind();
-							
-							if( pRefProp->m_Type == PT_STRING )
-							{
-								// Copy into the temp property so we don't mess with the reference properties values..
-
-								pTempProp->Copy( pRefProp );
-
-								// Replace any #'s with the prefab name...
-								
-								CStringProp *pStringProp = (CStringProp*)pTempProp;
-								char *pValue;
-								while( (pValue = strchr(pStringProp->GetString(), '#') ) != NULL)
-								{
-									// Delete the #
-									strcpy(pValue, &pValue[1]);
-									int nNameLen = strlen( GetName() );
-									if( nNameLen )
-									{
-										int nStrLen = strlen( pStringProp->GetString() );
-										
-										// Figure how much we want to insert
-										int nCopyLen = nNameLen;
-										if( (nCopyLen + nStrLen) > MAX_STRINGPROP_LEN )
-										{
-											nCopyLen = MAX_STRINGPROP_LEN - nStrLen;
-										}
-										
-										// Make some space
-										memmove(&pValue[nCopyLen], pValue, strlen(pValue) + 1);
-										// Copy the name in
-										memcpy(pValue, GetName(), nCopyLen);
-									}
-								}
-
-								pRefProp = pTempProp;	
-							}
-
-							// Setup the new value for this property...
-
-							gp_Init( &gpPropValue );
-							pRefProp->SetupGenericProp( &gpPropValue );
-							
-
-							CString sName = GetName();
-							sName += '.';
-							sName += pObject->GetName();
-
-							// Give the object a chance to do some debugging on the new value...
-
-							pPlugin->PreHook_PropChanged( sName,
-														  pRefProp->GetName(),
-														  pRefProp->m_Type,
-														  gpPropValue,
-														  pObject,
-														  sModifiers );
-
-							delete pPlugin;
-							delete pTempProp;
-						}
-
-						break;
-					}
-
-					// The class didn't have the plugin fn, see if the parent does
-					pDef = pDef->m_ParentClass;
-				}
-		
-			}
+			// talon: no PF_NOTIFYCHANGE notification (IObjectPlugin::PreHook_PropChanged) in the LT2 SDK
 		}		
 	}
 }
