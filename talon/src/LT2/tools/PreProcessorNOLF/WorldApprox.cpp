@@ -195,9 +195,12 @@ uint32 MakePVS(PVSInfo *pInfo)
 
 	pInfo->m_pWorld->SetPolyIndices();
 
-	// Bytes in a leaf set, a dword more than enough.
+	// Bytes in a leaf set, a dword more than enough. talon: NOLF's rounds
+	// with += 4 - (n % 4) (0x45dc26: neg, lea 4(n,-r)). MakePVS is near by
+	// one branch: the leaf loop at the end jumps back past the world
+	// pointer's reload (0x45dd36).
 	g_pPVSInfo->m_nVisBytes = (pInfo->m_pWorld->m_Leaves.GetSize() >> 3) + 1;
-	g_pPVSInfo->m_nVisBytes = (g_pPVSInfo->m_nVisBytes - (g_pPVSInfo->m_nVisBytes % 4)) + 4;
+	g_pPVSInfo->m_nVisBytes += 4 - (g_pPVSInfo->m_nVisBytes % 4);
 	g_pPVSInfo->m_nVisDWords = g_pPVSInfo->m_nVisBytes / 4;
 
 	MakeZones(pInfo);
@@ -628,18 +631,18 @@ static void MakePortalVis(CPrePortal *pPortal)
 }
 
 
-// 0x44c3b0.
+// 0x44c3b0 (AvP2); NOLF's is 0x45ccb0.
 //
-// talon: near, size-exact: the head loads g_pPVSInfo into ecx before the
-// frame where the shipped code loads it into edx after (and so the lea's
-// operands swap). The index and set locals and VEC_MAGSQR (the member
-// MagSqr sums the terms in another order) are what brought the rest in.
+// talon: NOLF's index is signed (sar) and it works the distance out with
+// DistSqr before CanSeeThrough, kept across the call. Near: the head (the
+// bit test) loads g_pPVSInfo in another order; a pVis local, none, or the
+// test on the global and the set through pVis do not give it.
 static void FloodPortalVis_R(CPreLeaf *pLeaf, CPrePortal *pFrom, float fDistSqr)
 {
 	CPrePortal *pPortal;
-	uint32 iIndex;
+	int iIndex;
 	uint8 *pVis;
-	PVector vDiff;
+	float fDist;
 	uint32 i;
 
 	iIndex = pLeaf->m_Index;
@@ -653,29 +656,27 @@ static void FloodPortalVis_R(CPreLeaf *pLeaf, CPrePortal *pFrom, float fDistSqr)
 	{
 		pPortal = pLeaf->m_Unknown_00[i];
 
-		vDiff = pPortal->m_vCenter - pFrom->m_vCenter;
+		fDist = pPortal->m_vCenter.DistSqr(pFrom->m_vCenter);
 		if(CanSeeThrough(g_pFloodPortal, pPortal))
-			FloodPortalVis_R(pPortal->m_pLeaf, pPortal, fDistSqr + VEC_MAGSQR(vDiff));
+			FloodPortalVis_R(pPortal->m_pLeaf, pPortal, fDistSqr + fDist);
 	}
 }
 
 
 // Whether pTest is partly in front of pPortal and pPortal partly behind
-// pTest (0x44c4a0).
+// pTest (0x44c4a0). talon: NOLF's (0x45cbf0) asks the planes' DistTo, which
+// reads m_Dist each time where the spelt-out sum keeps it on the FPU stack.
 static BOOL CanSeeThrough(CPrePortal *pPortal, CPrePortal *pTest)
 {
-	CPrePlane *pPlane;
 	uint32 i;
 
-	pPlane = &pPortal->m_Plane;
 	for(i=0; i < pTest->NumVerts(); i++)
 	{
-		if(pPlane->m_Normal.Dot(pTest->Pt(i)) - pPlane->m_Dist > 0.1)
+		if(pPortal->m_Plane.DistTo(pTest->Pt(i)) > 0.1)
 		{
-			pPlane = &pTest->m_Plane;
 			for(i=0; i < pPortal->NumVerts(); i++)
 			{
-				if(pPlane->m_Normal.Dot(pPortal->Pt(i)) - pPlane->m_Dist < -0.1)
+				if(pTest->m_Plane.DistTo(pPortal->Pt(i)) < -0.1)
 					return TRUE;
 			}
 

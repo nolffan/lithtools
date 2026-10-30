@@ -93,9 +93,13 @@ public:
 };
 
 
-// 0x4498d0.
+// 0x4498d0; NOLF's (0x45ad80) checks the root first, a pointer compared
+// "< 0": it is never true (retail bug, harmless: the test is dead).
 uint32 CUnseenPolyRemover::RemoveUnseenPolies(CPreWorld *pWorld, CMoArray<CBaseEditObj*> *pObjects)
 {
+	if(pWorld->m_RootNode < 0)
+		return 0;
+
 	MarkInsideLeaves(pWorld, pObjects);
 	return RemovePolies(pWorld);
 }
@@ -691,6 +695,8 @@ NextVert:;
 
 // Marks pLeaf and the leaves its portals lead to, but through hull maker
 // surfaces, FastApprox, counting them in g_nFastApproxLeaves (0x44ac50).
+// talon: NOLF's (0x45d550) reads the surface's flags directly; through
+// GetSurfaceFlags icl tests m_pSurface twice.
 void VisMarkFastApprox_R(CPreLeaf *pLeaf)
 {
 	CPrePortal *pPortal;
@@ -707,7 +713,7 @@ void VisMarkFastApprox_R(CPreLeaf *pLeaf)
 		pPortal = pLeaf->m_Unknown_00[i];
 
 		if(pPortal->m_pNode && pPortal->m_pNode->m_pPoly && pPortal->m_pNode->m_pPoly->m_pSurface &&
-			!(pPortal->m_pNode->m_pPoly->GetSurfaceFlags() & SURF_HULLMAKER) && pPortal->m_pLeaf)
+			!(pPortal->m_pNode->m_pPoly->m_pSurface->m_Flags & SURF_HULLMAKER) && pPortal->m_pLeaf)
 		{
 			VisMarkFastApprox_R(pPortal->m_pLeaf);
 		}

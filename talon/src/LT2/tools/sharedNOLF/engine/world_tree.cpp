@@ -142,13 +142,13 @@ static inline LTBOOL IsSegmentDimOutsideBox(LTVector &pt0, LTVector &pt1,
 
 // Returns BackSide if segment is behind boxMin, FrontSide if the segment
 // is in front of boxMax, and Intersect otherwise.
-// talon: the 2001 one takes the one dimension's coordinates by value
-// (inlined into TestNode, 0x44db3d, its arguments in dead parameter slots).
-static inline PolySide GetDimBoxStatus(float pt0, float pt1, float boxMin, float boxMax)
+// talon: NOLF's is Build 69's (the vectors and the dimension).
+static inline PolySide GetDimBoxStatus(LTVector &pt0, LTVector &pt1, 
+	LTVector &boxMin, LTVector &boxMax, uint32 iDim)
 {
-	if(pt0 < boxMin && pt1 < boxMin)
+	if(pt0[iDim] < boxMin[iDim] && pt1[iDim] < boxMin[iDim])
 		return BackSide;
-	else if (pt0 > boxMax && pt1 > boxMax)
+	else if (pt0[iDim] > boxMax[iDim] && pt1[iDim] > boxMax[iDim])
 		return FrontSide;
 	else
 		return Intersect;
@@ -157,16 +157,14 @@ static inline PolySide GetDimBoxStatus(float pt0, float pt1, float boxMin, float
 
 // Filters the box down the tree and calls the callback for any objects
 // that the box touches.
-// 0x44d7b0. talon: the 2001 one reads the frame code once, up front.
+// talon: NOLF's (0x45e7b0) reads the frame code each time, as Build 69's
+// does (AvP2's, 0x44d7b0, reads it once, up front).
 static void FindObjectsInBox_R(WorldTreeNode *pNode, FindObjInfo *pInfo)
 {
 	LTLink *pCur, *pListHead;
 	LTVector vMin, vMax;
 	WorldTreeObj *pObj;
-	uint32 frameCode;
 
-
-	frameCode = pInfo->m_pTree->m_TempFrameCode;
 
 	// Check objects sitting on this node.	
 	if(pNode->m_nObjectsOnOrBelow == 0)
@@ -181,10 +179,10 @@ static void FindObjectsInBox_R(WorldTreeNode *pNode, FindObjInfo *pInfo)
 		pCur = pCur->m_pNext;
 	
 		// Check the frame code.
-		if(pObj->m_WTFrameCode == frameCode)
+		if(pObj->m_WTFrameCode == pInfo->m_pTree->m_TempFrameCode)
 			continue;
 
-		pObj->m_WTFrameCode = frameCode;
+		pObj->m_WTFrameCode = pInfo->m_pTree->m_TempFrameCode;
 
 		// Do the boxes intersect?
 		pObj->GetBBox(&vMin, &vMax);
@@ -203,45 +201,43 @@ static void FindObjectsInBox_R(WorldTreeNode *pNode, FindObjInfo *pInfo)
 
 // Intersects the line segment in the specified dimension on fPlane's plane, 
 // then sees if the intersection point is inside the box on the other dimension.
-// talon: the 2001 one (0x44dda0) takes the coordinates by value and works out
-// only the other dimension's coordinate of the intersection.
+// talon: the NOLF one is Build 69's (the vectors by reference, the
+// intersection point worked out whole), with a double 0.001 (0x49c6a8);
+// inlined twice into TestBoxBothSides (0x45e930).
 static inline LTBOOL TestBoxPlane(
-	float pt1, 
-	float pt2, 
+	LTVector &pt1, 
+	LTVector &pt2, 
 	float fPlane,
-	float boxMinOther, 
-	float boxMaxOther, 
-	float pt1Other, 
-	float pt2Other)
+	LTVector &boxMin, 
+	LTVector &boxMax, 
+	uint32 iDim, 
+	uint32 iOtherDim)
 {
-	float fTest;
+	float t;
+	LTVector vTest;
 	
 	// Does it cross the plane?
-	if((pt1 < fPlane) != (pt2 <= fPlane))
+	if((pt1[iDim] < fPlane) != (pt2[iDim] <= fPlane))
 	{
-		if(fabs(pt2 - pt1) < 0.001)
-			fTest = pt1Other;
+		if(fabs(pt2[iDim] - pt1[iDim]) < 0.001)
+			t = 0.0f;
 		else
-			fTest = (fPlane - pt1) * (pt2Other - pt1Other) / (pt2 - pt1) + pt1Other;
+			t = (fPlane - pt1[iDim]) / (pt2[iDim] - pt1[iDim]);
 	}
 	else
 	{
 		return LTFALSE;
 	}
 
-	return fTest >= boxMinOther && fTest <= boxMaxOther;
+	vTest = pt1 + (pt2 - pt1) * t;
+	return vTest[iOtherDim] >= boxMin[iOtherDim] && vTest[iOtherDim] <= boxMax[iOtherDim];
 }
 
 
 // Intersects the line segment with the 2 sides of the box on dimension iDim, then sees if the
 // intersection point is inside the box on iOtherDim.
-// talon: the 2001 one is half way to Build 69's: the vectors and the
-// dimensions come in, and it hands TestBoxPlane the coordinates by value
-// through _CVector::operator[]. With this shape TestNode's budget expands
-// the X side's two TestBoxPlanes and leaves the Z side's two as calls to the
-// out-of-line copy (0x44dda0), as shipped; TestBoxPlane spelt out four times,
-// or this one taking the floats, never gives that split.
-static inline LTBOOL TestBoxBothSides(
+// talon: not inline in NOLF's: TestNode calls it (0x45e930) twice.
+static LTBOOL TestBoxBothSides(
 	LTVector &pt1, 
 	LTVector &pt2, 
 	LTVector &boxMin, 
@@ -249,10 +245,10 @@ static inline LTBOOL TestBoxBothSides(
 	uint32 iDim, 
 	uint32 iOtherDim)
 {
-	if(TestBoxPlane(pt1[iDim], pt2[iDim], boxMin[iDim], boxMin[iOtherDim], boxMax[iOtherDim], pt1[iOtherDim], pt2[iOtherDim]))
+	if(TestBoxPlane(pt1, pt2, boxMin[iDim], boxMin, boxMax, iDim, iOtherDim))
 		return LTTRUE;
 
-	if(TestBoxPlane(pt1[iDim], pt2[iDim], boxMax[iDim], boxMin[iOtherDim], boxMax[iOtherDim], pt1[iOtherDim], pt2[iOtherDim]))
+	if(TestBoxPlane(pt1, pt2, boxMax[iDim], boxMin, boxMax, iDim, iOtherDim))
 		return LTTRUE;
 
 	return LTFALSE;
@@ -260,9 +256,8 @@ static inline LTBOOL TestBoxBothSides(
 
 // Does tests to see if the segment intersects the node.  If so, calls IntersectSegment_R
 // on it and returns the value.
-// talon: 0x44dac0, the 2001 one. GetDimBoxStatus takes the coordinates by
-// value (X and Z spelt out); TestBoxBothSides takes the vectors and the
-// dimensions, as in Build 69.
+// talon: NOLF's (0x45eb50) is Build 69's: GetDimBoxStatus and
+// TestBoxBothSides take the vectors and the dimensions.
 static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 {
 	PolySide outStatus;
@@ -277,10 +272,10 @@ static LTBOOL TestNode(WorldTreeNode *pNode, ISInfo *pInfo)
 	else
 	{
 		// If both points are outside on the same side, then the line is outside.
-		outStatus = GetDimBoxStatus(pInfo->m_Pts[0].x, pInfo->m_Pts[1].x, pNode->m_BBoxMin.x, pNode->m_BBoxMax.x);
+		outStatus = GetDimBoxStatus(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 0);
 		if(outStatus != Intersect)
 		{
-			if(outStatus == GetDimBoxStatus(pInfo->m_Pts[0].z, pInfo->m_Pts[1].z, pNode->m_BBoxMin.z, pNode->m_BBoxMax.z))
+			if(outStatus == GetDimBoxStatus(pInfo->m_Pts[0], pInfo->m_Pts[1], pNode->m_BBoxMin, pNode->m_BBoxMax, 2))
 			{
 				// Trivial reject.
 				return LTFALSE;
@@ -901,11 +896,6 @@ uint32 WorldTree::GetCurFrameCode()
 }
 
 
-void WorldTree::Init(WorldTreeHelper *pHelper)
-{
-	m_pHelper = pHelper;
-	m_AlwaysVisObjects.Init();
-}
 
 
 void WorldTree::Term()
@@ -914,6 +904,17 @@ void WorldTree::Term()
 	m_nNodes = 0;
 	m_nDepth = 0;
 	m_AlwaysVisObjects.Term();
+}
+
+
+// talon: stand-in: the list tied off by hand. m_AlwaysVisObjects.Init()
+// (or TieOff(), or dl_TieOff) compiles the same stores but schedules icl's
+// stack adjust after them, where 0x460330 has it before; NOLF's spelling
+// isn't known.
+void WorldTree::Init(WorldTreeHelper *pHelper)
+{
+	m_pHelper = pHelper;
+	m_AlwaysVisObjects.m_pPrev = m_AlwaysVisObjects.m_pNext = (LTLink*)&m_AlwaysVisObjects;
 }
 
 
