@@ -751,6 +751,35 @@ bool CEditRegion::PostLoadUpdateVersion(uint32 nVersion, bool& bModified)
 }
 
 
+// talon: Build 69's (the 2001 LoadFile, above, reads a stream)
+RegionLoadStatus CEditRegion::LoadFile( const char* filename, CEditProjectMgr* pProject, uint32& nVersion, bool& bBinary)
+{
+	//get the extension from the filename
+	const char* pszExtension = filename;
+
+	const char* pszCurr = filename;
+
+	while(*pszCurr)
+	{
+		if(*pszCurr == '.')
+			pszExtension = pszCurr;
+
+		pszCurr++;
+	}
+
+	//alright, now classify the file
+	if(stricmp(pszExtension, ".tbw") == 0)
+	{
+		bBinary = true;
+		return LoadTBW(filename, pProject, nVersion);
+	}
+	else
+	{
+		bBinary = false;
+		return LoadLTA(filename, pProject, nVersion);
+	}
+}
+
 RegionLoadStatus CEditRegion::LoadLTA(const char* filename, CEditProjectMgr* pProject, uint32& nFileVersion )
 {
 	RegionLoadStatus	status = REGIONLOAD_INVALIDFILE;

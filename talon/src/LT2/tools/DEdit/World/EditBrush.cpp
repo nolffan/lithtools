@@ -1123,3 +1123,10 @@ void CEditBrush::OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const
 	CWorldNode::OnPropertyChanged(pProperty, bNotifyGame, pModifiers);
 }
 #endif // DIRECTEDITOR_BUILD (talon: closes Build 69's block above)
+
+// talon: Build 69's
+void CEditBrush::DoCopy(CWorldNode *pOther, CStringHolder *pStringHolder)
+{
+	CopyEditBrush(pOther->AsBrush(), pStringHolder);
+	CWorldNode::DoCopy(pOther);
+}

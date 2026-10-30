@@ -179,3 +179,20 @@ CEditBrush* no_CreateNewBrush(CEditRegion *pRegion, CWorldNode *pParent)
 	return pBrush;
 }
 
+
+// talon: Build 69's (the image's "Brush", "BrushType",
+// "FrictionCoefficient", 0x0043c5bd)
+void SetupBrushProperties(CEditBrush *pBrush, CEditRegion *pRegion)
+{
+	CBaseProp	*pProp;
+
+	SetupWorldNode("Brush", pBrush->AsNode(), pRegion);
+
+	pProp = pBrush->m_PropList.GetProp("BrushType");
+	if(pProp && (pProp->m_Type == PT_LONGINT))
+		((CRealProp*)pProp)->m_Value = 129.0f;
+
+	pProp = pBrush->m_PropList.GetProp("FrictionCoefficient");
+	if(pProp && (pProp->m_Type == PT_REAL))
+		((CRealProp*)pProp)->m_Value = 1.0f;
+}

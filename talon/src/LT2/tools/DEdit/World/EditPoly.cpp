@@ -95,6 +95,13 @@ CEditPoly::CEditPoly()
 }
 
 
+// talon: Build 69's
+CEditPoly::CEditPoly( CEditPoly *pCopyFrom )
+{
+	CommonConstructor( );
+	CopyEditPoly( pCopyFrom );
+}
+
 // CEditPoly::CEditPoly( CEditBrush *pBrush ) (0x40f8f0).
 CEditPoly::CEditPoly( CEditBrush *pBrush )
 {
