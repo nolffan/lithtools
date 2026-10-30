@@ -63,8 +63,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\built\Release\tools\ProcessorNOLF"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W2 /GX /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
-# ADD CPP /nologo /MT /W2 /GX /EHa /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
+# ADD BASE CPP /nologo /MT /W2 /GX /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdkNOLF\inc" /I "..\..\lithshared\stdlithNOLF" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
+# ADD CPP /nologo /MT /W2 /GX /EHa /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdkNOLF\inc" /I "..\..\lithshared\stdlithNOLF" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -194,7 +194,7 @@ SOURCE=.\LightMapMaker.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\..\sdk\inc\ltquatbase.cpp
+SOURCE=..\..\sdkNOLF\inc\ltquatbase.cpp
 # End Source File
 # Begin Source File
 
