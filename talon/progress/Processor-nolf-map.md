@@ -67,8 +67,13 @@ cvtres 1735, and 82 objects without `@comp.id`.
   EH-framed functions call them. Our icl 4.0 (build 99100, the trial)
   inlines into those too, under every switch and pragma tried (/EHs,
   /Ob1, /Qip_no_inlining, /Qvc6, `#pragma inline_depth(0)`,
-  `auto_inline`, mcpcom without `-mGLOB_new_eh`); icl 4.5 is further
-  off. Probably an earlier 4.0 build. /Ob0 for a whole file is the
+  `auto_inline`, mcpcom without `-mGLOB_new_eh`). The other Intel
+  compilers are further off: 4.5 keeps few of 4.0's matches, and 5.0.1
+  (build 010525Z) matches almost nothing (streamsim, PropList,
+  LightMapMaker, WorldNode and EditBrush: 6, 1, 1, 1 and 1 functions,
+  against 4.0's 52, 72, 309, 105 and 60) and inlines into EH-framed
+  functions too. So it is 4.0, and probably another build of it than
+  ours (the original 5.0, unheld, is unlikely if 5.0.1 is this far). /Ob0 for a whole file is the
   stand-in where it wins (Processor.dsp: streamsim, ProcessorApp,
   EditObjects, create_world_tree, BuildHulls).
 - **`X$$1`** is a second entry point: a function with 8-byte locals gets
