@@ -44,8 +44,22 @@ TARGETS = [
          shipped=U2 + "/DEdit.exe", stem="DEdit", built=None, optional=True,
          app=[(0x00401000, 0x0048d759)]),
     dict(label="ModelEdit.exe", what="model editor (Talon, Update 1/2)", kind="image",
-         shipped=U2 + "/ModelEdit.exe", stem="ModelEdit", built=None, optional=True,
-         app=[(0x00401000, 0x00437194)]),
+         shipped=U2 + "/ModelEdit.exe", stem="ModelEdit",
+         # src/LT2/tools/ModelEdit/ModelEdit.dsw (cl 9044, /O1, static MFC;
+         # progress/ModelEdit-map.md). Its own code, in module order, then
+         # the LT2 libraries (RegMgr 0x00436870..0x00436be2, StdLith built
+         # with the allocator override 0x00436c00..0x00437164: Monolith's,
+         # ours to build, so inside the range); from 0x00437170 MFC's inline
+         # functions (AfxGetMainWnd, the ??_9 vcall thunks), from 0x00437194
+         # nafxcw.lib's wincore.obj. Inside the range, the C++ library's
+         # (libcpmt.lib's) header functions our objects instantiate are
+         # screened out (progress/ModelEdit-screen-exclude.csv)
+         built="src/LT2/built/Release/tools/ModelEdit/ModelEdit.exe", optional=True,
+         partial_objs=["src/LT2/built/Release/tools/ModelEdit/*.obj",
+                       "src/LT2/built/Release/tools/ModelEdit/ltamgr/ltamgr.lib",
+                       "src/LT2/lithshared/built/Release/Lib_StdLith_alloc/Lib_StdLith.lib",
+                       "src/LT2/lithshared/built/Release/RegMgr/regmgr.lib"],
+         app=[(0x00401000, 0x00437170)]),
     # ---- the world processors ------------------------------------------
     # AvP2 v1.0's (2001-10-03, cl 12.00.8966) writes AvP2's world version
     # 70; NOLF Tools 001's (2001-01-03, cl 12.00.8447) NOLF's 66
