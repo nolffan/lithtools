@@ -8,11 +8,13 @@
 #include "editregion.h"
 #include "node_ops.h"
 
-// talon: the 2001 one (0x425520..0x425940): no_DetachNode, no_AttachNode and
-// no_DestroyNode, which takes the node off the region's lists itself. Build
-// 69's no_InitializeNewNode, no_CreateNewBrush and SetupBrushProperties are
-// not in the image (they use what the 2001 CEditRegion and EditObjects do
-// not have).
+// talon: NOLF's (0x431c00..0x4325e0): Build 69's SetupBrushProperties
+// (0x431c00), no_DetachNode, no_AttachNode, no_InitializeNewNode
+// (0x431ec0), no_CreateNewBrush (0x432100) and no_DestroyNode, which takes
+// the node off the region's lists itself. The 2001 CEditRegion has no
+// AddBrush/AddObject: no_InitializeNewNode adds to its lists directly
+// (inline at 0x432006 and 0x431ee1). AvP2's processor has only the
+// detach, attach and destroy.
 
 
 BOOL g_bCheckNodes = TRUE;
@@ -31,6 +33,22 @@ BOOL g_bCheckNodes = TRUE;
 #else
 	#define NODEOPS_CHECK(x) ASSERT(x)
 #endif
+
+
+void SetupBrushProperties(CEditBrush *pBrush, CEditRegion *pRegion)
+{
+	CBaseProp	*pProp;
+
+	SetupWorldNode("Brush", pBrush, pRegion);
+
+	pProp = pBrush->m_PropList.GetProp("BrushType");
+	if(pProp && (pProp->m_Type == PT_LONGINT))
+		((CRealProp*)pProp)->m_Value = 129.0f;
+
+	pProp = pBrush->m_PropList.GetProp("FrictionCoefficient");
+	if(pProp && (pProp->m_Type == PT_REAL))
+		((CRealProp*)pProp)->m_Value = 1.0f;
+}
 
 
 void no_DetachNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bAttachToRoot)
@@ -88,6 +106,37 @@ void no_AttachNode(CEditRegion *pRegion, CWorldNode *pChild, CWorldNode *pParent
 		GetNodeView( )->SetNode(pChild);
 	}
 #endif
+}
+
+
+void no_InitializeNewNode(CEditRegion *pRegion, CWorldNode *pNode, CWorldNode *pParent)
+{
+	if(pNode->GetType() == Node_Brush)
+	{
+		pRegion->m_Brushes.AddTail(pNode->AsBrush());
+	}
+	else if(pNode->GetType() == Node_Object)
+	{
+		pRegion->m_Objects.Append(pNode->AsObject());
+	}
+
+	// Set it up in the node view.
+	no_AttachNode(pRegion, pNode, pParent);
+
+	// Select it if it was selected.
+	if(pNode->IsFlagSet(NODEFLAG_SELECTED))
+		pRegion->SelectNode(pNode);
+}
+
+
+CEditBrush* no_CreateNewBrush(CEditRegion *pRegion, CWorldNode *pParent)
+{
+	CEditBrush *pBrush;
+	
+	pBrush = new CEditBrush;
+	SetupBrushProperties(pBrush, pRegion);
+	no_InitializeNewNode(pRegion, pBrush, pParent);
+	return pBrush;
 }
 
 

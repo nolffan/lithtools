@@ -10,8 +10,10 @@
 	// ----------------------------------------------------------------------- //
 	//      PURPOSE:        Tells if the given poly is convex.
 	// ----------------------------------------------------------------------- //
+	// talon: NOLF's returns BOOL, not bool: inlined in CPrePoly::PostJoinFixup
+	// (0x43ff40) its FALSE goes straight to the caller's return FALSE.
 	template<class T>
-	bool IsConvex(T *pPoly, PReal convexThreshold)
+	BOOL IsConvex(T *pPoly, PReal convexThreshold)
 	{
 
 		uint32		i, j, nextI;
@@ -27,7 +29,7 @@
 			edgePlane.m_Normal = edgePlane.m_Normal.Cross(pPoly->Normal());
 			edgePlane.m_Normal.Norm();
 			if(edgePlane.m_Normal.Mag() < 0.1f)
-				return false;
+				return FALSE;
 
 			edgePlane.m_Dist = edgePlane.m_Normal.Dot(pPoly->Pt(i));
 
@@ -45,12 +47,12 @@
 				dot = pointDots[j];
 				if(dot < convexThreshold)
 				{
-					return false;
+					return FALSE;
 				}
 			}
 		}
 
-		return true;
+		return TRUE;
 	}
 
 	

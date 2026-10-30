@@ -3,12 +3,13 @@
 #include "iltmath.h"
 #include "geomroutines.h"
 
-// talon: the 2001 one (0x424210..0x424b40), from Build 69's runtime source
-// with the image's differences: ILTMath's own virtuals are the
-// implementation (CLTMath, which the lightmap maker embeds, adds nothing),
-// and there are SetupEuler and GetEulerAngles taking a vector, and
-// GetEulerAngles (written from the image). InterpolateRotation's code is
-// folded with the lightmap maker's (0x41d6e0).
+// talon: NOLF's (0x42ff60..0x431080; ILTMath's vtable 0x489960, 15
+// entries), from Build 69's runtime source with the image's differences:
+// ILTMath's own virtuals are the implementation (CLTMath, which the
+// lightmap maker embeds, adds nothing). NOLF's ILTMath is NOLF's SDK's
+// (iltmath.h): no SetupEuler taking a vector and no GetEulerAngles, which
+// AvP2's has (EulerRotateX calls RotateAroundAxis through vtable+0x34,
+// 0x430985).
 
 
 LTRESULT ILTMath::GetRotationVectors(LTRotation &rot, LTVector &right, LTVector &up, LTVector &forward)
@@ -27,11 +28,6 @@ LTRESULT ILTMath::SetupEuler(LTRotation &rRot, float pitch, float yaw, float rol
 {
 	gr_EulerToRotation(pitch, yaw, roll, &rRot);
 	return LT_OK;
-}
-
-LTRESULT ILTMath::SetupEuler(LTRotation &rRot, LTVector &vAngles)
-{
-	return SetupEuler(rRot, vAngles.x, vAngles.y, vAngles.z);
 }
 
 LTRESULT ILTMath::SetupTransformationMatrix(LTMatrix &mMat, LTVector &vTranslation, LTRotation &rRot)
@@ -135,73 +131,4 @@ LTRESULT ILTMath::GetRotationVectorsFromMatrix(LTMatrix &mMat,
 {
 	mMat.GetBasisVectors(&vRight, &vUp, &vForward);
 	return LT_OK;
-}
-
-// Undoes SetupEuler: the roll from the right vector against the level
-// one, then, rolled back, the pitch, then the yaw.
-LTRESULT ILTMath::GetEulerAngles(LTRotation &rRot, float *pitch, float *yaw, float *roll)
-{
-	LTRotation rot;
-	LTVector vUp, vLevelUp, vRight, vLevelForward, vLevelRight, vForward;
-	float fCos, fSin;
-
-	rot = rRot;
-	GetRotationVectors(rot, vRight, vUp, vForward);
-
-	vLevelRight = vForward.Cross(LTVector(0.0f, 1.0f, 0.0f));
-	vLevelRight.Norm();
-	vLevelUp = vLevelRight.Cross(vForward);
-
-	if(roll)
-	{
-		fCos = vRight.Dot(vLevelRight);
-		fSin = vRight.Dot(vLevelUp);
-		if(fCos > 1.0f) fCos = 1.0f; else if(fCos < -1.0f) fCos = -1.0f;
-		if(fSin > 1.0f) fSin = 1.0f; else if(fSin < -1.0f) fSin = -1.0f;
-
-		*roll = (float)acos(fCos);
-		if(fSin < 0.0f)
-			*roll = -*roll;
-	}
-
-	AlignRotation(rot, vForward, vLevelUp);
-	GetRotationVectors(rot, vRight, vUp, vForward);
-
-	vLevelUp.Init(0.0f, 1.0f, 0.0f);
-	vLevelForward = vLevelUp.Cross(vRight);
-	vLevelForward.Norm();
-
-	if(pitch)
-	{
-		fCos = vLevelForward.Dot(vForward);
-		fSin = vForward.Dot(vLevelUp);
-		if(fCos > 1.0f) fCos = 1.0f; else if(fCos < -1.0f) fCos = -1.0f;
-		if(fSin > 1.0f) fSin = 1.0f; else if(fSin < -1.0f) fSin = -1.0f;
-
-		*pitch = (float)acos(fCos);
-		if(fSin > 0.0f)
-			*pitch = -*pitch;
-	}
-
-	AlignRotation(rot, vLevelForward, vLevelUp);
-	GetRotationVectors(rot, vRight, vUp, vForward);
-
-	if(yaw)
-	{
-		fCos = vForward.Dot(LTVector(0.0f, 0.0f, 1.0f));
-		fSin = vForward.Dot(LTVector(1.0f, 0.0f, 0.0f));
-		if(fCos > 1.0f) fCos = 1.0f; else if(fCos < -1.0f) fCos = -1.0f;
-		if(fSin > 1.0f) fSin = 1.0f; else if(fSin < -1.0f) fSin = -1.0f;
-
-		*yaw = (float)acos(fCos);
-		if(fSin < 0.0f)
-			*yaw = -*yaw;
-	}
-
-	return LT_OK;
-}
-
-LTRESULT ILTMath::GetEulerAngles(LTRotation &rRot, LTVector &vAngles)
-{
-	return GetEulerAngles(rRot, &vAngles.x, &vAngles.y, &vAngles.z);
 }
