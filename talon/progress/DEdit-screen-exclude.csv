@@ -5,31 +5,128 @@ addr,reason
 0x0040177e,"not game code: MFC, ?LoadBitmapA@CBitmap@@QAEHI@Z (nafxcw.lib ctlpict.obj and 2 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
 0x00401bb1,"not game code: MFC, ??1CFileDialog@@UAE@XZ (nafxcw.lib dlgfile.obj and 3 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
 0x004030f0,"not game code: MFC, ?GetFont@CWnd@@QBEPAVCFont@@XZ (nafxcw.lib occcont.obj and 2 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
-0x00404043,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404044,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x0040404c,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404064,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404065,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404066,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404067,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x0040406c,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x0040406e,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x0040406f,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404074,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404075,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
-0x00404078,"not a function: interior of the function at 0x00403ea7 (ProjectBar's, 412 bytes as the table has it; it runs on past 0x404079); the function table starts a row inside it"
+0x00404043,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404044,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404045,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x0040404c,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x0040404f,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404064,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404065,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404066,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404067,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x0040406c,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x0040406e,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x0040406f,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404074,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404075,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404078,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
+0x00404079,not a function: interior block of CProjectBar::LoadLayoutFile (0x00403ea7..0x0040414d); the function table starts a row inside it
 0x004045d5,"not game code: MFC, ??1CWaitCursor@@QAE@XZ (nafxcw.lib daoview.obj and 10 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
 0x00404c85,"not game code: MFC, ??1CBitmap@@UAE@XZ (nafxcw.lib ctlpict.obj and 2 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
 0x00405d0c,"not game code: MFC, ?GetOwner@CWnd@@QBEPAV1@XZ (nafxcw.lib barcool.obj and 4 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
 0x00406992,"not game code: MFC, ??1CFileDialog@@UAE@XZ (nafxcw.lib dlgfile.obj and 3 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
+0x00408636,"not a function: interior block of GetTextureDimensions (0x00408596..0x0040868b); its catch block, which the function table takes for a function"
+0x0040865c,"not a function: interior block of GetTextureDimensions (0x00408596..0x0040868b); its catch block, which the function table takes for a function"
 0x00409fde,"not game code: MFC, ??0CString@@QAE@XZ (nafxcw.lib filelist.obj, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
-0x0041656c,"not a function: interior of the function at 0x0041653e (the row at 0x00416567 starts mid-instruction); the function table starts a row inside it"
-0x0041656d,"not a function: interior of the function at 0x0041653e (the row at 0x00416567 starts mid-instruction); the function table starts a row inside it"
-0x00416570,"not a function: interior of the function at 0x0041653e (the row at 0x00416567 starts mid-instruction); the function table starts a row inside it"
-0x00416574,"not a function: interior of the function at 0x0041653e (the row at 0x00416567 starts mid-instruction); the function table starts a row inside it"
-0x0041676c,"not a function: interior of the function at 0x004166da (mid-instruction); the function table starts a row inside it"
-0x00417363,"not a function: interior of the function at 0x0041731a (after a call); the function table starts a row inside it"
+0x0040bcbf,not a function: interior block of CTextureDlg::DoAddToPalette (0x0040bcaa..0x0040bd08); the function table starts a row inside it
+0x0040d786,not a function: interior block of CAdvancedSelect::Unselect (0x0040d739..0x0040d7a6); the function table starts a row inside it
+0x00410001,not a function: interior block of CBasePoly::GetTriangles (0x0040fe8c..0x004100df); the function table starts a row inside it
+0x00412f4e,not a function: interior block of CMoArray<CMoArray<int>>::Insert2 (0x00412e32..0x00412f7e); the function table starts a row inside it
+0x00413233,not a function: interior block of CColorSelectDlg::SetCurColor (0x00413222..0x004134ac); the function table starts a row inside it
+0x00414318,not a function: interior block of CColumnCtrl::Sort (0x004142af..0x00414424); the function table starts a row inside it
+0x0041636f,not a function: interior block of dfm_BuildName (0x0041630e..0x0041638c); the function table starts a row inside it
+0x00416563,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x00416567,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x0041656c,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x0041656d,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x00416570,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x00416574,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x00416575,not a function: interior block of CDEditApp::CDEditApp (0x0041653e..0x004165b2); the function table starts a row inside it
+0x004166da,not a function: interior block of CDEditApp::InitInstance (0x00416687..0x004168af); the function table starts a row inside it
+0x0041676c,not a function: interior block of CDEditApp::InitInstance (0x00416687..0x004168af); the function table starts a row inside it
+0x0041676e,not a function: interior block of CDEditApp::InitInstance (0x00416687..0x004168af); the function table starts a row inside it
+0x00416d6f,not a function: interior block of CDEditApp::OnFileNewProject (0x00416b48..0x004171a7); the function table starts a row inside it
+0x00416e6f,not a function: interior block of CDEditApp::OnFileNewProject (0x00416b48..0x004171a7); the function table starts a row inside it
+0x00416f66,not a function: interior block of CDEditApp::OnFileNewProject (0x00416b48..0x004171a7); the function table starts a row inside it
+0x0041726f,not a function: interior block of CDEditApp::OnFileOpen (0x004171dc..0x0041731a); the function table starts a row inside it
+0x00417363,not a function: interior block of CDEditApp::OnOpenRecentFile (0x0041731a..0x004173a8); the function table starts a row inside it
+0x00417365,not a function: interior block of CDEditApp::OnOpenRecentFile (0x0041731a..0x004173a8); the function table starts a row inside it
+0x00417372,not a function: interior block of CDEditApp::OnOpenRecentFile (0x0041731a..0x004173a8); the function table starts a row inside it
+0x0041746e,not a function: interior block of CAboutDlg::OnInitDialog (0x004173a8..0x00417476); the function table starts a row inside it
+0x00417478,not a function: interior block of CDEditApp::OnIdle (0x00417476..0x004175b0); the function table starts a row inside it
+0x0041756e,not a function: interior block of CDEditApp::OnIdle (0x00417476..0x004175b0); the function table starts a row inside it
+0x0041776f,not a function: interior block of CDEditApp::OnFileNewWorld (0x00417699..0x004179a1); the function table starts a row inside it
+0x00417845,not a function: interior block of CDEditApp::OnFileNewWorld (0x00417699..0x004179a1); the function table starts a row inside it
+0x0041786f,not a function: interior block of CDEditApp::OnFileNewWorld (0x00417699..0x004179a1); the function table starts a row inside it
+0x00417972,not a function: interior block of CDEditApp::OnFileNewWorld (0x00417699..0x004179a1); the function table starts a row inside it
+0x0041aacf,not a function: interior block of D3DRender::Resize (0x0041aab3..0x0041ab02); the function table starts a row inside it
+0x0041aad9,not a function: interior block of D3DRender::Resize (0x0041aab3..0x0041ab02); the function table starts a row inside it
+0x0041ab08,not a function: interior block of dm_CreateDirect3dDrawMgr (0x0041ab02..0x0041abcc); the function table starts a row inside it
+0x0041d4f1,not a function: interior block of DrawBase::DrawObject (0x0041d454..0x0041d967); the function table starts a row inside it
+0x0041db35,not a function: interior block of DrawBase::DrawPaths (0x0041d9f3..0x0041dfb6); the function table starts a row inside it
+0x0041db60,not a function: interior block of DrawBase::DrawPaths (0x0041d9f3..0x0041dfb6); the function table starts a row inside it
+0x0041efe7,not a function: interior block of dtxmgr's function (0x0041efe2..0x0041f004); the function table starts a row inside it
+0x0041f1ec,not a function: interior block of CMoArray<CVector>::SetSize2 (0x0041f1ea..0x0041f24c); the function table starts a row inside it
+0x0041f672,not a function: interior block of dtx_Alloc (0x0041f612..0x0041f7b4); the function table starts a row inside it
+0x00423df8,"not a function: interior block of LoadNodeProperties (0x00423c91..0x00423e35); its catch block, which the function table takes for a function"
+0x00423e1e,"not a function: interior block of LoadNodeProperties (0x00423c91..0x00423e35); its catch block, which the function table takes for a function"
+0x00424b31,not a function: interior block of CEditPlane::SplitPoly (0x00424937..0x00424b98); the function table starts a row inside it
+0x004275fa,"not a function: interior block of CEditRegion::LoadFile (0x00427381..0x0042763a); its catch block, which the function table takes for a function"
+0x00427620,"not a function: interior block of CEditRegion::LoadFile (0x00427381..0x0042763a); its catch block, which the function table takes for a function"
+0x004295e8,not a function: interior block of CEditRegion::UpdateNodeRefProps (0x004294e1..0x00429639); the function table starts a row inside it
+0x0042b02c,not a function: interior block of dm_CreateNormalDrawMgr (0x0042b02b..0x0042b077); the function table starts a row inside it
+0x0042e07b,not a function: interior block of quat_Slerp (0x0042df60..0x0042e0a9); the function table starts a row inside it
+0x0042f751,not a function: interior block of _InsertStringIntoList (0x0042f6f2..0x0042f75c); the function table starts a row inside it
+0x00430001,not a function: interior block of CMainFrame::OnUpdateGeometryEditMode (0x0042ffe3..0x00430017); the function table starts a row inside it
+0x00430bb4,not a function: interior block of CMainFrame::OnSingleNodeSelection (0x00430ba1..0x00430c0c); the function table starts a row inside it
+0x00434443,not a function: interior block of model.cpp's function (0x0043443f..0x0043444c); the function table starts a row inside it
+0x00434465,not a function: interior block of CMoArray<ModelTri>::GenCopyList (0x0043444c..0x004344f5); the function table starts a row inside it
+0x00434470,not a function: interior block of CMoArray<ModelTri>::GenCopyList (0x0043444c..0x004344f5); the function table starts a row inside it
+0x00434474,not a function: interior block of CMoArray<ModelTri>::GenCopyList (0x0043444c..0x004344f5); the function table starts a row inside it
+0x00434477,not a function: interior block of CMoArray<ModelTri>::GenCopyList (0x0043444c..0x004344f5); the function table starts a row inside it
+0x0043464d,not a function: interior block of CMoArray<PieceLOD>::GenGetAt (0x0043464a..0x00434670); the function table starts a row inside it
+0x00434e5d,not a function: interior block of CMoArray<LeafPolyRef>::GenCopyList (0x00434e17..0x00434eb5); the function table starts a row inside it
+0x00435b7c,not a function: interior block of CMoArray<LTMatrix>::InternalNiceSetSize (0x00435b20..0x00435bb6); the function table starts a row inside it
+0x00437af6,not a function: interior block of PieceLOD::Load (0x00437aa5..0x00437cc5); the function table starts a row inside it
+0x00439016,not a function: interior block of LTStream_Read (0x00439006..0x00439037); the function table starts a row inside it
+0x004393c6,"not a function: interior block of vector<CAnim*>::_M_insert_overflow (0x004392dd..0x004393e5); its catch block, which the function table takes for a function"
+0x004395e7,not a function: interior block of _Rb_tree<string>::_M_copy (0x00439554..0x0043960f); the function table starts a row inside it
+0x0043999b,"not a function: interior block of _Rb_tree<string>::_M_create_node (0x0043994b..0x004399b6); its catch block, which the function table takes for a function"
+0x00439deb,"not a function: interior block of _Rb_tree<string, set<string>>::_M_create_node (0x00439da7..0x00439e05); its catch block, which the function table takes for a function"
+0x0043a039,not a function: interior block of __node_alloc::_S_chunk_alloc (0x00439fd3..0x0043a0c2); the function table starts a row inside it
+0x0043af53,"not a function: interior block of CMap<void*,void*,Color_Font>::NewAssoc (0x0043af20..0x0043af88); the function table starts a row inside it"
+0x0043b391,"not game code: MFC, ?GetAt@CStringArray@@QBE?AVCString@@H@Z (nafxcw.lib array_s.obj and 1 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
+0x00440000,not a function: interior block of COptionsPrimitives::LoadSettings (0x0043ff58..0x00440039); the function table starts a row inside it
+0x00443344,not a function: interior block of CPopupNoteDlg::UpdateWindowPos (0x00443284..0x004433b4); the function table starts a row inside it
+0x0044f79e,not a function: interior block of CRegionDoc::SaveOBJ (0x0044f5f1..0x0044fa14); the function table starts a row inside it
+0x0044fbb3,"not a function: interior block of CRegionDoc::StartPreProcessor (0x0044facf..0x0044fbcb); its catch block, which the function table takes for a function"
+0x00450002,not a function: interior block of CRegionDoc::UpdateSelectionBox (0x0044fe1f..0x0045003d); the function table starts a row inside it
+0x00453e95,not a function: interior block of CRegionView::InitTracker (0x00452bb7..0x00455025); the function table starts a row inside it
+0x0045561c,"not a function: interior block of CRegionView::OnIdle (0x00455537..0x0045562e); its catch block, which the function table takes for a function"
+0x00455674,"not a function: interior block of CRegionView::OnDraw (0x0045562e..0x00455686); its catch block, which the function table takes for a function"
+0x00455819,"not a function: interior block of CRegionView::OnSize (0x004557cb..0x0045582b); its catch block, which the function table takes for a function"
+0x004558b8,"not a function: interior block of CRegionView::OnLButtonDown (0x0045584a..0x004558ca); its catch block, which the function table takes for a function"
+0x00455b26,"not a function: interior block of CRegionView::OnRButtonUp (0x00455aa7..0x00455b38); its catch block, which the function table takes for a function"
+0x00455c2d,"not a function: interior block of RegionView's function (0x00455bf7..0x00455c3f); its catch block, which the function table takes for a function"
+0x0045615b,"not a function: interior block of CRegionView::OnEditUndo (0x0045601b..0x0045616d); its catch block, which the function table takes for a function"
+0x004562c0,"not a function: interior block of CRegionView::OnEditRedo (0x0045618c..0x004562d2); its catch block, which the function table takes for a function"
+0x00456455,"not a function: interior block of CRegionView::OnAddObject (0x00456336..0x00456467); its catch block, which the function table takes for a function"
+0x004565d6,not a function: interior block of CRegionView::OnFileImportWorld (0x00456566..0x0045670c); the function table starts a row inside it
+0x004574de,"not a function: interior block of CRegionView::OnBindToObject (0x00457261..0x004574f0); its catch block, which the function table takes for a function"
+0x00457ce6,"not a function: interior block of CRegionView::OnRemoveExtraEdges (0x00457c3d..0x00457cf8); its catch block, which the function table takes for a function"
+0x0045b7e2,"not a function: interior block of CRegionView::OnBrushUnJoin (0x0045b794..0x0045ba49); the function table starts a row inside it, mid-instruction"
+0x0045f94e,not a function: interior block of CRotationEdit::OnInitDialog (0x0045f903..0x0045fa10); the function table starts a row inside it
+0x00460440,not a function: interior block of dalloc_z (0x00460433..0x0046045f); the function table starts a row inside it
 0x004606f6,"not game code: MFC, ?LoadBitmapA@CBitmap@@QAEHI@Z (nafxcw.lib ctlpict.obj and 2 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
-0x0046d2c1,"not a function: interior of the function at 0x0046d2a7 (its pop esi; ret, the target of its je at 0x0046d2b2); the function table starts a row inside it"
+0x00461d04,not a function: interior block of WriteTga (0x00461bea..0x00461d74); the function table starts a row inside it
+0x00462a45,not a function: interior block of PaintPreviewWnd (0x004629cd..0x00462dd6); the function table starts a row inside it
+0x0046d2c1,not a function: interior block of CViewRender::~CViewRender (0x0046d2a7..0x0046d2c3); the function table starts a row inside it
+0x0046d356,not a function: interior block of CViewRender::RestartRender (0x0046d2eb..0x0046d3bb); the function table starts a row inside it
+0x00470000,not a function: interior block of CMRCFrameWndSizeDock::DestroyDynamicBars (0x0046ff81..0x00470007); the function table starts a row inside it
+0x00470001,not a function: interior block of CMRCFrameWndSizeDock::DestroyDynamicBars (0x0046ff81..0x00470007); the function table starts a row inside it
+0x0047534d,not a function: interior block of CRVTrackerCurveEdit::OnStart (0x00475340..0x0047551b); the function table starts a row inside it
 0x00479b33,"not game code: MFC, ??_9@$BOA@AE (nafxcw.lib ppgfont.obj and 1 more, byte-identical in msvc-6.00-9044), a header function an object of ours instantiates"
-0x0047c059,"not a function: interior of the function at 0x0047c01c (the target of its je at 0x0047c050); the function table starts a row inside it"
+0x0047c059,not a function: interior block of CRVTrackerVertScale::WatchEvent (0x0047c01c..0x0047c066); the function table starts a row inside it
+0x00484848,not a function: interior block of CButeMgr::DisplayMessage (0x00484810..0x004848e3); the function table starts a row inside it
+0x0048bdea,not a function: interior block of CLTANode::Free (0x0048bdc0..0x0048be30); the function table starts a row inside it
+0x0048d17c,not a function: interior block of CLTANodeBuilder::AddValue (0x0048d110..0x0048d1c2); the function table starts a row inside it
