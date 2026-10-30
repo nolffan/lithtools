@@ -1,0 +1,151 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+# talon: the world editor and the libraries it links; written for this
+# project. The libraries' order is the link's (progress/DEdit-map.md).
+
+###############################################################################
+
+Project: "LT2_StdLith_alloc"=..\..\lithshared\stdlith\Lib_StdLith_alloc.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_RegMgr_Talon"=..\..\lithshared\regmgr\regmgr60_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_ZLib_Talon"=..\..\lithshared\zlib\Lib_ZLib_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "Talon_ButeMgr"=..\..\..\Libs\ButeMgr\ButeMgr_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "Talon_CryptMgr"=..\..\..\Libs\CryptMgr\cryptmgr_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "Talon_DibMgr"=..\..\lithshared\dibmgr\dibmgr60_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "Talon_GenRegMgr"=..\..\lithshared\genregmgr\genregmgr60_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "Talon_LTAMgr"=..\..\..\Engine\libs\ltamgr\ltamgr_Talon.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "DEdit"=.\DEdit.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name Talon_GenRegMgr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name Talon_ButeMgr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name Talon_CryptMgr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name LT2_RegMgr_Talon
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name LT2_StdLith_alloc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name Talon_DibMgr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name Talon_LTAMgr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name LT2_ZLib_Talon
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################

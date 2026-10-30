@@ -68,11 +68,13 @@ TALON_RCFLAGS ?=
 #                                          Intel C/C++ 4.0 and VC6 SP3
 #   src/LT2/tools/ModelEdit/ModelEdit.dsw  the model editor (Talon), VC6 SP5
 #                                          with the Processor Pack
+#   src/LT2/tools/DEdit/DEdit.dsw          the world editor (Talon), likewise
 WORKSPACES := \
     src/LT2/lithshared/lithshared.dsw:LT2_StdLith,LT2_ZLib,LT2_RegMgr \
     src/LT2/tools/PreProcessor/Processor.dsw:Processor \
     src/LT2/tools/PreProcessorNOLF/Processor.dsw:ProcessorNOLF \
     src/LT2/tools/ModelEdit/ModelEdit.dsw:ModelEdit \
+    src/LT2/tools/DEdit/DEdit.dsw:DEdit \
     src/Libs/Libs.dsw:ButeMgr,CryptMgr,DibMgr,GenRegMgr,Lib_Lith,MFCStub,RegMgr,regmgr32,Lib_StdLith,Lib_ZLib \
     src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader,MaxDTXLoader30,MaxDTXLoader40,MaxModelExport30,MaxModelExport40,MaxWorldExport30,MaxWorldExport40,MaxWorldImport30,MaxWorldImport40,MayaModelExport30,MayaModelExport40,MayaWorldExport30,MayaWorldExport40 \
     src/LT2/tools/LithRez/LithRez.dsw:LithRez
@@ -143,12 +145,19 @@ LINK_ProcessorNOLF := $(VC6SP3)/BIN/link.exe
 # objects and the LT2 libraries it links (LT2_StdLith_alloc,
 # LT2_RegMgr_Talon) are VC6 SP5 with the Processor Pack's (cl 12.00.9044,
 # Rich 0x31/9044), with that toolchain's headers, MFC (nafxcw.lib, build
-# 8569) and C runtime, linked statically.
+# 8569) and C runtime, linked statically. The Talon DEdit (2001-12-06;
+# progress/DEdit-map.md) likewise, with the 2001 libraries it links
+# (LT2_ZLib_Talon and the Talon_* projects).
 ENV_VC6PP := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(VC6PP))\BIN' \
     INCLUDE='$(call ws,$(VC6PP))\INCLUDE;$(call ws,$(VC6PP))\MFC\INCLUDE' \
     LIB='$(call ws,$(VC6PP))\LIB;$(call ws,$(VC6PP))\MFC\LIB'
-$(foreach p,ModelEdit LT2_StdLith_alloc LT2_RegMgr_Talon,$(eval ENV_$(p) := $$(ENV_VC6PP))$(eval CL_$(p) := $$(VC6PP)/BIN/cl.exe)\
+$(foreach p,ModelEdit DEdit LT2_StdLith_alloc LT2_RegMgr_Talon LT2_ZLib_Talon Talon_ButeMgr Talon_CryptMgr \
+    Talon_DibMgr Talon_GenRegMgr Talon_LTAMgr,$(eval ENV_$(p) := $$(ENV_VC6PP))$(eval CL_$(p) := $$(VC6PP)/BIN/cl.exe)\
     $(eval LINK_$(p) := $$(VC6PP)/BIN/link.exe)$(eval LIBEXE_$(p) := $$(VC6PP)/BIN/lib.exe))
+# DEdit includes <afxpriv.h>, whose <afxconv.h> needs ATL's <atlconv.h>:
+# the Processor Pack toolchain has no ATL, so Developer Studio's (ATL 3.0,
+# msvc-6.00-9782) follows.
+ENV_DEdit := $(ENV_VC6PP) INCLUDE='$(call ws,$(VC6PP))\INCLUDE;$(call ws,$(VC6PP))\MFC\INCLUDE;$(call ws,$(TC))\msvc-6.00-9782\VC98\ATL\Include'
 
 # The prefix: made the first time, then only checked; every tool run waits
 # for it (an order-only prerequisite, so it causes no rebuild).
