@@ -26,6 +26,7 @@
 #include "navigator.h"
 
 #ifdef DIRECTEDITOR_BUILD
+#	include "prefabmgr.h"	// talon: Build 69's, for DEdit until its prefabs are brought back
 #	include "editprojectmgr.h"
 #	include "undo_mgr.h"
 #endif
@@ -341,6 +342,15 @@ public:
 
 	// talon: no prefab manager in 2001: the class is 0x128 bytes, laid out
 	// from its constructor (0x410110), m_LoadErrorCode at 0x124.
+
+#ifdef DIRECTEDITOR_BUILD
+	// talon: Build 69's prefab manager, for DEdit's link until its prefab
+	// code is brought back to 2001 (which has none: progress/DEdit-map.md).
+public:
+	CPrefabMgr*				GetPrefabMgr()		{return &m_PrefabMgr;}
+private:
+	CPrefabMgr				m_PrefabMgr;
+#endif
 };
 
 

@@ -76,6 +76,16 @@ uint32	GetNodePropertiesSize(CWorldNode* pNode);
 // talon: the 2001 CopyObjectList (0x40f2e0; Processing.cpp's name for it,
 // called at 0x440baa): it leaves out the hidden objects with bIgnoreHidden.
 void	CopyRegionObjects( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out, BOOL bIgnoreHidden );
+
+#ifdef DIRECTEDITOR_BUILD
+// talon: Build 69's, for DEdit (its LTA world, and its copy of the object
+// list), until they are brought back to 2001.
+class CPropListContainer;
+BOOL	LoadNodePropertiesLTA(CLTANode* pParseNode, CWorldNode *pNode, CPropListContainer& container, CEditProjectMgr* pProject = NULL );
+void	SaveObjectListLTA(CLTANodeBuilder &lb, CMoArray<CBaseEditObj*> &theList);
+void	SaveNodePropertiesLTA(CLTAFile* pFile, CWorldNode *pNode, uint32 level);
+void	CopyObjectList( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out );
+#endif
 // Duplicates the node heirarchy between two lists of objects.  
 // Note that the objects must be in exactly the same order in the list.
 // Returns false on failure
@@ -179,7 +189,7 @@ protected:
 	
 	virtual LTRESULT Parse(ConParse *pParse);
 	virtual LTRESULT CPrint(const char *pMsg, ...);
-	virtual LTRESULT ShowDebugWindow(bool bShow);
+	virtual LTRESULT ShowDebugWindow(LTBOOL bShow);
 	virtual LTRESULT FindObject(const char *pName);
 	virtual const char* GetObjectClass( const char *pObjName );
 	virtual const char* GetProjectDir( );

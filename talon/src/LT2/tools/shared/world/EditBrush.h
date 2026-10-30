@@ -66,6 +66,21 @@
 			BOOL					LoadTBW( CAbstractIO& InFile, CStringHolder *pStringHolder, uint32 dwUnknown );
 			void					SaveTBW( CAbstractIO& OutFile, BOOL bUnknown );
 
+#ifdef DIRECTEDITOR_BUILD
+			// talon: Build 69's, for DEdit (its LTA world, and what its
+			// editing calls), until they are brought back to 2001.
+			void					DoCopy(CWorldNode *pOther, CStringHolder *pStringHolder);
+			BOOL					LoadLTA( CLTANode* pNode, CStringHolder *pStringHolder );
+			void					SaveLTA( CLTAFile* pFile, uint32 level );
+			BOOL					IsOpen();
+			uint32					FindPolyWithEdge( uint32 iStart, uint32 v1, uint32 v2 );
+			uint32					FindClosestVert( const LTVector &vec );
+			void					RemoveUnusedVerts();
+			void					FlipNormals();			// Flips all of the polygons
+			void					UpdatePlanes();		
+			CBoundingBox			CalcBoundingBox();
+#endif
+
 
 		// Geometry stuff.
 		// talon: none of these but CopyEditBrush, UpdateBSphere and

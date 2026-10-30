@@ -49,6 +49,14 @@
 
 			virtual void		LoadData( CAbstractIO &file )	{}
 			virtual void		SaveData( CAbstractIO &file )	{}
+#ifdef DIRECTEDITOR_BUILD
+			// talon: Build 69's LTA virtuals, for DEdit (the 2001 one has an
+			// LTA world); where in its vtable is to be found.
+			virtual void		LoadDataLTA( CLTANode* pNode )	{}
+			virtual uint32		DataSize( ) const { return 0; }
+			virtual void		SaveDataLTA( CLTAFile* pFile, uint32 level )	{}
+			virtual void		SaveDataLTA( CLTANodeBuilder &lb )	{}
+#endif
 			virtual void		Copy( CBaseProp *pOther );
 			virtual CBaseProp*	CreateSameKind()				{ return new CBaseProp(NULL); }
 			virtual void		SetupString(char *pStr) {}
@@ -90,6 +98,12 @@
 			
 			void		LoadData( CAbstractIO &file );
 			void		SaveData( CAbstractIO &file );
+#ifdef DIRECTEDITOR_BUILD
+				void		LoadDataLTA( CLTANode* pNode );
+				uint32		DataSize( ) const;
+				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
+				void		SaveDataLTA( CLTANodeBuilder &lb );
+#endif
 			void		Copy( CBaseProp *pOther );
 			virtual		CBaseProp*	CreateSameKind()				{ return new CStringProp(NULL); }
 			void		SetupString(char *pStr);
@@ -122,6 +136,12 @@
 			
 			void		LoadData( CAbstractIO &file );
 			void		SaveData( CAbstractIO &file );
+#ifdef DIRECTEDITOR_BUILD
+				void		LoadDataLTA( CLTANode* pNode );
+				uint32		DataSize( ) const;
+				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
+				void		SaveDataLTA( CLTANodeBuilder &lb );
+#endif
 			void		Copy( CBaseProp *pOther );
 			virtual		CBaseProp*	CreateSameKind()				{ return new CVectorProp(NULL); }
 			void		SetupString(char *pStr);
@@ -152,6 +172,12 @@
 
 		void		LoadData( CAbstractIO &file );
 		void		SaveData( CAbstractIO &file );
+#ifdef DIRECTEDITOR_BUILD
+			void		LoadDataLTA( CLTANode* pNode );
+			uint32		DataSize( ) const;
+			void		SaveDataLTA( CLTAFile* pFile, uint32 level );
+			void		SaveDataLTA( CLTANodeBuilder &lb );
+#endif
 		void		Copy( CBaseProp *pOther );
 		virtual CBaseProp*	CreateSameKind() { return new CRotationProp(NULL); }
 		void		SetupString(char *pStr);
@@ -206,6 +232,12 @@
 
 			void		LoadData( CAbstractIO &file );
 			void		SaveData( CAbstractIO &file );
+#ifdef DIRECTEDITOR_BUILD
+				void		LoadDataLTA( CLTANode* pNode );
+				uint32		DataSize( ) const;
+				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
+				void		SaveDataLTA( CLTANodeBuilder &lb );
+#endif
 			void		Copy( CBaseProp *pOther );
 			void		SetupString(char *pStr);
 			virtual void		SetupGenericProp(GenericProp *pProp);
@@ -235,6 +267,12 @@
 
 			void		LoadData( CAbstractIO &file );
 			void		SaveData( CAbstractIO &file );
+#ifdef DIRECTEDITOR_BUILD
+				void		LoadDataLTA( CLTANode* pNode );
+				uint32		DataSize( ) const;
+				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
+				void		SaveDataLTA( CLTANodeBuilder &lb );
+#endif
 			void		Copy( CBaseProp *pOther );
 			void		SetupString(char *pStr);
 			virtual void		SetupGenericProp(GenericProp *pProp);
@@ -295,6 +333,27 @@
 			CMoArray<CBaseProp*>	m_Props;
 
 	};
+
+
+#ifdef DIRECTEDITOR_BUILD
+// talon: Build 69's, for DEdit's LTA world.
+class CPropListContainer
+{
+public:
+			CPropListContainer();
+	void	Init();
+	uint32	AddPropList(CPropList* propList, uint32 nNumFilters, const char** pszFilters);
+	uint32	AddPropList(CPropList* propList, bool alwaysAdd=false);
+
+	void	SaveLTA( CLTAFile* pFile, uint32 level );
+	void	SaveTBW( CAbstractIO& OutFile );
+
+	CPropList* GetElem(uint32 index) {return m_propList[index];} 
+	void	UnloadFromMemory();
+private:
+	CMoArray<CPropList*> m_propList;
+};
+#endif
 
 
 #endif  // __PROPLIST_H__

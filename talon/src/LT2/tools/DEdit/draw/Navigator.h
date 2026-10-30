@@ -27,6 +27,11 @@
 
 
 /************************************************************************/
+#ifdef DIRECTEDITOR_BUILD
+class CLTANode;
+class CLTAFile;
+#endif
+
 class CNavigator : public CCS
 {
 	public:
@@ -46,6 +51,10 @@ class CNavigator : public CCS
 		// Load/Save
 		BOOL		LoadTBW(CAbstractIO& InFile);
 		BOOL		SaveTBW(CAbstractIO& OutFile);
+#ifdef DIRECTEDITOR_BUILD
+		BOOL		LoadLTA(CLTANode* pParseNode);	// talon: DEdit's (Navigator.cpp)
+		BOOL		SaveLTA(CLTAFile* pFile, uint32 level);
+#endif
 
 	public:
 
@@ -73,6 +82,10 @@ public:
 	// Load/Save
 	BOOL		LoadTBW(CAbstractIO& InFile);
 	BOOL		SaveTBW(CAbstractIO& OutFile);
+#ifdef DIRECTEDITOR_BUILD
+	BOOL		LoadLTA(CLTANode* pParseNode);	// talon: DEdit's (Navigator.cpp)
+	BOOL		SaveLTA(CLTAFile* pFile, uint32 level);
+#endif
 
 	// Access to member variables
 	void		SetDescription(char *lpszDescription);
@@ -94,6 +107,10 @@ public:
 	// Load/Save
 	BOOL		LoadTBW(CAbstractIO& InFile);
 	BOOL		SaveTBW(CAbstractIO& OutFile);
+#ifdef DIRECTEDITOR_BUILD
+	BOOL		LoadLTA(CLTANode* pParseNode);	// talon: DEdit's (Navigator.cpp)
+	BOOL		SaveLTA(CLTAFile* pFile, uint32 level);
+#endif
 };
 
 #endif  // __NAVIGATOR_H__

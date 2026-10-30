@@ -56,6 +56,13 @@
 			BOOL				LoadBasePolyTBW( CAbstractIO& InFile );
 			void				SaveBasePolyTBW( CAbstractIO& OutFile );
 
+#ifdef DIRECTEDITOR_BUILD
+			// talon: Build 69's LTA loading and saving, for DEdit (the 2001
+			// one has an LTA world: progress/DEdit-map.md).
+			bool				LoadBasePolyLTA( CLTANode* pNode );
+			void				SaveBasePolyLTA( CLTAFile* pFile, uint32 level );
+#endif
+
 		// Functionality.
 		public:
 

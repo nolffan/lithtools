@@ -26,6 +26,21 @@
 	// Otherwise, it attaches the children to the parent node.
 	void no_DestroyNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bDeleteChildren);
 
+#ifdef DIRECTEDITOR_BUILD
+	// talon: Build 69's, for DEdit.
+
+	// Initializes a node you've allocated (adds it to the region's lists and
+	// to the node tree).
+	void no_InitializeNewNode(CEditRegion *pRegion, CWorldNode *pNode, CWorldNode *pParent);
+
+	// Create a brush and parent it up to the given parent node (the
+	// root node if no parent is specified).
+	CEditBrush* no_CreateNewBrush(CEditRegion *pRegion, CWorldNode *pParent=NULL);
+
+	// Sets up brush properties
+	void SetupBrushProperties(CEditBrush *pBrush, CEditRegion *pRegion);
+#endif
+
 
 
 #endif  // __NODEOPS_H__

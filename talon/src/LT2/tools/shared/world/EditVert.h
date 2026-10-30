@@ -50,6 +50,35 @@
 			LTVector	m_Projected;
 
 			uint32		m_Unknown_24;
+
+#ifdef DIRECTEDITOR_BUILD
+			// talon: stand-in: Build 69's vertex flags and colour, for
+			// DEdit's link until its renderer is brought back to 2001 (whose
+			// vertices have none; m_Unknown_24 may be what it has).
+			enum	{	VERTFLAG_INFRUSTUM		= (1 << 0)	};
+
+			bool		IsInFrustum() const						{ return IsFlagSet(VERTFLAG_INFRUSTUM); }
+			void		SetInFrustum(bool bVal)					{ SetFlag(VERTFLAG_INFRUSTUM, bVal); }
+
+			bool		IsFlagSet(uint8 nFlag) const			{ return (m_nFlags & nFlag) ? true : false; }
+			void		EnableFlag(uint8 nFlag)					{ m_nFlags |= nFlag; }
+			void		DisableFlag(uint8 nFlag)				{ m_nFlags &= ~nFlag; }
+
+			void		SetFlag(uint8 nFlag, bool bVal)
+			{
+				if(bVal)
+					EnableFlag(nFlag);
+				else
+					DisableFlag(nFlag);
+			}
+
+			uint8		m_nFlags;
+			uint8		m_nClipPlanes;
+			uint8		m_nR;
+			uint8		m_nG;
+			uint8		m_nB;
+			uint8		m_nA;
+#endif
 	};
 
 

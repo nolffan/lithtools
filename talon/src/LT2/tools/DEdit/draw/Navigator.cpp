@@ -271,3 +271,220 @@ BOOL CNavigatorPosArray::SaveTBW(CAbstractIO& OutFile)
 	return TRUE;
 }
 
+#ifdef DIRECTEDITOR_BUILD
+// talon: Build 69's LTA loading and saving, DEdit's alone (the 2001 one
+// writes "navigator", "description", "up", "forward", ... at 0x0043b71c);
+// the processors have none.
+#include "ltamgr.h"
+#include "ltasaveutils.h"
+
+/*
+( up 0.000000 1.000000 0.000000 )
+( forward 0.000000 0.000000 1.000000 )
+( right 1.000000 0.000000 0.000000 )
+( position 0.000000 0.000000 -6144.000000 )
+( lookat 0.000000 0.000000 0.000000 )
+( lookatdist -0.001327 )
+*/
+
+BOOL CNavigator::LoadLTA(CLTANode* pParseNode)
+{
+	// Load the orientation vectors
+	CLTANode* pTemp = CLTAUtil::ShallowFindList(pParseNode, "up");
+	if( pTemp ) {
+		//file >> m_Up.x;			file >> m_Up.y;			file >> m_Up.z;
+		m_Up.x = GetFloat(pTemp->GetElement(1));
+		m_Up.y = GetFloat(pTemp->GetElement(2));
+		m_Up.z = GetFloat(pTemp->GetElement(3));
+	}
+	pTemp = CLTAUtil::ShallowFindList(pParseNode, "forward");
+	if( pTemp ){
+		// file >> m_Forward.x;	file >> m_Forward.y;	file >> m_Forward.z;
+		m_Forward.x = GetFloat(pTemp->GetElement(1));
+		m_Forward.y = GetFloat(pTemp->GetElement(2));
+		m_Forward.z = GetFloat(pTemp->GetElement(3));
+	}
+	pTemp = CLTAUtil::ShallowFindList(pParseNode, "right");
+	if( pTemp ){
+		// file >> m_Right.x;		file >> m_Right.y;		file >> m_Right.z;	
+		m_Right.x = GetFloat(pTemp->GetElement(1));
+		m_Right.y = GetFloat(pTemp->GetElement(2));
+		m_Right.z = GetFloat(pTemp->GetElement(3));
+	}
+	
+	// Load the position
+	pTemp = CLTAUtil::ShallowFindList(pParseNode, "position");
+	if( pTemp ) {
+		// file >> m_Position.x;	file >> m_Position.y;	file >> m_Position.z;
+		m_Position.x = GetFloat(pTemp->GetElement(1));
+		m_Position.y = GetFloat(pTemp->GetElement(2));
+		m_Position.z = GetFloat(pTemp->GetElement(3));
+	}
+
+	// Load the look-at vector
+	pTemp = CLTAUtil::ShallowFindList(pParseNode, "lookat");
+	if( pTemp ) {
+		// file >> m_LookAt.x;		file >> m_LookAt.y;		file >> m_LookAt.z;
+		m_LookAt.x = GetFloat(pTemp->GetElement(1));
+		m_LookAt.y = GetFloat(pTemp->GetElement(2));
+		m_LookAt.z = GetFloat(pTemp->GetElement(3));
+	}
+
+	// Load the look-at distance
+	pTemp = CLTAUtil::ShallowFindList(pParseNode, "lookatdist");
+	if( pTemp ) {
+		// file >> m_LookAtDist;
+		m_LookAtDist = GetFloat(pTemp->GetElement(1));
+	}
+	
+	return TRUE;
+}
+
+/*********************************************************/
+// Save
+BOOL CNavigator::SaveLTA(CLTAFile* pFile, uint32 level)
+{
+	PrependTabs(pFile, level);
+	pFile->WriteStr("( navigator");
+		PrependTabs(pFile, level+1);
+		pFile->WriteStrF("( up %f %f %f )", m_Up.x, m_Up.y, m_Up.z );
+		PrependTabs(pFile, level+1);
+		pFile->WriteStrF("( forward %f %f %f )", m_Forward.x, m_Forward.y, m_Forward.z );
+		PrependTabs(pFile, level+1);
+		pFile->WriteStrF("( right %f %f %f )", m_Right.x, m_Right.y, m_Right.z );
+		PrependTabs(pFile, level+1);
+		pFile->WriteStrF("( position %f %f %f )", m_Position.x, m_Position.y, m_Position.z );
+		PrependTabs(pFile, level+1);
+		pFile->WriteStrF("( lookat %f %f %f )", m_LookAt.x, m_LookAt.y, m_LookAt.z );
+		PrependTabs(pFile, level+1);
+		pFile->WriteStrF("( lookatdist %f )", m_LookAtDist );
+
+	PrependTabs(pFile, level);
+	pFile->WriteStr(")");
+
+	return TRUE;
+}
+
+/*********************************************************/
+// Load LTA
+BOOL CNavigatorPosItem::LoadLTA(CLTANode* pParseNode)
+{
+	// Reset this class
+	Term();
+
+	// Load each navigator
+	CLTANodeIterator NodeIter(pParseNode);
+	CLTANode* pNavNode;
+
+	while((pNavNode = NodeIter.FindNextList("navigator")) != NULL)
+	{
+		CNavigator *pNavigator = new CNavigator;
+		pNavigator->LoadLTA(pNavNode);
+		m_NavigatorArray.Add(pNavigator);
+	}
+
+	// Load the length of the description string
+	DWORD dwBufferSize=0;
+	CLTANode*  pDescription = CLTAUtil::ShallowFindList(pParseNode,"description");
+	const char* descString = GetString(PairCdrNode(pDescription));
+	dwBufferSize = strlen(descString);
+	// file >> dwBufferSize;
+
+	if (dwBufferSize > 0)
+	{
+		// Load the description buffer
+		char *lpszBuffer=new char[dwBufferSize+1];
+		memset(lpszBuffer, NULL, dwBufferSize+1);
+
+		// file.Read(lpszBuffer, dwBufferSize);
+		strcpy(lpszBuffer,descString);
+
+		SetDescription(lpszBuffer);
+		delete []lpszBuffer;
+	}
+	else
+	{
+		SetDescription("\0");
+	}
+	
+	return TRUE;
+}
+
+/*********************************************************/
+// SaveLTA
+BOOL CNavigatorPosItem::SaveLTA(CLTAFile* pFile, uint32 level)
+{
+	PrependTabs(pFile, level);
+	pFile->WriteStr("( navigatorpositem");
+		// Save each navigator
+		unsigned int i;
+		for (i=0; i < m_NavigatorArray.GetSize(); i++)
+		{
+			m_NavigatorArray[i]->SaveLTA(pFile, level+1);
+		}
+		// Save the length of the description string
+		char *lpszDescription=GetDescription();
+		if (lpszDescription)
+		{
+			PrependTabs(pFile, level+1);
+			pFile->WriteStrF("( description \"%s\" )", lpszDescription);
+		}
+		else
+		{
+			PrependTabs(pFile, level+1);
+			pFile->WriteStr("( description \"\" )");
+		}
+	PrependTabs(pFile, level);
+	pFile->WriteStr(")");
+	return TRUE;
+}
+
+/***************************************************************/
+// CNavigatorPosArray Class
+/***************************************************************/
+
+// Load
+BOOL CNavigatorPosArray::LoadLTA(CLTANode* pParseNode)
+{
+	// Remove all of the items
+	unsigned int i;
+	for (i=0; i < GetSize(); i++)
+	{
+		delete GetAt(i);
+	}
+	SetSize(0);
+
+
+	// Load the number of items
+	uint32 dwNumItems=0;
+	dwNumItems = pParseNode->GetNumElements();
+
+	// Load each item
+	for (i=0; i < dwNumItems; i++)
+	{
+		CNavigatorPosItem *pItem=new CNavigatorPosItem;
+		pItem->LoadLTA(pParseNode->GetElement(i));
+		Add(pItem);
+	}
+
+	return TRUE;
+}
+
+/*********************************************************/
+// SaveLTA
+BOOL CNavigatorPosArray::SaveLTA(CLTAFile* pFile, uint32 level)
+{
+	PrependTabs(pFile, level);
+	pFile->WriteStr("( navigatorposlist (");
+		// Save each item
+		unsigned int i;
+		for (i=0; i < GetSize(); i++)
+		{
+			GetAt(i)->SaveLTA(pFile, level+1);		
+		}
+	PrependTabs(pFile, level);
+	pFile->WriteStr(") )");
+
+	return TRUE;
+}
+#endif // DIRECTEDITOR_BUILD

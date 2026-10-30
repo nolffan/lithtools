@@ -132,6 +132,16 @@
 			void				*m_pUser1;			// 0x7c
 			uint32				m_Unknown_80;
 			uint32				m_SurfaceFlags;		// 0x84: the poly's own surface flags
+
+#ifdef DIRECTEDITOR_BUILD
+			// talon: stand-in: Build 69's two textured planes, for DEdit's
+			// link until its texturing is brought back to the 2001 poly's one
+			// texture (O, P, Q and m_pTextureName above).
+			CTexturedPlane&			GetTexture(uint32 nTexture)			{ assert(nTexture < NUM_TEXTURES); return m_Textures[nTexture]; }
+			const CTexturedPlane&	GetTexture(uint32 nTexture) const	{ assert(nTexture < NUM_TEXTURES); return m_Textures[nTexture]; }
+		private:
+			CTexturedPlane			m_Textures[NUM_TEXTURES];
+#endif
 	};
 
 
