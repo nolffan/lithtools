@@ -26,12 +26,16 @@
 
 	// Useful definitions.
 	#define BEGIN_MEMORYEXCEPTION()		try {
-	#define END_MEMORYEXCEPTION()		} catch( CMemoryException * x ) { GiveMemoryWarning(); x->Delete();}
+	// talon: 2001 (the catch funclets, e.g. 0x4558b8, call GiveMemoryWarning only).
+	#define END_MEMORYEXCEPTION()		} catch( CMemoryException x ) { GiveMemoryWarning(); }
 
 	// Edit modes.
 	#define BRUSH_EDITMODE						0
 	#define GEOMETRY_EDITMODE					1
 	#define OBJECT_EDITMODE						2
+	// talon: 2001's fourth mode (CRegionView::OnSelectNone 0x45d3ed clears the
+	// document's lightmap poly selection in it); MainFrm calls it LIGHT_EDITMODE (OnLightEditMode 0x4300b3).
+	#define LIGHT_EDITMODE					3
 
 
 	// Shade modes.
@@ -43,10 +47,8 @@
 	// Updating hints..
 	#define REGIONVIEWUPDATE_EDITMODE			101
 	#define REGIONVIEWUPDATE_REDRAW				102
-	#define REGIONVIEWUPDATE_VIEWID				0x8000
-
-	// Macro for creating a view ID update
-	#define REGIONVIEWUPDATE_VIEW(a)			(REGIONVIEWUPDATE_VIEWID | (a))
+	// talon: 2001's (CRegionView::OnUpdate 0x4562f1): redraws the Direct3D views.
+	#define REGIONVIEWUPDATE_LIGHTMAPS			103
 	
 	// The number of move/size handles
 	#define NUM_BOX_HANDLES						18
@@ -54,7 +56,10 @@
 	enum EditState
 	{
 		EDIT_NOSTATE,
-		EDIT_DRAWINGPOLY
+		EDIT_DRAWINGPOLY,
+		// talon: 2001's third state (the DrawPoly tracker's split, which calls
+		// UpdateSplitPolyVertex); the name is ours.
+		EDIT_SPLITTINGPOLY
 	};
 
 	// Grid directions
@@ -115,31 +120,36 @@
 		CPoint						GetCurMousePos();
 		
 
-		uint32						GetShadeMode() const;
+		// talon: 2001's view keeps these itself (ViewFunctions 0x46623c..0x466289;
+		// the wireframe, grid, objects and marker flags have no out-of-line
+		// accessors in the image).
+		int							GetShadeMode();
 		void						SetShadeMode( int mode );
 
-		BOOL						IsSelectBackfaces() const;
+		BOOL						IsWalkThroughMovement();
+		void						SetWalkThroughMovement( BOOL bWalkThrough );
+
+		BOOL						IsSelectBackfaces();
 		void						SetSelectBackfaces( BOOL bBackface );
 
-		BOOL						IsShowNormals() const;
+		BOOL						IsShowNormals();
 		void						SetShowNormals( BOOL bShow );
 
-		BOOL						IsShowWireframe() const;
-		void						SetShowWireframe( BOOL bShow );
+		BOOL						IsShowWireframe()				{ return m_bShowWireframe; }
+		void						SetShowWireframe( BOOL bShow )	{ m_bShowWireframe = bShow; }
 
-		BOOL						IsShowGrid() const;
-		void						SetShowGrid(BOOL bShow);
+		BOOL						IsShowGrid()					{ return m_bShowGrid; }
+		void						SetShowGrid(BOOL bShow)			{ m_bShowGrid = bShow; }
 
-		BOOL						IsShowObjects() const;
-		void						SetShowObjects(BOOL bShow);
+		BOOL						IsShowObjects()					{ return m_bShowObjects; }
+		void						SetShowObjects(BOOL bShow)		{ m_bShowObjects = bShow; }
 
-		BOOL						IsShowMarker() const;
-		void						SetShowMarker(BOOL bShow);
+		BOOL						IsShowMarker()					{ return m_bShowMarker; }
+		void						SetShowMarker(BOOL bShow)		{ m_bShowMarker = bShow; }
 
 		int							GetEditMode();
 
 		//used to notify when the hot keys have been changed
-		void						OnHotKeysChanged();
 
 		// Switch the navigator to one of the stored navigators for this level
 		void						SwitchNavigator(int nNavIndex);
@@ -183,6 +193,19 @@
 		BOOL						OnSelectLightNode(CUITracker *pTracker);
 		BOOL						OnEditLightNode(CUITracker *pTracker);
 
+		// talon: 2001's (ViewFunctions, 0x46c783; the name ours): selects the
+		// lightmap texel under the cursor.
+		void						SelectLightTexel();
+		// talon: 2001's (ViewFunctions; names ours): 0x46c536 (OnApplyTextureClick
+		// in the light edit mode), 0x46ca7c (the Tag tracker, 0x4790c8).
+		void						PickLightPoly();
+		void						TagLightTexelsInRect( CRect rect );
+
+		// talon: 2001's (ViewFunctions 0x4677ce, 0x46790a; Build 69 has them in
+		// CRVTrackerDrawPoly; names Build 69's).
+		void						UpdateDrawPolyVertex( CPoint &point );
+		void						UpdateSplitPolyVertex( CPoint &point );
+
 	// Tagging stuff.
 	public:
 		
@@ -190,8 +213,8 @@
 		BOOL						GetClosestPoint( CPoint &point, CVector &vClosest, BOOL bSelectedOnly, CReal *pDist = NULL );
 
 		CVertRef					GetClosestVert( CEditBrush *pBrush, CPoint point, CReal *pDist=NULL );
-		CVertRef					GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *pDist=NULL, bool bIgnoreFrozen = true );
-		CVertRef					GetClosestVert( CVertRefArray &vertArray, CPoint point, CReal *pDist=NULL, bool bIgnoreFrozen = true );
+		CVertRef					GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *pDist=NULL );
+		CVertRef					GetClosestVert( CVertRefArray &vertArray, CPoint point, CReal *pDist=NULL );
 		
 		CEdgeRef					GetClosestEdge( CPoint &point, BOOL bSelectedOnly = FALSE );
 		CEdgeRef					GetClosestEdge( CEditBrush *pBrush, CPoint point, CReal *pDist=NULL );
@@ -199,7 +222,7 @@
 		CPolyRef					CastRayAtPolies( CEditRay &ray, CReal *pDist=NULL, CReal rMinDist = 0.0f, BOOL bSelectedOnly = FALSE );
 		CPolyRef					CastRayAtPolies( CEditBrush *pBrush, CEditRay &ray, CReal *pDist=NULL );
 
-		CWorldNode*					GetClosestObject(const CPoint& point, BOOL bSelectedOnly, CReal *pDist=NULL, BOOL bFilter = FALSE );
+		CObjectRef					GetClosestObject( CPoint point, BOOL bSelectedOnly, CReal *pDist=NULL );
 
 
 
@@ -216,7 +239,7 @@
 		void						TagPointsInRect( CRect &rect );
 
 		// Tags all points/edges/polies in the tag rect.
-		void						GetObjectsInRect( CRect &rect, CMoArray< CWorldNode * > &objects, BOOL bFilter = FALSE );
+		void						GetObjectsInRect( CRect &rect, CMoArray<CWorldNode*> &objects );
 
 		// Tags/untags the given object.
 		void						ToggleVertexTag( CVertRef ref );
@@ -239,7 +262,6 @@
 		//determines if any polygons are selected for editing. This occurs when
 		//in geometry mode and the cursor is over a face, or if it is brush mode and
 		//a brush is selected
-		BOOL						AreAnyPoliesSelected();
 
 		// Gets the current texture name from the controls.
 		BOOL						GetCurrentTextureName( char* &pTextureName, BOOL bUseSprites=FALSE );
@@ -251,7 +273,7 @@
 		void						UpdatePlanesOfPolies( CVertRefArray &verts );
 		
 		// Finds the intersection with the right EditPlane.
-		BOOL						GetVertexFromPoint( CPoint point, CVector &vertex, BOOL bSnapToGrid = TRUE );
+		BOOL						GetVertexFromPoint( CPoint point, CVector &vertex );
 
 		// Updates the current immediate selection.
 		// Returns TRUE if it's changed.
@@ -269,10 +291,8 @@
 
 		//Returns the active region.  If none is active, just return the first region 
 		//in the active document.
-		CEditRegion*				GetActiveRegion();
 
 		//  maximizes a view.  0 = upper left, 1 = upper right, 2 = lower left, 3 = lower right
-		void						MaximizeView( uint32 nViewIndex );	
 
 		// Tells if the given key is down.  Pass it in uppercase.
 		BOOL						IsKeyDown( int key );
@@ -347,7 +367,6 @@
 		void						DoCreatePrimitiveCylinder( CVector &vCenter, int nNumSides, CReal fHeight, CReal fRadius );
 		void						DoCreatePrimitivePyramid( CVector &vCenter, int nNumSides, CReal fHeight, CReal fRadius );
 		void						DoCreatePrimitiveSphere(CVector &vCenter, int nSubdivisionsX, int nSubdivisionsY, CReal fRadius, BOOL bDome=FALSE);
-		void						DoCreatePrimitivePlane(const LTVector& vBasis, const LTVector& vRight, const LTVector& vUp, float fWidth, float fHeight, bool bSquare);
 
 		void						GetSelectedPolies(CMoArray<CEditPoly*> &polies);
 
@@ -357,20 +376,17 @@
 		// Returns: TRUE if the file import was a success.
 		BOOL						ImportLTAFile(CString sFilename, BOOL bPositionAtCrosshair);
 		BOOL						ImportOBJFile(CString sFilename, BOOL bPositionAtCrosshair);
+		// talon: 2001 (0x4568fe; the name from ImportOBJFile's "calling
+		// ImportWorldFile"): imports a .ed world.
+		BOOL						ImportWorldFile(CString sFilename, BOOL bPositionAtCrosshair);
 		bool						CreateBrushesFromScene(CEditRegion *pRegion, CObjInterface *pScene );
 
 		//given a user input event name and a menu handler, it will set up the text for
 		//the menu item
-		static void					SetMenuHotKeyText(const char* pszUIE, CCmdUI* pCmdID);
 
 		// Does a recursive search through the node tree for nodes with a node flag, adding them to the actionList.  Used for undo.
-		void						UndoHelper(PreActionList *actionList, CWorldNode *node, const uint32 flag=0, const bool wantFlag=true) const;
 
 	private:
-		// Helper function for GetObjectsInRect
-		void RecurseAndGetObjectsInRect(CRect &rect, CMoArray< CWorldNode * > &objects, CWorldNode *pRoot, BOOL bFilter);
-		// Helper function for GetClosestObject
-		CWorldNode *RecurseAndGetClosestObject(const CPoint &point, BOOL bSelectedOnly, CWorldNode *pRoot, SDWORD &nDistMin, float &fViewMin, BOOL bFilter);
 
 	// Operations
 	public:
@@ -413,29 +429,18 @@
 		afx_msg void OnUpdateApplyColor( CCmdUI *pCmdUI );
 		afx_msg void OnApplyTexture();
 		afx_msg void OnUpdateApplyTexture( CCmdUI *pCmdUI );
-		afx_msg void OnRemoveTexture();
-		afx_msg void OnUpdateRemoveTexture( CCmdUI *pCmdUI );
 		afx_msg void OnImportTerrainMap();
 		afx_msg void OnCreatePrimitiveBox();
-		afx_msg void OnUpdateCreatePrimitiveBox( CCmdUI *pCmdUI );
 		afx_msg void OnCreatePrimitiveCylinder();
-		afx_msg void OnUpdateCreatePrimitiveCylinder( CCmdUI *pCmdUI );
 		afx_msg void OnCreatePrimitivePyramid();
-		afx_msg void OnUpdateCreatePrimitivePyramid( CCmdUI *pCmdUI );
 		afx_msg void OnCreatePrimitiveSphere();
-		afx_msg void OnUpdateCreatePrimitiveSphere( CCmdUI *pCmdUI );
-		afx_msg void OnCreatePrimitivePlane();
-		afx_msg void OnUpdateCreatePrimitivePlane( CCmdUI *pCmdUI );
 		afx_msg void OnCreatePrimitiveDome();
-		afx_msg void OnUpdateCreatePrimitiveDome( CCmdUI *pCmdUI );
 		afx_msg void OnUpdateSingleBrushOperation( CCmdUI *pCmdUI );
 		afx_msg void OnSize(UINT nType, int cx, int cy);
 		afx_msg BOOL OnEraseBkgnd(CDC* pDC);
 		afx_msg void OnDestroy();
 		afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 		afx_msg void OnMouseMove(UINT nFlags, CPoint point);
-		afx_msg LRESULT OnMouseHover(WPARAM wParam, LPARAM lParam);
-		afx_msg LRESULT OnMouseLeave(WPARAM wParam, LPARAM lParam);
 		afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
 		afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
 		afx_msg void OnAlignPolyTextures();
@@ -443,18 +448,12 @@
 		afx_msg void OnKeyUp(UINT nChar, UINT nRepCnt, UINT nFlags);
 		afx_msg void OnContextMenu(CWnd*, CPoint point);
  		afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
-		afx_msg BOOL OnMouseWheel(UINT nFlags, short zDelta, CPoint pt);
-		afx_msg void OnMButtonDown(UINT nFlags, CPoint point);
-		afx_msg void OnMButtonUp(UINT nFlags, CPoint point);
 		afx_msg void OnAutoTriangulate();
-		afx_msg void OnStartPreprocessor();
 		afx_msg void OnKillFocus(CWnd* pNewWnd);
 		afx_msg void OnSetFocus(CWnd* pOldWnd);
 		afx_msg void OnRemoveExtraEdges();
 		afx_msg void OnMapTextureCoords();
-		afx_msg void OnUpdateMapTextureCoords(CCmdUI* pCmdUI);
 		afx_msg void OnRotateSelection();
-		afx_msg void OnUpdateRotateSelection(CCmdUI* pCmdUI);
 		afx_msg void OnResetAllTextureCoords();
 		afx_msg void OnEditUndo();
 		afx_msg void OnUpdateEditUndo(CCmdUI* pCmdUI);
@@ -463,44 +462,24 @@
 		afx_msg void OnJoinTaggedVertices();
 		afx_msg void OnObjectHeight();
 		afx_msg void OnBindToObject();
-		afx_msg void OnUpdateBindToObject(CCmdUI* pCmdUI);
-		afx_msg void OnSnapVertices();
-		afx_msg void OnUpdateSnapVertices(CCmdUI* pCmdUI);
 		afx_msg void OnAddObject();
-		afx_msg void OnUpdateAddObject(CCmdUI* pCmdUI);
 		afx_msg void OnShowWireframe();
-		afx_msg void OnUpdateShowWireframe(CCmdUI* pCmdUI);
 		afx_msg void OnShowObjects();
-		afx_msg void OnUpdateShowObjects(CCmdUI* pCmdUI);
-		afx_msg void OnUpdateGeometryEditing(CCmdUI* pCmdUI);
-		afx_msg void OnUpdateObjectEditing(CCmdUI* pCmdUI);
 		afx_msg void OnObjectProperties();
-		afx_msg void OnUpdateObjectProperties(CCmdUI* pCmdUI);
 		afx_msg void OnWorldInfo();
 		afx_msg void OnShadeWireframe();
-		afx_msg void OnUpdateShadeWireframe(CCmdUI* pCmdUI);
 		afx_msg void OnShadeTextured();
-		afx_msg void OnUpdateShadeTextured(CCmdUI* pCmdUI);
 		afx_msg void OnShadeFlat();
-		afx_msg void OnUpdateShadeFlat(CCmdUI* pCmdUI);
 		afx_msg void OnShadeLightmapsOnly();
-		afx_msg void OnUpdateShadeLightmapsOnly(CCmdUI* pCmdUI);
 		afx_msg void OnShowNormals();
 		afx_msg void OnBackfacingPolies();
 		afx_msg void OnBackView();
-		afx_msg void OnUpdateBackView(CCmdUI* pCmdUI);
 		afx_msg void OnBottomView();
-		afx_msg void OnUpdateBottomView(CCmdUI* pCmdUI);
 		afx_msg void OnFrontView();
-		afx_msg void OnUpdateFrontView(CCmdUI* pCmdUI);
 		afx_msg void OnLeftView();
-		afx_msg void OnUpdateLeftView(CCmdUI* pCmdUI);
 		afx_msg void OnPerspectiveView();
-		afx_msg void OnUpdatePerspectiveView(CCmdUI* pCmdUI);
 		afx_msg void OnRightView();
-		afx_msg void OnUpdateRightView(CCmdUI* pCmdUI);
 		afx_msg void OnTopView();
-		afx_msg void OnUpdateTopView(CCmdUI* pCmdUI);
 		afx_msg void OnProcessWorld();
 		afx_msg void OnFileSave();
 		afx_msg void OnUpdateFileSaveAs(CCmdUI* pCmdUI);
@@ -508,21 +487,6 @@
 		afx_msg void OnShowEditGrid();
 		afx_msg void OnShowMarker();
 		afx_msg void On4ViewConfiguration();
-		afx_msg void OnUpdate4ViewConfiguration(CCmdUI* pCmdUI);
-		afx_msg void OnDisplayAllModels();
-		afx_msg void OnUpdateDisplayAllModels(CCmdUI* pCmdUI);
-		afx_msg void OnHideAllModels();
-		afx_msg void OnUpdateHideAllModels(CCmdUI* pCmdUI);
-		afx_msg void OnDisplaySelectedModels();
-		afx_msg void OnUpdateDisplaySelectedModels(CCmdUI* pCmdUI);
-		afx_msg void OnHideSelectedModels();
-		afx_msg void OnUpdateHideSelectedModels(CCmdUI* pCmdUI);
-		afx_msg void OnDisplayModelsOfClass();
-		afx_msg void OnUpdateDisplayModelsOfClass(CCmdUI* pCmdUI);
-		afx_msg void OnHideModelsOfClass();
-		afx_msg void OnUpdateHideModelsOfClass(CCmdUI* pCmdUI);
-		afx_msg void OnDisplayModelPolycount();
-		afx_msg void OnUpdateDisplayModelPolycount(CCmdUI* pCmdUI);
 		afx_msg void OnUpdateStatus( CCmdUI* pCmdUI );
 		afx_msg void OnUseDevice1();
 		afx_msg void OnUseDevice2();
@@ -533,33 +497,18 @@
 		afx_msg void OnRenderMode3();
 		afx_msg void OnRenderMode4();
 		afx_msg void OnReplaceTextures();
-		afx_msg void OnUpdateReplaceTextures(CCmdUI* pCmdUI);
-		afx_msg void OnReplaceTexturesInSel();
-		afx_msg void OnUpdateReplaceTexturesInSel(CCmdUI* pCmdUI);
 		afx_msg void OnSelectTexture();
-		afx_msg void OnUpdateSelectTexture(CCmdUI* pCmdUI);
-		afx_msg void OnSelectPrefab();
-		afx_msg void OnUpdateSelectPrefab(CCmdUI* pCmdUI);
 		afx_msg void OnSelectBrushColor();
-		afx_msg void OnUpdateSelectBrushColor(CCmdUI* pCmdUI);
 		afx_msg void OnResetDetailLevels();
-		afx_msg void OnUpdateAllObjectProperties();
 		afx_msg void OnNavigatorStore();
-		afx_msg void OnUpdateNavigatorStore(CCmdUI* pCmdUI);
 		afx_msg void OnNavigatorOrganize();
-		afx_msg void OnUpdateNavigatorOrganize(CCmdUI* pCmdUI);
 		afx_msg void OnNavigatorGotoNext();
-		afx_msg void OnUpdateNavigatorGotoNext(CCmdUI* pCmdUI);
 		afx_msg void OnNavigatorGotoPrevious();
-		afx_msg void OnUpdateNavigatorGotoPrevious(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionSelectAll();
-		afx_msg void OnUpdateSelectionSelectAll(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionSelectNone();
-		afx_msg void OnUpdateSelectionSelectNone(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionSelectInverse();
 		afx_msg void OnUpdateSelectionSelectInverse(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionAdvanced();
-		afx_msg void OnUpdateSelectionAdvanced(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionHideSelected();
 		afx_msg void OnUpdateSelectionHideSelected(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionUnhideSelected();
@@ -573,9 +522,7 @@
 		afx_msg void OnUpdateBrushCarve(CCmdUI* pCmdUI);
 		afx_msg void OnBrushJoin();
 		afx_msg void OnBrushUnJoin();
-		afx_msg void OnSetCameraFOV();
 		afx_msg void OnBrushFlip();
-		afx_msg void OnUpdateBrushFlip(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionMirrorX();
 		afx_msg void OnUpdateSelectionMirrorX(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionMirrorY();
@@ -584,8 +531,6 @@
 		afx_msg void OnUpdateSelectionMirrorZ(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionContainer();
 		afx_msg void OnUpdateSelectionContainer(CCmdUI* pCmdUI);
-		afx_msg void OnCenterSelectionOnMarker();
-		afx_msg void OnUpdateCenterSelectionOnMarker(CCmdUI* pCmdUI);
 		afx_msg void OnCenterMarkerOnSelection();
 		afx_msg void OnUpdateCenterMarkerOnSelection(CCmdUI* pCmdUI);
 		afx_msg void OnPlaceMarkerAtCamera();
@@ -597,122 +542,145 @@
 		afx_msg void OnWorldDebugFindNamingConflicts();
 		afx_msg void OnWorldScaleGeometry();
 		afx_msg void OnMapTextureToView();
-		afx_msg void OnUpdateMapTextureToView(CCmdUI* pCmdUI);
 		afx_msg void OnResetTextureCoords();
-		afx_msg void OnUpdateResetTextureCoords(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionHideInverse();
 		afx_msg void OnUpdateSelectionHideInverse(CCmdUI* pCmdUI);
 		afx_msg void OnSelectionUnhideInverse();
 		afx_msg void OnUpdateSelectionUnhideInverse(CCmdUI* pCmdUI);
 		afx_msg void OnFileImportWorld();
 		afx_msg void OnSelectionSavePrefab();
-		afx_msg void OnSelectionScale();
 		afx_msg void OnUpdateSelectionSavePrefab(CCmdUI* pCmdUI);
-		afx_msg void OnUpdateSelectionScale(CCmdUI* pCmdUI);
-		afx_msg void OnViewMaximizeView1();
-		afx_msg void OnUpdateViewMaximizeView1(CCmdUI* pCmdUI);
-		afx_msg void OnViewMaximizeView2();
-		afx_msg void OnUpdateViewMaximizeView2(CCmdUI* pCmdUI);
-		afx_msg void OnViewMaximizeView3();
-		afx_msg void OnUpdateViewMaximizeView3(CCmdUI* pCmdUI);
-		afx_msg void OnViewMaximizeView4();
-		afx_msg void OnUpdateViewMaximizeView4(CCmdUI* pCmdUI);
-		afx_msg void OnViewMaximizeActiveView();
-		afx_msg void OnUpdateViewMaximizeActiveView(CCmdUI* pCmdUI);
-		afx_msg void OnSelectionFreezeSelected();
-		afx_msg void OnUpdateSelectionFreezeSelected(CCmdUI* pCmdUI);
-		afx_msg void OnSelectionUnfreezeAll();
-		afx_msg void OnUpdateSelectionUnfreezeAll(CCmdUI* pCmdUI);
-		afx_msg void OnFitTextureToPoly();
-		afx_msg void OnUpdateFitTextureToPoly(CCmdUI* pCmdUI);
-		afx_msg void OnToggleClassIcons();
-		afx_msg void OnUpdateToggleClassIcons(CCmdUI* pCmdUI);
-		afx_msg void OnHideFrozenNodes();
-		afx_msg void OnUpdateHideFrozenNodes(CCmdUI* pCmdUI);
-		afx_msg void OnCameraToObject();
-		afx_msg void OnUpdateCameraToObject(CCmdUI* pCmdUI);
-		afx_msg void OnDisconnectSelectedPrefabs();
-		afx_msg void OnUpdateDisconnectSelectedPrefabs(CCmdUI* pCmdUI);
-		afx_msg void OnMirrorTextureX();
-		afx_msg void OnUpdateMirrorTextureX(CCmdUI* pCmdUI);
-		afx_msg void OnMirrorTextureY();
-		afx_msg void OnUpdateMirrorTextureY(CCmdUI* pCmdUI);
 		afx_msg void OnMatchTextureCoords();
-		afx_msg void OnUpdateMatchTextureCoords(CCmdUI* pCmdUI);
 		afx_msg void OnHollowBrush();
+		// talon: 2001's (the message map 0x4dbb40).
+		afx_msg void OnUpdateShrinkPixelScale(CCmdUI* pCmdUI);
+		afx_msg void OnUpdateGrowPixelScale(CCmdUI* pCmdUI);
+		afx_msg void OnShrinkPixelScale();
+		afx_msg void OnGrowPixelScale();
+		afx_msg void OnAltT();
+		afx_msg void OnWalkthruMovement();
+		afx_msg void OnOrbitMovement();
+		afx_msg void OnUpdatePlanes();
+		afx_msg void OnUseDirect3D();
+		afx_msg void OnChar(UINT nChar, UINT nRepCnt, UINT nFlags);
+		afx_msg void OnSelectDetailBrushes();
+		afx_msg void OnWorldDebugClearLeakFinder();
+		afx_msg void OnUpdateWorldDebugClearLeakFinder(CCmdUI* pCmdUI);
+		afx_msg void OnWorldDebugGotoNextLeakVertice();
+		afx_msg void OnUpdateWorldDebugGotoNextLeakVertice(CCmdUI* pCmdUI);
+		afx_msg void OnWorldDebugGotoPreviousLeakVertice();
+		afx_msg void OnUpdateWorldDebugGotoPreviousLeakVertice(CCmdUI* pCmdUI);
+		afx_msg void OnLoadLightData();
+		afx_msg void OnUnloadLightData();
+		afx_msg void OnSaveLightData();
+		afx_msg void OnUpdateLightData(CCmdUI* pCmdUI);
 		//}}AFX_MSG
 
 		DECLARE_MESSAGE_MAP()
 
 		
 		//-------------Member Variables-----------------//
+		// talon: the 2001 layout (sizeof 0x8b8, the constructor 0x45292d and
+		// destructor 0x452afe; CView 0x40, CViewRender 0x40..0x554). Offsets
+		// are CRegionView's; members no function names are named by offset.
 	public:
 
-		//the ID of the viewport (0-3). Used for accessing viewport specific properties
-		uint32						m_nViewID;
+		int							m_nShadeMode;				// 0x554 (Get/SetShadeMode 0x46623c)
+		BOOL						m_bWalkThroughMovement;		// 0x558 (0x466250; 0x457b10, 0x457b18)
+		BOOL						m_bSelectBackfaces;			// 0x55c (0x466264)
+		BOOL						m_bShowNormals;				// 0x560 (0x466278)
 
-		CEditRay					m_rayMousePoint;
+		CEditRay					m_rayMousePoint;			// 0x564 (OnContextMenu 0x457645)
 
 		// THE region you're editing.
-		CEditRegion					*m_pRegion;
+		CEditRegion					*m_pRegion;					// 0x57c
+
+		int							m_nPixelScale;				// 0x580 (OnShrinkPixelScale 0x45976e)
+		float						m_fPixelScale;				// 0x584
+		BOOL						m_bShowWireframe;			// 0x588 (OnShowWireframe 0x457c06)
+		BOOL						m_Unknown58c;				// 0x58c (= FALSE in the constructor)
+		BOOL						m_bShowObjects;				// 0x590 (OnShowObjects 0x457bc8)
+		BOOL						m_bShowGrid;				// 0x594 (OnShowEditGrid 0x458e87)
+		BOOL						m_bShowMarker;				// 0x598 (OnShowMarker 0x458e9e)
 
 		// When the right button goes down, if no editing actions are taken,
 		// it sets this to TRUE so the popup menu comes up.
-		BOOL						m_bDoMenu;
+		BOOL						m_bDoMenu;					// 0x59c (0x455a6e)
 
-		DWORD						m_dwGridSpacing;			
-		DWORD						m_dwMajorGridSpacing;
+		DWORD						m_dwGridSpacing;			// 0x5a0
+		DWORD						m_dwMajorGridSpacing;		// 0x5a4
+
+		CMoArray<CWorldNode*>		m_Unknown5a8;				// 0x5a8 (vtable 0x4d75fc; only constructed and destroyed)
 
 		// Timing stuff.
-		UINT						m_TimerID;
+		UINT						m_TimerID;					// 0x5bc
+
+		DWORD						m_Unknown5c0[3];			// 0x5c0
 
 		// Used to track the mouse.
-		CPoint						m_LastMousePos;			
-
-
-		CPolyRef					m_PolyToSplit;
-
-		// Is the window in focus?
-		BOOL						m_bInFocus;				
-		CUITrackerMgr				m_cTrackerMgr;
-
-		// used for mouse movement tracking
-		BOOL						m_bMouseOver; 
-
-		CRect						m_TagDrawRect;
-
-		// Handles on the selection box.
-		CVector						m_BoxHandles[NUM_BOX_HANDLES];
-		CPoint						m_HandlePos[NUM_BOX_HANDLES];
-		BOOL						m_HandlesInFrustum[NUM_BOX_HANDLES];
-		
-		// More info on the box.
-		CVector						m_BoxMiddle;
-		CVector						m_BoxHalf;
-
-		int							m_CurMouseOverHandle;
+		CPoint						m_LastMousePos;				// 0x5cc
 
 		// Current state.
-		EditState					m_EditState;			
+		EditState					m_EditState;				// 0x5d4
+
+		CPolyRef					m_PolyToSplit;				// 0x5d8
+
+		BOOL						m_Unknown5e0;				// 0x5e0 (= FALSE in the constructor)
+
+		// Is the window in focus?
+		BOOL						m_bInFocus;					// 0x5e4
+		BOOL						m_Unknown5e8;				// 0x5e8 (= TRUE in the constructor)
+
+		CUITrackerMgr				m_cTrackerMgr;				// 0x5ec
+
+		DWORD						m_Unknown608[2];			// 0x608 (never touched)
+
+		CRect						m_TagDrawRect;				// 0x610
+
+		CBrushRef					m_Unknown620;				// 0x620 (UpdateImmediateSelection 0x467aa5)
+
+		// Handles on the selection box.
+		CVector						m_BoxHandles[NUM_BOX_HANDLES];			// 0x624
+		CPoint						m_HandlePos[NUM_BOX_HANDLES];			// 0x6fc
+		BOOL						m_HandlesInFrustum[NUM_BOX_HANDLES];	// 0x78c
+		
+		// More info on the box.
+		CVector						m_BoxMiddle;				// 0x7d4
+		CVector						m_BoxHalf;					// 0x7e0
+
+		int							m_CurMouseOverHandle;		// 0x7ec
 
 		// Different cursors for the app.
-		HCURSOR						m_CursorArrow;
+		HCURSOR						m_CursorArrow;				// 0x7f0
 		HCURSOR						m_CursorNS;
 		HCURSOR						m_CursorWE;
 		HCURSOR						m_CursorNWSE;
 		HCURSOR						m_CursorNESW; 
-		HCURSOR						m_CursorSizeAll;
+		HCURSOR						m_CursorSizeAll;			// 0x804
 		
 		// Is a size handle selected?  (If not, it won't try to size the brush selections.)
-		BOOL						m_bSizeHandleSelected;
+		BOOL						m_bSizeHandleSelected;		// 0x808 (0x467db6)
+
+		DWORD						m_Unknown80c[10];			// 0x80c..0x834
 
 		// Used for texture polygons with the "K" key
-		int							m_nCurrentTextureVertIndex;
+		int							m_nCurrentTextureVertIndex;	// 0x834 (OnInitTextureSpace 0x45d28d)
+
+		// The leak vertex the view is at (OnWorldDebugGotoNextLeakVertice 0x45c4e8).
+		int							m_nCurLeakVertex;			// 0x838
 
 		// Distance to selected object.  Used to cycle selections.
-		CReal						m_rSelectDist;
+		CReal						m_rSelectDist;				// 0x83c
 		
-		CPoint						m_MousePoint;
+		CPoint						m_MousePoint;				// 0x840 (OnMouseMove 0x45592a)
+
+		// Only constructed and destroyed (vtables 0x4dcc28, 0x4dcbf8).
+		CVertRefArray				m_Unknown848;				// 0x848
+		CBrushRefArray				m_Unknown85c;				// 0x85c
+		CPolyRef					m_Unknown870;				// 0x870
+		DWORD						m_Unknown878[2];			// 0x878
+		CVertRefArray				m_Unknown880;				// 0x880
+		DWORD						m_Unknown894[9];			// 0x894..0x8b8
 	};
 
 	/////////////////////////////////////////////////////////////////////////////

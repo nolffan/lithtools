@@ -80,16 +80,27 @@ IMPLEMENT_DYNCREATE(CRegionView, CView)
 
 CRegionView::CRegionView()
 {
+	m_fPixelScale			= 1.0f;
+	m_Unknown5e8			= TRUE;
+	m_nPixelScale			= 1;
+
 	m_TagDrawRect.SetRect( -1, -1, -1, -1 );
 	
+	m_CurMouseOverHandle	= -1;
+	m_Unknown5e0			= FALSE;
+
+	m_bShowWireframe		= FALSE;
+	m_Unknown58c			= FALSE;
+	m_bShowObjects			= TRUE;
+	m_bShowGrid				= TRUE;
+	m_bShowMarker			= TRUE;
+
 	// Setup all the defaults for the editing view.
 	m_bInFocus				= FALSE;
 
 	m_EditState				= EDIT_NOSTATE;
 	m_dwGridSpacing			= 64;
 	m_dwMajorGridSpacing	= 256;
-
-	m_CurMouseOverHandle	= -1;
 
 	m_CursorArrow	= AfxGetApp()->LoadStandardCursor( IDC_ARROW );
 	m_CursorNS		= AfxGetApp()->LoadStandardCursor( IDC_SIZENS );
@@ -103,8 +114,7 @@ CRegionView::CRegionView()
 	
 	m_rSelectDist				= 0.0f;
 	m_nCurrentTextureVertIndex	= 0;
-
-	m_bMouseOver				= FALSE;
+	m_nCurLeakVertex			= 0;
 
 	InitTracker();
 }
@@ -118,56 +128,64 @@ CRegionView::~CRegionView()
 }
 
 
+// talon: the 2001 command ids that resource.h (Build 69's) has no name for,
+// or names differently; values from the message map at 0x4dbb40.
+#define ID_RV2001_SHRINK_PIXEL_SCALE		32843	// "Shrink pixel scale"
+#define ID_RV2001_GROW_PIXEL_SCALE			32844	// "Grow pixel scale"
+#define ID_RV2001_ALT_T						32945	// accelerator Alt+T
+#define ID_RV2001_AUTO_TRIANGULATE			32875
+#define ID_RV2001_NORMAL_TO_FORWARD			40007	// "As Forward Vector Rotation"
+#define ID_RV2001_NORMAL_TO_UP				40008	// "As Up Vector Rotation"
+#define ID_RV2001_NORMAL_TO_RIGHT			40009	// "As Right Vector Rotation"
+#define ID_RV2001_SELECT_DETAIL_BRUSHES		32839	// "Select Detail Brushes"
+#define ID_RV2001_INDICATOR_VIEWTYPE		59142
+#define ID_RV2001_SAVE_LIGHT_DATA			40088	// "&Save Light Data"
+#define ID_RV2001_PLACE_MARKER_AT_VECTOR	40067	// "Marker to Location"
+
+// The 2001 message map (0x4dbb40), in its order.
 BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_WM_CONTEXTMENU()
-	//{{AFX_MSG_MAP(CRegionView)
+	ON_UPDATE_COMMAND_UI(ID_SHRINK_GRID_SPACING, OnUpdateShrinkGridSpacing)
+	ON_UPDATE_COMMAND_UI(ID_EXPAND_GRID_SPACING, OnUpdateExpandGridSpacing)
+	ON_UPDATE_COMMAND_UI(ID_RV2001_SHRINK_PIXEL_SCALE, OnUpdateShrinkPixelScale)
+	ON_UPDATE_COMMAND_UI(ID_RV2001_GROW_PIXEL_SCALE, OnUpdateGrowPixelScale)
+	ON_UPDATE_COMMAND_UI(ID_APPLY_COLOR, OnUpdateApplyColor)
+	ON_UPDATE_COMMAND_UI(ID_APPLY_TEXTURE, OnUpdateApplyTexture)
+	ON_COMMAND(ID_SHRINK_GRID_SPACING, OnShrinkGridSpacing)
+	ON_COMMAND(ID_EXPAND_GRID_SPACING, OnExpandGridSpacing)
+	ON_COMMAND(ID_RV2001_SHRINK_PIXEL_SCALE, OnShrinkPixelScale)
+	ON_COMMAND(ID_RV2001_GROW_PIXEL_SCALE, OnGrowPixelScale)
+	ON_COMMAND(ID_APPLY_COLOR, OnApplyColor)
+	ON_COMMAND(ID_RV2001_ALT_T, OnAltT)
+	ON_COMMAND(ID_APPLY_TEXTURE, OnApplyTexture)
+	ON_COMMAND(ID_HOLLOW_BRUSH, OnHollowBrush)
+	ON_COMMAND(ID_IMPORT_TERRAIN_MAP, OnImportTerrainMap )
+	ON_COMMAND(ID_ADDPRIM_BOX, OnCreatePrimitiveBox )
+	ON_COMMAND(ID_ADDPRIM_CYLINDER, OnCreatePrimitiveCylinder )
+	ON_COMMAND(ID_ADDPRIM_PYRAMID, OnCreatePrimitivePyramid )
+	ON_UPDATE_COMMAND_UI(ID_HOLLOW_BRUSH, OnUpdateSingleBrushOperation)
 	ON_WM_SIZE()
 	ON_WM_ERASEBKGND()
 	ON_WM_DESTROY()
-	ON_WM_MOUSEMOVE()
-	ON_WM_MOUSEWHEEL()
 	ON_WM_LBUTTONDOWN()
+	ON_WM_MOUSEMOVE()
 	ON_WM_LBUTTONUP()
 	ON_WM_RBUTTONDOWN()
 	ON_WM_RBUTTONUP()
-	ON_WM_MBUTTONDOWN()
-	ON_WM_MBUTTONUP()
 	ON_WM_KEYDOWN()
 	ON_WM_KEYUP()
+	ON_COMMAND(ID_RV2001_AUTO_TRIANGULATE, OnAutoTriangulate)
 	ON_WM_KILLFOCUS()
 	ON_WM_SETFOCUS()
-	ON_MESSAGE(WM_MOUSELEAVE, OnMouseLeave)
-	ON_MESSAGE(WM_MOUSEHOVER, OnMouseHover)
-	ON_COMMAND(ID_SHRINK_GRID_SPACING, OnShrinkGridSpacing)
-	ON_UPDATE_COMMAND_UI(ID_SHRINK_GRID_SPACING, OnUpdateShrinkGridSpacing)
-	ON_COMMAND(ID_EXPAND_GRID_SPACING, OnExpandGridSpacing)
-	ON_UPDATE_COMMAND_UI(ID_EXPAND_GRID_SPACING, OnUpdateExpandGridSpacing)
-	ON_UPDATE_COMMAND_UI(ID_APPLY_COLOR, OnUpdateApplyColor)
-	ON_COMMAND(ID_APPLY_COLOR, OnApplyColor)
-	ON_COMMAND(ID_APPLY_TEXTURE, OnApplyTexture)
-	ON_UPDATE_COMMAND_UI(ID_APPLY_TEXTURE, OnUpdateApplyTexture)
-	ON_COMMAND(ID_REMOVE_TEXTURE, OnRemoveTexture)
-	ON_UPDATE_COMMAND_UI(ID_REMOVE_TEXTURE, OnUpdateRemoveTexture)
-	ON_COMMAND(ID_HOLLOW_BRUSH, OnHollowBrush)
-	ON_UPDATE_COMMAND_UI(ID_HOLLOW_BRUSH, OnUpdateSingleBrushOperation)
-	ON_COMMAND(ID_IMPORT_TERRAIN_MAP, OnImportTerrainMap )
-	ON_COMMAND(ID_ADDPRIM_BOX, OnCreatePrimitiveBox )
-	ON_UPDATE_COMMAND_UI(ID_ADDPRIM_BOX, OnUpdateCreatePrimitiveBox)
-	ON_COMMAND(ID_ADDPRIM_CYLINDER, OnCreatePrimitiveCylinder )
-	ON_UPDATE_COMMAND_UI(ID_ADDPRIM_CYLINDER, OnUpdateCreatePrimitiveCylinder)
-	ON_COMMAND(ID_ADDPRIM_PYRAMID, OnCreatePrimitivePyramid )
-	ON_UPDATE_COMMAND_UI(ID_ADDPRIM_PYRAMID, OnUpdateCreatePrimitivePyramid)
-	ON_COMMAND(ID_ADDPRIM_SPHERE, OnCreatePrimitiveSphere)
-	ON_UPDATE_COMMAND_UI(ID_ADDPRIM_SPHERE, OnUpdateCreatePrimitiveSphere)
-	ON_COMMAND(ID_ADDPRIM_PLANE, OnCreatePrimitivePlane)
-	ON_UPDATE_COMMAND_UI(ID_ADDPRIM_PLANE, OnUpdateCreatePrimitivePlane)
-	ON_COMMAND(ID_ADDPRIM_DOME, OnCreatePrimitiveDome)
-	ON_UPDATE_COMMAND_UI(ID_ADDPRIM_DOME, OnUpdateCreatePrimitiveDome)
 	ON_COMMAND(ID_POPUP_FUNCTIONS_REMOVEEXTRAEDGES, OnRemoveExtraEdges)
 	ON_COMMAND(ID_POPUP_FUNCTIONS_MAPTEXTURECOORDS, OnMapTextureCoords)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_FUNCTIONS_MAPTEXTURECOORDS, OnUpdateMapTextureCoords)
+	// talon: TODO (not written yet): ON_COMMAND(ID_RV2001_NORMAL_TO_FORWARD, OnNormalToForward)
+	// talon: TODO (not written yet): ON_COMMAND(ID_RV2001_NORMAL_TO_UP, OnNormalToUp)
+	// talon: TODO (not written yet): ON_COMMAND(ID_RV2001_NORMAL_TO_RIGHT, OnNormalToRight)
+	// talon: TODO (not written yet): ON_UPDATE_COMMAND_UI(ID_RV2001_NORMAL_TO_FORWARD, OnUpdateNormalToVector)
+	// talon: TODO (not written yet): ON_UPDATE_COMMAND_UI(ID_RV2001_NORMAL_TO_UP, OnUpdateNormalToVector)
+	// talon: TODO (not written yet): ON_UPDATE_COMMAND_UI(ID_RV2001_NORMAL_TO_RIGHT, OnUpdateNormalToVector)
 	ON_COMMAND(ID_POPUP_FUNCTIONS_ROTATESELECTION, OnRotateSelection)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_FUNCTIONS_ROTATESELECTION, OnUpdateRotateSelection)
 	ON_COMMAND(ID_POPUP_FUNCTIONS_RESETALLTEXTURECOORDINATES, OnResetAllTextureCoords)
 	ON_COMMAND(ID_EDIT_UNDO, OnEditUndo)
 	ON_UPDATE_COMMAND_UI(ID_EDIT_UNDO, OnUpdateEditUndo)
@@ -176,46 +194,37 @@ BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_COMMAND(ID_POPUP_FUNCTIONS_JOINTAGGEDVERTICES, OnJoinTaggedVertices)
 	ON_COMMAND(ID_OBJECT_HEIGHT, OnObjectHeight)
 	ON_COMMAND(ID_POPUP_ADDOBJECT, OnAddObject)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_ADDOBJECT, OnUpdateAddObject)
 	ON_COMMAND(ID_POPUP_BINDTOOBJECT, OnBindToObject)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_BINDTOOBJECT, OnUpdateBindToObject)
 	ON_COMMAND(ID_POPUP_OPTIONS_SHOWWIREFRAME, OnShowWireframe)
 	ON_COMMAND(ID_POPUP_OBJECTPROPERTIES, OnObjectProperties)
 	ON_COMMAND(ID_POPUP_WORLDINFO, OnWorldInfo)
 	ON_COMMAND(ID_POPUP_SHADEMODE_WIREFRAMEPOLIES, OnShadeWireframe)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_SHADEMODE_WIREFRAMEPOLIES, OnUpdateShadeWireframe)
 	ON_COMMAND(ID_POPUP_SHADEMODE_TEXTUREDPOLIES, OnShadeTextured)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_SHADEMODE_TEXTUREDPOLIES, OnUpdateShadeTextured)
 	ON_COMMAND(ID_POPUP_SHADEMODE_FLATPOLIES, OnShadeFlat)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_SHADEMODE_FLATPOLIES, OnUpdateShadeFlat)
 	ON_COMMAND(ID_POPUP_SHADEMODE_LIGHTMAPSONLY, OnShadeLightmapsOnly)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_SHADEMODE_LIGHTMAPSONLY, OnUpdateShadeLightmapsOnly)
 	ON_COMMAND(ID_POPUP_OPTIONS_SHOWOBJECTS, OnShowObjects)
 	ON_COMMAND(ID_POPUP_OPTIONS_SHOWNORMALS, OnShowNormals)
 	ON_COMMAND(ID_POPUP_OPTIONS_BACKFACINGPOLIES, OnBackfacingPolies)
+	ON_COMMAND(ID_POPUP_MOVEMODE_WALKTHRUMOVEMENT, OnWalkthruMovement)
+	ON_COMMAND(ID_POPUP_MOVEMODE_ORBITMOVEMENT, OnOrbitMovement)
 	ON_COMMAND(ID_POPUP_VIEWMODE_BACKVIEW, OnBackView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_BACKVIEW, OnUpdateBackView)
 	ON_COMMAND(ID_POPUP_VIEWMODE_BOTTOMVIEW, OnBottomView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_BOTTOMVIEW, OnUpdateBottomView)
 	ON_COMMAND(ID_POPUP_VIEWMODE_FRONTVIEW, OnFrontView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_FRONTVIEW, OnUpdateFrontView)
 	ON_COMMAND(ID_POPUP_VIEWMODE_LEFTVIEW, OnLeftView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_LEFTVIEW, OnUpdateLeftView)
 	ON_COMMAND(ID_POPUP_VIEWMODE_PERSPECTIVEVIEW, OnPerspectiveView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_PERSPECTIVEVIEW, OnUpdatePerspectiveView)
 	ON_COMMAND(ID_POPUP_VIEWMODE_RIGHTVIEW, OnRightView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_RIGHTVIEW, OnUpdateRightView)
 	ON_COMMAND(ID_POPUP_VIEWMODE_TOPVIEW, OnTopView)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_TOPVIEW, OnUpdateTopView)
 	ON_COMMAND(ID_POPUP_PROCESSWORLD, OnProcessWorld)
 	ON_COMMAND(ID_FILE_SAVE, OnFileSave)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE_AS, OnUpdateFileSaveAs)
 	ON_COMMAND(ID_POPUP_FUNCTIONS_CLEANUPGEOMETRY, OnCleanupGeometry)
+	ON_COMMAND(ID_POPUP_FUNCTIONS_UPDATEPLANES, OnUpdatePlanes)
+	// talon: TODO (not written yet): ON_COMMAND(ID_POPUP_FUNCTIONS_FINDCONCAVEBRUSHES, OnFindConcaveBrushes)
 	ON_COMMAND(ID_POPUP_OPTIONS_SHOWEDITGRID, OnShowEditGrid)
- 	ON_COMMAND(ID_POPUP_OPTIONS_SHOWMARKER, OnShowMarker)
+	ON_COMMAND(ID_POPUP_OPTIONS_SHOWMARKER, OnShowMarker)
+	// talon: TODO (not written yet): ON_COMMAND(ID_POPUP_EXPORTQUAKEMAP, OnExportQuakeMap)
 	ON_COMMAND(ID_POPUP_VIEWMODE_4VIEWCONFIGURATION, On4ViewConfiguration)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_VIEWMODE_4VIEWCONFIGURATION, OnUpdate4ViewConfiguration)
-	ON_UPDATE_COMMAND_UI( ID_INDICATOR_VIEWTYPE, OnUpdateStatus )
+	ON_UPDATE_COMMAND_UI(ID_RV2001_INDICATOR_VIEWTYPE, OnUpdateStatus )
 	ON_COMMAND(ID_USEDEVICE1, OnUseDevice1)
 	ON_COMMAND(ID_USEDEVICE2, OnUseDevice2)
 	ON_COMMAND(ID_USEDEVICE3, OnUseDevice3)
@@ -224,34 +233,23 @@ BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_COMMAND(ID_RENDERMODE2, OnRenderMode2)
 	ON_COMMAND(ID_RENDERMODE3, OnRenderMode3)
 	ON_COMMAND(ID_RENDERMODE4, OnRenderMode4)
+	ON_COMMAND(ID_USEDIRECT3D, OnUseDirect3D)
 	ON_COMMAND(ID_POPUP_REPLACEALLTEXTURES,OnReplaceTextures)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_REPLACEALLTEXTURES, OnUpdateReplaceTextures)
-	ON_COMMAND(ID_REPLACE_TEXTURES_IN_SEL,OnReplaceTexturesInSel)
-	ON_UPDATE_COMMAND_UI(ID_REPLACE_TEXTURES_IN_SEL, OnUpdateReplaceTexturesInSel)
 	ON_COMMAND(ID_POPUP_SELECTTEXTURE,OnSelectTexture)
-	ON_UPDATE_COMMAND_UI(ID_POPUP_SELECTTEXTURE, OnUpdateSelectTexture)
-	ON_COMMAND(ID_SELECT_PREFAB, OnSelectPrefab)
-	ON_UPDATE_COMMAND_UI(ID_SELECT_PREFAB, OnUpdateSelectPrefab)
-	ON_COMMAND(ID_SELECTBRUSHCOLOR,OnSelectBrushColor)
-	ON_UPDATE_COMMAND_UI(ID_SELECTBRUSHCOLOR, OnUpdateSelectBrushColor)
+	// talon: TODO (not written yet): ON_COMMAND(ID_EDIT_SURFACE_FLAGS, OnEditSurfaceFlags)
+	// talon: TODO (not written yet): ON_COMMAND(ID_EDIT_SURFACE_COLOR, OnEditSurfaceColor)
+	ON_WM_CHAR()
 	ON_COMMAND(ID_RESET_DETAIL_LEVELS, OnResetDetailLevels)
-	ON_COMMAND(ID_WORLD_SPECIAL_UPDATE_PROPS, OnUpdateAllObjectProperties)
 	ON_COMMAND(ID_NAVIGATOR_STORE, OnNavigatorStore)
-	ON_UPDATE_COMMAND_UI(ID_NAVIGATOR_STORE, OnUpdateNavigatorStore)
 	ON_COMMAND(ID_NAVIGATOR_ORGANIZE, OnNavigatorOrganize)
-	ON_UPDATE_COMMAND_UI(ID_NAVIGATOR_ORGANIZE, OnUpdateNavigatorOrganize)
 	ON_COMMAND(ID_NAVIGATOR_GOTONEXT, OnNavigatorGotoNext)
-	ON_UPDATE_COMMAND_UI(ID_NAVIGATOR_GOTONEXT, OnUpdateNavigatorGotoNext)
 	ON_COMMAND(ID_NAVIGATOR_GOTOPREVIOUS, OnNavigatorGotoPrevious)
-	ON_UPDATE_COMMAND_UI(ID_NAVIGATOR_GOTOPREVIOUS, OnUpdateNavigatorGotoPrevious)
 	ON_COMMAND(ID_SELECTION_SELECTALL, OnSelectionSelectAll)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_SELECTALL, OnUpdateSelectionSelectAll)
 	ON_COMMAND(ID_SELECTION_SELECTNONE, OnSelectionSelectNone)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_SELECTNONE, OnUpdateSelectionSelectNone)
 	ON_COMMAND(ID_SELECTION_SELECTINVERSE, OnSelectionSelectInverse)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_SELECTINVERSE, OnUpdateSelectionSelectInverse)
 	ON_COMMAND(ID_SELECTION_ADVANCED, OnSelectionAdvanced)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_ADVANCED, OnUpdateSelectionAdvanced)
+	ON_COMMAND(ID_RV2001_SELECT_DETAIL_BRUSHES, OnSelectDetailBrushes)
+	ON_UPDATE_COMMAND_UI(ID_SELECTION_SELECTINVERSE, OnUpdateSelectionSelectInverse)
 	ON_COMMAND(ID_SELECTION_HIDESELECTED, OnSelectionHideSelected)
 	ON_UPDATE_COMMAND_UI(ID_SELECTION_HIDESELECTED, OnUpdateSelectionHideSelected)
 	ON_COMMAND(ID_SELECTION_UNHIDESELECTED, OnSelectionUnhideSelected)
@@ -261,21 +259,20 @@ BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_COMMAND(ID_WORLD_IMPORT_OBJECTS, OnWorldImportObjects)
 	ON_COMMAND(ID_BRUSH_SPLITBRUSH, OnBrushSplitBrush)
 	ON_UPDATE_COMMAND_UI(ID_BRUSH_SPLITBRUSH, OnUpdateBrushSplitBrush)
-	ON_COMMAND(ID_SET_CAMERA_FOV, OnSetCameraFOV)
-	ON_COMMAND(ID_BRUSH_FLIP, OnBrushFlip)
-	//ON_UPDATE_COMMAND_UI(ID_BRUSH_CARVE, OnUpdateBrushFlip)
 	ON_COMMAND(ID_BRUSH_CARVE, OnBrushCarve)
 	ON_UPDATE_COMMAND_UI(ID_BRUSH_CARVE, OnUpdateBrushCarve)
+	ON_COMMAND(ID_BRUSH_FLIP, OnBrushFlip)
+	ON_UPDATE_COMMAND_UI(ID_BRUSH_CARVE, OnUpdateBrushCarve)
 	ON_COMMAND(ID_SELECTION_MIRROR_X, OnSelectionMirrorX)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_MIRROR_X, OnUpdateSelectionMirrorX)
 	ON_COMMAND(ID_SELECTION_MIRROR_Y, OnSelectionMirrorY)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_MIRROR_Y, OnUpdateSelectionMirrorY)
 	ON_COMMAND(ID_SELECTION_MIRROR_Z, OnSelectionMirrorZ)
+	ON_UPDATE_COMMAND_UI(ID_SELECTION_MIRROR_X, OnUpdateSelectionMirrorX)
+	ON_UPDATE_COMMAND_UI(ID_SELECTION_MIRROR_Y, OnUpdateSelectionMirrorY)
 	ON_UPDATE_COMMAND_UI(ID_SELECTION_MIRROR_Z, OnUpdateSelectionMirrorZ)
+	ON_COMMAND(ID_ADDPRIM_SPHERE, OnCreatePrimitiveSphere)
+	ON_COMMAND(ID_ADDPRIM_DOME, OnCreatePrimitiveDome)
 	ON_COMMAND(ID_SELECTION_CONTAINER, OnSelectionContainer)
 	ON_UPDATE_COMMAND_UI(ID_SELECTION_CONTAINER, OnUpdateSelectionContainer)
-	ON_COMMAND(ID_CENTER_SELECTION_ON_MARKER, OnCenterSelectionOnMarker)
-	ON_UPDATE_COMMAND_UI(ID_CENTER_SELECTION_ON_MARKER, OnUpdateCenterSelectionOnMarker)
 	ON_COMMAND(ID_CENTER_MARKER_ON_SELECTION, OnCenterMarkerOnSelection)
 	ON_UPDATE_COMMAND_UI(ID_CENTER_MARKER_ON_SELECTION, OnUpdateCenterMarkerOnSelection)
 	ON_COMMAND(ID_PLACE_MARKER_AT_CAMERA, OnPlaceMarkerAtCamera)
@@ -283,13 +280,15 @@ BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_COMMAND(ID_SELECTION_GENERATE_UNIQUE_NAMES, OnSelectionGenerateUniqueNames)
 	ON_UPDATE_COMMAND_UI(ID_SELECTION_GENERATE_UNIQUE_NAMES, OnUpdateSelectionGenerateUniqueNames)
 	ON_COMMAND(ID_WORLD_OBJECT_BROWSER, OnWorldObjectBrowser)
-	ON_COMMAND(ID_PLACE_MARKER_AT_VECTOR, OnPlaceMarkerAtVector)
+	// talon: TODO (not written yet): ON_COMMAND(ID_WORLD_DEBUG_LOADLEAKFILE, OnWorldDebugLoadLeakFile)
+	ON_COMMAND(ID_WORLD_DEBUG_CLEARLEAKFINDER, OnWorldDebugClearLeakFinder)
+	ON_COMMAND(ID_RV2001_PLACE_MARKER_AT_VECTOR, OnPlaceMarkerAtVector)
 	ON_COMMAND(ID_WORLD_DEBUG_FIND_NAMING_CONFLICTS, OnWorldDebugFindNamingConflicts)
 	ON_COMMAND(ID_WORLD_SCALE_GEOMETRY, OnWorldScaleGeometry)
 	ON_COMMAND(ID_MAP_TEXTURE_TO_VIEW, OnMapTextureToView)
-	ON_UPDATE_COMMAND_UI(ID_MAP_TEXTURE_TO_VIEW, OnUpdateMapTextureToView)
 	ON_COMMAND(ID_RESET_TEXTURE_COORDS, OnResetTextureCoords)
-	ON_UPDATE_COMMAND_UI(ID_RESET_TEXTURE_COORDS, OnUpdateResetTextureCoords)
+	ON_COMMAND(ID_SELECTION_SCALE, OnMatchTextureCoords)
+	// talon: TODO (not written yet): ON_COMMAND(0, OnCommandZero)
 	ON_COMMAND(ID_SELECTION_HIDEINVERSE, OnSelectionHideInverse)
 	ON_UPDATE_COMMAND_UI(ID_SELECTION_HIDEINVERSE, OnUpdateSelectionHideInverse)
 	ON_COMMAND(ID_SELECTION_UNHIDEINVERSE, OnSelectionUnhideInverse)
@@ -297,55 +296,20 @@ BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_COMMAND(ID_FILE_IMPORT_WORLD, OnFileImportWorld)
 	ON_COMMAND(ID_SELECTION_SAVEPREFAB, OnSelectionSavePrefab)
 	ON_UPDATE_COMMAND_UI(ID_SELECTION_SAVEPREFAB, OnUpdateSelectionSavePrefab)
-	ON_COMMAND(ID_SELECTION_SCALE, OnSelectionScale)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_SCALE, OnUpdateSelectionScale)
-	ON_UPDATE_COMMAND_UI(ID_IMPORT_TERRAIN_MAP, OnUpdateSingleBrushOperation )	
+	ON_UPDATE_COMMAND_UI(ID_IMPORT_TERRAIN_MAP, OnUpdateSingleBrushOperation )
 	ON_UPDATE_COMMAND_UI( ID_INDICATOR_CAMERA, OnUpdateStatus )
 	ON_UPDATE_COMMAND_UI( ID_INDICATOR_GRID, OnUpdateStatus )
+	ON_COMMAND(ID_WORLD_DEBUG_GOTO_NEXT_LEAK_VERTICE, OnWorldDebugGotoNextLeakVertice)
+	ON_UPDATE_COMMAND_UI(ID_WORLD_DEBUG_GOTO_NEXT_LEAK_VERTICE, OnUpdateWorldDebugGotoNextLeakVertice)
+	ON_COMMAND(ID_WORLD_DEBUG_GOTO_PREVIOUS_LEAK_VERTICE, OnWorldDebugGotoPreviousLeakVertice)
+	ON_UPDATE_COMMAND_UI(ID_WORLD_DEBUG_GOTO_PREVIOUS_LEAK_VERTICE, OnUpdateWorldDebugGotoPreviousLeakVertice)
+	ON_UPDATE_COMMAND_UI(ID_WORLD_DEBUG_CLEARLEAKFINDER, OnUpdateWorldDebugClearLeakFinder)
 	ON_COMMAND(ID_WORLD_SPECIAL_ALIGNPOLYTEXTURES, OnAlignPolyTextures)
-	ON_COMMAND(ID_VIEW_MAXIMIZEVIEW1, OnViewMaximizeView1)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_MAXIMIZEVIEW1, OnUpdateViewMaximizeView1)
-	ON_COMMAND(ID_VIEW_MAXIMIZEVIEW2, OnViewMaximizeView2)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_MAXIMIZEVIEW2, OnUpdateViewMaximizeView2)
-	ON_COMMAND(ID_VIEW_MAXIMIZEVIEW3, OnViewMaximizeView3)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_MAXIMIZEVIEW3, OnUpdateViewMaximizeView3)
-	ON_COMMAND(ID_VIEW_MAXIMIZEVIEW4, OnViewMaximizeView4)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_MAXIMIZEVIEW4, OnUpdateViewMaximizeView4)
-	ON_COMMAND(ID_VIEW_MAXIMIZEACTIVEVIEW, OnViewMaximizeActiveView)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_MAXIMIZEACTIVEVIEW, OnUpdateViewMaximizeActiveView)
-	ON_COMMAND(ID_SELECTION_FREEZE_SELECTED, OnSelectionFreezeSelected)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_FREEZE_SELECTED, OnUpdateSelectionFreezeSelected)
-	ON_COMMAND(ID_SELECTION_UNFREEZE_ALL, OnSelectionUnfreezeAll)
-	ON_UPDATE_COMMAND_UI(ID_SELECTION_UNFREEZE_ALL, OnUpdateSelectionUnfreezeAll)
-	ON_COMMAND(ID_SNAP_VERTICES, OnSnapVertices)
-	ON_UPDATE_COMMAND_UI(ID_SNAP_VERTICES, OnUpdateSnapVertices)
-	
-	ON_COMMAND(ID_VIEW_DISPLAY_ALL_MODELS, OnDisplayAllModels)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_DISPLAY_ALL_MODELS, OnUpdateDisplayAllModels)
-	ON_COMMAND(ID_VIEW_HIDE_ALL_MODELS, OnHideAllModels)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_HIDE_ALL_MODELS, OnUpdateHideAllModels)
-	ON_COMMAND(ID_VIEW_DISPLAY_SELECTED_MODELS, OnDisplaySelectedModels)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_DISPLAY_SELECTED_MODELS, OnUpdateDisplaySelectedModels)
-	ON_COMMAND(ID_VIEW_HIDE_SELECTED_MODELS, OnHideSelectedModels)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_HIDE_SELECTED_MODELS, OnUpdateHideSelectedModels)
-	ON_COMMAND(ID_VIEW_DISPLAY_MODELS_OF_CLASS, OnDisplayModelsOfClass)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_DISPLAY_MODELS_OF_CLASS, OnUpdateDisplayModelsOfClass)
-	ON_COMMAND(ID_VIEW_HIDE_MODELS_OF_CLASS, OnHideModelsOfClass)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_HIDE_MODELS_OF_CLASS, OnUpdateHideModelsOfClass)
-	ON_COMMAND(ID_VIEW_DISPLAY_MODEL_POLYCOUNT, OnDisplayModelPolycount)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_DISPLAY_MODEL_POLYCOUNT, OnUpdateDisplayModelPolycount)
-	ON_COMMAND(ID_FIT_TEXTURE_TO_POLY, OnFitTextureToPoly)
-	ON_UPDATE_COMMAND_UI(ID_FIT_TEXTURE_TO_POLY, OnUpdateFitTextureToPoly)
-	ON_COMMAND(ID_TOGGLE_CLASS_ICONS, OnToggleClassIcons)
-	ON_UPDATE_COMMAND_UI(ID_TOGGLE_CLASS_ICONS, OnUpdateToggleClassIcons)
-	ON_COMMAND(ID_HIDE_FROZEN_NODES, OnHideFrozenNodes)
-	ON_UPDATE_COMMAND_UI(ID_HIDE_FROZEN_NODES, OnUpdateHideFrozenNodes)
-	ON_COMMAND(ID_CAMERA_TO_OBJECT, OnCameraToObject)
-	ON_UPDATE_COMMAND_UI(ID_CAMERA_TO_OBJECT, OnUpdateCameraToObject)
-	ON_COMMAND(ID_DISCONNECT_SELECTED_PREFABS, OnDisconnectSelectedPrefabs)
-	ON_UPDATE_COMMAND_UI(ID_DISCONNECT_SELECTED_PREFABS, OnUpdateDisconnectSelectedPrefabs)
-
-	//}}AFX_MSG_MAP
+	ON_COMMAND(ID_LOAD_LIGHT_DATA, OnLoadLightData)
+	ON_COMMAND(ID_UNLOAD_LIGHT_DATA, OnUnloadLightData)
+	ON_UPDATE_COMMAND_UI(ID_UNLOAD_LIGHT_DATA, OnUpdateLightData)
+	ON_COMMAND(ID_RV2001_SAVE_LIGHT_DATA, OnSaveLightData)
+	ON_UPDATE_COMMAND_UI(ID_RV2001_SAVE_LIGHT_DATA, OnUpdateLightData)
 END_MESSAGE_MAP()
 
 
@@ -364,20 +328,6 @@ inline void CRegionView::EnableAMenuItem( CMenu *pMenu, UINT nItem, int testVal1
 	pMenu->EnableMenuItem( nItem, (testVal1 == testVal2) ? (MF_ENABLED | MF_BYCOMMAND) : (MF_GRAYED | MF_BYCOMMAND));
 }
 
-//determines if any polygons are selected for editing. This occurs when
-//in geometry mode and the cursor is over a face, or if it is brush mode and
-//a brush is selected
-BOOL CRegionView::AreAnyPoliesSelected()
-{
-	if(GetEditMode() == GEOMETRY_EDITMODE)
-	{
-		return (TaggedPolies().GetSize() > 0) ? TRUE : FALSE;
-	}
-	else
-	{
-		return (GetRegion()->m_Selections.GetSize() > 0) ? TRUE : FALSE;
-	}
-}
 
 BOOL CRegionView::OnIdle( LONG lCount )
 {
@@ -421,25 +371,9 @@ BOOL CRegionView::OnIdle( LONG lCount )
 }
 
 
-void CRegionView::SetObjectEditMode()
-{
-	((CMainFrame *)AfxGetMainWnd())->OnObjectEditMode();
-}
 
-void CRegionView::SetGeometryEditMode()
-{
-	((CMainFrame *)AfxGetMainWnd())->OnGeometryEditMode();
-}
 
-void CRegionView::SetBrushEditMode()
-{
-	((CMainFrame *)AfxGetMainWnd())->OnBrushEditMode();
-}
 
-void CRegionView::NextTextureLayer()
-{
-	SetCurrTexture((GetCurrTexture() + 1) % CEditPoly::NUM_TEXTURES);
-}
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -447,10 +381,12 @@ void CRegionView::NextTextureLayer()
 
 void CRegionView::OnDraw(CDC* pDC)
 {
-	CDocument* pDoc = GetDocument();
-
 	BEGIN_MEMORYEXCEPTION()
 	{
+		// talon: 2001 (0x45562e) gets the client rectangle and doesn't use it.
+		CRect rect;
+		GetClientRect( &rect );
+
 		DrawRect( NULL );
 	}
 	END_MEMORYEXCEPTION()
@@ -459,21 +395,13 @@ void CRegionView::OnDraw(CDC* pDC)
 
 void CRegionView::DrawRect(CRect *pRect)
 {
-	CRect rcClient;
-	GetClientRect(&rcClient);
-
-	//don't render if we don't have any area to draw in (this saves a lot of time when
-	//views are minimized)
-	if((rcClient.Width() < 2) || (rcClient.Height() < 2))
-	{
-		return;
-	}
-
 	CViewRender::DrawRect(pRect);
 
 	if (m_bInFocus)
 	{
-		CRect cCorner;
+		CRect rcClient, cCorner;
+		GetClientRect(&rcClient);
+
 		CDC *pDC = GetDC();
 		if (pDC)
 		{
@@ -530,22 +458,24 @@ void CRegionView::Dump(CDumpContext& dc) const
 void CRegionView::OnInitialUpdate() 
 {
 	CRect rcClient;
-	int cx, cy;	
 
 	CView::OnInitialUpdate();
 	
 	// Status message..
 	GetClientRect(&rcClient);
-	cx = rcClient.Width();
-	cy = rcClient.Height();
-	TRACE( "New World View: (%d, %d)\n", cx, cy );
-	
 
 	// Install the main timer.
 	m_TimerID = SetTimer( 10, 1, NULL );
 
 	// Get the region pointer and set it in various structures.
 	m_pRegion = &GetRegionDoc()->m_Region;
+
+	// talon: 2001 (0x455797): the view's own defaults.
+	SetWalkThroughMovement( TRUE );
+	SetShadeMode( SM_TEXTURED );
+	SetSelectBackfaces( TRUE );
+	SetShowNormals( FALSE );
+	SetShowWireframe( FALSE );
 
 	SetupInitialDrawMgr();		
 }
@@ -596,55 +526,13 @@ void CRegionView::OnLButtonDown( UINT nFlags, CPoint point )
 	CView::OnLButtonDown(nFlags, point);
 }
 
-BOOL CRegionView::OnMouseWheel( UINT nFlags, short zDelta, CPoint point )
-{
-	// convert screen coordinates to window coordinates:
-	CRect rect;
-	GetWindowRect( &rect );
-	CPoint cursorPt = point - CPoint( rect.left, rect.top );
-
-	m_cTrackerMgr.ProcessEvent( CUIMouseEvent( UIEVENT_MOUSEWHEEL, UI_MOUSENONE, cursorPt, zDelta ) );
-	return CView::OnMouseWheel( nFlags, zDelta, point );
-}
-
-void CRegionView::OnMButtonDown( UINT nFlags, CPoint point ) 
-{
-	BEGIN_MEMORYEXCEPTION()
-	{
-		m_cTrackerMgr.ProcessEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSEMIDDLE, point));
-	}
-	END_MEMORYEXCEPTION()
-	
-	CView::OnMButtonDown(nFlags, point);
-}
 
 
-void CRegionView::OnMButtonUp(UINT nFlags, CPoint point) 
-{
-	BEGIN_MEMORYEXCEPTION()
-	{
-		BOOL		bDraw = FALSE;
-		
-		bDraw |= m_cTrackerMgr.ProcessEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSEMIDDLE, point));
 
-		if (!bDraw)
-			bDraw |= UpdateImmediateSelection();
-
-		if( bDraw )
-			DrawRect();
-	}
-	END_MEMORYEXCEPTION()
-
-	CView::OnMButtonUp(nFlags, point);
-}
 
 
 void CRegionView::OnMouseMove(UINT nFlags, CPoint point) 
 {
-	CRegionDoc *pDoc;
-	CRegionView *pRegionView;
-	POSITION pos;
-
 	if (!m_cTrackerMgr.ProcessEvent(CUIMouseEvent(UIEVENT_MOUSEMOVE, UI_MOUSENONE, point)))
 	{
 
@@ -657,18 +545,6 @@ void CRegionView::OnMouseMove(UINT nFlags, CPoint point)
 		// Reset selection distance if mouse moved enough...
 		if( dist > 3 )
 			m_rSelectDist = 0.0f;	
-	}
-
-	if(!m_bMouseOver) 
-	{
-		m_bMouseOver = TRUE;
-
-		TRACKMOUSEEVENT tme;
-		tme.cbSize		= sizeof (tme);
-		tme.dwFlags		= TME_HOVER | TME_LEAVE;
-		tme.hwndTrack	= m_hWnd;
-		tme.dwHoverTime = HOVER_DEFAULT;
-		_TrackMouseEvent(&tme);
 	}
 
 	CView::OnMouseMove(nFlags, point);
@@ -846,13 +722,17 @@ void CRegionView::OnAutoTriangulate()
 	}
 }
 
-void CRegionView::OnStartPreprocessor() 
+// talon: 2001 (0x455ef1, accelerator Alt+T; the name ours): toggles the
+// immediate poly's flag at 0x70.
+void CRegionView::OnAltT()
 {
-	m_pRegion->UpdatePlanes();
-
-	GetRegionDoc()->StartPreProcessor();
-	SetFocus();
+	if( GetEditMode() == GEOMETRY_EDITMODE )
+	{
+		GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, IPoly().m_pBrush), TRUE);
+		IPoly()()->m_Unknown_70 = !IPoly()()->m_Unknown_70;
+	}
 }
+
 
 
 void CRegionView::OnKillFocus(CWnd* pNewWnd) 
@@ -863,8 +743,6 @@ void CRegionView::OnKillFocus(CWnd* pNewWnd)
 	// (Note : Can't DrawRect here because focus changes before the window is completely created)
 	Invalidate();
 
-	//clear out any pending trackers
-	m_cTrackerMgr.FlushTrackers();
 
 	// Send an empty message to the trackers so they can pick up on the focus change
 	m_cTrackerMgr.ProcessEvent(CUIEvent(UIEVENT_NONE));
@@ -883,8 +761,6 @@ void CRegionView::OnSetFocus(CWnd* pOldWnd)
 	Invalidate();
 
 	
-	//clear out any pending trackers
-	m_cTrackerMgr.FlushTrackers();
 
 
 	// Send an empty message to the trackers so they can pick up on the focus change
@@ -923,7 +799,6 @@ void CRegionView::OnEditUndo()
 		m_EditState = EDIT_NOSTATE;
 		
 		GetRegionDoc()->m_UndoMgr.Undo();
-		GetRegionDoc()->Modify();
 
 		DrawRect();
 		SetFocus();
@@ -955,7 +830,6 @@ void CRegionView::OnEditUndo()
 void CRegionView::OnUpdateEditUndo(CCmdUI* pCmdUI) 
 {
 	pCmdUI->Enable( GetRegionDoc()->m_UndoMgr.m_nUndos > 0 );	
-	SetMenuHotKeyText(UIE_EDIT_UNDO, pCmdUI);
 }
 
 
@@ -985,7 +859,6 @@ void CRegionView::OnEditRedo()
 		m_EditState = EDIT_NOSTATE;
 												   
 		GetRegionDoc()->m_UndoMgr.Redo();
-		GetRegionDoc()->Modify();
 
 		DrawRect();
 		SetFocus();
@@ -1015,57 +888,34 @@ void CRegionView::OnEditRedo()
 void CRegionView::OnUpdateEditRedo(CCmdUI* pCmdUI) 
 {
 	pCmdUI->Enable( GetRegionDoc()->m_UndoMgr.m_nRedos > 0 );
-	SetMenuHotKeyText(UIE_EDIT_REDO, pCmdUI);
 }
 
 
 
 void CRegionView::OnUpdate(CView* pSender, LPARAM lHint, CObject* pHint) 
 {
-	if( lHint == REGIONVIEWUPDATE_REDRAW )
+	if( lHint == REGIONVIEWUPDATE_LIGHTMAPS )
+	{
+		// talon: 2001 (0x4562f1): only the Direct3D views draw lightmaps.
+		if( m_DrawType == 1 )
+			DrawRect();
+	}
+	else if( lHint == REGIONVIEWUPDATE_REDRAW )
 	{
 		DrawRect();
 	}
 	else if( lHint == REGIONVIEWUPDATE_EDITMODE )
 	{
-		if (GetInFocus())
-		{
-			//we need to first clear out any of the old selected vertices (this way
-			//if we delete a brush that contains them, we won't crash)
-			TaggedVerts().GenRemoveAll();
-			TaggedBrushes().Term();
-			TaggedPolies().SetSize(1);
-
-
-			//we now also need to update any immediate selections to ensure they are
-			//valid
-			UpdateImmediateSelection();
-		}
-
+		UpdateImmediateSelection();
 		DrawRect();
-	}
-	else if( lHint &  REGIONVIEWUPDATE_VIEWID)
-	{
-		//remove the mask to get the value of the view we want to
-		//update
-		uint32 nVal = lHint & ~REGIONVIEWUPDATE_VIEWID;
-
-		//only update ourselves if this is a matching view
-		if(nVal == m_nViewID)
-			DrawRect();
 	}
 	else
 	{
 		if( (pSender != this) && (pSender != NULL) )
 			DrawRect();	
 	}
-
 }
 
-void CRegionView::OnUpdateAddObject(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_ADD_OBJECT, pCmdUI);
-}
 
 void CRegionView::OnAddObject() 
 {
@@ -1270,7 +1120,7 @@ BOOL CRegionView::ImportLTAFile(CString sFilename, BOOL bPositionAtCrosshair)
 		GetRegionDoc()->Modify(&actionList, TRUE);
 		GetRegionDoc()->NotifySelectionChange();
 
-		GetRegionDoc()->SynchronizePropertyLists( GetRegion(), false );
+		GetRegionDoc()->SynchronizePropertyLists( GetRegion() );
 
 		// Reset this parameter
 		g_bCheckNodes=bCheckNodes;
@@ -1660,25 +1510,9 @@ void CRegionView::OnBindToObject()
 	END_MEMORYEXCEPTION()
 }
 
-void CRegionView::OnUpdateBindToObject(CCmdUI* pCmdUI)
-{
-	if(GetRegion()->m_Selections.GetSize() > 0)
-	{
-		pCmdUI->Enable(TRUE);
-	}
-	else
-	{
-		pCmdUI->Enable(FALSE);
-	}
-	SetMenuHotKeyText(UIE_BIND_TO_OBJECT, pCmdUI);
-}
 
 
 
-void CRegionView::OnUpdateObjectProperties(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable( GetRegion()->GetFirstSelectedObject() != NULL );
-}
 
 
 void CRegionView::OnWorldInfo() 
@@ -1824,14 +1658,6 @@ void CRegionView::OnShadeWireframe()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateShadeWireframe(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(TRUE);
-	
-	if(GetViewMode() != VM_PERSPECTIVE)
-		pCmdUI->SetCheck();
-	SetMenuHotKeyText(UIE_SHADE_WIREFRAME, pCmdUI);
-}
 
 void CRegionView::OnShadeTextured() 
 {
@@ -1839,14 +1665,6 @@ void CRegionView::OnShadeTextured()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateShadeTextured(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetViewMode() == VM_PERSPECTIVE) ? TRUE : FALSE);
-
-	if(GetViewMode() != VM_PERSPECTIVE)
-		pCmdUI->SetCheck(FALSE);
-	SetMenuHotKeyText(UIE_SHADE_TEXTURES, pCmdUI);
-}
 
 void CRegionView::OnShadeFlat() 
 {
@@ -1854,14 +1672,6 @@ void CRegionView::OnShadeFlat()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateShadeFlat(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetViewMode() == VM_PERSPECTIVE) ? TRUE : FALSE);
-
-	if(GetViewMode() != VM_PERSPECTIVE)
-		pCmdUI->SetCheck(FALSE);
-	SetMenuHotKeyText(UIE_SHADE_FLAT, pCmdUI);
-}
 
 
 void CRegionView::OnShadeLightmapsOnly() 
@@ -1870,15 +1680,18 @@ void CRegionView::OnShadeLightmapsOnly()
 	DrawRect();
 }
 
-
-void CRegionView::OnUpdateShadeLightmapsOnly(CCmdUI* pCmdUI)
+// talon: 2001 (0x457b10, 0x457b18).
+void CRegionView::OnWalkthruMovement()
 {
-	pCmdUI->Enable((GetViewMode() == VM_PERSPECTIVE) ? TRUE : FALSE);
-
-	if(GetViewMode() != VM_PERSPECTIVE)
-		pCmdUI->SetCheck(FALSE);
-	SetMenuHotKeyText(UIE_SHADE_LIGHTMAPS, pCmdUI);
+	SetWalkThroughMovement(TRUE);
 }
+
+void CRegionView::OnOrbitMovement()
+{
+	SetWalkThroughMovement(FALSE);
+}
+
+
 
 void CRegionView::OnBackView() 
 {
@@ -1886,10 +1699,6 @@ void CRegionView::OnBackView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateBackView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_BACK_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnBottomView() 
@@ -1898,10 +1707,6 @@ void CRegionView::OnBottomView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateBottomView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_BOTTOM_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnFrontView() 
@@ -1910,10 +1715,6 @@ void CRegionView::OnFrontView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateFrontView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_FRONT_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnLeftView() 
@@ -1922,10 +1723,6 @@ void CRegionView::OnLeftView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateLeftView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_LEFT_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnPerspectiveView() 
@@ -1934,10 +1731,6 @@ void CRegionView::OnPerspectiveView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdatePerspectiveView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_PERSPECTIVE_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnRightView() 
@@ -1946,10 +1739,6 @@ void CRegionView::OnRightView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateRightView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_RIGHT_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnTopView() 
@@ -1958,10 +1747,6 @@ void CRegionView::OnTopView()
 	DrawRect();
 }
 
-void CRegionView::OnUpdateTopView(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_TOP_VIEW, pCmdUI);
-}
 
 
 void CRegionView::OnShowObjects()
@@ -2077,6 +1862,8 @@ void CRegionView::GetSelectedPolies(CMoArray<CEditPoly*> &polies)
 }
 
 
+// talon: 2001 (0x457e32): the first selected poly's texture mapping into
+// the 2001 dialog, which applies the changes and makes the undo itself.
 void CRegionView::OnMapTextureCoords() 
 {
 	CMapTextureCoordsDlg dlg(this);
@@ -2085,28 +1872,14 @@ void CRegionView::OnMapTextureCoords()
 	CTexture *pTexture;
 	DVector normP, normQ;
 
-
 	polies.SetCacheSize(200);
 	GetSelectedPolies(polies);
 	if(polies.GetSize() > 0)
 	{
-		pPoly = NULL;
-
-		//find the first textured polygon
-		for(uint32 nCurrPoly = 0; nCurrPoly < polies.GetSize(); nCurrPoly++)
+		pPoly = polies[0];
+		if(pPoly->m_pTextureFile)
 		{
-			if(polies[nCurrPoly]->GetTexture(GetCurrTexture()).m_pTextureFile)
-			{
-				pPoly = polies[nCurrPoly];
-				break;
-			}
-		}
-
-		if(pPoly)
-		{
-			CTexturedPlane& PolyTex = pPoly->GetTexture(GetCurrTexture());
-
-			pTexture = dib_GetDibTexture(PolyTex.m_pTextureFile);
+			pTexture = dib_GetDibTexture(pPoly->m_pTextureFile);
 			if(pTexture && pTexture->m_pDib)
 			{
 				// Setup parameters for the dialog.
@@ -2114,57 +1887,40 @@ void CRegionView::OnMapTextureCoords()
 				dlg.m_TextureHeight = pTexture->m_pDib->GetHeight() >> pTexture->m_UIMipmapOffset;
 				
 				//get the normal versions of the vectors
-				normP = PolyTex.GetP();
+				normP = pPoly->P;
 				normP.Norm();
-				normQ = PolyTex.GetQ();
+				normQ = pPoly->Q;
 				normQ.Norm();
 
-				//find out the scale for this polygon
-				dlg.m_UScale = (1.0f / PolyTex.GetP().Mag()) * (float)dlg.m_TextureWidth;
-				dlg.m_VScale = (1.0f / PolyTex.GetQ().Mag()) * (float)dlg.m_TextureHeight;
-
 				//find the U offset ranging from [0...TexWidth)
-				dlg.m_UOffset = normP.Dot(PolyTex.GetO() - pPoly->Pt(0)) * PolyTex.GetP().Mag();
+				dlg.m_UOffset = normP.Dot(pPoly->O - pPoly->Pt(0));
 				dlg.m_UOffset = (float)fmod(dlg.m_UOffset, (float)dlg.m_TextureWidth);
-				if(dlg.m_UOffset < 0.0f)
-					dlg.m_UOffset = (float)dlg.m_TextureWidth + dlg.m_UOffset;
-				if (dlg.m_UOffset < 0.001)
+				if (fabs(dlg.m_UOffset) < 0.001)
 					dlg.m_UOffset = 0.0f;
 
 				//find the V offset ranging from [0...TexHeight)
-				dlg.m_VOffset = normQ.Dot(PolyTex.GetO() - pPoly->Pt(0)) * PolyTex.GetQ().Mag();
+				dlg.m_VOffset = normQ.Dot(pPoly->O - pPoly->Pt(0));
 				dlg.m_VOffset = (float)fmod(dlg.m_VOffset, (float)dlg.m_TextureHeight);
-				if(dlg.m_VOffset < 0.0f)
-					dlg.m_VOffset = (float)dlg.m_TextureHeight + dlg.m_VOffset;
-				if (dlg.m_VOffset < 0.001)
+				if (fabs(dlg.m_VOffset) < 0.001)
 					dlg.m_VOffset = 0.0f;
 
-				// User enters rotation in degrees, but saved in radians...
-				dlg.m_Rotation = dlg.m_RefRotation = 0.0f;
+				//find out the scale for this polygon
+				dlg.m_UScale = (1.0f / pPoly->P.Mag()) * (float)dlg.m_TextureWidth;
+				dlg.m_VScale = (1.0f / pPoly->Q.Mag()) * (float)dlg.m_TextureHeight;
 
-				//we need to load up options from the registry
-				dlg.m_bAutoApply = ::GetApp()->GetOptions().GetBoolValue("MapTextureAutoApply", TRUE);
-				dlg.m_nWindowX	 = ::GetApp()->GetOptions().GetDWordValue("MapTextureWindowX", 100);
-				dlg.m_nWindowY	 = ::GetApp()->GetOptions().GetDWordValue("MapTextureWindowY", 100);
+				dlg.m_RefRotation = 0.0f;
+				dlg.m_Rotation = 0.0f;
 
-				if( dlg.DoModal() == IDOK )
-				{
-				}
+				dlg.m_bStick = pPoly->m_Unknown_70;
+				dlg.m_bXZOnly = (pPoly->m_SurfaceFlags >> 16) & 1;
 
-				//save the settngs
-				::GetApp()->GetOptions().SetBoolValue("MapTextureAutoApply", dlg.m_bAutoApply);
-				::GetApp()->GetOptions().SetDWordValue("MapTextureWindowX", dlg.m_nWindowX);
-				::GetApp()->GetOptions().SetDWordValue("MapTextureWindowY", dlg.m_nWindowY);
+				if(dlg.DoModal() == IDOK)
+					dlg.ApplyChanges();
 			}
 		}
 	}
 }
 
-void CRegionView::OnUpdateMapTextureCoords(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(AreAnyPoliesSelected());
-	SetMenuHotKeyText(UIE_MAP_TEXTURE_COORDS, pCmdUI);
-}
 
 
 void CRegionView::OnRotateSelection() 
@@ -2232,11 +1988,6 @@ void CRegionView::OnRotateSelection()
 	}
 }
 
-void CRegionView::OnUpdateRotateSelection(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetRegion()->m_Selections.GetSize() > 0) ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_ROTATE_SELECTION, pCmdUI);
-}
 
 
 void CRegionView::OnJoinTaggedVertices() 
@@ -2365,6 +2116,22 @@ void CRegionView::OnUpdateFileSaveAs( CCmdUI* pCmdUI )
 	pCmdUI->Enable( FALSE );
 }
 
+// talon: 2001 (0x458c4d): updates every poly's plane.
+void CRegionView::OnUpdatePlanes()
+{
+	LPOS pos;
+	CEditBrush *pBrush;
+	DWORD i;
+
+	for(pos=m_pRegion->m_Brushes; pos; )
+	{
+		pBrush = m_pRegion->m_Brushes.GetNext(pos);
+
+		for(i=0; i < pBrush->m_Polies; i++)
+			pBrush->m_Polies[i]->UpdatePlane();
+	}
+}
+
 void CRegionView::OnCleanupGeometry() 
 {
 	// MIKE 12/29/97 - removed this call.. full undos puff and CleanupGeometry is a hack anyway.
@@ -2420,10 +2187,6 @@ void CRegionView::On4ViewConfiguration()
 	GetRegionDoc()->RedrawAllViews();
 }
 
-void CRegionView::OnUpdate4ViewConfiguration(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_RESET_VIEWPORTS, pCmdUI);
-}
 
 void CRegionView::OnUpdateSingleBrushOperation( CCmdUI *pCmdUI )
 {
@@ -2433,7 +2196,6 @@ void CRegionView::OnUpdateSingleBrushOperation( CCmdUI *pCmdUI )
 void CRegionView::OnUpdateShrinkGridSpacing( CCmdUI *pCmdUI )
 {
 	pCmdUI->Enable( GetGridSpacing() > 1 );
-	SetMenuHotKeyText(UIE_SHRINK_GRID_SPACING, pCmdUI);
 }
 
 void CRegionView::OnUpdateExpandGridSpacing( CCmdUI *pCmdUI )
@@ -2441,7 +2203,18 @@ void CRegionView::OnUpdateExpandGridSpacing( CCmdUI *pCmdUI )
 	// NOTE: If the grid needs to be spaced larger, it needs to be saved using
 	// a DWORD in the .lyt file.
 	pCmdUI->Enable( GetGridSpacing() < (1<<15) );
-	SetMenuHotKeyText(UIE_EXPAND_GRID_SPACING, pCmdUI);
+}
+
+// talon: 2001 (0x4596cb, the name ours).
+void CRegionView::OnUpdateShrinkPixelScale( CCmdUI *pCmdUI )
+{
+	pCmdUI->Enable( m_nPixelScale > 1 );
+}
+
+// talon: 2001 (0x4596e7, the name ours).
+void CRegionView::OnUpdateGrowPixelScale( CCmdUI *pCmdUI )
+{
+	pCmdUI->Enable( m_nPixelScale < 8 );
 }
 
 void CRegionView::OnShrinkGridSpacing()
@@ -2461,11 +2234,46 @@ void CRegionView::OnExpandGridSpacing()
 	UpdateStatusBar( );
 }
 
+// talon: 2001 (0x45976e, the name ours): halves the size of a drawn pixel.
+void CRegionView::OnShrinkPixelScale()
+{
+	CRect rect;
+
+	if( m_nPixelScale > 1 )
+	{
+		GetClientRect( &rect );
+
+		m_nPixelScale /= 2;
+		m_fPixelScale = (float)m_nPixelScale;
+		m_ViewDefInfo.m_fPixelScaleX = m_ViewDefInfo.m_fPixelScaleY = 1.0f / m_fPixelScale;
+
+		SetupNewSize( rect.Width(), rect.Height() );
+		DrawRect();
+	}
+}
+
+// talon: 2001 (0x4597f5, the name ours): doubles the size of a drawn pixel.
+void CRegionView::OnGrowPixelScale()
+{
+	CRect rect;
+
+	if( m_nPixelScale < 8 )
+	{
+		GetClientRect( &rect );
+
+		m_nPixelScale *= 2;
+		m_fPixelScale = (float)m_nPixelScale;
+		m_ViewDefInfo.m_fPixelScaleX = m_ViewDefInfo.m_fPixelScaleY = 1.0f / m_fPixelScale;
+
+		SetupNewSize( rect.Width(), rect.Height() );
+		DrawRect();
+	}
+}
+
 
 void CRegionView::OnUpdateApplyColor( CCmdUI *pCmdUI )
 {
-	pCmdUI->Enable( (GetRegion()->m_Selections > 0) && (GetEditMode() == BRUSH_EDITMODE) );
-	SetMenuHotKeyText(UIE_APPLY_COLOR, pCmdUI);
+	pCmdUI->Enable(GetRegion()->m_Selections.GetSize() > 0 && GetEditMode() == BRUSH_EDITMODE);
 }
 
 
@@ -2508,9 +2316,9 @@ void CRegionView::OnApplyColor()
 }
 
 
+// talon: 2001's is empty (folded with the other empty handlers at 0x44ef03).
 void CRegionView::OnUpdateApplyTexture( CCmdUI *pCmdUI )
 {
-	SetMenuHotKeyText(UIE_APPLY_TEXTURE_TO_SEL, pCmdUI);
 }
 
 void CRegionView::OnApplyTexture()
@@ -2579,85 +2387,7 @@ void CRegionView::OnApplyTexture()
 }
 
 
-void CRegionView::OnUpdateRemoveTexture( CCmdUI *pCmdUI )
-{
-	SetMenuHotKeyText(UIE_REMOVE_TEXTURE, pCmdUI);
-}
 
-void CRegionView::OnRemoveTexture()
-{
-	DWORD i, k;
-	char *pCurTexName;
-	CWorldNode *pNode;
-	
-	PreActionList actionList;
-	CPreAction *pAction;
-	GPOS pos;
-	
-	if( (GetEditMode() == BRUSH_EDITMODE) ||
-		(GetEditMode() == OBJECT_EDITMODE))
-	{
-		// Remove the current texture from the selected brushes.
-
-		// Build the list of the brushes we're going to modify..
-		for(i=0; i < GetRegion()->m_Selections; i++)
-		{
-			pNode = GetRegion()->m_Selections[i];
-			if(pNode->GetType() == Node_Brush)
-			{
-				//we have a brush, determine if the active texture layer has a texture assigned to it
-				CEditBrush* pBrush = pNode->AsBrush();
-				for(uint32 nCurrPoly = 0; nCurrPoly < pBrush->m_Polies.GetSize(); nCurrPoly++)
-				{
-					//see if this has a texture
-					CTexturedPlane* pTex = &pBrush->m_Polies[nCurrPoly]->GetTexture(GetCurrTexture());
-
-					if(pTex->m_pTextureName && (stricmp(pTex->m_pTextureName, "Default") != 0))
-					{
-						//this is a brush we want to add
-						actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, pNode));
-						break;
-					}
-				}
-			}
-		}
-		
-		// Store the changes..
-		GetRegionDoc()->Modify(&actionList, FALSE);
-		
-		// Make the changes.
-		for(pos=actionList; pos; )
-		{
-			CWorldNode* pNode = actionList.GetNext(pos)->m_pNode;
-
-			if(pNode->GetType() == Node_Brush)
-			{
-				CEditBrush* pBrush = (CEditBrush*)pNode;
-		
-				for( k=0; k < pBrush->m_Polies; k++ )
-				{
-					pBrush->m_Polies[k]->GetTexture(GetCurrTexture()).m_pTextureName = "Default";
-					pBrush->m_Polies[k]->GetTexture(GetCurrTexture()).UpdateTextureID();
-				}
-			}
-		}
-	}
-	else if(GetEditMode() == GEOMETRY_EDITMODE)
-	{
-		// Put the selected texture onto the current poly.
-		if( IPoly().IsValid() )
-		{
-			actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, IPoly().m_pBrush));
-			GetRegionDoc()->Modify(&actionList, TRUE);
-			
-			IPoly()()->GetTexture(GetCurrTexture()).m_pTextureName = "Default";
-			IPoly()()->GetTexture(GetCurrTexture()).UpdateTextureID();
-		}
-	}
-
-	GDeleteAndRemoveElements(actionList);
-	GetRegionDoc()->RedrawAllViews();
-}
 
 void CRegionView::OnObjectProperties() 
 {
@@ -2805,49 +2535,55 @@ void CRegionView::OnActivateFrame(UINT nState, CFrameWnd* pFrameWnd)
 
 void CRegionView::OnUseDevice1()
 {
-	RestartRender(FALSE, 0, -1, TRUE);
+	RestartRender(FALSE, -1, 0, -1, TRUE);
 }
 
 
 void CRegionView::OnUseDevice2()
 {
-	RestartRender(FALSE, 1, -1, TRUE);
+	RestartRender(FALSE, -1, 1, -1, TRUE);
 }
 
 
 void CRegionView::OnUseDevice3()
 {
-	RestartRender(FALSE, 2, -1, TRUE);
+	RestartRender(FALSE, -1, 2, -1, TRUE);
 }
 
 
 void CRegionView::OnUseDevice4()
 {
-	RestartRender(FALSE, 3, -1, TRUE);
+	RestartRender(FALSE, -1, 3, -1, TRUE);
 }
 
 
 void CRegionView::OnRenderMode1()
 {
-	RestartRender(FALSE, -1, 0, TRUE);
+	RestartRender(FALSE, -1, -1, 0, TRUE);
 }
 
 
 void CRegionView::OnRenderMode2()
 {
-	RestartRender(FALSE, -1, 1, TRUE);
+	RestartRender(FALSE, -1, -1, 1, TRUE);
 }
 
 
 void CRegionView::OnRenderMode3()
 {
-	RestartRender(FALSE, -1, 2, TRUE);
+	RestartRender(FALSE, -1, -1, 2, TRUE);
 }
 
 
 void CRegionView::OnRenderMode4()
 {
-	RestartRender(FALSE, -1, 3, TRUE);
+	RestartRender(FALSE, -1, -1, 3, TRUE);
+}
+
+// talon: 2001 (0x459ff0): toggles between Direct3D and the software renderer.
+void CRegionView::OnUseDirect3D()
+{
+	RestartRender(FALSE, m_DrawType == 0, -1, -1, TRUE);
 }
 
 
@@ -2856,79 +2592,10 @@ void CRegionView::OnRenderMode4()
 //
 
 
-LRESULT CRegionView::OnMouseHover(WPARAM wParam, LPARAM lParam) 
-{
-
-	char output[512];
-	CBrushRef currentBrush = GetMouseOverBrush();
-
-	// This seems to bomb out under odd circumstances, so I added some nested ifs for debugging
-	if(currentBrush.IsValid())
-	{
-		if(currentBrush.m_pBrush != NULL)
-		{
-			if(currentBrush.m_pBrush->GetName() != NULL)
-			{
-				sprintf(output, "Brush Name: %s", currentBrush.m_pBrush->GetName());
-			}
-			else ASSERT(false); // Let David C. know if this asserts
-		}
-		else ASSERT(false); // Let David C. know if this asserts
-	} 
-	else 
-	{
-		sprintf(output, "   ");
-	}
-
-	CMainFrame* pFrame = (CMainFrame*)AfxGetMainWnd();
-	pFrame->UpdateStatusText(ID_INDICATOR_BRUSHNAME, output);
-
-	m_bMouseOver = FALSE;
-
-	return 0;
-}
 
 
-LRESULT CRegionView::OnMouseLeave(WPARAM wParam, LPARAM lParam) 
-{
 
-	m_bMouseOver = FALSE;
 
-	return 0;
-}
-
-void CRegionView::OnSelectPrefab()
-{
-	//get the first selected prefab
-	uint32 nNumSel = GetRegion()->GetNumSelections();
-	for(uint32 nCurrSel = 0; nCurrSel < nNumSel; nCurrSel++)
-	{
-		if(GetRegion()->GetSelection(nCurrSel)->GetType() == Node_PrefabRef)
-		{
-			GetProjectBar()->SelectPrefab(((CPrefabRef*)GetRegion()->GetSelection(nCurrSel))->GetPrefabFilename());
-			break;
-		}
-	}
-}
-
-void CRegionView::OnUpdateSelectPrefab(CCmdUI* pCmdUI)
-{
-	//see if we have any prefabs selected
-	uint32 nNumSel = GetRegion()->GetNumSelections();
-	BOOL bEnable = FALSE;
-
-	for(uint32 nCurrSel = 0; nCurrSel < nNumSel; nCurrSel++)
-	{
-		if(GetRegion()->GetSelection(nCurrSel)->GetType() == Node_PrefabRef)
-		{
-			bEnable = TRUE;
-			break;
-		}
-	}
-
-	pCmdUI->Enable(bEnable);	
-	SetMenuHotKeyText(UIE_SELECT_PREFAB, pCmdUI);
-}
 
 
 void CRegionView::ReplaceTextures(bool bSelectedOnly)
@@ -3006,22 +2673,8 @@ void CRegionView::OnReplaceTextures()
 	ReplaceTextures(false);
 }
 
-void CRegionView::OnUpdateReplaceTextures(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(IPoly().IsValid());
-	SetMenuHotKeyText(UIE_REPLACE_TEXTURES, pCmdUI);
-}
 
-void CRegionView::OnReplaceTexturesInSel()
-{
-	ReplaceTextures(true);
-}
 
-void CRegionView::OnUpdateReplaceTexturesInSel(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(IPoly().IsValid());
-	SetMenuHotKeyText(UIE_REPLACE_TEXTURES_IN_SEL, pCmdUI);
-}
 
 void CRegionView::OnSelectTexture()
 {
@@ -3098,11 +2751,6 @@ void CRegionView::OnSelectTexture()
 }
 
 
-void CRegionView::OnUpdateSelectTexture(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(AreAnyPoliesSelected() ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_SELECT_TEXTURE, pCmdUI);
-}
 
 
 void CRegionView::OnSelectBrushColor()
@@ -3164,11 +2812,43 @@ void CRegionView::OnSelectBrushColor()
 }
 
 
-void CRegionView::OnUpdateSelectBrushColor(CCmdUI* pCmdUI)
-{
 
-	pCmdUI->Enable(AreAnyPoliesSelected() ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_SELECT_BRUSH_COLOR, pCmdUI);
+// talon: 2001 (0x45a4a1): '-' and '=' darken and brighten the selected
+// polies' ambient light.
+void CRegionView::OnChar(UINT nChar, UINT nRepCnt, UINT nFlags)
+{
+	CMoArray<CEditPoly*> polies;
+	DWORD i, j;
+
+	if( nChar == '-' )
+	{
+		GetSelectedPolies( polies );
+		for( i=0; i < polies; i++ )
+		{
+			for( j=0; j < 3; j++ )
+			{
+				if( polies[i]->m_Ambient[j] > 0 )
+					polies[i]->m_Ambient[j] -= 3;
+			}
+		}
+	}
+	else if( nChar == '=' )
+	{
+		GetSelectedPolies( polies );
+		for( i=0; i < polies; i++ )
+		{
+			for( j=0; j < 3; j++ )
+			{
+				if( polies[i]->m_Ambient[j] < 255 )
+					polies[i]->m_Ambient[j] += 3;
+			}
+		}
+	}
+
+	if( polies > 0 )
+		DrawRect();
+
+	CView::OnChar(nChar, nRepCnt, nFlags);
 }
 
 void CRegionView::OnResetDetailLevels()
@@ -3176,31 +2856,22 @@ void CRegionView::OnResetDetailLevels()
 	CEditRegion *pRegion;
 	CEditBrush *pBrush;
 	LPOS pos;
-	CBoolProp *pProp;
+	CRealProp *pProp;
 
+	// talon: 2001 (0x45a56d): the brushes' "DetailLevel", a real.
 	pRegion = GetRegion();
 	for(pos=pRegion->m_Brushes; pos; )
 	{
 		pBrush = pRegion->m_Brushes.GetNext(pos);
 
-		pProp = (CBoolProp*)pBrush->m_PropList.GetProp("Detail");
+		pProp = (CRealProp*)pBrush->m_PropList.GetProp("DetailLevel");
 		if(pProp)
 		{
-			pProp->m_Value = false;
+			pProp->m_Value = 0.0f;
 		}
 	}
 }
 
-void CRegionView::OnUpdateAllObjectProperties()
-{
-	CRegionDoc		*pRegionDoc = LTNULL;
-
-	pRegionDoc = GetRegionDoc();
-	if( !pRegionDoc ) 
-		return;
-
-	pRegionDoc->UpdateAllObjectProperties();
-}
 
 /******************************************************************/
 // Store the current camera position in the list of navigator positions
@@ -3260,10 +2931,6 @@ void CRegionView::OnNavigatorStore()
 	}
 }
 
-void CRegionView::OnUpdateNavigatorStore(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_NAVIGATOR_STORE, pCmdUI);
-}
 
 /******************************************************************/
 // Open the navigator organizer dialog
@@ -3291,10 +2958,6 @@ void CRegionView::OnNavigatorOrganize()
 	}
 }
 
-void CRegionView::OnUpdateNavigatorOrganize(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_NAVIGATOR_ORGANIZE, pCmdUI);
-}
 
 /******************************************************************/
 // Go to the next navigator position
@@ -3328,10 +2991,6 @@ void CRegionView::OnNavigatorGotoNext()
 	SwitchNavigator(nIndex);
 }
 
-void CRegionView::OnUpdateNavigatorGotoNext(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_NAVIGATOR_NEXT, pCmdUI);
-}
 
 
 /******************************************************************/
@@ -3366,10 +3025,6 @@ void CRegionView::OnNavigatorGotoPrevious()
 	SwitchNavigator(nIndex);	
 }
 
-void CRegionView::OnUpdateNavigatorGotoPrevious(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_NAVIGATOR_PREVIOUS, pCmdUI);
-}
 
 
 // Switch the navigator to one of the stored navigators for this level
@@ -3443,10 +3098,6 @@ void CRegionView::OnSelectionSelectAll()
 	EndWaitCursor();
 }
 
-void CRegionView::OnUpdateSelectionSelectAll(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_SELECT_ALL, pCmdUI);
-}
 
 /************************************************************************/
 // Handles the "Select None" command
@@ -3469,10 +3120,6 @@ void CRegionView::OnSelectionSelectNone()
 	GetRegionDoc()->RedrawAllViews();
 }
 
-void CRegionView::OnUpdateSelectionSelectNone(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_SELECT_NONE, pCmdUI);
-}
 
 /************************************************************************/
 // Handles the "Select Inverse" command
@@ -3501,25 +3148,14 @@ void CRegionView::OnSelectionSelectInverse()
 // The command UI update for the "Select Inverse" command
 void CRegionView::OnUpdateSelectionSelectInverse(CCmdUI* pCmdUI) 
 {
-	// Get the edit region
 	CEditRegion *pRegion=GetRegion();
-	
 	if (pRegion)
 	{
-		// Get the number of selections
-		if (pRegion->GetNumSelections() > 0)
-		{
-			// Enable the control
+		if (pRegion->m_Selections.GetSize() > 0)
 			pCmdUI->Enable(TRUE);
-		}
 		else
-		{
-			// Disable the control
 			pCmdUI->Enable(FALSE);
-		}
 	}
-	
-	SetMenuHotKeyText(UIE_SELECT_INVERSE, pCmdUI);
 }
 
 /************************************************************************/
@@ -3562,11 +3198,6 @@ void CRegionView::OnSelectionAdvanced()
 			{
 				advancedSelect.AddNameCriteria(dlg.m_ObjectName, !dlg.m_bMatchWholeWord);
 			}
-			if (dlg.m_bNodesWithProperty)
-			{
-				advancedSelect.AddPropertyCriteria(dlg.AllocPropertyFromData(), dlg.m_bMatchValue);
-			}
-
 			// Show the wait cursor
 			BeginWaitCursor();
 
@@ -3592,20 +3223,12 @@ void CRegionView::OnSelectionAdvanced()
 				GetNodeView()->SetRedraw(TRUE);
 			}
 
-			GetNodeView()->Update(); // Refresh node view
-
-			advancedSelect.ClearCriteria(); // Clean-up
-
 			// Stop showing the wait cursor
 			EndWaitCursor();
 		}
 	}	
 }
 
-void CRegionView::OnUpdateSelectionAdvanced(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_ADVANCED_SELECT, pCmdUI);
-}
 
 
 
@@ -3695,28 +3318,17 @@ void CRegionView::OnSelectionContainer()
 
 /************************************************************************/
 // Command update handler for the "Select Container" command
-void CRegionView::OnUpdateSelectionContainer(CCmdUI* pCmdUI) 
+void CRegionView::OnUpdateSelectionContainer(CCmdUI* pCmdUI)
 {
-	// Get the document
+	// talon: 2001 (0x45af33: the group, container and hide-inverse updates
+	// are one function in the link)
 	CRegionDoc *pDoc=GetRegionDoc();
-	if (!pDoc)		
+	if (pDoc)
 	{
-		return;
+		CEditRegion *pRegion=&pDoc->m_Region;
+		if (pRegion && pRegion->m_Selections.GetSize() <= 0)
+			pCmdUI->Enable(FALSE);
 	}
-
-	// Get the region
-	CEditRegion *pRegion=pDoc->GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-
-	if (pRegion->GetNumSelections() <= 0)
-	{
-		pCmdUI->Enable(FALSE);
-	}	
-
-	SetMenuHotKeyText(UIE_SELECT_CONTAINER, pCmdUI);
 }
 
 /************************************************************************/
@@ -3725,124 +3337,97 @@ void CRegionView::OnSelectionHideSelected()
 {
 	// Get the region
 	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
+	if (pRegion)
 	{
-		return;
-	}
+		// Put the wait cursor on the screen
+		BeginWaitCursor( );
 
-	// Put the wait cursor on the screen
-	BeginWaitCursor( );
-
-	int i;
-
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-	{
-		PreActionList actionList;	
-		for (i=0; i < pRegion->GetNumSelections(); i++)
+		for (DWORD i=0; i < pRegion->m_Selections; i++)
 		{
-			actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, pRegion->GetSelection(i)));
+			pRegion->m_Selections[i]->HideNode();
 		}
-		GetRegionDoc()->Modify(&actionList, TRUE);
+
+		// Update the node images
+		GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
+
+		// Redraw the views
+		GetRegionDoc()->RedrawAllViews();
+
+		// End the wait cursor
+		EndWaitCursor( );
 	}
-	else
-		GetRegionDoc()->Modify();
-
-	for (i=0; i < pRegion->GetNumSelections(); i++)
-	{
-		// Hide the node
-		pRegion->GetSelection(i)->HideNode();
-	}
-
-	// Update the node images
-	GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-
-	// End the wait cursor
-	EndWaitCursor( );
 }
 
 /************************************************************************/
 // The command UI update for the "Hide Selected" command
 void CRegionView::OnUpdateSelectionHideSelected(CCmdUI* pCmdUI) 
 {
-	// Get the region
+	// talon: 2001 (0x45acf5, shared with the unhide updates by the link)
 	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-
-	if (pRegion->GetNumSelections() <= 0)
-	{
+	if (pRegion && pRegion->m_Selections.GetSize() <= 0)
 		pCmdUI->Enable(FALSE);
-	}
-	SetMenuHotKeyText(UIE_HIDE_SELECTED, pCmdUI);
 }
 
 /************************************************************************/
 // Handles the "Unhide Selected" command
+// talon: 2001 (0x45ad15): selects every brush with a DetailLevel above 0.
+// No EndWaitCursor follows the BeginWaitCursor (RETAIL_BUGS).
+void CRegionView::OnSelectDetailBrushes()
+{
+	LPOS pos;
+	CEditBrush *pBrush;
+	CRealProp *pProp;
+
+	BeginWaitCursor();
+
+	OnSelectionSelectNone();
+
+	for(pos=m_pRegion->m_Brushes; pos; )
+	{
+		pBrush = m_pRegion->m_Brushes.GetNext(pos);
+
+		pProp = (CRealProp*)pBrush->m_PropList.GetProp("DetailLevel");
+		if( pProp && pProp->m_Value > 0.0f )
+			m_pRegion->SelectNode( pBrush );
+	}
+
+	GetNodeView()->UpdateNodeImage( m_pRegion->GetRootNode() );
+	GetRegionDoc()->RedrawAllViews();
+}
+
 void CRegionView::OnSelectionUnhideSelected() 
 {
 	// Get the region
 	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
+	if (pRegion)
 	{
-		return;
-	}	
+		// Put the wait cursor on the screen
+		BeginWaitCursor( );
 
-	// Put the wait cursor on the screen
-	BeginWaitCursor( );
-	
-	int i;
-
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
+		for (DWORD i=0; i < pRegion->m_Selections; i++)
 		{
-		PreActionList actionList;	
-		for (i=0; i < pRegion->GetNumSelections(); i++)
-		{
-			actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, pRegion->GetSelection(i)));
+			pRegion->m_Selections[i]->ShowNode();
 		}
-		GetRegionDoc()->Modify(&actionList, TRUE);
+
+		// Update the node images
+		GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
+
+		// Redraw the views
+		GetRegionDoc()->RedrawAllViews();
+
+		// End the wait cursor
+		EndWaitCursor( );
 	}
-	else
-		GetRegionDoc()->Modify();
-
-	for (i=0; i < pRegion->GetNumSelections(); i++)
-	{
-		// Show the node
-		pRegion->GetSelection(i)->ShowNode();
-	}
-
-	// Update the node images
-	GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-
-	// End the wait cursor
-	EndWaitCursor( );
 }
 
 /************************************************************************/
 // The command UI update for the "Unhide Selected" command
 void CRegionView::OnUpdateSelectionUnhideSelected(CCmdUI* pCmdUI) 
 {
-	// Get the region
+	// talon: 2001 (0x45acf5, shared with the unhide updates by the link)
 	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-	
-	if (pRegion->GetNumSelections() <= 0)
-	{
+	if (pRegion && pRegion->m_Selections.GetSize() <= 0)
 		pCmdUI->Enable(FALSE);
-	}
-	SetMenuHotKeyText(UIE_UNHIDE_SELECTED, pCmdUI);
 }
 
 /************************************************************************/
@@ -3858,27 +3443,18 @@ void CRegionView::OnSelectionHideInverse()
 	// Hide the inverse nodes
 	if (pRegion)
 	{
-		// Setup the undo information 
-		if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-		{
-			PreActionList actionList;	
-			UndoHelper(&actionList, pRegion->GetRootNode(), NODEFLAG_SELECTED, false);
-			GetRegionDoc()->Modify(&actionList, TRUE);
-		}
-		else
-			GetRegionDoc()->Modify();
-
 		pRegion->RecurseAndInverseHide(pRegion->GetRootNode());		
 
 		// Make sure that the root is not hidden
 		pRegion->GetRootNode()->ShowNode();
 	}
 
-	// Update the node images
+	// talon: 2001 (0x45ae28) updates the node images whether or not there is a
+	// region (with none it passes the root of NULL: RETAIL_BUGS).
 	GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
 
-	// Redraw
-	GetRegionDoc()->RedrawAllViews();	
+	// Redraw the views
+	GetRegionDoc()->RedrawAllViews();
 
 	// End the wait cursor
 	EndWaitCursor( );
@@ -3886,9 +3462,17 @@ void CRegionView::OnSelectionHideInverse()
 
 /************************************************************************/
 // The command UI update for the "Hide Inverse" command
-void CRegionView::OnUpdateSelectionHideInverse(CCmdUI* pCmdUI) 
+void CRegionView::OnUpdateSelectionHideInverse(CCmdUI* pCmdUI)
 {
-	SetMenuHotKeyText(UIE_HIDE_INVERSE, pCmdUI);
+	// talon: 2001 (0x45af33: the group, container and hide-inverse updates
+	// are one function in the link)
+	CRegionDoc *pDoc=GetRegionDoc();
+	if (pDoc)
+	{
+		CEditRegion *pRegion=&pDoc->m_Region;
+		if (pRegion && pRegion->m_Selections.GetSize() <= 0)
+			pCmdUI->Enable(FALSE);
+	}
 }
 
 /************************************************************************/
@@ -3897,32 +3481,20 @@ void CRegionView::OnSelectionUnhideInverse()
 {
 	// Get the edit region
 	CEditRegion *pRegion=GetRegion();
-
+	
 	// Put the wait cursor on the screen
 	BeginWaitCursor( );
 
-	// Hide the inverse nodes
+	// Unhide the inverse nodes
 	if (pRegion)
 	{
-		// Setup the undo information 
-		if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-		{
-			PreActionList actionList;	
-			UndoHelper(&actionList, pRegion->GetRootNode(), NODEFLAG_SELECTED, false);
-			GetRegionDoc()->Modify(&actionList, TRUE);
-		}
-		else
-			GetRegionDoc()->Modify();
-
-
-		pRegion->RecurseAndInverseUnhide(pRegion->GetRootNode());		
+		pRegion->RecurseAndInverseUnhide(pRegion->GetRootNode());
 	}
 
-	// Update the node images
 	GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
 
-	// Redraw
-	GetRegionDoc()->RedrawAllViews();	
+	// Redraw the views
+	GetRegionDoc()->RedrawAllViews();
 
 	// End the wait cursor
 	EndWaitCursor( );
@@ -3931,8 +3503,11 @@ void CRegionView::OnSelectionUnhideInverse()
 /************************************************************************/
 // The command UI update for the "Unhide Inverse" command
 void CRegionView::OnUpdateSelectionUnhideInverse(CCmdUI* pCmdUI) 
-{	
-	SetMenuHotKeyText(UIE_UNHIDE_INVERSE, pCmdUI);
+{
+	// talon: 2001 (0x45acf5, as the hide-selected update)
+	CEditRegion *pRegion=GetRegion();
+	if (pRegion && pRegion->m_Selections.GetSize() <= 0)
+		pCmdUI->Enable(FALSE);
 }
 
 /************************************************************************/
@@ -3975,28 +3550,17 @@ void CRegionView::OnSelectionGroup()
 
 /************************************************************************/
 // Command UI updater for the group function
-void CRegionView::OnUpdateSelectionGroup(CCmdUI* pCmdUI) 
+void CRegionView::OnUpdateSelectionGroup(CCmdUI* pCmdUI)
 {
-	// Get the document
+	// talon: 2001 (0x45af33: the group, container and hide-inverse updates
+	// are one function in the link)
 	CRegionDoc *pDoc=GetRegionDoc();
-	if (!pDoc)		
+	if (pDoc)
 	{
-		return;
+		CEditRegion *pRegion=&pDoc->m_Region;
+		if (pRegion && pRegion->m_Selections.GetSize() <= 0)
+			pCmdUI->Enable(FALSE);
 	}
-
-	// Get the region
-	CEditRegion *pRegion=pDoc->GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-	
-	if (pRegion->GetNumSelections() <= 0)
-	{
-		pCmdUI->Enable(FALSE);
-	}		
-
-	SetMenuHotKeyText(UIE_GROUP_SELECTION, pCmdUI);
 }
 
 /************************************************************************/
@@ -4168,20 +3732,12 @@ void CRegionView::OnBrushSplitBrush()
 
 }
 
-//used to notify when the hot keys have been changed
-void CRegionView::OnHotKeysChanged()
-{
-	m_cTrackerMgr.FlushTrackers();
-}
 
 /************************************************************************/
 // The command update handler for the split brush command
 void CRegionView::OnUpdateBrushSplitBrush(CCmdUI* pCmdUI) 
-{	
-	// Start by enabling the menu item
-	pCmdUI->Enable(CanSplitBrush());
-
-	SetMenuHotKeyText(UIE_SPLIT_BRUSH, pCmdUI);
+{
+	pCmdUI->Enable(CanSplitBrush(NULL));
 }
 
 
@@ -4479,26 +4035,6 @@ void CRegionView::OnBrushFlip()
 }
 
 /************************************************************************/
-// The command update handler for the flip command
-void CRegionView::OnUpdateBrushFlip(CCmdUI* pCmdUI) 
-{	
-	// Get the edit region
-	CEditRegion *pRegion=GetRegion();
-
-	// Make sure that we have one brush selected
-	if(pRegion->GetNumSelections() == 1 && pRegion->GetSelection(0)->GetType() == Node_Brush)
-	{
-		// Enable the menu item
-		pCmdUI->Enable(TRUE);		
-	}
-	else
-	{
-		// Disable the menu item
-		pCmdUI->Enable(FALSE);
-	}
-
-	SetMenuHotKeyText(UIE_FLIP_BRUSH, pCmdUI);
-}
 
 
 /************************************************************************/
@@ -4512,20 +4048,11 @@ void CRegionView::OnSelectionMirrorX()
 // Command update handler for the mirror x-axis command
 void CRegionView::OnUpdateSelectionMirrorX(CCmdUI* pCmdUI) 
 {
-	// Get the edit region
-	CEditRegion *pRegion=GetRegion();
-
-	// Make sure that there are selection nodes
-	if (pRegion->GetNumSelections() > 0)
-	{
+	// talon: 2001 (0x45bad5, one function for the three in the link)
+	if (GetRegion()->m_Selections.GetSize() > 0)
 		pCmdUI->Enable(TRUE);
-	}
 	else
-	{
 		pCmdUI->Enable(FALSE);
-	}
-
-	SetMenuHotKeyText(UIE_MIRROR_X, pCmdUI);
 }
 
 /************************************************************************/
@@ -4539,19 +4066,11 @@ void CRegionView::OnSelectionMirrorY()
 // Command update handler for the mirror y-axis command
 void CRegionView::OnUpdateSelectionMirrorY(CCmdUI* pCmdUI) 
 {
-	// Get the edit region
-	CEditRegion *pRegion=GetRegion();
-
-	// Make sure that there are selection nodes
-	if (pRegion->GetNumSelections() > 0)
-	{
+	// talon: 2001 (0x45bad5, one function for the three in the link)
+	if (GetRegion()->m_Selections.GetSize() > 0)
 		pCmdUI->Enable(TRUE);
-	}
 	else
-	{
 		pCmdUI->Enable(FALSE);
-	}
-	SetMenuHotKeyText(UIE_MIRROR_Y, pCmdUI);
 }
 
 /************************************************************************/
@@ -4565,75 +4084,17 @@ void CRegionView::OnSelectionMirrorZ()
 // Command update handler for the mirror z-axis command
 void CRegionView::OnUpdateSelectionMirrorZ(CCmdUI* pCmdUI) 
 {
-	// Get the edit region
-	CEditRegion *pRegion=GetRegion();
-
-	// Make sure that there are selection nodes
-	if (pRegion->GetNumSelections() > 0)
-	{
+	// talon: 2001 (0x45bad5, one function for the three in the link)
+	if (GetRegion()->m_Selections.GetSize() > 0)
 		pCmdUI->Enable(TRUE);
-	}
 	else
-	{
 		pCmdUI->Enable(FALSE);
-	}
-	SetMenuHotKeyText(UIE_MIRROR_Z, pCmdUI);
 }
 
 /************************************************************************/
 // Centers the seleciton about the currently placed marker
 
-void CRegionView::OnCenterSelectionOnMarker()
-{
-	CRegionDoc *pDoc = GetRegionDoc();
-	CEditRegion *pRegion = GetRegion();
-	if (!pRegion || !pDoc || (pRegion->GetNumSelections() == 0))
-	{
-		return;
-	}
 
-	//make sure the selection box is up to date
-	pDoc->UpdateSelectionBox();
-
-	//figure out where we are moving the lower corner to
-	LTVector vMoveTo = pRegion->m_vMarker - (pDoc->m_SelectionMax - pDoc->m_SelectionMin) * 0.5f;
-
-	//find a delta vector for that move
-	LTVector vMoveAmount = vMoveTo - pDoc->m_SelectionMin;
-
-	//offset these nodes
-	OffsetSelectedNodes(vMoveAmount);
-
-	// Update the views
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateCenterSelectionOnMarker(CCmdUI* pCmdUI)
-{
-	// Get the region doc
-	CRegionDoc *pDoc=GetRegionDoc();
-	if (!pDoc)
-	{
-		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Make sure that there are selected objects
-	if (pRegion->GetNumSelections() < 1)
-	{
-		pCmdUI->Enable(FALSE);
-	}
-
-	SetMenuHotKeyText(UIE_CENTER_SEL_ON_MARKER, pCmdUI);
-}
 
 /************************************************************************/
 // Centers the marker on the selected brushes or objects
@@ -4660,29 +4121,9 @@ void CRegionView::OnCenterMarkerOnSelection()
 // Command update handler for the "center marker on selection" command
 void CRegionView::OnUpdateCenterMarkerOnSelection(CCmdUI* pCmdUI) 
 {
-	// Get the region doc
-	CRegionDoc *pDoc=GetRegionDoc();
-	if (!pDoc)
-	{
+	// talon: 2001 (0x45bbfa)
+	if (GetDocument() && m_pRegion && m_pRegion->m_Selections.GetSize() < 1)
 		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Make sure that there are selected objects
-	if (pRegion->GetNumSelections() < 1)
-	{
-		pCmdUI->Enable(FALSE);
-	}
-
-	SetMenuHotKeyText(UIE_MARKER_CENTER, pCmdUI);
 }
 
 /************************************************************************/
@@ -4868,22 +4309,10 @@ void CRegionView::OnSelectionGenerateUniqueNames()
 /************************************************************************/
 // Command update handler for the "generate unique names" command
 void CRegionView::OnUpdateSelectionGenerateUniqueNames(CCmdUI* pCmdUI) 
-{	
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
+{
+	// talon: 2001 (0x45bfa4, the generate-names and save-prefab updates in one)
+	if (!m_pRegion || m_pRegion->m_Selections.GetSize() < 1)
 		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Make sure that there are selected objects
-	if (pRegion->GetNumSelections() < 1)
-	{
-		pCmdUI->Enable(FALSE);
-	}	
-
-	SetMenuHotKeyText(UIE_GENERATE_UNIQUE_NAMES, pCmdUI);
 }
 
 /************************************************************************/
@@ -4986,21 +4415,9 @@ void CRegionView::OnSelectionSavePrefab()
 // Command update handler for the "Save Prefab" option
 void CRegionView::OnUpdateSelectionSavePrefab(CCmdUI* pCmdUI) 
 {
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
+	// talon: 2001 (0x45bfa4, the generate-names and save-prefab updates in one)
+	if (!m_pRegion || m_pRegion->m_Selections.GetSize() < 1)
 		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Make sure that there are selected objects
-	if (pRegion->GetNumSelections() < 1)
-	{
-		pCmdUI->Enable(FALSE);
-	}		
-
-	SetMenuHotKeyText(UIE_SAVE_AS_PREFAB, pCmdUI);
 }
 
 
@@ -5216,26 +4633,6 @@ void CRegionView::OnSelectionScale()
 	GetProjectBar()->UpdateAll();	
 }
 /************************************************************************/
-// Command update handler for the selection scaling option
-void CRegionView::OnUpdateSelectionScale(CCmdUI* pCmdUI) 
-{
-
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		pCmdUI->Enable(FALSE);
-		return;
-	}
-
-	// Make sure that there are selected objects
-	if (pRegion->GetNumSelections() < 1)
-	{
-		pCmdUI->Enable(FALSE);
-	}		
-
-	SetMenuHotKeyText(UIE_SCALE_SELECTION, pCmdUI);
-}
 
 /************************************************************************/
 // This command opens up the object browser
@@ -5285,6 +4682,57 @@ void CRegionView::OnWorldObjectBrowser()
 			pOptions->SetGroupByType(objectBrowserDlg.m_bGroupByType);
 		}
 	}
+}
+
+// talon: 2001 (0x45c49d).
+void CRegionView::OnWorldDebugClearLeakFinder()
+{
+	m_pRegion->m_Unknown_b4.Term();
+	GetRegionDoc()->RedrawAllViews();
+}
+
+// talon: 2001 (0x45c4c4).
+void CRegionView::OnUpdateWorldDebugClearLeakFinder(CCmdUI* pCmdUI)
+{
+	if( m_pRegion && m_pRegion->m_Unknown_b4 > 0 )
+		pCmdUI->Enable( TRUE );
+	else
+		pCmdUI->Enable( FALSE );
+}
+
+// talon: 2001 (0x45c4e8): puts the marker on the next leak vertex.
+void CRegionView::OnWorldDebugGotoNextLeakVertice()
+{
+	if( m_pRegion && m_nCurLeakVertex+1 < m_pRegion->m_Unknown_b4 )
+	{
+		m_nCurLeakVertex++;
+		CVector &vLeak = m_pRegion->m_Unknown_b4[m_nCurLeakVertex];
+		m_pRegion->m_vMarker = vLeak;
+		GetMainFrame()->CenterViewsAtVector( vLeak );
+		GetRegionDoc()->RedrawAllViews();
+	}
+}
+
+// talon: 2001 (0x45c547): puts the marker on the previous leak vertex.
+void CRegionView::OnWorldDebugGotoPreviousLeakVertice()
+{
+	if( m_pRegion && m_nCurLeakVertex > 0 && m_pRegion->m_Unknown_b4 > 0 )
+	{
+		m_nCurLeakVertex--;
+		CVector &vLeak = m_pRegion->m_Unknown_b4[m_nCurLeakVertex];
+		m_pRegion->m_vMarker = vLeak;
+		GetMainFrame()->CenterViewsAtVector( vLeak );
+		GetRegionDoc()->RedrawAllViews();
+	}
+}
+
+// talon: 2001's are empty (folded at 0x44ef03).
+void CRegionView::OnUpdateWorldDebugGotoNextLeakVertice(CCmdUI* pCmdUI)
+{
+}
+
+void CRegionView::OnUpdateWorldDebugGotoPreviousLeakVertice(CCmdUI* pCmdUI)
+{
 }
 
 /************************************************************************/
@@ -5449,7 +4897,6 @@ void CRegionView::OnMapTextureToView()
 void CRegionView::OnUpdateMapTextureToView(CCmdUI* pCmdUI)
 {
 	pCmdUI->Enable(AreAnyPoliesSelected());
-	SetMenuHotKeyText(UIE_MAP_TEXTURE_TO_VIEW, pCmdUI);
 }
 
 
@@ -5529,7 +4976,30 @@ void CRegionView::OnUpdateResetTextureCoords(CCmdUI* pCmdUI)
 	BOOL bEnable = AreAnyPoliesSelected();
 
 	pCmdUI->Enable(bEnable);
-	SetMenuHotKeyText(UIE_RESET_TEXTURE_COORDS, pCmdUI);
+}
+
+// talon: 2001 (0x45cddc..0x45ce12): the light animations kept with the
+// world (CRegionDoc, 0x450c20..).
+void CRegionView::OnLoadLightData()
+{
+	GetRegionDoc()->LoadLightAnims();
+	GetRegionDoc()->RedrawAllViews();
+}
+
+void CRegionView::OnUnloadLightData()
+{
+	GetRegionDoc()->TermLightAnims();
+	GetRegionDoc()->RedrawAllViews();
+}
+
+void CRegionView::OnSaveLightData()
+{
+	GetRegionDoc()->SaveLightAnims();
+}
+
+void CRegionView::OnUpdateLightData(CCmdUI* pCmdUI)
+{
+	pCmdUI->Enable( GetRegionDoc()->m_pLightWorld != NULL );
 }
 
 BOOL CRegionView::OnDepthSelect(CUITracker *pTracker)
@@ -5585,13 +5055,18 @@ BOOL CRegionView::OnDepthSelect(CUITracker *pTracker)
 	else if( GetEditMode() == OBJECT_EDITMODE )
 	{
 		// Setup the closest object to be selected and in the property dialog.
-		CWorldNode* pObj = GetClosestObject( GetCurMousePos(), FALSE );
-		if( pObj )
+		CObjectRef obj = GetClosestObject( GetCurMousePos(), FALSE );
+		if( obj() )
 		{
-			GetNodeView( )->m_NodeViewTree.SelectTree( pObj, pRVCTracker->GetToggleState(0));
+			GetNodeView( )->m_NodeViewTree.SelectTree( obj(), pRVCTracker->GetToggleState(0));
 		}
 
 		GetRegionDoc()->NotifySelectionChange();
+	}
+	else if( GetEditMode() == LIGHT_EDITMODE )
+	{
+		// talon: 2001 (0x45cfc4)
+		PickLightPoly();
 	}
 	else
 		bResult = FALSE;
@@ -5721,7 +5196,7 @@ BOOL CRegionView::OnInitTextureSpace(CUITracker *pTracker)
 	else if ((GetEditMode() == GEOMETRY_EDITMODE) && (IPoly().IsValid()))
 	{
 		// InitTextureSpace() on the immediate polygon.
-		GetRegionDoc()->Modify(new CPreAction(ACTION_MODIFYNODE, IPoly().m_pBrush), TRUE);
+		GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, IPoly().m_pBrush), TRUE);
 		
 		CEditPoly *pPoly = IPoly()();
 
@@ -5798,16 +5273,17 @@ BOOL CRegionView::OnSelectNone(CUITracker *pTracker)
 			GetRegionDoc()->RedrawAllViews();
 			break;
 		}
+		case LIGHT_EDITMODE :
+		{
+			// talon: 2001 (0x45d40b): unselects the lightmap poly.
+			GetRegionDoc()->m_LightPolyWorld = (uint32)-1;
+			GetRegionDoc()->m_LightPolyName = (uint32)-1;
+			GetRegionDoc()->RedrawAllViews();
+			break;
+		}
 		default :
 			bResult = FALSE;
 			break;
-	}
-
-	if (bResult) 
-	{
-		// Sets the dirty bit for the file.  Unnecessary if the undo code is included
-		GetRegionDoc()->SetModifiedFlag( TRUE );
-		GetRegionDoc()->SetTitle(true);
 	}
 
 	return bResult;
@@ -5925,63 +5401,6 @@ BOOL CRegionView::OnNudge(CUITracker *pTracker)
 	return bResult;
 }
 
-BOOL CRegionView::OnNudgeRotate(CUITracker *pTracker)
-{
-	CRVCallback *pRVCTracker = (CRVCallback *)pTracker;
-
-	CRotateSelection dlg;
-	CReal rRotation;
-	CEditRegion *pRegion;
-	CMatrix matRot;
-	CVector vRotationVector, vRotationCenter;
-	DWORD i;
-	PreActionList actionList;
-	CLinkedList<CEditBrush*> brushList;
-
-	pRegion = GetRegion( );
-	ASSERT( pRegion );
-
-	if( !pRegion->m_Selections.GetSize( ))
-		return FALSE;
-
-	// Rotate...
-	BeginWaitCursor( );
-
-	if (pRVCTracker->GetData() == VK_LEFT)
-		rRotation = 45 * MATH_PI / 180.0f;
-	else
-		rRotation = -45 * MATH_PI / 180.0f;
-
-	// Set up the rotation matrix
-	vRotationVector = m_pViewDef->m_Nav.Forward( );
-	vRotationVector.Norm( );
-	vRotationCenter = GetRegion()->m_vMarker;
-	gr_SetupRotationAroundVector(&matRot, vRotationVector, rRotation);
-
-	// Setup undos...
-	for(i=0; i < pRegion->m_Selections; i++)
-		actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, pRegion->m_Selections[i]));
-		
-	GetRegionDoc()->Modify(&actionList, TRUE);
-
-	// Loop over all selected nodes...
-	for( i = 0; i < pRegion->m_Selections.GetSize( ); i++ )
-	{
-		pRegion->m_Selections[i]->Rotate( matRot, vRotationCenter );
-		
-		if(pRegion->m_Selections[i]->GetType() == Node_Brush)
-			brushList.AddTail(pRegion->m_Selections[i]->AsBrush());
-	}
-
-	// Update the geometry stuff...
-	pRegion->UpdatePlanes(&brushList);
-	pRegion->CleanupGeometry(&brushList);
-	GetRegionDoc()->UpdateSelectionBox();
-
-	EndWaitCursor( );
-
-	return TRUE;
-}
 
 BOOL CRegionView::OnSplitEdges(CUITracker *pTracker)
 {
@@ -6085,7 +5504,7 @@ BOOL CRegionView::OnFlipNormal(CUITracker *pTracker)
 		return FALSE;
 
 	// Flip the current polygon's normal.
-	GetRegionDoc()->Modify(new CPreAction(ACTION_MODIFYNODE, IPoly().m_pBrush), TRUE);
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, IPoly().m_pBrush), TRUE);
 
 	IPoly()()->Flip();
 	
@@ -6104,982 +5523,89 @@ BOOL CRegionView::OnOrbitVertex(CUITracker *pTracker)
 		return FALSE;
 
 	// Center the orbit on the current vertex.
-	Nav().LookAt( IVert()() );
-	//Nav().UpdateViewerDistance();
+	// talon: 2001 (0x45db09): sets the look-at point and the distance.
+	Nav().m_LookAt = IVert()();
+	Nav().UpdateViewerDistance();
 
 	return TRUE;
 }
 
-//given a user input event name and a menu handler, it will set up the text for
-//the menu item
-void CRegionView::SetMenuHotKeyText(const char* pszUIE, CCmdUI* pCmdUI)
+// talon: 2001 (0x45db67): picks the lightmap texel under the cursor.
+BOOL CRegionView::OnSelectLightNode(CUITracker *pTracker)
 {
-	if((pCmdUI == NULL) || (pCmdUI->m_pMenu == NULL))
-		return;
+	if (GetEditMode() != LIGHT_EDITMODE)
+		return FALSE;
 
-	//try and get the hotkey
-	const CHotKey* pHotKey = CGlobalHotKeyDB::m_DB.GetHotKey( pszUIE );
-	
-	if( pHotKey == NULL)
-	{
-		return;
-	}
-
-	//get the existing text
-	CString sText;
-	pCmdUI->m_pMenu->GetMenuString(pCmdUI->m_nID, sText, MF_BYCOMMAND);
-
-	//strip out everything past a tab if there is one
-	int nTabPos = sText.Find('\t');
-
-	if(nTabPos != -1)
-	{
-		sText = sText.Left(nTabPos);
-	}
-	
-	//now we want to tack on the tab and the hot key name
-	sText += "\t";
-
-	sText += CBindKeyDlg::HotKeyToString( *pHotKey );
-
-	//now we actually set the text of the menu item
-	pCmdUI->SetText(sText);
+	SelectLightTexel();
+	return TRUE;
 }
 
-// Returns the active region.  If none is active, just return the first region in 
-// the active document.
-CEditRegion* CRegionView::GetActiveRegion()
+// talon: 2001 (0x45db86): brightens (TRUE) or darkens the selected texels.
+BOOL CRegionView::OnEditLightNode(CUITracker *pTracker)
 {
-	CEditRegion *pRegion = GetRegion();
-	if( !pRegion )
-	{
-		CDocTemplate* pTemp = GetApp()->m_pWorldTemplate;
-		POSITION position = pTemp->GetFirstDocPosition();
-		CDocument* pDoc = pTemp->GetNextDoc( position );
-		POSITION viewPos = pDoc->GetFirstViewPosition();
-		CRegionView* pView = (CRegionView*)pDoc->GetNextView( viewPos );
-		pRegion = pView->GetRegion();
-	}
-	return pRegion;
+	if (GetEditMode() != LIGHT_EDITMODE)
+		return FALSE;
+
+	GetRegionDoc()->BrightenTexels(((CRegionViewCommand*)pTracker)->GetData());
+	return TRUE;
 }
+
+
 
 //***************************************************************************//
 
-//determines if a viewport is maximized
-static bool IsViewMaximized(uint32 nRow, uint32 nCol, int nColWidths[], int nRowHeights[])
-{
-	if((nColWidths[(nCol + 1) % 2] == 0) && (nRowHeights[(nRow + 1) % 2] == 0))
-		return true;
-
-	return false;
-}
-
-//given a view index, this will calculate the row and column indices
-static void GetViewRowAndCol(uint32 nView, uint32& nRow, uint32& nCol)
-{
-	switch( nView )
-	{
-		case 0:
-			nRow = 0;
-			nCol = 0;
-			break;
-		case 1:
-			nRow = 1;
-			nCol = 0;
-			break;
-		case 2:
-			nRow = 0;
-			nCol = 1;
-			break;
-		case 3:
-			nRow = 1;
-			nCol = 1;
-			break;
-		default:
-			ASSERT(false);
-			nRow = 0;
-			nCol = 0;
-			break;
-	}
-}
-
-void CRegionView::MaximizeView( uint32 nViewIndex )
-{
-	CRegionFrame		*pFrame = (CRegionFrame*)GetParent()->GetParent();
-	CSplitterWnd		*pSplitter = pFrame->GetSplitter();
-	CRegionView			*pRegionView;
-	CRegionDoc			*pRegionDoc = (CRegionDoc*)GetDocument();
-	CRect				rect;
-
-	//get the area of the client rectangle
-	pFrame->GetClientRect( &rect );
-
-	//get the dimensions of each one of the panes
-	int nColWidths[2], nRowHeights[2], nGarbage;
-	pSplitter->GetRowInfo( 0, nRowHeights[0], nGarbage );
-	pSplitter->GetRowInfo( 1, nRowHeights[1], nGarbage );
-	pSplitter->GetColumnInfo( 0, nColWidths[0], nGarbage );
-	pSplitter->GetColumnInfo( 1, nColWidths[1], nGarbage );
-
-	//get the row and column of the view we are modifying
-	uint32 nViewRow, nViewCol;
-	GetViewRowAndCol(nViewIndex, nViewRow, nViewCol);
-
-	//we need to determine if we are maximizing the window, or restoring it to the
-	//normal 4 pane view. If the other windows are minimized, then we are restoring it,
-	//otherwise, we are maximizing
-	if( IsViewMaximized(nViewRow, nViewCol, nColWidths, nRowHeights))
-	{
-		//we are restoring
-		pSplitter->SetRowInfo(0, (int)((float)rect.Height() * pRegionDoc->m_fSavedSplitCenterY), 10);
-		pSplitter->SetColumnInfo(0, (int)((float)rect.Width() * pRegionDoc->m_fSavedSplitCenterX), 10);
-		pSplitter->RecalcLayout();
-
-		return;
-	}
-
-	//see if any of the views are maximized
-	BOOL bAnyMaximized = FALSE;
-
-	for(uint32 nCurrView = 0; nCurrView < 4; nCurrView++)
-	{
-		uint32 nCurrRow, nCurrCol;
-		GetViewRowAndCol(nCurrView, nCurrRow, nCurrCol);
-		if(IsViewMaximized(nCurrRow, nCurrCol, nColWidths, nRowHeights))
-		{
-			bAnyMaximized = TRUE;
-			break;
-		}
-	}
-
-	//we are going to maximize, so save the ratio of the viewports so they can
-	//be restored later, but only store it if nothing is already maximized
-	if(!bAnyMaximized)
-	{
-		pRegionDoc->m_fSavedSplitCenterX = nColWidths[0] / (float)rect.Width();
-		pRegionDoc->m_fSavedSplitCenterY = nRowHeights[0] / (float)rect.Height();
-	}
-	
-	pSplitter->SetRowInfo( ( nViewIndex % 2 ) ? 0 : 1, 0, 10 );
-	pSplitter->SetRowInfo( ( nViewIndex % 2 ) ? 1 : 0, rect.Height(), 10 );
-	pSplitter->SetColumnInfo( ( nViewIndex > 1 ) ? 0 : 1, 0, 10 );
-	pSplitter->SetColumnInfo( ( nViewIndex > 1 ) ? 1 : 0, rect.Width(), 10 );
-	pSplitter->RecalcLayout();
-
-	//we are maximizing the view. Before this is done however, we need to update the key
-	//listing of the tracker we are switching it to to prevent it from sending
-	//the same event twice
-	pRegionView = (CRegionView*)pFrame->GetSplitter()->GetPane(nViewRow, nViewCol);
-	if( pRegionView )
-	{
-		CUITracker* pTracker = pRegionView->m_cTrackerMgr.FindTracker("Focus");
-		if(pTracker)
-		{
-			((CRVTrackerFocus*)pTracker)->RefreshKeyList();
-		}
-	}	
-
-	// Call SetUpNewSize() on the viewports being minimized first, then
-	// call SetUpNewSize() on the viewport being maximized first:
-	for( int i = 0; i < 5; ++i )
-	{
-		CRegionView* pRegionView = NULL;
-
-		if( i == nViewIndex )	// skip viewport being maximized (do it last; i.e. when i == 4)
-			continue;
-
-		uint32 nPaneToSize = i;
-
-		if( nPaneToSize == 4 )
-			nPaneToSize = nViewIndex;	// call SetupNewSize() on the view being maximized last (resize the other views first so that it will have the max. video ram available when it resizes the view being maximized)
-
-		//find out which pane we are currently manipulating
-		uint32 nPaneRow, nPaneCol;
-		GetViewRowAndCol(nPaneToSize, nPaneRow, nPaneCol);
-		
-		pRegionView = (CRegionView*)pFrame->GetSplitter()->GetPane(nPaneRow, nPaneCol);
-
-		//now actually resize the pane
-		if( pRegionView )
-		{
-			CRect rect;
-			pRegionView->GetClientRect( &rect );
-			pRegionView->SetupNewSize( rect.Width(), rect.Height() );
-		}
-	}
-
-	GetRegionDoc()->RedrawAllViews();
-}
-
-//***************************************************************************//
-void CRegionView::OnViewMaximizeView1() 
-{
-	MaximizeView( 0 );
-}
-
-void CRegionView::OnUpdateViewMaximizeView1(CCmdUI* pCmdUI) 
-{
-	CEditRegion *pRegion = GetActiveRegion();
-	if( !pRegion )
-		return;
-
-	SetMenuHotKeyText(UIE_MAXIMIZE_VIEW1, pCmdUI);
-}
-
-//***************************************************************************//
-void CRegionView::OnViewMaximizeView2() 
-{
-	MaximizeView( 2 );
-}
-
-void CRegionView::OnUpdateViewMaximizeView2(CCmdUI* pCmdUI) 
-{
-	CEditRegion *pRegion = GetActiveRegion();
-	if( !pRegion )
-		return;
-
-	SetMenuHotKeyText(UIE_MAXIMIZE_VIEW2, pCmdUI);
-}
-
-//***************************************************************************//
-void CRegionView::OnViewMaximizeView3() 
-{
-	MaximizeView( 1 );
-}
-
-void CRegionView::OnUpdateViewMaximizeView3(CCmdUI* pCmdUI) 
-{
-	CEditRegion *pRegion = GetActiveRegion();
-	if( !pRegion )
-		return;
-
-	SetMenuHotKeyText(UIE_MAXIMIZE_VIEW3, pCmdUI);
-}
-
-//***************************************************************************//
-void CRegionView::OnViewMaximizeView4() 
-{
-	MaximizeView( 3 );
-}
-
-void CRegionView::OnUpdateViewMaximizeView4(CCmdUI* pCmdUI) 
-{
-	CEditRegion *pRegion = GetActiveRegion();
-	if( !pRegion )
-		return;
-
-	SetMenuHotKeyText(UIE_MAXIMIZE_VIEW4, pCmdUI);
-}
-
-//***************************************************************************//
-void CRegionView::OnViewMaximizeActiveView() 
-{
-	CRegionFrame* pFrame = (CRegionFrame*)GetParent()->GetParent();
-	CRegionView* pRegionView = (CRegionView*)pFrame->GetSplitter()->GetPane(0,0);
-	if( ::GetFocus() == pRegionView->m_hWnd )
-	{
-		MaximizeView( 0 );
-		return;
-	}
-	pRegionView = (CRegionView*)pFrame->GetSplitter()->GetPane(1,0);
-	if( ::GetFocus() == pRegionView->m_hWnd )
-	{
-		MaximizeView( 1 );
-		return;
-	}
-	pRegionView = (CRegionView*)pFrame->GetSplitter()->GetPane(0,1);
-	if( ::GetFocus() == pRegionView->m_hWnd )
-	{
-		MaximizeView( 2 );
-		return;
-	}
-	pRegionView = (CRegionView*)pFrame->GetSplitter()->GetPane(1,1);
-	if( ::GetFocus() == pRegionView->m_hWnd )
-	{
-		MaximizeView( 3 );
-		return;
-	}
-}
-
-void CRegionView::OnUpdateViewMaximizeActiveView(CCmdUI* pCmdUI) 
-{
-	CEditRegion *pRegion = GetActiveRegion();
-	if( !pRegion )
-		return;
-
-	SetMenuHotKeyText(UIE_MAXIMIZE_ACTIVE_VIEW, pCmdUI);
-}
-
-//***************************************************************************//
-void CRegionView::OnSelectionFreezeSelected()
-{
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-
-	// Put the wait cursor on the screen
-	BeginWaitCursor( );
-
-	// Get the selected nodes
-	CMoArray<CWorldNode*> selectedNodes;
-	selectedNodes.CopyArray(pRegion->m_Selections);
-		
-	CWorldNode::FindParentNodes(selectedNodes);
-
-	int i;
-
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-	{
-		PreActionList actionList;	
-		for (i=0; i < pRegion->GetNumSelections(); i++)
-		{
-			actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, pRegion->GetSelection(i)));
-		}
-		GetRegionDoc()->Modify(&actionList, TRUE);
-	}
-	else
-		GetRegionDoc()->Modify();
 
 
-	for (i=0; i < pRegion->GetNumSelections(); i++)
-	{
-		// Hide the node
-		pRegion->FreezeNode(pRegion->GetSelection(i), true, true, false);
-	}
 
-	//clean up all the old selections
-	pRegion->ClearSelections();
 
-	// Update the node images
-	GetNodeView()->UpdateNodeImage(pRegion->GetRootNode());
 
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
 
-	// End the wait cursor
-	EndWaitCursor( );
-}
 
-void CRegionView::OnUpdateSelectionFreezeSelected(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetRegion()->GetNumSelections() > 0) ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_FREEZE_SELECTED, pCmdUI);
-}
+
+
+
+
+
+
+
 
 //***************************************************************************//
 
-void CRegionView::OnSelectionUnfreezeAll()
-{
-	// Setup the undo information 
-	if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-	{
-		PreActionList actionList;	
-		UndoHelper(&actionList, GetRegion()->GetRootNode(), NODEFLAG_FROZEN, true);
-		GetRegionDoc()->Modify(&actionList, TRUE);
-	}
-	else
-		GetRegionDoc()->Modify();
 
-	//unfreeze the entire tree
-	GetRegion()->FreezeNode(GetRegion()->GetRootNode(), false, false, true);
-
-	// Update the node images
-	GetNodeView()->UpdateNodeImage(GetRegion()->GetRootNode());
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateSelectionUnfreezeAll(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_UNFREEZE_ALL, pCmdUI);
-}
 
 /*************************************************************************/
-// Model Viewing command handlers
-void CRegionView::OnDisplayAllModels()
-{
-	//unfreeze the entire tree
-	GetRegion()->GetRootNode()->ShowModel(TRUE, TRUE);
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateDisplayAllModels(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_SHOW_ALL_MODELS, pCmdUI);
-}
-
-void CRegionView::OnHideAllModels()
-{
-	//unfreeze the entire tree
-	GetRegion()->GetRootNode()->ShowModel(FALSE, TRUE);
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateHideAllModels(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_HIDE_ALL_MODELS, pCmdUI);
-}
-
-void CRegionView::OnDisplaySelectedModels()
-{
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-
-	for (uint32 nCurrSel = 0; nCurrSel < pRegion->GetNumSelections(); nCurrSel++)
-	{
-		// Hide the node
-		pRegion->GetSelection(nCurrSel)->ShowModel(TRUE, FALSE);
-	}
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateDisplaySelectedModels(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetRegion()->GetNumSelections() > 0) ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_SHOW_SELECTED_MODELS, pCmdUI);
-}
-
-void CRegionView::OnHideSelectedModels()
-{
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{
-		return;
-	}
-
-	for (uint32 nCurrSel = 0; nCurrSel < pRegion->GetNumSelections(); nCurrSel++)
-	{
-		// Hide the node
-		pRegion->GetSelection(nCurrSel)->ShowModel(FALSE, FALSE);
-	}
-
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateHideSelectedModels(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetRegion()->GetNumSelections() > 0) ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_HIDE_SELECTED_MODELS, pCmdUI);
-}
-
-//this will recursively search through the node tree, and set the showing
-//model property for all nodes that are of the specified class
-static void ShowModelsForClass(CWorldNode* pNode, const CString& sClass, BOOL bShowModel)
-{
-	ASSERT(pNode);
-
-	//see if we have an object
-	if(pNode->GetType() == Node_Object)
-	{
-		if(sClass.CompareNoCase(pNode->AsObject()->GetClassName()) == 0)
-		{
-			pNode->ShowModel(bShowModel, FALSE);
-		}
-	}
-
-	//now run through all of its children
-	GPOS pos = pNode->m_Children;
-	while (pos)
-	{
-		ShowModelsForClass(pNode->m_Children.GetNext(pos), sClass, bShowModel);
-	}
-
-}
-
-void CRegionView::OnDisplayModelsOfClass()
-{
-	//first have the user select the class that they want displayed
-	CClassDlg dlg;
-	dlg.SetProject(GetProject());
-	dlg.SetTitle("Show Models for which Class");
-
-	if(dlg.DoModal() != IDOK)
-	{
-		//they aborted the operation
-		return;
-	}
-
-	//now we have to go through the list of objects, and find out what objects match
-	//the class
-	ShowModelsForClass(GetRegion()->GetRootNode(), dlg.GetSelectedClass(), TRUE);		
-}
-
-void CRegionView::OnUpdateDisplayModelsOfClass(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_SHOW_MODELS_OF_CLASS, pCmdUI);
-}
-
-void CRegionView::OnHideModelsOfClass()
-{
-	//first have the user select the class that they want displayed
-	CClassDlg dlg;
-	dlg.SetProject(GetProject());
-	dlg.SetTitle("Hide Models for which Class");
-
-	if(dlg.DoModal() != IDOK)
-	{
-		//they aborted the operation
-		return;
-	}
-
-	//now we have to go through the list of objects, and find out what objects match
-	//the class
-	ShowModelsForClass(GetRegion()->GetRootNode(), dlg.GetSelectedClass(), FALSE);
-	
-	// Redraw the views
-	GetRegionDoc()->RedrawAllViews();
-
-}
-
-void CRegionView::OnUpdateHideModelsOfClass(CCmdUI* pCmdUI)
-{
-	SetMenuHotKeyText(UIE_HIDE_MODELS_OF_CLASS, pCmdUI);
-}
-
-void CRegionView::OnDisplayModelPolycount()
-{
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)  return;
-
-	uint32 nPolycount = 0;
-
-	for (uint32 nCurrSel = 0; nCurrSel < pRegion->GetNumSelections(); nCurrSel++)
-	{
-		if (pRegion->GetSelection(nCurrSel)->GetType() == Node_Object)
-		{
-			CBaseEditObj *pObj = pRegion->GetSelection(nCurrSel)->AsObject();
-
-			//see if this object has a valid handle
-			if(!pObj->GetModelHandle().IsValid())
-				continue;
-
-			CMeshShapeList *pList;
-			
-			if(!GetApp()->GetModelMgr().GetShapeList(pObj->GetModelHandle(), &pList))
-				continue;
-
-			for (uint32 i=0; i<pList->GetNumShapes(); i++)
-			{
-				nPolycount += pList->GetShape(i)->GetNumTriangles();
-			}
-
-			GetApp()->GetModelMgr().ReleaseShapeList(pObj->GetModelHandle());
-		}
-	}
-
-	char text[128];
-	sprintf(text, "%d polygons counted in all models selected.", nPolycount);
-	AppMessageBox(text, MB_OK);
-}
-
-void CRegionView::OnUpdateDisplayModelPolycount(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetRegion()->GetNumSelections() > 0) ? TRUE : FALSE);
-	SetMenuHotKeyText(UIE_SHOW_MODEL_POLYCOUNT, pCmdUI);
-}
-
-
-void CRegionView::UndoHelper(PreActionList *actionList, CWorldNode *node, const uint32 flag, const bool wantFlag) const
-{
-	// If this node has the flag set properly, add it to the list
-
-	if (flag == 0) 
-	{
-		actionList->AddTail(new CPreAction(ACTION_MODIFYNODE, node));
-	}
-	else if (wantFlag && (node->IsFlagSet(flag)))
-	{
-		actionList->AddTail(new CPreAction(ACTION_MODIFYNODE, node));
-	}
-	else if (!wantFlag && !(node->IsFlagSet(flag)))
-	{
-		actionList->AddTail(new CPreAction(ACTION_MODIFYNODE, node));
-	}
-
-	// Recurse through all children
-
-	GPOS ChildPos = node->m_Children;
-
-	while(ChildPos)
-	{
-		UndoHelper(actionList, node->m_Children.GetNext(ChildPos), flag, wantFlag);
-	}
-}
-
-//**************************************************************************//
-void CRegionView::OnFitTextureToPoly()
-{
-	//only in geometry edit mode
-	if(GetEditMode() != GEOMETRY_EDITMODE)
-		return;
-
-	//we need to build up a list of polygons that we will be fitting the face
-	//to
-	CMoArray<CEditPoly*> PolyList;
-
-	PolyList.SetCacheSize(256);
-	GetSelectedPolies(PolyList);
-
-	//make sure we have polygons
-	if(PolyList.GetSize() == 0)
-		return;
-
-	//now we need to get the PQ vectors from the first polygon
-	LTVector vP = PolyList[0]->GetTexture(GetCurrTexture()).GetP();
-	LTVector vQ = PolyList[0]->GetTexture(GetCurrTexture()).GetQ();
-
-	//set the O to the first point
-	LTVector vO = PolyList[0]->Pt(0);
-
-	//find a normalized version of P and Q.
-	LTVector vPNorm(vP);
-	vPNorm.Norm();
-
-	LTVector vQNorm(vQ);
-	vQNorm.Norm();
-
-	//run through all polygons and all their points and adjust the O
-	uint32 nCurrPoly;
-	for(nCurrPoly = 0; nCurrPoly < PolyList.GetSize(); nCurrPoly++)
-	{
-		CEditPoly *pPoly = PolyList[nCurrPoly];
-
-		for(uint32 nCurrPt = 0; nCurrPt < pPoly->NumVerts(); nCurrPt++)
-		{
-			//do some dot products to determine how O needs to move
-			CReal fPDot = (pPoly->Pt(nCurrPt) - vO).Dot(vPNorm);
-			CReal fQDot = (pPoly->Pt(nCurrPt) - vO).Dot(vQNorm);
-
-			//if either is negative, we need to shift the origin
-			if(fPDot < 0.0f)
-			{
-				vO += vPNorm * fPDot;
-			}
-			if(fQDot < 0.0f)
-			{
-				vO += vQNorm * fQDot;
-			}
-		}
-	}
-
-	//ok, we now have the final origin, now we need to stretch P and Q to form a box
-	//over all the points
-	CReal fPLen = 0.0f;
-	CReal fQLen = 0.0f;
-
-
-	MakeUndoForPolygons(&PolyList);
-
-	//also we need to do the undo around here as well
-	for(nCurrPoly = 0; nCurrPoly < PolyList.GetSize(); nCurrPoly++)
-	{
-		CEditPoly* pPoly = PolyList[nCurrPoly];
-
-		for(uint32 nCurrPt = 0; nCurrPt < pPoly->NumVerts(); nCurrPt++)
-		{
-			LTVector vToPt = pPoly->Pt(nCurrPt) - vO;
-
-			//find the lengths with respect to P and Q
-			CReal fCurrPLen = vToPt.Dot(vPNorm);
-			CReal fCurrQLen = vToPt.Dot(vQNorm);
-
-			fPLen = LTMAX(fPLen, fCurrPLen);
-			fQLen = LTMAX(fQLen, fCurrQLen);
-		}
-	}
-
-	//now we create the final P and Q
-	vP = vPNorm / fPLen;
-	vQ = vQNorm / fQLen;
-					
-	//now set all the polygons, and make the undo
-	for(nCurrPoly = 0; nCurrPoly < PolyList.GetSize(); nCurrPoly++)
-	{
-		CEditPoly *pPoly = PolyList[nCurrPoly];
-
-		//get the dimensions of the textures
-		uint32 nTexWidth  = pPoly->GetTexture(GetCurrTexture()).GetBaseTextureWidth();
-		uint32 nTexHeight = pPoly->GetTexture(GetCurrTexture()).GetBaseTextureHeight();
-
-		pPoly->SetTextureSpace(GetCurrTexture(), vO, vP * (float)nTexWidth, vQ * (float)nTexHeight);
-	}
-
-	Invalidate();
-}
-
-//handler for fitting texture to a face
-void CRegionView::OnUpdateFitTextureToPoly(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable((GetEditMode() == GEOMETRY_EDITMODE) && AreAnyPoliesSelected());
-	SetMenuHotKeyText(UIE_FIT_TEXTURE_TO_POLY, pCmdUI);
- 
-}
-
-//for toggling class icons in the views
-void CRegionView::OnToggleClassIcons()
-{
-	//get the old value
-	BOOL bOld = GetApp()->GetOptions().GetDisplayOptions()->IsShowClassIcons();
-
-	//set the new
-	GetApp()->GetOptions().GetDisplayOptions()->SetShowClassIcons(bOld ? FALSE : TRUE);
-
-	//redraw the views
-	Invalidate();
-	GetRegionDoc()->UpdateAllViews( this );
-}
-
-void CRegionView::OnUpdateToggleClassIcons(CCmdUI* pCmdUI)
-{
-	//set the check appropriately
-	pCmdUI->SetCheck(GetApp()->GetOptions().GetDisplayOptions()->IsShowClassIcons());
-
-	//set the text
-	SetMenuHotKeyText(UIE_TOGGLE_CLASS_ICONS, pCmdUI);
-}
-
-//for toggling class icons in the views
-void CRegionView::OnHideFrozenNodes()
-{
-	//get the old value
-	BOOL bOld = GetApp()->GetOptions().GetDisplayOptions()->IsHideFrozenNodes();
-
-	//set the new
-	GetApp()->GetOptions().GetDisplayOptions()->SetHideFrozenNodes(bOld ? FALSE : TRUE);
-
-	//redraw the views
-	Invalidate();
-	GetRegionDoc()->UpdateAllViews( this );
-}
-
-void CRegionView::OnUpdateHideFrozenNodes(CCmdUI* pCmdUI)
-{
-	//set the check appropriately
-	pCmdUI->SetCheck(GetApp()->GetOptions().GetDisplayOptions()->IsHideFrozenNodes());
-
-	//set the text
-	SetMenuHotKeyText(UIE_HIDE_FROZEN_NODES, pCmdUI);
-}
-
-void CRegionView::OnSetCameraFOV()
-{
-	CCameraFOVDlg Dlg;
-
-	Dlg.DoModal();
-}
-
-void CRegionView::OnCameraToObject()
-{
-	//run through and find the first selected object
-	for(uint32 nCurrSel = 0; nCurrSel < GetRegion()->GetNumSelections(); nCurrSel++)
-	{
-		if(GetRegion()->GetSelection(nCurrSel)->GetType() == NODE_OBJECT)
-		{
-			CBaseEditObj* pObj = GetRegion()->GetSelection(nCurrSel)->AsObject();
-
-			//we have our object, so we need to steal the position and orientation,
-			//and set that up for our camera
-			LTVector vPos = pObj->GetPos();
-
-			LTMatrix mObjTrans;
-			gr_SetupMatrixEuler(pObj->GetOr(), mObjTrans.m);
-
-			LTVector vUp, vRight, vForward;
-			mObjTrans.GetBasisVectors(&vRight, &vUp, &vForward);
-
-			Nav().Pos() = vPos;
-			Nav().LookAt(vPos + vForward * 100.0f);
-
-			// Redraw the views
-			GetRegionDoc()->RedrawAllViews();
-		}
-	}
-}
-
-void CRegionView::OnUpdateCameraToObject(CCmdUI* pCmdUI)
-{
-	BOOL bValid = FALSE;
-
-	if(GetViewMode() == VM_PERSPECTIVE)
-	{
-
-		//make sure we have an object selected
-		for(uint32 nCurrSel = 0; nCurrSel < GetRegion()->GetNumSelections(); nCurrSel++)
-		{
-			if(GetRegion()->GetSelection(nCurrSel)->GetType() == NODE_OBJECT)
-			{
-				bValid = TRUE;
-				break;
-			}
-		}
-	}
-
-	pCmdUI->Enable(bValid);
-	//set the text
-	SetMenuHotKeyText(UIE_CAMERA_TO_OBJECT, pCmdUI);
-}
-
-//callback for reporting errors while instantiating prefabs
-static void ReportPrefabError(const char* pszError)
-{
-	GetDebugDlg()->ShowWindow(SW_SHOW);
-	GetDebugDlg()->AddMessage(pszError);
-}
-
-void CRegionView::OnDisconnectSelectedPrefabs()
-{
-	//setup the undo list
-	PreActionList undoList;
-
-	//the list of detached trees
-	CMoArray<CWorldNode*> RootList;
-
-	//run through and find the selected prefabs
-	int32 nCurrSel;
-	for(nCurrSel = 0; nCurrSel < GetRegion()->GetNumSelections(); nCurrSel++)
-	{
-		if(GetRegion()->GetSelection(nCurrSel)->GetType() == Node_PrefabRef)
-		{
-			//get the prefab
-			CPrefabRef* pPrefabRef = (CPrefabRef*)GetRegion()->GetSelection(nCurrSel);
-
-			//instantiate it
-			CWorldNode *pNewRoot = pPrefabRef->InstantiatePrefab(GetRegion(), ReportPrefabError, &undoList);
-			RootList.Append(pNewRoot);
-
-			//Setup this node for undo so it will be recreated when undone
-			undoList.AddTail(new CPreAction(ACTION_MODIFYNODE, pPrefabRef));
-		}
-	}
-
-	//now we setup the undo so that the prefabs will all be backed up in their current
-	//state
-	GetRegionDoc()->Modify(&undoList);
-
-	//now that the nodes have been backed up for undo, we need to go through and destroy
-	//the prefabs and handle the new selections (note that we run through backwards,
-	//this is because removing the node removes it from the selection and that messes
-	//up the count when going forward)
-	for(nCurrSel = GetRegion()->GetNumSelections() - 1; nCurrSel >= 0; nCurrSel--)
-	{
-		if(GetRegion()->GetSelection(nCurrSel)->GetType() == Node_PrefabRef)
-		{
-			//get the prefab
-			CPrefabRef* pPrefabRef = (CPrefabRef*)GetRegion()->GetSelection(nCurrSel);
-
-			//destroy the node
-			no_DestroyNode(GetRegion(), pPrefabRef, TRUE);
-		}
-	}
-
-	//now select all of the children that came off of it since it was
-	//originally selected
-	for(uint32 nCurrRoot = 0; nCurrRoot < RootList.GetSize(); nCurrRoot++)
-	{
-		GetRegion()->RecurseAndSelect(RootList[nCurrRoot]);
-	}
-
-	//update the selection box and redraw the views
-	GetRegionDoc()->UpdateSelectionBox();
-	GetRegionDoc()->RedrawAllViews();
-}
-
-void CRegionView::OnUpdateDisconnectSelectedPrefabs(CCmdUI* pCmdUI)
-{
-	BOOL bValid = FALSE;
-
-	//make sure we have an object selected
-	for(uint32 nCurrSel = 0; nCurrSel < GetRegion()->GetNumSelections(); nCurrSel++)
-	{
-		if(GetRegion()->GetSelection(nCurrSel)->GetType() == Node_PrefabRef)
-		{
-			bValid = TRUE;
-			break;
-		}
-	}
-	
-	pCmdUI->Enable(bValid);
-	//set the text
-	SetMenuHotKeyText(UIE_DISCONNECT_SELECTED_PREFABS, pCmdUI);
-}
-
-void CRegionView::OnMirrorTextureX()
-{
-	//we need to build up a list of polygons that we will be fitting the face
-	//to
-	CMoArray<CEditPoly*> PolyList;
-
-	PolyList.SetCacheSize(256);
-	GetSelectedPolies(PolyList);
-
-	//make the undo
-	if(PolyList.GetSize() > 0)
-		MakeUndoForPolygons(&PolyList);
-
-	//run through the polygons and invert the P vector
-	for(uint32 nCurrPoly = 0; nCurrPoly < PolyList.GetSize(); nCurrPoly++)
-	{
-		CEditPoly* pPoly = PolyList[nCurrPoly];
-		CTexturedPlane& PolyTex = pPoly->GetTexture(GetCurrTexture());
-		pPoly->SetTextureSpace(GetCurrTexture(), PolyTex.GetO(), -PolyTex.GetP(), PolyTex.GetQ());
-	}
-
-	GetRegionDoc()->RedrawPerspectiveViews();
-}
-
-void CRegionView::OnUpdateMirrorTextureX(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(AreAnyPoliesSelected());
-	SetMenuHotKeyText(UIE_MIRROR_TEXTURE_X, pCmdUI);
-}
-
-void CRegionView::OnMirrorTextureY()
-{
-	//we need to build up a list of polygons that we will be fitting the face
-	//to
-	CMoArray<CEditPoly*> PolyList;
-
-	PolyList.SetCacheSize(256);
-	GetSelectedPolies(PolyList);
-
-	//make the undo
-	if(PolyList.GetSize() > 0)
-		MakeUndoForPolygons(&PolyList);
-
-	//run through the polygons and invert the Q vector
-	for(uint32 nCurrPoly = 0; nCurrPoly < PolyList.GetSize(); nCurrPoly++)
-	{
-		CEditPoly* pPoly = PolyList[nCurrPoly];
-		CTexturedPlane& PolyTex = pPoly->GetTexture(GetCurrTexture());
-		pPoly->SetTextureSpace(GetCurrTexture(), PolyTex.GetO(), PolyTex.GetP(), -PolyTex.GetQ());
-	}
-
-	GetRegionDoc()->RedrawPerspectiveViews();
-}
-
-void CRegionView::OnUpdateMirrorTextureY(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(AreAnyPoliesSelected());
-	SetMenuHotKeyText(UIE_MIRROR_TEXTURE_Y, pCmdUI);
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void CRegionView::OnMatchTextureCoords()
 {
@@ -7130,73 +5656,8 @@ void CRegionView::OnMatchTextureCoords()
 	GetRegionDoc()->RedrawPerspectiveViews();
 }
 
-void CRegionView::OnUpdateMatchTextureCoords(CCmdUI* pCmdUI)
-{
-	//only allow this if we are in geometry mode and have more than one polygon
-	//selected
-	if((GetEditMode() == GEOMETRY_EDITMODE) && (TaggedPolies().GetSize() > 1))
-	{
-		pCmdUI->Enable(TRUE);
-	}
-	else
-	{
-		pCmdUI->Enable(FALSE);
-	}
 
-	SetMenuHotKeyText(UIE_MATCH_TEXTURE_COORDS, pCmdUI);
-}
 
-void CRegionView::OnSnapVertices()
-{
-	//make sure that the user wants to do this
-	CString sText;
-	sText += "This tool will run through the current selection and truncate the position of all vertex coordinates. ";
-	sText += "This will cause all points to lie on the grid, however with any non-triangulated geometry it can cause non-planar polygons. ";
-	sText += "In addition this can cause seams to appear with vertices that are not co-incident. It is highly recommended that you back";
-	sText += "up work before performing this, and thoroughly test the modified geometry before proceeding forward with the changes. ";
-	sText += "Press cancel now if you do not want to perform this operation. ";
-
-	if(MessageBox(sText, "Are you sure you want to do this?", MB_OKCANCEL) != IDOK)
-	{
-		return;
-	}
-
-	for(uint32 nCurrSel = 0; nCurrSel < GetRegion()->m_Selections.GetSize(); nCurrSel++)
-	{
-		if(GetRegion()->m_Selections[nCurrSel]->GetType() == Node_Brush)
-		{
-			CEditBrush* pBrush = (CEditBrush*)GetRegion()->m_Selections[nCurrSel];
-
-			for(uint32 i = 0; i < pBrush->m_Points; i++)
-			{
-				pBrush->m_Points[i].x = floor(pBrush->m_Points[i].x);
-				pBrush->m_Points[i].y = floor(pBrush->m_Points[i].y);
-				pBrush->m_Points[i].z = floor(pBrush->m_Points[i].z);
-			}
-			
-			pBrush->UpdateBoundingInfo();
-			pBrush->UpdatePlanes();
-
-			GetRegionDoc()->UpdateSelectionBox();
-		}
-	}
-}
-
-void CRegionView::OnUpdateSnapVertices(CCmdUI* pCmdUI)
-{
-	BOOL bEnable = FALSE;
-
-	for(uint32 nCurrSel = 0; nCurrSel < GetRegion()->m_Selections.GetSize(); nCurrSel++)
-	{
-		if(GetRegion()->m_Selections[nCurrSel]->GetType() == Node_Brush)
-		{
-			bEnable = TRUE;
-			break;
-		}
-	}
-
-	pCmdUI->Enable(bEnable);
-}
 
 void CRegionView::OnHollowBrush()
 {

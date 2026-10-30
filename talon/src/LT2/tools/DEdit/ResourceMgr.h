@@ -23,8 +23,8 @@ enum resource_type
 	RESTYPE_TEXTURE,
 	RESTYPE_SOUND,
 	RESTYPE_MODEL,
+	RESTYPE_SCRIPT,		// talon: 2001's 6, "DirTypeScripts" (0x45f192); the name is ours
 	RESTYPE_PREFAB,
-	RESTYPE_PHYSICS,
 	RESTYPE_UNKNOWN
 };
 

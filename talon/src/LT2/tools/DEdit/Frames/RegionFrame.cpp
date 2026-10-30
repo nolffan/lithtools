@@ -83,12 +83,6 @@ BOOL CRegionFrame::OnCreateClient(LPCREATESTRUCT lpcs, CCreateContext* pContext)
 	m_wndSplitter.CreateView( 0, 1, RUNTIME_CLASS(CRegionView), CSize(130, 50), pContext );
 	m_wndSplitter.CreateView( 1, 1, RUNTIME_CLASS(CRegionView), CSize(130, 50), pContext );
 
-	//setup the ID's for each of the panes
-	((CRegionView*)m_wndSplitter.GetPane(0, 0))->m_nViewID = 0;
-	((CRegionView*)m_wndSplitter.GetPane(0, 1))->m_nViewID = 1;
-	((CRegionView*)m_wndSplitter.GetPane(1, 0))->m_nViewID = 2;
-	((CRegionView*)m_wndSplitter.GetPane(1, 1))->m_nViewID = 3;
-
 	// activate the input view
 	SetActiveView((CView*)m_wndSplitter.GetPane(0,0));
 
@@ -110,8 +104,16 @@ void CRegionFrame::OnSize(UINT nType, int cx, int cy)
 	if( m_bValid )
 	{
 		GetClientRect( &rect );
-		m_wndSplitter.SetRowInfo( 0, ( int )( rect.Height() * 0.5 ), 10 );
-		m_wndSplitter.SetColumnInfo( 0, ( int )( rect.Width() * 0.5 ), 10 );
+		// talon: 0x452894..0x4528d4 stores each size as a double and reads
+		// it back (fstpl/fldl -0x8(%ebp)) before the multiply; a volatile
+		// double is the only form found that does (a plain double local, a
+		// float cast, an inline helper and /2.0 all keep it on the FPU
+		// stack). The 2001 spelling is not known.
+		volatile double dSize;
+		dSize = rect.Height();
+		m_wndSplitter.SetRowInfo( 0, ( int )( dSize * 0.5 ), 10 );
+		dSize = rect.Width();
+		m_wndSplitter.SetColumnInfo( 0, ( int )( dSize * 0.5 ), 10 );
 		m_wndSplitter.RecalcLayout();
 	}
 }

@@ -50,6 +50,17 @@ public:
 
 
 struct BatchTextureScaleInfo;
+class CPreMainWorld;
+
+// talon: a selected lightmap texel (8 bytes, 0x450f7a; the names are ours).
+class CTexelRef
+{
+public:
+	// talon: FindElement's compare (0x413e00): m_X, then m_Y.
+	BOOL		operator==(const CTexelRef &other) const	{ return m_X == other.m_X && m_Y == other.m_Y; }
+
+	uint32		m_X, m_Y;
+};
 
 class CRegionDoc : public CDocument, public CNotifier
 {
@@ -65,8 +76,8 @@ protected:
 // Attributes
 public:
 
-	void				NotifyPropertyChange( CBaseProp *pProp, bool bUpdateView );
-	void				NotifyPropertiesChange( bool bUpdateView );
+	void				NotifyPropertyChange( CBaseProp *pProp, BOOL bUpdateView );
+	void				NotifyPropertiesChange( BOOL bUpdateView );
 
 
 	void				InitUndoBuffers();
@@ -76,31 +87,33 @@ public:
 	//errors back to the debug window
 	void				UpdateAllObjectProperties();
 
-	//sets the title for this document for how it shows up in the display
-	void				SetTitle(bool bModified);
-	void				SetTitleKeepModified();
-	
-	bool				SaveLTA(bool bFullSave);
-	bool				SaveOBJ(bool bFullSave);
+	// talon: 2001's saves (0x44f4dc, the name ours; 0x44f5f1).
+	BOOL				SaveRegion(BOOL bFullSave);
+	BOOL				SaveOBJ(BOOL bFullSave);
+
 
 	void				StartPreProcessor();
 	BOOL				SaveModifiedLTA() { return SaveModified(); }
 
 	CRegionView*		CreateNewRegionView();
  
-	bool				LoadLTAIntoRegion( const char* filename, bool bForceSyncObjects, bool bAllowPropSync);
+	// talon: 0x44fc1f, the name ours.
+	BOOL				LoadRegion(CAbstractIO &file);
 
 	CEditRegion*		GetRegion()		{ return &m_Region; }
 
 	// Sets the modified flag and (possibly) adds an undo to the buffer.
-	void				Modify(CPreAction *pAction=NULL, bool bDeleteAction=false);
+	// talon: 2001's takes the undo flag first (0x44fc87; its callers push
+	// all three, e.g. 0x43ca74 1, action, 1 and 0x417f0a 0, 0, 0); the
+	// flags are BOOLs (cmpl at 0x44fcc9, 0x44fce6).  The defaults are ours.
+	void				Modify(BOOL bAddUndo=FALSE, CPreAction *pAction=NULL, BOOL bDeleteAction=FALSE);
 	
 	// Modify with an action list.  If you pass in NULL or a list with 0 actions, it
 	// won't modify the document.
-	void				Modify(PreActionList *pActionList, bool bDeleteList=FALSE);
+	void				Modify(PreActionList *pActionList, BOOL bDeleteList=FALSE);
 
 	// Automatically sets up an (ACTION_MODIFYNODE) undo list for all the current selections.
-	void				SetupUndoForSelections(bool bOnlyOfType=FALSE, int type=0);
+	void				SetupUndoForSelections(BOOL bOnlyOfType=FALSE, int type=0);
 
 	//invalidates all views of this document causing them to be redrawn
 	void				RedrawAllViews( DWORD extraHint=0 );
@@ -114,8 +127,8 @@ public:
 	void				NotifySelectionChange();
 	void				SetupPropertiesDlg(bool bShow);
 
-	void				SynchronizePropertyLists( CEditRegion *pRegion, bool bForceSync );
-	bool				CheckSynchronize();
+	void				SynchronizePropertyLists( CEditRegion *pRegion );
+	BOOL				CheckSynchronize();
 	
 	// Adds an object to the document
 	CBaseEditObj		*AddObject(const char *pClassName, CVector vPos);
@@ -125,7 +138,7 @@ public:
 	void				BindNodeToSelected(CWorldNode *pNode, PreActionList *pActionList = NULL);
 
 	// Selects a node
-	void				SelectNode(CWorldNode *pNode, bool bClearSelections=TRUE);
+	void				SelectNode(CWorldNode *pNode, BOOL bClearSelections=TRUE);
 	
 	// Moves the selected nodes to the indicated parent node.
 	// This sets up the undo information as well.
@@ -134,16 +147,9 @@ public:
 	// Converts an object from one class to another.  A pointer to the object is then returned.
 	CBaseEditObj		*ConvertObjectClass(CBaseEditObj *pOldObject, const char *lpszClassName);
 
-	// resize texture mapping coordinates based on a new texture size
-	void				TextureScale( const CMoArray<BatchTextureScaleInfo*>& textureInfo, CWorldNode* node=NULL );
-
 	// Clone the selected nodes (Note : This uses the clipboard to make the clone)
 	void				Clone();
  
-	//updates the backup name to reflect any changes in the filename or 
-	//to the autosave options
-	void				UpdateBackupName(const char* pszFilename);
-
 	// Select the brushes which are using a given texture
 	void				SelectBrushesByTexture(const char *pFilename);
 
@@ -151,25 +157,25 @@ public:
 	// are already tagged.
 	void				TagPoly(const CPolyRef &cPoly);
 
-	//this will setup the documents backup file name information as well as
-	//open up the specified LTA and load it into the region. This is essentially
-	//the internals to OnOpenDocument, but are broken out to allow forcing 
-	//synchronization without breaking the overriding of OnOpenDocument
-	//from CDocument
-	bool				InitDocument(LPCTSTR lpszPathname, bool bForceSync, bool bAllowPropSync);
+	// talon: 2001's lightmap editing (0x450b6a..0x451049; the names are
+	// ours): the world's .dat file, its base light animation's lightmaps,
+	// and the selected texels.
+	CString				GetLightAnimFileName();
+	void				LoadLightAnims();
+	void				TermLightAnims();
+	void				SaveLightAnims();
+	void				BrightenTexels(BOOL bBrighter);
+	void				SetTexelColor(COLORREF newColor);
 
 
 
 public:	
 
-	//the ratio of the XY coordinate of the center of the splitter view. These
-	//ranges from 0 to 1 and are used when switching to full screen views, and then
-	//switching back
-	float				m_fSavedSplitCenterX;
-	float				m_fSavedSplitCenterY;
-
 	// Used while attempting to synchronize property lists.
-	bool				m_bCanSynchronize;
+	// talon: 2001's is a BOOL at 0x54, right after the bases, and m_WorldName
+	// follows at 0x58 (0x4507d3 movl $1,0x54; 0x44fc9d lea 0x58): Build 69's
+	// saved splitter centre (two floats before it) is not there.
+	BOOL				m_bCanSynchronize;
 
 	// World name (like 'World1')
 	CString				m_WorldName;
@@ -197,6 +203,10 @@ public:
 	// Note: there is ALWAYS one entry in here.  It is the immediate poly.
 	CPolyRefArray				m_TaggedPolies;
 
+	// talon: 2001's (0x184): the world's .dat file, loaded by
+	// LoadLightAnims; the name is ours.
+	CPreMainWorld				*m_pLightWorld;
+
 
 public:
 
@@ -206,6 +216,14 @@ public:
 
 	// Backups for the undo buffer.
 	CUndoMgr					m_UndoMgr;
+
+	// talon: 2001's lightmap texel selection (0x31c..0x33c; the names are
+	// ours).  What the string is for is not known yet: only the
+	// constructor and destructor touch it here.
+	CString						m_Unknown_31c;
+	uint32						m_LightPolyWorld;	// the poly's world model and
+	uint32						m_LightPolyName;	// m_nName, -1 for none (0x44f158)
+	CMoArray<CTexelRef>			m_SelTexels;
 			
 // Operations
 public:

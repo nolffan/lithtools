@@ -50,3 +50,37 @@ END_MESSAGE_MAP()
 
 /////////////////////////////////////////////////////////////////////////////
 // CResNewDir message handlers
+
+
+/////////////////////////////////////////////////////////////////////////////
+// talon: a second dialog of 2001's ResNewDir.cpp, of which only the
+// message map (0x4dd108, WM_DESTROY) and its OnDestroy (0x45f0f9) are in
+// the image: nothing constructs it, so the link dropped its constructor
+// and vtable.  A tree control at 0x5c and the chosen item's data at 0x98
+// are all it shows; the names are ours, and the dialog id is not known.
+
+class CResDirTreeDlg : public CDialog
+{
+public:
+	CTreeCtrl	m_Tree;
+	DWORD		m_dwSelData;
+
+protected:
+	afx_msg void OnDestroy();
+	DECLARE_MESSAGE_MAP()
+};
+
+
+BEGIN_MESSAGE_MAP(CResDirTreeDlg, CDialog)
+	ON_WM_DESTROY()
+END_MESSAGE_MAP()
+
+
+// 0x45f0f9: keeps the selected item's data and frees the tree's image list.
+void CResDirTreeDlg::OnDestroy()
+{
+	m_dwSelData = m_Tree.GetItemData(m_Tree.GetSelectedItem());
+	delete m_Tree.GetImageList(TVSIL_NORMAL);
+
+	CDialog::OnDestroy();
+}

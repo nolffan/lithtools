@@ -20,12 +20,18 @@
 #include "CObjInterface.h"
 #include "geomroutines.h"
 #include "edithelpers.h"
-#include "optionsmisc.h"
-#include "levelerrordlg.h"
 #include "optionsrun.h"
 #include "draw_d3d.h"
-#include "levelitemsdlg.h"
-#include "objectsearchdlg.h"
+#include "colorselectdlg.h"
+#include "preworld.h"
+#include "prelightmap.h"
+#include "d3d_texturemgr.h"
+
+// talon: the views' update hint for a lightmap change (0x45103a pushes
+// 103); RegionView.h has no name for it.
+#ifndef REGIONVIEWUPDATE_LIGHTMAPS
+#define REGIONVIEWUPDATE_LIGHTMAPS	103
+#endif
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -36,48 +42,54 @@ static char THIS_FILE[] = __FILE__;
 /////////////////////////////////////////////////////////////////////////////
 // CRegionDoc
 
+// talon: the colour dialog's callback (0x44f005): the colour goes to the
+// selected lightmap texels (the name is ours).
+static void RegionDocColorChangeCB(COLORREF newColor, void *pUser)
+{
+	((CRegionDoc*)pUser)->SetTexelColor(newColor);
+}
+
 IMPLEMENT_DYNCREATE(CRegionDoc, CDocument)
 
+// 0x44f04e: 2001's has a fixed undo depth (40, 0x44f18f) and registers for
+// the colour dialog's changes.
 CRegionDoc::CRegionDoc() 
 {
-	m_fSavedSplitCenterX	= 0.5f;
-	m_fSavedSplitCenterY	= 0.5f;
+	GetColorSelectDlg()->AddCallback(RegionDocColorChangeCB, this);
+
+	m_LightPolyWorld = (uint32)-1;
+	m_LightPolyName = (uint32)-1;
 
 	m_TaggedPolies.SetCacheSize(4096);
 
 	m_RegionStringHolder.SetAllocSize( 1000 );
 
+	m_bCanSynchronize		= FALSE;
 	m_Region.m_pStringHolder = &m_RegionStringHolder;
-	m_bCanSynchronize		= false;
 
-	// Grab maximum undo buffer size out of registry
-	int nUndos = (uint32)GetApp()->GetOptions().GetMiscOptions()->GetNumUndos();
-
-	m_UndoMgr.Init(this, nUndos, nUndos);
+	m_UndoMgr.Init(this, 40, 40);
 
 	m_TaggedPolies.SetSize(1);
 
 	m_TaggedVerts.Init(
 		64,
 		&m_TaggedVertsHelper);
+
+	m_pLightWorld = NULL;
 }
 
 
+// 0x44f237
 CRegionDoc::~CRegionDoc()
 {
-	//see if we need to delete the files on close -JohnO
-	if(GetApp()->GetOptions().DeleteOnClose())
-	{
-		DeleteFile(m_BackupName);
-	}
+	GetColorSelectDlg()->RemoveCallback(RegionDocColorChangeCB, this);
 
-	//let anything that may hold onto references into this level know about changes
-	::GetLevelErrorDlg()->NotifyDocumentClosed(this);
-	::GetLevelItemsDlg()->NotifyDocumentClosed(this);
-	::GetObjectSearchDlg()->NotifyDocumentClosed(this);
+	DeleteFile(m_BackupName);
 
 	GetProjectBar()->RemoveRegionDoc(this);
 	GetPropertiesDlg()->Term();
+
+	TermLightAnims();
 }
 
 
@@ -109,18 +121,12 @@ void CRegionDoc::SetupPropertiesDlg( bool bShow )
 
 	pList = CreateMainPropertyList(this);
 	GetPropertiesDlg()->Init(pList, this, typeName);
-	
-	// TODO fix this code to show the properties dialog now that it
-	// doesn't necessarily exist in the project bar.
-	/*
-	if(bShow)
-		GetProjectBar()->SetTab( CProjectBar::TAB_PROPERTIESVIEW );
-	*/
 }			
 
 
 
-void CRegionDoc::NotifyPropertiesChange( bool bUpdateView )
+// 0x44f3ff
+void CRegionDoc::NotifyPropertiesChange( BOOL bUpdateView )
 {
 	// Setup undos.
 	SetupUndoForSelections();
@@ -131,7 +137,8 @@ void CRegionDoc::NotifyPropertiesChange( bool bUpdateView )
 }
 
 
-void CRegionDoc::NotifyPropertyChange( CBaseProp *pProp, bool bUpdateView )
+// 0x44f429
+void CRegionDoc::NotifyPropertyChange( CBaseProp *pProp, BOOL bUpdateView )
 {
 	// Setup undos.
 	SetupUndoForSelections();
@@ -142,6 +149,7 @@ void CRegionDoc::NotifyPropertyChange( CBaseProp *pProp, bool bUpdateView )
 }
 
 
+// 0x44f458
 BOOL CRegionDoc::SaveModified()
 {
 	int			status;
@@ -154,12 +162,8 @@ BOOL CRegionDoc::SaveModified()
 
 		if( status == IDYES )
 		{
-			//! if( !SaveRegion(TRUE))
-			if( !SaveLTA(TRUE))
+			if( !SaveRegion(TRUE))
 				return FALSE;
-
-			SetModifiedFlag( FALSE );
-			SetTitle(false);
 		}
 		else if( status == IDCANCEL )
 		{
@@ -167,170 +171,62 @@ BOOL CRegionDoc::SaveModified()
 		}
 	}
 
+	SetModifiedFlag( FALSE );
 	return TRUE;
 }
 
 
-bool CRegionDoc::SaveLTA(bool bFullSave)
+// 0x44f4dc: the world goes to the backup file first; a real save then
+// copies it over the world file, once the world file is known to be
+// writable (the name is ours: Build 69's SaveRegion is commented out).
+// NEAR (277 of 277 bytes): the shipped build numbers the two error
+// strings' unwind states the other way round (the backup's 1, the world
+// file's 2); putting the backup's test first in the source moves the
+// blocks, not the numbers.
+BOOL CRegionDoc::SaveRegion(BOOL bFullSave)
 {
+	CMoFileIO	file;
+
 	BeginWaitCursor();
 
-	// make sure the extension is .lta
-
-	char dir[_MAX_DIR];
-	char fname[_MAX_FNAME];
-	char ext[_MAX_EXT];
-
-	_splitpath( LPCTSTR(m_FileName), NULL, dir, fname, ext );
-
-	bool bBinary = false;
-
-	if(stricmp(ext, ".tbw") == 0)
-		bBinary = true;
-
-	//we want to see if the file exists and is read only. If so, we should prompt the user
-	//to see if they want to make it read only (thus to combat source safe...)
-	CFileStatus Status;
-	if(CFile::GetStatus(m_FileName, Status))
+	if( file.Open(m_BackupName, "wb") )
 	{
-		if(Status.m_attribute & CFile::readOnly)
+		m_Region.SaveFile(file, TRUE);
+		file.Close();
+
+		if( bFullSave )
 		{
-			//we have a read only file, prompt the user
-			CString sMsg;
-			sMsg.Format(IDS_SAVETOREADONLYFILE, m_FileName);
-			if(MessageBox(GetApp()->GetMainWnd()->m_hWnd, sMsg, "Make file writable?", MB_ICONQUESTION | MB_YESNO) == IDNO)
+			if( file.Open(m_FileName, "wb") )
 			{
-				//they didn't want to make the file writable, bail
-				return false;
-			}
-
-			//ok, make the file writable
-			Status.m_attribute &= ~CFile::readOnly;
-			CFile::SetStatus(m_FileName, Status);
-		}
-	}
-
-	BOOL bBackupWorked	= FALSE;
-	BOOL bFileSaved		= FALSE;
-
-	clock_t	SaveTimeStart = clock();
-
-	if(bBinary)
-	{
-		CMoFileIO OutFile;
-		if(OutFile.Open(LPCTSTR(m_BackupName), "wb"))
-		{
-			//able to open up the backup name, so now save it
-			m_Region.SaveTBW( OutFile );
-			OutFile.Close();
-
-			bFileSaved		= TRUE;
-			bBackupWorked	= TRUE;
-		}
-	}
-	else
-	{
-		CLTAFile OutFile(	LPCTSTR(m_BackupName), false, 
-							CLTAUtil::IsFileCompressed(LPCTSTR(m_FileName)));
-
-		if( OutFile.IsValid() )
-		{
-			//able to open up the backup name, so now save it
-			m_Region.SaveLTA( &OutFile );
-			if(OutFile.Close())
-			{
-				bFileSaved		= TRUE;
-				bBackupWorked	= TRUE;
-			}
-		}
-	}
-
-	if(!bBackupWorked)
-	{
-		//failed to open the backup, so try saving directly to the
-		//desired output file -JohnO
-		if(bFullSave)
-		{
-			if(bBinary)
-			{
-				CMoFileIO OutFile;
-				if(OutFile.Open(LPCTSTR(m_FileName), "wb"))
-				{
-					//able to open up the backup name, so now save it
-					m_Region.SaveTBW( OutFile );
-					OutFile.Close();
-					
-					bFileSaved = TRUE;
-				}
+				file.Close();
+				CopyFile(m_BackupName, m_FileName, FALSE);
 			}
 			else
 			{
-				CLTAFile OutFile(	LPCTSTR(m_FileName), false, 
-									CLTAUtil::IsFileCompressed(LPCTSTR(m_FileName)));
-
-				if(OutFile.IsValid())
-				{
-					m_Region.SaveLTA( &OutFile );
-					
-					if(OutFile.Close())
-					{
-						bFileSaved = TRUE;
-					}
-				}
+				CString str;
+				str.FormatMessage(IDS_ERROR_SAVING_FILE, (LPCTSTR)m_FileName);
+				AfxMessageBox( str );
+				return FALSE;
 			}
 		}
-	}
 
-	//make sure that the file was loaded, or throw an error if it wasn't
-	if(!bFileSaved)
+		EndWaitCursor();
+		return TRUE;
+	}
+	else
 	{
-		CString error;
-		error.FormatMessage( (bFullSave) ?	IDS_ERROR_SAVING_FILE : 
-											IDS_ERROR_SAVING_BACKUP, 
-							 m_BackupName );
-		AfxMessageBox( error );
+		CString str;
+		str.FormatMessage(IDS_ERROR_SAVING_FILE, (LPCTSTR)m_BackupName);
+		AfxMessageBox( str );
 		return FALSE;
 	}
-
-	//Save the main file if the backup worked properly (if it didn't, we don't
-	//need to copy it over)
-	if(bFullSave && bBackupWorked)
-	{
-		FILE* pFile;
-		BOOL bCopied = FALSE;
-
-		if( pFile = fopen(LPCTSTR(m_FileName), "wt") )
-		{
-			fclose(pFile);
-			pFile = NULL;
-			bCopied = CopyFile(m_BackupName,m_FileName,FALSE);
-		}
-
-		if(!bCopied)
-		{
-			CString error;
-
-			error.FormatMessage( IDS_ERROR_SAVING_FILE, m_FileName );
-			AfxMessageBox( error );
-			return FALSE;
-		}
-	}
-
-	EndWaitCursor();
-
-	return TRUE;
 }
 
 
-bool CRegionDoc::SaveOBJ(bool bFullSave)
+// 0x44f5f1
+BOOL CRegionDoc::SaveOBJ(BOOL bFullSave)
 {
-	//! SaveRegion(bool bFullSave);
-	// load the saved ed file into scene
-	// save scene as obj
-
-	bool retVal = FALSE;
-
-	SaveLTA(bFullSave);
+	SaveRegion(bFullSave);
 	CObjInterface objInterface;
 	// fill in objInterface with data from the saved ed file
 
@@ -346,15 +242,8 @@ bool CRegionDoc::SaveOBJ(bool bFullSave)
 
 		if(file.Open(m_FileName, "rb"))
 		{
-			uint32 nFileVersion;
-			bool bBinary = false;
-
-			if( REGIONLOAD_OK == region.LoadFile(m_FileName, NULL, nFileVersion, bBinary) )
+			if( REGIONLOAD_OK == region.LoadFile(file, NULL, NULL) )
 			{
-				// printf("\n( p \"loaded ed file: %s\");", edfilename);
-				// printf("\n( p \"num polies: %d\");", region.GetTotalNumPolies());
-				// printf("\n( p \"num points: %d\");", region.GetTotalNumPoints());
-				
 				CWorldNode *pRoot = region.GetRootNode();
 				CMoArray<CWorldNode*> nodeArray;
 
@@ -376,7 +265,6 @@ bool CRegionDoc::SaveOBJ(bool bFullSave)
 								int k = 0;
 								for( j = 0; j < pBrush->m_Points.GetSize(); j++ )
 								{
-									// printf("\nv  %f %f %f", pBrush->m_Points[j][0],pBrush->m_Points[j][1],pBrush->m_Points[j][2]);
 									if(exportObjFileDlg.m_exportFor3DSMax)
 									{
 										LTVector v(pBrush->m_Points[j][0],pBrush->m_Points[j][2],pBrush->m_Points[j][1]);
@@ -393,7 +281,6 @@ bool CRegionDoc::SaveOBJ(bool bFullSave)
 				
 					}
 
-					// printf("\ng object");
 					int vertFound = 1;
 					for( i = 0, vertFound = 1; i < nodeArray.GetSize(); i++ )
 					{
@@ -409,13 +296,10 @@ bool CRegionDoc::SaveOBJ(bool bFullSave)
 
 								for( j = 0; j < pBrush->m_Polies.GetSize(); j++ )
 								{
-									
-									// printf("\nf  ");
 									CMoArray< int > iv;
 
 									for( k = 0; k < pBrush->m_Polies[j]->m_Indices.GetSize(); k++ )
 									{
-										// printf("%d ", vertFound+(pBrush->m_Polies[j]->m_Indices[k]) );
 										iv.Append(vertFound+(pBrush->m_Polies[j]->m_Indices[k]));
 									}
 
@@ -429,11 +313,6 @@ bool CRegionDoc::SaveOBJ(bool bFullSave)
 						}
 					}
 				}
-			}
-			else
-			{
-				// printf("\n( p \"error: can't load ed file: %s\");", edfilename);
-				retVal = FALSE;
 			}
 		}
 
@@ -470,48 +349,44 @@ bool CRegionDoc::SaveOBJ(bool bFullSave)
 		{
 			m_FileName;
 		}
-		SaveLTA(bFullSave);
+		SaveRegion(bFullSave);
 
 		EndWaitCursor( ); // End the wait cursor
 	}
-	return retVal;
+	return FALSE;
 }
 
-// -------------------------------------------------------------
-//! this is where we will change the call to the processor
-//  so that it will handle lta files 
+
+// 0x44facf: 2001's runs "Processor" on the world's file name.
 void CRegionDoc::StartPreProcessor()
 {
-	CString sCommand;
+	CMoFileIO	file;
+	char		fileName[256], extension[256];
+	char		szWorkingDirectory[MAX_PATH];
+	char		szCommand[500];
 
-	// Get parameters.
+	OnSaveDocument(NULL);
+	CHelpers::ExtractFileNameAndExtension( GetPathName(), fileName, extension );
+
 	try
 	{
-		//! change this call to save an LTA file -> SaveLTA(TRUE)
-		//! SaveRegion(TRUE);
-		//SaveLTA(TRUE);
+		SaveRegion(TRUE);
 
-		if(SaveModifiedLTA()) // Ask user if he/she wishes to save level, if changed
-		{
+		// Save and then set the working directory
+		GetCurrentDirectory(sizeof(szWorkingDirectory), szWorkingDirectory);
+		SetCurrentDirectory(GetApp()->m_ExeDirectory);
 
-			// Save and then set the working directory
-			char szWorkingDirectory[MAX_PATH];
-			GetCurrentDirectory(sizeof(szWorkingDirectory), (char *)&szWorkingDirectory);
-			SetCurrentDirectory(GetApp()->m_ExeDirectory);
+		sprintf(szCommand, "\"%s\\Processor\" \"%s\"", GetApp()->m_ExeDirectory, fileName);
 
-			sCommand.Format("\"%swinpacker\" -file \"%s\" -ProjectPath \"%s\"", GetApp()->m_ExeDirectory, GetPathName(), GetProject()->GetBaseProjectDir());
+		if( WinExec(szCommand, SW_SHOW) <= 31 )
+			AppMessageBox( IDS_ERRORRUNNINGPREPROCESSOR, MB_OK );  
 
-			if( WinExec(sCommand, SW_SHOW) <= 31 )
-				AppMessageBox( IDS_ERRORRUNNINGPREPROCESSOR, MB_OK );  
-
-			// Reset the current working directory
-			SetCurrentDirectory(szWorkingDirectory);
-		}
+		// Reset the current working directory
+		SetCurrentDirectory(szWorkingDirectory);
 	}
-	catch( CMemoryException * x )
+	catch( CMemoryException e )
 	{
 		AppMessageBox( IDS_OUTOFMEMORY_SAVING, MB_OK );
-		x->Delete();
 	}
 }
 
@@ -526,89 +401,52 @@ CRegionView* CRegionDoc::CreateNewRegionView()
 	return (CRegionView*)pFrameWnd->GetActiveView();
 }
 
-bool CRegionDoc::LoadLTAIntoRegion( const char* filename, bool bForceUpdateObjects, bool bAllowPropSync)
+
+// 0x44fc1f: an empty file is a new world (the name is ours).
+BOOL CRegionDoc::LoadRegion(CAbstractIO &file)
 {
-	// RegionLoadStatus		LoadLTA( char* filename, CEditProjectMgr* pProject=NULL );
-	// SetModifiedFlag( FALSE );
-	// NotifySelectionChange();
+	if( file.GetLen() )
+	{
+		file.SeekTo(0);
+		if( m_Region.LoadFile(file, NULL, GetProject()) != REGIONLOAD_OK )
+			return FALSE;
 
-	CLoadLTADialog LoadDlg;
-	LoadDlg.m_sFileName = filename;
+		m_Region.UpdateTextureIDs( GetProject() );
+		m_Region.UpdatePolyTriangles();
+		SynchronizePropertyLists(&m_Region);
+		NotifySelectionChange();
+	}
 
-	POSITION FirstPos = GetFirstViewPosition();
-	CView* pView = GetNextView(FirstPos);
-
-	LoadDlg.Create(MAKEINTRESOURCE(IDD_LTALOADING), (CWnd*)pView);
-	LoadDlg.RedrawWindow();
-
-	uint32 nFileVersion;
-	bool bBinary = false;
-	if( m_Region.LoadFile((char*)filename, GetProject(), nFileVersion, bBinary) != REGIONLOAD_OK )
-		return false;
-
-	m_Region.GetPrefabMgr()->SetRootPath(dfm_GetBaseDir(GetFileMgr()));
-	m_Region.GetPrefabMgr()->BindAllRefs(m_Region.GetRootNode());
-
-	bool bModified = false;
-	if(!bBinary)
-		m_Region.PostLoadUpdateVersion(nFileVersion, bModified);
-
-	if(bModified)
-		SetModifiedFlag(TRUE);
-
-
-	ASSERT(!m_Region.CheckNodes());
-	
-	// Update all the texture IDs and polygon pieces.
-	m_Region.UpdateTextureIDs( GetProject() );
-
-	//if we are allowed to sync up properties, go ahead and do so
-	if(bAllowPropSync)
-		SynchronizePropertyLists(&m_Region, bForceUpdateObjects);
-
-	//initialize all of our selection data
-	NotifySelectionChange();
-
-	LoadDlg.DestroyWindow();
-
-	return true;
+	return TRUE;
 }
 
 
-void CRegionDoc::Modify(CPreAction *pAction, bool bDeleteAction)
+void CRegionDoc::Modify(BOOL bAddUndo, CPreAction *pAction, BOOL bDeleteAction)
 {
-	if(!IsModified())
-	{
-		SetModifiedFlag( TRUE );
-		SetTitle(true);
-	}
+	SetModifiedFlag( TRUE );
+	SetTitle(m_WorldName + " *");
 
-	if(pAction)
-	{
+	if(bAddUndo && pAction)
 		m_UndoMgr.PreAction(pAction);
 
-		if(bDeleteAction)
-			delete pAction;
-	}
+	if(pAction && bDeleteAction)
+		delete pAction;
 }
 
 
-void CRegionDoc::Modify(PreActionList *pActionList, bool bDeleteList)
+void CRegionDoc::Modify(PreActionList *pActionList, BOOL bDeleteList)
 {
 	if(!pActionList || pActionList->GetSize() == 0)
 		return;
 
-	if(!IsModified())
-	{
-		SetModifiedFlag( TRUE );
-		SetTitle(true);
-	}
+	SetModifiedFlag( TRUE );
+	SetTitle(m_WorldName + " *");
 
 	m_UndoMgr.PreActions(pActionList, bDeleteList);
 }
 
 
-void CRegionDoc::SetupUndoForSelections(bool bOnlyOfType, int type)
+void CRegionDoc::SetupUndoForSelections(BOOL bOnlyOfType, int type)
 {
 	PreActionList actionList;
 	DWORD i;
@@ -641,44 +479,14 @@ void CRegionDoc::RedrawAllViews( DWORD extraHint )
 	}
 }
 
-//invalidates all perspective views of this document causing them to
-//be redrawn. This should be done for texture operations, and other
-//things which will not be reflected in wireframe modes
-void CRegionDoc::RedrawPerspectiveViews(DWORD extraHint)
-{
-	POSITION Pos = GetFirstViewPosition();
 
-	//run through all views of this document
-	CView* pView;
-	while(pView = GetNextView(Pos))
-	{
-		CRegionView* pRegionView = (CRegionView*)pView;
-
-		//see if this is a perspective view
-		if(pRegionView->GetViewMode() == VM_PERSPECTIVE)
-		{
-			//it is, so trigger the update
-			pRegionView->OnUpdate(NULL, (extraHint) ? extraHint : REGIONVIEWUPDATE_REDRAW, NULL);
-		}
-	}
-}
-
-
+// 0x44fe1f: 2001's box is the brushes' points and the objects' positions,
+// and the status bar shows it with its size.
 void CRegionDoc::UpdateSelectionBox( LPARAM extraHint )
 {
 	DWORD			i, k;
 	CWorldNode		*pNode;
 	CEditBrush		*pBrush;
-	CBaseEditObj    *pObject;
-
-	//used to count up the type of each item selected
-	uint32 nNumSelObjects	= 0;
-	uint32 nNumSelBrushes	= 0;
-	uint32 nNumSelOther		= 0;
-	uint32 nNumSelPrefabs	= 0;
-
-	uint32 nNumSelVerts		= 0;
-	uint32 nNumSelPolys		= 0;
 
 	m_SelectionMin.Init( (CReal)MAX_CREAL, (CReal)MAX_CREAL, (CReal)MAX_CREAL );
 	m_SelectionMax.Init( (CReal)-MAX_CREAL, (CReal)-MAX_CREAL, (CReal)-MAX_CREAL );
@@ -688,13 +496,11 @@ void CRegionDoc::UpdateSelectionBox( LPARAM extraHint )
 		pNode = m_Region.m_Selections[i];
 		if(pNode->GetType() == Node_Brush)
 		{
-			nNumSelBrushes++;
-
 			pBrush = pNode->AsBrush();
 
 			for( k=0; k < pBrush->m_Points; k++ )
 			{
-				LTVector vPt = pBrush->m_Points[k];
+				CEditVert &vPt = pBrush->m_Points[k];
 
 				if( vPt.x < m_SelectionMin.x )	m_SelectionMin.x = vPt.x;
 				if( vPt.y < m_SelectionMin.y )	m_SelectionMin.y = vPt.y;
@@ -704,169 +510,34 @@ void CRegionDoc::UpdateSelectionBox( LPARAM extraHint )
 				if( vPt.y > m_SelectionMax.y )	m_SelectionMax.y = vPt.y;
 				if( vPt.z > m_SelectionMax.z )	m_SelectionMax.z = vPt.z;
 			}
-
-			nNumSelVerts += pBrush->m_Points.GetSize();
-			nNumSelPolys += pBrush->m_Polies.GetSize();
 		}
 		else if(pNode->GetType() == Node_Object)
 		{
-			nNumSelObjects++;
+			CVector &vPt = pNode->GetPos();
 
-			// Don't contribute to the selection box if not in Object Mode
-			//if (m_pView->GetEditMode() == OBJECT_EDITMODE) {
+			if( vPt.x < m_SelectionMin.x )	m_SelectionMin.x = vPt.x;
+			if( vPt.y < m_SelectionMin.y )	m_SelectionMin.y = vPt.y;
+			if( vPt.z < m_SelectionMin.z )	m_SelectionMin.z = vPt.z;
 
-			pObject = pNode->AsObject();
-
-			//Sometimes the object can get here without having properly initialized dimensions
-			//so if that is the case, it should update its dimensions
-			if(pObject->ShouldSearchForDims())
-			{
-				pObject->InitDims();
-			}
-
-			char debugout[512];
-
-			if (pObject->GetNumDims() != 0)  // check if object has dims
-			{
-				LTVector* dimV = pObject->GetDim(0);
-
-				ASSERT(dimV != NULL); // bad!
-
-				LTVector vPt = pObject->GetPos();
-
-				if( vPt.x - fabs(dimV->x) < m_SelectionMin.x )	m_SelectionMin.x = vPt.x - fabs(dimV->x);
-				if( vPt.y - fabs(dimV->y) < m_SelectionMin.y )	m_SelectionMin.y = vPt.y - fabs(dimV->y);
-				if( vPt.z - fabs(dimV->z) < m_SelectionMin.z )	m_SelectionMin.z = vPt.z - fabs(dimV->z);
-
-				if( vPt.x + fabs(dimV->x) > m_SelectionMax.x )	m_SelectionMax.x = vPt.x + fabs(dimV->x);
-				if( vPt.y + fabs(dimV->y) > m_SelectionMax.y )	m_SelectionMax.y = vPt.y + fabs(dimV->y);
-				if( vPt.z + fabs(dimV->z) > m_SelectionMax.z )	m_SelectionMax.z = vPt.z + fabs(dimV->z);
-			} 
-			else // non-dimmed object
-			{
-				LTVector vPt = pObject->GetPos();
-
-				if( vPt.x < m_SelectionMin.x )	m_SelectionMin.x = vPt.x;
-				if( vPt.y < m_SelectionMin.y )	m_SelectionMin.y = vPt.y;
-				if( vPt.z < m_SelectionMin.z )	m_SelectionMin.z = vPt.z;
-
-				if( vPt.x > m_SelectionMax.x )	m_SelectionMax.x = vPt.x;
-				if( vPt.y > m_SelectionMax.y )	m_SelectionMax.y = vPt.y;
-				if( vPt.z > m_SelectionMax.z )	m_SelectionMax.z = vPt.z;
-			}
+			if( vPt.x > m_SelectionMax.x )	m_SelectionMax.x = vPt.x;
+			if( vPt.y > m_SelectionMax.y )	m_SelectionMax.y = vPt.y;
+			if( vPt.z > m_SelectionMax.z )	m_SelectionMax.z = vPt.z;
 		}
-		else if(pNode->GetType() == Node_PrefabRef)
-		{
-			++nNumSelPrefabs;
-			CPrefabRef *pPrefab = (CPrefabRef*)pNode;
-
-			// Get the raw dimensions of the object
-			LTMatrix mPrefabTrans;
-			gr_SetupMatrixEuler(pPrefab->GetOr(), mPrefabTrans.m);
-
-			LTVector vUp, vRight, vForward;
-			mPrefabTrans.GetBasisVectors(&vRight, &vUp, &vForward);
-
-			// Transform the dimensions into world-space
-			LTVector vMinDims;
-			LTVector vPrefabMin = pPrefab->GetPrefabMin();
-			vMinDims.x = vPrefabMin.x * vRight.x + vPrefabMin.y * vUp.x + vPrefabMin.z * vForward.x;
-			vMinDims.y = vPrefabMin.x * vRight.y + vPrefabMin.y * vUp.y + vPrefabMin.z * vForward.y;
-			vMinDims.z = vPrefabMin.x * vRight.z + vPrefabMin.y * vUp.z + vPrefabMin.z * vForward.z;
-
-			LTVector vMaxDims;
-			LTVector vPrefabMax = pPrefab->GetPrefabMax();
-			vMaxDims.x = vPrefabMax.x * vRight.x + vPrefabMax.y * vUp.x + vPrefabMax.z * vForward.x;
-			vMaxDims.y = vPrefabMax.x * vRight.y + vPrefabMax.y * vUp.y + vPrefabMax.z * vForward.y;
-			vMaxDims.z = vPrefabMax.x * vRight.z + vPrefabMax.y * vUp.z + vPrefabMax.z * vForward.z;
-
-			// Get the min/max of the bounding box
-			LTVector vOffset = pPrefab->GetPos();
-
-			vMinDims += vOffset;
-			vMaxDims += vOffset;
-
-			LTVector vMin;
-			LTVector vMax;
-
-			VEC_MIN(vMin, vMinDims, vMaxDims);
-			VEC_MAX(vMax, vMinDims, vMaxDims);
-
-			VEC_MIN(m_SelectionMin, m_SelectionMin, vMin);
-			VEC_MAX(m_SelectionMax, m_SelectionMax, vMax);
-		}
-		else
-		{
-			nNumSelOther++;
-		}
-	}	
-
-	// Create the string to be put on the status bar
-	CString sBoundingText;
-	if (m_Region.m_Selections.GetSize() != 0)
-	{		
-		sBoundingText.Format("(%1.0f, %1.0f, %1.0f)->(%1.0f, %1.0f, %1.0f) = (%1.0f, %1.0f, %1.0f)",
-							 m_SelectionMin.x, m_SelectionMin.y, m_SelectionMin.z,
-							 m_SelectionMax.x, m_SelectionMax.y, m_SelectionMax.z,
-							 m_SelectionMax.x-m_SelectionMin.x,
-							 m_SelectionMax.y-m_SelectionMin.y,
-							 m_SelectionMax.z-m_SelectionMin.z);
 	}
 
-	// Update the status bar text
-	CMainFrame *pFrame = (CMainFrame *)AfxGetMainWnd();
-	pFrame->UpdateStatusText(ID_INDICATOR_BOUNDING_BOX, sBoundingText);
-
-	//update the selected items pane if anything is selected -JohnO
-	if(nNumSelObjects || nNumSelBrushes || nNumSelPrefabs || nNumSelOther)
+	CString str;
+	if( m_Region.m_Selections != 0 )
 	{
-		//used for building up the string to be displayed
-		CString sSelectionText;
-		CString sFormatText;
-
-		//start out with the indicator of the pane
-		sSelectionText.Format("Sel: ");
-
-		//add any selected objects to the display
-		if(nNumSelObjects)
-		{
-			sFormatText.Format("Obj: %d ", nNumSelObjects);
-			sSelectionText += sFormatText;
-		}
-
-		//add any brushes to the display
-		if(nNumSelBrushes)
-		{
-			sFormatText.Format("Brsh: %d (V:%d P:%d)", nNumSelBrushes, nNumSelVerts, nNumSelPolys);
-			sSelectionText += sFormatText;
-		}
-
-		//add any prefabs to the display
-		if(nNumSelPrefabs)
-		{
-			sFormatText.Format("Pfb: %d ", nNumSelPrefabs);
-			sSelectionText += sFormatText;
-		}
-
-		//add any miscelanious objects to the display
-		if(nNumSelOther)
-		{
-			sFormatText.Format("Misc: %d", nNumSelOther);
-			//don't need misc items yet, but in the future, they 
-			//may be needed. Currently misc items include only containers
-			//but may be needed later -JohnO
-			//sSelectionText += sFormatText;
-		}
-			
-		//print the actual pane
-		pFrame->UpdateStatusText(ID_INDICATOR_SELECTION, sSelectionText);
-	}
-	else
-	{
-		//no items were selected, so clear out all text from that pane
-		pFrame->UpdateStatusText(ID_INDICATOR_SELECTION, "Sel: None");
+		str.Format( "(%1.0f, %1.0f, %1.0f)->(%1.0f, %1.0f, %1.0f) = (%1.0f, %1.0f, %1.0f)",
+			m_SelectionMin.x, m_SelectionMin.y, m_SelectionMin.z,
+			m_SelectionMax.x, m_SelectionMax.y, m_SelectionMax.z,
+			m_SelectionMax.x - m_SelectionMin.x,
+			m_SelectionMax.y - m_SelectionMin.y,
+			m_SelectionMax.z - m_SelectionMin.z );
 	}
 
+	CMainFrame *pFrame = (CMainFrame*)AfxGetMainWnd();
+	pFrame->UpdateStatusText( ID_INDICATOR_BOUNDING_BOX, str );
 
 	RedrawAllViews( extraHint );
 }
@@ -882,8 +553,6 @@ BEGIN_MESSAGE_MAP(CRegionDoc, CDocument)
 	//{{AFX_MSG_MAP(CRegionDoc)
 		ON_UPDATE_COMMAND_UI(ID_EDIT_COPY, OnUpdateEditCopy)
 		ON_COMMAND(ID_EDIT_COPY, OnEditCopy)
-		ON_UPDATE_COMMAND_UI(ID_EDIT_CUT, OnUpdateEditCut)
-		ON_COMMAND(ID_EDIT_CUT, OnEditCut)
 		ON_UPDATE_COMMAND_UI(ID_EDIT_PASTE, OnUpdateEditPaste)
 		ON_COMMAND(ID_EDIT_PASTE, OnEditPaste)
 		ON_UPDATE_COMMAND_UI(ID_EDIT_STAMP, OnUpdateEditStamp)
@@ -935,119 +604,59 @@ BOOL CRegionDoc::OnNewDocument()
 }
 
 
+// 0x450064
 BOOL CRegionDoc::OnSaveDocument(LPCTSTR lpszPathName) 
 {
-	//we want to make sure that the focus is moved out from any of the controls
-	//in the properties page so that they can be updated and appropriately saved
-	bool bSetViewFocus = true;
-
-	//run through all the views and see if any have the focus
-	POSITION posView = GetFirstViewPosition();
-	CRegionView *pFirst = (CRegionView*)GetNextView(posView);
-	CRegionView *pView = pFirst;
-	while(pView)
-	{
-		if(GetFocus() == pView->m_hWnd)
-		{
-			bSetViewFocus = false;
-			break;
-		}
-		
-		pView = (CRegionView*)GetNextView(posView);
-	}
-	
-	//if there are any views, and none of the views had focus, we want to set the focus
-	//to the first view
-	if(bSetViewFocus && pFirst)
-	{
-		pFirst->SetFocus();
-	}
-
-	//! if( !SaveRegion(TRUE))
-	if( !SaveLTA(TRUE))
+	if( !SaveRegion(TRUE))
 		return FALSE;
 
 	SetModifiedFlag( FALSE );
-
-	SetTitle(false);
+	SetTitle( m_WorldName );
 	
-	return 1;
-	
-	// This was overwriting the file SaveRegion() saved!
-	//return CDocument::OnSaveDocument(lpszPathName);
+	return TRUE;
 }
 
 
-//this will setup the documents backup file name information as well as
-//open up the specified LTA and load it into the region. This is essentially
-//the internals to OnOpenDocument, but are broken out to allow forcing 
-//synchronization without breaking the overriding of OnOpenDocument
-//from CDocument
-bool CRegionDoc::InitDocument(LPCTSTR lpszPathName, bool bForceSync, bool bAllowPropSync)
+// 0x45008c: the backup is a temporary file (GetTempFileName).
+BOOL CRegionDoc::OnOpenDocument(LPCTSTR lpszPathName) 
 {
+	CMoFileIO	file;
+	CString		str;
 	char	pathName[_MAX_PATH], fileName[_MAX_PATH];
-	char	worldName[_MAX_PATH], extension[_MAX_PATH];
-	char	ext[_MAX_PATH];
+	char	worldName[_MAX_PATH], extension[_MAX_PATH], backupName[_MAX_PATH];
 
 	CHelpers::ExtractPathAndFileName( lpszPathName, pathName, fileName );
 	CHelpers::ExtractFileNameAndExtension( fileName, worldName, extension );
 
 	m_WorldName = worldName;
 	m_FileName = lpszPathName;
-	
-	UpdateBackupName(lpszPathName);
 
-	_splitpath( lpszPathName,NULL, NULL, NULL, ext );
+	GetTempPath(sizeof(pathName), pathName);
+	fileName[3] = '\0';
+	GetTempFileName(pathName, fileName, 0, backupName);
+	m_BackupName = backupName;
 
-	//set the modified flag to be false at first
-	SetModifiedFlag( FALSE );
-
-	// Set the new region doc so GetActiveRegion() won't return the old one..
-
-	GetProjectBar()->m_pNewRegionDoc = this;
-
-	if( !LoadLTAIntoRegion(lpszPathName, bForceSync, bAllowPropSync) )
+	if( file.Open(lpszPathName, "rb") )
 	{
-		CString str;
-		str.FormatMessage( IDS_ERROR_OPENING_WORLD, worldName );
-		AppMessageBox( str, MB_OK );
-		
-		GetProjectBar()->m_pNewRegionDoc = NULL;
+		if( LoadRegion(file) )
+		{
+			file.Close();
+			SetModifiedFlag( TRUE );
+			return TRUE;
+		}
 
-		return false;
-	}		
-
-	// Update all the properties in the new LTA...
-
-	CEditRegion	*pRegion = GetRegion();
-	if( !pRegion ) return false;
-
-	// First update only the variable declerations...
-	
-	pRegion->UpdateAllObjectProperties( "VVarDecsOnly; ClearVars;" );
-
-	// Now update our commands to add any dynamic objects...
-
-	pRegion->UpdateAllObjectProperties( "ClearDynaObjs; IMsgErs; IVarCmds;" );
-
-	// Then update everything but the variable declerations...
-
-	pRegion->UpdateAllObjectProperties( "IVarDecs; IAddDynaObj;" );
-
-	GetProjectBar()->m_pNewRegionDoc = NULL;
-
-	return true;
-}
-
-
-BOOL CRegionDoc::OnOpenDocument(LPCTSTR lpszPathName) 
-{
-	if(!InitDocument(lpszPathName, false, true))
+		str.FormatMessage(IDS_CORRUPTED_FILE, (LPCTSTR)worldName);
+	}
+	else
 	{
-		return FALSE;
+		str.FormatMessage(IDS_ERROR_OPENING_WORLD, (LPCTSTR)worldName);
 	}
 
-	return TRUE;
+	// NEAR (338 of 338 bytes): the shipped build clears the return register
+	// before the AppMessageBox call, ours after it; a result local and an
+	// AppMessageBox in each arm (382 bytes) don't reach it.
+	AppMessageBox( str, MB_OK );
+	return FALSE;
 }
 
 
@@ -1075,23 +684,6 @@ void CRegionDoc::OnUpdateEditCopy( CCmdUI *pCmdUI )
 void CRegionDoc::OnEditCopy()
 {
 	(( CMainFrame * )AfxGetMainWnd( ))->GetClipboard( )->Copy( GetRegion() );
-}
-
-
-void CRegionDoc::OnUpdateEditCut( CCmdUI *pCmdUI )
-{
-	pCmdUI->Enable( m_Region.m_Selections.GetSize( ) != 0 );
-}
-
-void CRegionDoc::OnEditCut()
-{
-	// copy the brushes
-	(( CMainFrame * )AfxGetMainWnd( ))->GetClipboard( )->Copy( GetRegion() );
-
-	// then delete them
-	POSITION pos = GetFirstViewPosition();
-	CRegionView* Ctest = (CRegionView*)GetNextView(pos);
-	Ctest->OnDelete(NULL);
 }
 
 
@@ -1138,14 +730,16 @@ void CRegionDoc::OnEditStamp()
 // Goes thru all the nodes and synchronizes their property lists
 // with their classes.  Returns FALSE if the user says not to 
 // synchronize the lists.
+// 0x45035a: 2001's records an undo for each node it changes, leaves
+// Zones alone, and copies a static list's first string in.
 // --------------------------------------------------------------- //
 
-static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorldNode *pNode)
+static BOOL RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorldNode *pNode, PreActionList *pActionList)
 {
-	DWORD			i, j, k, nProps, propIndex;
+	DWORD			j, k, nProps, propIndex;
 	CPropList		*pList;
 	ClassDef		*pClass;
-	CBaseProp		*pProp, *pNewProp;
+	CBaseProp		*pProp;
 	PropDef			*pVar;
 	char			szDebug[64];
 
@@ -1158,7 +752,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 	{
 		pChild = pNode->m_Children.GetNext(pos);
 
-		if(!RecurseAndSynchronize(pDoc, pRegion, pChild))
+		if(!RecurseAndSynchronize(pDoc, pRegion, pChild, pActionList))
 			return FALSE;
 	}
 
@@ -1166,7 +760,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 	pList = &pNode->m_PropList;
 	pClass = GetProject()->FindClassDef(pNode->GetClassName());
 	
-	if(pClass && (pPropList = GetProject()->GetClassDefProps(pClass)))	// If the class exists, sync stuff up.
+	if(pClass && stricmp(pClass->m_ClassName, "Zone") && (pPropList = GetProject()->GetClassDefProps(pClass)))	// If the class exists, sync stuff up.
 	{
 		// Remove variables that don't exist anymore.
 		nProps = pList->m_Props;
@@ -1183,6 +777,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 				if( !pDoc->m_bCanSynchronize && !pDoc->CheckSynchronize() )
 					return FALSE;
 
+				AddToActionListIfNew(pActionList, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
 				pDoc->SetModifiedFlag();
 				delete pList->m_Props[j];
 				pList->m_Props.Remove(j);
@@ -1209,6 +804,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 						return FALSE;
 				
 					delete pProp;
+					AddToActionListIfNew(pActionList, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
 
 					pProp = CreatePropFromCode(pVar->m_PropType, pVar->m_PropName);
 					if(pProp)
@@ -1231,6 +827,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 					if( !pDoc->m_bCanSynchronize && !pDoc->CheckSynchronize() )
 						return FALSE;
 				
+					AddToActionListIfNew(pActionList, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
 					pProp->m_PropFlags = pVar->m_PropFlags;
 				}
 
@@ -1238,8 +835,6 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 				DEditInternal* pDEditInternal = pVar->m_pDEditInternal;
 				if(pDEditInternal && (pVar->m_PropFlags & PF_STATICLIST))
 				{
-					_ASSERT(pProp->m_Type == PT_STRING);
-
 					const char* szString = ((CStringProp*)pProp)->m_String;
 					bool bMatch = false;
 					for ( int iString = 0 ; iString < pDEditInternal->m_cStrings ; iString++ )
@@ -1259,12 +854,8 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 						if( !pDoc->m_bCanSynchronize && !pDoc->CheckSynchronize() )
 							return FALSE;
 
-						if( pDEditInternal->m_aszStrings )
- 							((CStringProp*)pProp)->SetString( pDEditInternal->m_aszStrings[0] );
- 						else
- 							((CStringProp*)pProp)->SetString( "" );						
-						
-						pDoc->SetModifiedFlag();
+						AddToActionListIfNew(pActionList, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
+						strcpy(((CStringProp*)pProp)->m_String, pDEditInternal->m_aszStrings[0]);
 					}
 				}
 			}
@@ -1274,6 +865,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 				if( !pDoc->m_bCanSynchronize && !pDoc->CheckSynchronize() )
 					return FALSE;
 
+				AddToActionListIfNew(pActionList, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
 				pProp = CreatePropFromCode(pVar->m_PropType, pVar->m_PropName);
 				if(pProp)
 				{
@@ -1289,31 +881,18 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 }
 
 
-void CRegionDoc::SynchronizePropertyLists( CEditRegion *pRegion, bool bForceSync )
+// 0x450765: the changes go in as one undo.
+void CRegionDoc::SynchronizePropertyLists( CEditRegion *pRegion )
 {
-	//see if we need to force the updating of objects
-	if(bForceSync)
-	{
-		//by setting this, it makes the function SyncPropLists essentially
-		//think that it has already asked the user if they want to update
-		//objects and they said yes, which will in turn force synchronization
-		//without user input
-		m_bCanSynchronize = TRUE;
-	}
-
-	// MIKE 12/29/97 - Instead of doing a full Modify, it queues up the changes
-	// and sets up the PreActionList.
-	//Modify((( CMainFrame * )AfxGetMainWnd( ))->CountUndoProperties( ));
-	
-	//PreActionList actionList;
-	RecurseAndSynchronize(this, pRegion, pRegion->GetRootNode());
-	//Modify(&actionList, TRUE);
+	PreActionList actionList;
+	RecurseAndSynchronize(this, pRegion, pRegion->GetRootNode(), &actionList);
+	Modify(&actionList, TRUE);
 	
 	m_bCanSynchronize = FALSE;
 }
 
 
-bool CRegionDoc::CheckSynchronize()
+BOOL CRegionDoc::CheckSynchronize()
 {
 	if( AppMessageBox(IDS_OUTOFDATEOBJECTS, MB_YESNO) == IDYES )
 	{
@@ -1329,23 +908,27 @@ bool CRegionDoc::CheckSynchronize()
 
 
 // Adds an object to the document
+// NEAR (227 vs 220 bytes, 0x4507e5): 2001's CWorldNode::SetPos takes the
+// vector by value (0x450882 copies it to the stack before 0x46f282);
+// WorldNode.h's takes a reference.
 CBaseEditObj *CRegionDoc::AddObject(const char *pClassName, CVector vPos)
 {
 	CBaseEditObj *pObj = new CBaseEditObj;
-	if(SetupWorldNode(pClassName, pObj, &m_Region))
+	CEditRegion *pRegion=GetRegion();
+	if(SetupWorldNode(pClassName, pObj, pRegion))
 	{
-		// Get the region
-		CEditRegion *pRegion=GetRegion();
 		if (!pRegion)
 		{
 			return NULL;
 		}
 
 		// Add the object to the region
-		pRegion->AddObject(pObj);
+		// talon: 2001's CEditRegion::AddObject is inline, m_Objects.Append
+		// (0x450838; EditRegion.h has it out of line): written out here.
+		pRegion->m_Objects.Append(pObj);
 		pRegion->AddNodeToRoot( pObj->AsNode() );
 
-		Modify(new CPreAction(ACTION_ADDEDNODE, pObj), TRUE);
+		Modify(TRUE, new CPreAction(ACTION_ADDEDNODE, pObj), TRUE);
 
 		// Set the objects position
 		pObj->SetPos(vPos);
@@ -1371,7 +954,7 @@ void CRegionDoc::BindNode(CWorldNode *pChild, CWorldNode *pParent, PreActionList
 	if (pActionList)
 		pActionList->AddTail(new CPreAction(ACTION_MODIFYNODE, pChild));
 	else
-		GetNodeView( )->GetDoc( )->Modify(new CPreAction(ACTION_MODIFYNODE, pChild), TRUE );
+		GetNodeView( )->GetDoc( )->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pChild), TRUE );
 	pRegion->AttachNode( pChild, pParent );
 }
 
@@ -1394,7 +977,7 @@ void CRegionDoc::BindNodeToSelected(CWorldNode *pNode, PreActionList *pActionLis
 }
 
 // Selects a node and updates the views
-void CRegionDoc::SelectNode(CWorldNode *pNode, bool bClearSelections)
+void CRegionDoc::SelectNode(CWorldNode *pNode, BOOL bClearSelections)
 {
 	CEditRegion *pRegion = GetRegion();
 	if (!pRegion)
@@ -1415,6 +998,7 @@ void CRegionDoc::SelectNode(CWorldNode *pNode, bool bClearSelections)
 /************************************************************************/
 // Moves the selected nodes to the indicated parent node.
 // This sets up the undo information as well.
+// 0x4509b3: 2001's works on the region's selections in place.
 void CRegionDoc::MoveSelectedNodes(CWorldNode *pParentNode)
 {	
 	// Get the region
@@ -1425,49 +1009,32 @@ void CRegionDoc::MoveSelectedNodes(CWorldNode *pParentNode)
 	}	
 
 	// Get the selected nodes
-	CMoArray<CWorldNode*> selectedNodes;
-	selectedNodes.CopyArray(pRegion->m_Selections);
+	CMoArray<CWorldNode*> &selectedNodes = pRegion->m_Selections;
 		
 	CWorldNode::FindParentNodes(selectedNodes);
 
 	// Setup the undo information
 	PreActionList actionList;	
-	int i;
+	DWORD i;
 	for(i=0; i < selectedNodes.GetSize(); i++)
 	{
-		// Ignore a selected node if it is also the parent node or is a parent to the parent node
-		if ((selectedNodes[i] == pParentNode) || (selectedNodes[i]->FindNodeInChildren(pParentNode)))
-		{
-			continue;
-		}
-
-		actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, selectedNodes[i]));
+		if (selectedNodes[i] != pParentNode)
+			actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, selectedNodes[i]));
 	}
 	Modify(&actionList, TRUE);
 
 	// Attach the topmost nodes to the parent, children will follow...
 	for( i = 0; i < selectedNodes.GetSize( ); i++ )
 	{
-		// Ignore a selected node if it is also the parent node or is a parent to the parent node
-		if ((selectedNodes[i] == pParentNode) || (selectedNodes[i]->FindNodeInChildren(pParentNode)))
-		{
-			if (selectedNodes[i]->FindNodeInChildren(pParentNode))  
-			{
-				AppMessageBox("Cannot move a parent node under its own child.\nPlease move the child node and try again.", MB_OK | MB_ICONEXCLAMATION );
-			}
-
-			continue;
-		}
-
 		CWorldNode *pNode = selectedNodes[i];
-		GetRegion()->AttachNode( pNode, pParentNode);
+		if (pNode != pParentNode)
+			pRegion->AttachNode( pNode, pParentNode);
 	}
-
-	ASSERT(GetRegion()->CheckNodes() == NULL);
 }
 
 /************************************************************************/
 // Converts an object from one class to another.  A pointer to the object is then returned.
+// 0x450a77
 CBaseEditObj *CRegionDoc::ConvertObjectClass(CBaseEditObj *pOldObject, const char *lpszClassName)
 {
 	// Create the new object at the coordinates of the one being converted
@@ -1483,15 +1050,8 @@ CBaseEditObj *CRegionDoc::ConvertObjectClass(CBaseEditObj *pOldObject, const cha
 		BindNode(pOldObject->m_Children.GetNext(gPos), pNewNode);
 	}
 
-	// Get the property lists for both the new and the old object
-	CPropList *pNewPropList=pNewNode->GetPropertyList();
-	CPropList *pOldPropList=pOldObject->GetPropertyList();
-
-	ASSERT(pNewPropList);
-	ASSERT(pOldPropList);
-
 	// Copy the property values from the old list to the new list
-	pNewPropList->CopyMatchingValues(pOldPropList);
+	pNewNode->m_PropList.CopyMatchingValues(&pOldObject->m_PropList);
 
 	// Copy the flags
 	pNewNode->SetFlags(pOldObject->GetFlags());
@@ -1499,13 +1059,7 @@ CBaseEditObj *CRegionDoc::ConvertObjectClass(CBaseEditObj *pOldObject, const cha
 	// Clear the selection flag if it is set
 	if (pNewNode->IsFlagSet(NODEFLAG_SELECTED))
 	{
-		GetRegion()->UnselectNode(pNewNode);
-	}
-
-	// Clear the frozen flag if it is set
-	if( pNewNode->IsFlagSet( NODEFLAG_FROZEN ) )
-	{
-		pNewNode->ClearFlag( NODEFLAG_FROZEN );
+		pNewNode->ClearFlag(NODEFLAG_SELECTED);
 	}
 		
 	// Update the label in the node view
@@ -1529,6 +1083,257 @@ void CRegionDoc::OnUpdateEditPasteAlternate(CCmdUI* pCmdUI)
 {
 	pCmdUI->Enable((( CMainFrame * )AfxGetMainWnd( ))->GetClipboard( )->IsFull( ));
 }
+
+
+// ---------------------------------------------------------------------- //
+// talon: 2001's lightmap editing.  The world's processed file (its .dat)
+// is loaded into a CPreMainWorld; the base light animation's first frame
+// gives each poly its lightmap, and the texels selected in the views
+// (m_SelTexels, on the poly m_LightPolyRef) can be made brighter or
+// darker or given the colour dialog's colour, then saved back.  The names
+// are ours.
+// ---------------------------------------------------------------------- //
+
+
+
+
+// 0x450b6a: the world's file name with its extension (IDS_WORLDEXTENSION)
+// replaced by IDS_DAT_EXTENSION.
+CString CRegionDoc::GetLightAnimFileName()
+{
+	CString	worldExt, datExt;
+	char	fileName[1024], *pExt;
+
+	strcpy(fileName, m_FileName);
+
+	worldExt.LoadString(IDS_WORLDEXTENSION);
+	pExt = strstr(fileName, worldExt);
+	if(pExt)
+		*pExt = 0;
+
+	datExt.LoadString(IDS_DAT_EXTENSION);
+	strcat(fileName, datExt);
+
+	return CString(fileName);
+}
+
+
+// 0x450c20
+void CRegionDoc::LoadLightAnims()
+{
+	CMoFileIO	file;
+	CString		fileName, str;
+	CPreLightAnim	*pAnim;
+	CPreLightFrame	*pFrame;
+	CPrePoly		*pPoly;
+	uint32		i;
+
+	TermLightAnims();
+
+	fileName = GetLightAnimFileName();
+	if(file.Open(fileName, "rb"))
+	{
+		m_pLightWorld = new CPreMainWorld;
+		if(m_pLightWorld->LoadFile(file, TRUE) == 0)
+		{
+			pAnim = m_pLightWorld->FindLightAnim(BASE_LIGHTANIM_NAME);
+			if(pAnim && pAnim->m_Frames.GetSize() > 0)
+			{
+				pFrame = pAnim->m_Frames[0];
+				if(pFrame->m_PolyMaps.GetSize() == pAnim->m_Polies.GetSize())
+				{
+					for(i=0; i < pAnim->m_Polies.GetSize(); i++)
+					{
+						pPoly = m_pLightWorld->GetLMPoly(&pAnim->m_Polies[i]);
+						if(pPoly)
+							pPoly->m_Unknown_24 = pFrame->m_PolyMaps[i];
+					}
+				}
+			}
+		}
+		else
+		{
+			str.FormatMessage(IDS_ERROR_LOADING_DAT, (LPCTSTR)fileName);
+			AppMessageBox(str, MB_OK);
+
+			delete m_pLightWorld;
+			m_pLightWorld = NULL;
+		}
+	}
+	else
+	{
+		str.FormatMessage(IDS_ERROR_OPENING_DAT, (LPCTSTR)fileName);
+		AppMessageBox(str, MB_OK);
+	}
+}
+
+
+// 0x450dc4
+void CRegionDoc::TermLightAnims()
+{
+	if(m_pLightWorld)
+	{
+		d3d_UnbindWorld(m_pLightWorld);
+		delete m_pLightWorld;
+		m_pLightWorld = NULL;
+	}
+}
+
+
+// 0x450dfb (the function table has it inside 0x450dc4)
+void CRegionDoc::SaveLightAnims()
+{
+	CString		fileName, str;
+	CMoFileIO	file;
+
+	if(m_pLightWorld)
+	{
+		fileName = GetLightAnimFileName();
+		if(file.Open(fileName, "wb"))
+		{
+			if(!m_pLightWorld->SaveFile(file))
+			{
+				str.FormatMessage(IDS_ERROR_SAVING_DAT, (LPCTSTR)fileName);
+				AppMessageBox(str, MB_OK);
+			}
+
+			file.Close();
+		}
+		else
+		{
+			str.FormatMessage(IDS_ERROR_OPENING_DAT, (LPCTSTR)fileName);
+			AppMessageBox(str, MB_OK);
+		}
+	}
+}
+
+
+// 0x450ef8: one step brighter (or darker) on each selected texel.
+// NEAR (337 vs 318 bytes): the shipped build keeps 0xFF in ecx and the
+// add in ebx, so it spills this, the poly, the width and the x to the
+// frame (named width/x locals and an nMax local tried; the rest of the
+// shape, the clamps and the recombination, is the same).
+void CRegionDoc::BrightenTexels(BOOL bBrighter)
+{
+	uint32		data[1024];
+	CPrePoly	*pPoly;
+	CPreLightMap *pMap;
+	uint32		i;
+	int			nMax = 0xFF;
+
+	if(!m_pLightWorld)
+		return;
+
+	pPoly = m_pLightWorld->FindPoly(m_LightPolyWorld, m_LightPolyName);
+	if(!pPoly)
+		return;
+
+	pMap = pPoly->m_Unknown_24;
+	if(!pMap)
+		return;
+
+	if(!pMap->Decompress(data))
+		return;
+
+	for(i=0; i < m_SelTexels.GetSize(); i++)
+	{
+		CTexelRef &texel = m_SelTexels[i];
+
+		if(texel.m_X < pPoly->m_LMWidth && texel.m_Y < pPoly->m_LMHeight)
+		{
+			uint32 *pColor = &data[texel.m_Y * pPoly->m_LMWidth + texel.m_X];
+			int b = *pColor & nMax;
+			int g = (*pColor >> 8) & nMax;
+			int nAdd = bBrighter ? 1 : -1;
+			int r = ((*pColor >> 16) & nMax) + nAdd;
+
+			if(r < 0)			r = 0;
+			else if(r > nMax)	r = nMax;
+
+			g += nAdd;
+			if(g < 0)			g = 0;
+			else if(g > nMax)	g = nMax;
+
+			b += nAdd;
+			if(b < 0)			b = 0;
+			else if(b > nMax)	b = nMax;
+
+			*pColor = (((r << 8) | g) << 8) | b;
+		}
+	}
+
+	if(pMap->CompressLightMap(pPoly->m_LMWidth, pPoly->m_LMHeight, data))
+	{
+		d3d_UnbindPrePoly(pPoly);
+		RedrawAllViews(REGIONVIEWUPDATE_LIGHTMAPS);
+	}
+}
+
+
+// 0x451049: the colour dialog's colour on each selected texel.
+void CRegionDoc::SetTexelColor(COLORREF newColor)
+{
+	uint32		data[1024];
+	CPrePoly	*pPoly;
+	CPreLightMap *pMap;
+	uint32		i, color;
+
+	if(!m_pLightWorld)
+		return;
+
+	pPoly = m_pLightWorld->FindPoly(m_LightPolyWorld, m_LightPolyName);
+	if(!pPoly)
+		return;
+
+	pMap = pPoly->m_Unknown_24;
+	if(!pMap)
+		return;
+
+	color = (((GetRValue(newColor) << 8) | GetGValue(newColor)) << 8) | GetBValue(newColor);
+	if(!pMap->Decompress(data))
+		return;
+
+	for(i=0; i < m_SelTexels.GetSize(); i++)
+	{
+		CTexelRef &texel = m_SelTexels[i];
+
+		if(texel.m_X < pPoly->m_LMWidth && texel.m_Y < pPoly->m_LMHeight)
+			data[texel.m_Y * pPoly->m_LMWidth + texel.m_X] = color;
+	}
+
+	if(pMap->CompressLightMap(pPoly->m_LMWidth, pPoly->m_LMHeight, data))
+	{
+		d3d_UnbindPrePoly(pPoly);
+		RedrawAllViews(REGIONVIEWUPDATE_LIGHTMAPS);
+	}
+}
+
+
+
+// ---------------------------------------------------------------------- //
+// talon: Build 69 only, kept while other files still call them (none of
+// them is in the 2001 image).
+// ---------------------------------------------------------------------- //
+
+void CRegionDoc::RedrawPerspectiveViews(DWORD extraHint)
+{
+	POSITION Pos = GetFirstViewPosition();
+
+	//run through all views of this document
+	CView* pView;
+	while(pView = GetNextView(Pos))
+	{
+		CRegionView* pRegionView = (CRegionView*)pView;
+
+		//see if this is a perspective view
+		if(pRegionView->GetViewMode() == VM_PERSPECTIVE)
+		{
+			//it is, so trigger the update
+			pRegionView->OnUpdate(NULL, (extraHint) ? extraHint : REGIONVIEWUPDATE_REDRAW, NULL);
+		}
+	}
+}
+
 
 // Clone the selected objects and select the new version
 void CRegionDoc::Clone()
@@ -1597,145 +1402,6 @@ void CRegionDoc::SelectBrushesByTexture(const char *pFilename)
 
 	EndWaitCursor();
 }
- 
-//updates the backup name to reflect any changes in the filename or 
-//to the autosave options
-void CRegionDoc::UpdateBackupName(const char* pszFilename)
-{
-	char	pathName[_MAX_PATH], fileName[_MAX_PATH];
-	char	worldName[_MAX_PATH], extension[_MAX_PATH], backupName[_MAX_PATH];
-
-
-	CHelpers::ExtractPathAndFileName( pszFilename, pathName, fileName );
-	CHelpers::ExtractFileNameAndExtension( fileName, worldName, extension );
-
-	
-	//see if autosaving is disabled, if so, set the path to the default temp one
-	if(GetApp()->GetOptions().IsAutoSave() == FALSE)
-	{
-		//SCHLEGZ: get the temporary path
-		GetTempPath(sizeof(pathName),pathName);
-
-		//create the temporary filename
-		fileName[3] = '\0';
-		GetTempFileName(pathName, fileName,0, backupName);
-		m_BackupName = backupName;
-	}
-	else
-	{
-		//get the path for the backup directory
-		m_BackupName = GetApp()->GetOptions().GetAutoSavePath();
-
-		//ensure that it ends with a trailing slash
-		if(	(!m_BackupName.IsEmpty()) && 
-			(m_BackupName[m_BackupName.GetLength() - 1] != '\\'))
-		{
-			m_BackupName += '\\';
-		}
-
-		m_BackupName += worldName;
-		m_BackupName += "-Backup.";
-		m_BackupName += extension;
-	}
-
-}
- 
-
-// adjust OPQs of polygons based on scaled texture sizes
-void CRegionDoc::TextureScale( const CMoArray<BatchTextureScaleInfo*>& textureInfo, CWorldNode* node )
-{
-	// prime the pump
-	if( !node )
-		node = m_Region.GetRootNode();
-
-	ASSERT( node );
-
-	// node is a brush, process it
-	if( node->GetType() == Node_Brush )
-	{
-		CEditBrush* brush = node->AsBrush();
-		
-		// loop through the polygons in the brush
-		for( int i = 0; i < brush->m_Polies; i++ )
-		{
-			CEditPoly* poly = brush->m_Polies[i];
-
-			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
-			{
-				CTexturedPlane& Texture = poly->GetTexture(nCurrTex);
-
-				// look to see if this poly has a rescaled texture
-				// (a hash table would be nice here, just seeing if this might be fast enough)
-				for( int j = 0; j < textureInfo.GetSize(); j++ )
-				{
-					if( !(textureInfo[j]->texName.CompareNoCase( Texture.m_pTextureName )) )
-					{
-						// found a rescaled polygon
-						float xScale = (float)textureInfo[j]->newX / (float)textureInfo[j]->oldX;
-						float yScale = (float)textureInfo[j]->newY / (float)textureInfo[j]->oldY;
-
-						LTVector newO = Texture.GetO();
-						LTVector newP = Texture.GetP() * xScale;
-						LTVector newQ = Texture.GetQ() * yScale;
-
-						poly->SetTextureSpace(nCurrTex, newO, newP, newQ );
-					}
-				}
-			}
-		}
-	}
-
-	// recurse the children
-	GPOS pos = node->m_Children;
-	while( pos )
-	{
-		CWorldNode* child = node->m_Children.GetNext( pos );
-		ASSERT( child );
-		TextureScale( textureInfo, child );
-	}
-}
-
-void CRegionDoc::SetTitle(bool bModified)
-{
-	//this has the filename passed in, so what we need to do is possibly add the
-	//path beforehand if the user has that setting enabled, then pass it on down
-	CString sTitle;
-
-	COptionsMisc *pOptions = (GetApp()) ? GetApp()->GetOptions().GetMiscOptions() : NULL;
-
-	if(pOptions && pOptions->IsShowFullPathTitle())
-	{
-		sTitle = m_FileName;
-	}
-	else
-	{
-		sTitle = m_WorldName;
-	}
-
-	//add the asterisk if needed
-	if(bModified)
-	{
-		sTitle += " *";
-	}
-
-#ifdef _DEBUG
-	//add an indicator that we are running a debug version
-	sTitle += "- DEBUG";
-#endif
-
-	CDocument::SetTitle(sTitle);
-}
-		
-void CRegionDoc::SetTitleKeepModified()
-{
-	//get the title of the document
-	CString sTitle = CDocument::GetTitle();
-
-	//see if it has the asterisk on the end
-	bool bModified = !(sTitle.IsEmpty()) && (sTitle[sTitle.GetLength() - 1] == '*');
-
-	SetTitle(bModified);
-}
 
 void CRegionDoc::TagPoly(const CPolyRef &cPoly)
 {
@@ -1746,26 +1412,4 @@ void CRegionDoc::TagPoly(const CPolyRef &cPoly)
 	}
 
 	m_TaggedPolies.Add(cPoly);
-}
-
-//called to have all the properties in objects checked in the proper order for reporting
-//errors back to the debug window
-void CRegionDoc::UpdateAllObjectProperties()
-{
-	CEditRegion* pRegion = GetRegion();
-
-	if(!pRegion)
-		return;
-
-	// First update only the variable declerations...
-	
-	pRegion->UpdateAllObjectProperties( "VVarDecsOnly; ClearVars;" );
-
-	// Now update our commands to add any dynamic objects...
-
-	pRegion->UpdateAllObjectProperties( "ClearDynaObjs; IMsgErs; IVarCmds;" );
-
-	// Then update everything but the variable declerations and dynamic objects...
-
-	pRegion->UpdateAllObjectProperties( "IVarDecs; IAddDynaObj;" );
 }

@@ -53,6 +53,10 @@ BOOL CResourceMgr::CreateDir( CString path, resource_type resType )
 			fileNameArray.Add("DirTypeModels");
 			break;
 
+		case RESTYPE_SCRIPT:
+			fileNameArray.Add("DirTypeScripts");
+			break;
+
 		case RESTYPE_SOUND:
 			fileNameArray.Add("DirTypeSounds");
 			break;
@@ -76,10 +80,6 @@ BOOL CResourceMgr::CreateDir( CString path, resource_type resType )
 		case RESTYPE_PREFAB:
 			fileNameArray.Add("DirTypeWorlds");
 			fileNameArray.Add("DirTypePrefabs");
-			break;
-
-		case RESTYPE_PHYSICS:
-			fileNameArray.Add("DirTypePhysics");
 			break;
 
 		default:			
@@ -178,9 +178,6 @@ resource_type CResourceMgr::GetDirType(CString dirName)
 	if(IsDirType(dirName, RESTYPE_PREFAB))
 		return RESTYPE_PREFAB;
 
-	if(IsDirType(dirName, RESTYPE_PHYSICS))
-		return RESTYPE_PHYSICS;
-
 	return RESTYPE_UNKNOWN;
 }
 
@@ -218,9 +215,6 @@ BOOL CResourceMgr::IsDirType(CString path, resource_type resType)
 
 		case RESTYPE_PREFAB:
 			return DoesDirHaveFile(path, "DirTypePrefabs");
-
-		case RESTYPE_PHYSICS:
-			return DoesDirHaveFile(path, "DirTypePhysics");
 	}
 
 	return FALSE;
