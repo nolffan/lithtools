@@ -4,7 +4,6 @@
 #include "precompile.h"
 #include "modeledit.h"
 #include "modeleditdlg.h"
-#include "tdguard.h"
 #include <direct.h>
 
 #ifdef _DEBUG
@@ -50,14 +49,6 @@ CModelEditApp theApp;
 
 BOOL CModelEditApp::InitInstance()
 {
-	if (!TdGuard::Aegis::GetSingleton().Init() ||
-		!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		ExitProcess(0);
-		return FALSE;
-	}
-
-
 	AfxEnableControlContainer();
 
 	// Standard initialization

@@ -9,7 +9,6 @@
 #include "regmgr.h"
 #include "mmsystem.h" // for timegettime()
 #include "windef.h"   // for max (?)
-#include "tdguard.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -139,12 +138,6 @@ void CCamera::LookAtPoint( const LTVector& lookAt )
 
 CRenderWnd::CRenderWnd()
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		ExitProcess(0);
-		return;
-	}
-
 	m_pModelEditDlg = NULL;
 
 	m_DrawStruct.m_bDrawSkeleton = FALSE;

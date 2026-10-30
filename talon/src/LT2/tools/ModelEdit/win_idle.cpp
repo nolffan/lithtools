@@ -2,7 +2,6 @@
 
 #include "precompile.h"
 #include "win_idle.h"
-#include "tdguard.h"
 
 // Stub function to get into the object's main thread loop
 unsigned long WINAPI CWinIdle::ThreadStub(LPVOID pIdle)
@@ -48,12 +47,6 @@ DWORD CWinIdle::RunIdle()
 
 BOOL CWinIdle::StartIdle(HWND hWnd, UINT uMessage, WPARAM wParam, LPARAM lParam, DWORD dwDelay)
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		ExitProcess(0);
-		return FALSE;
-	}
-
 	// Make sure it's not already running
 	if (m_hIdleThread)
 		return FALSE;
