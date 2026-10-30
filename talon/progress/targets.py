@@ -58,7 +58,7 @@ TARGETS = [
          partial_objs=["src/LT2/built/Release/tools/ModelEdit/*.obj",
                        "src/LT2/built/Release/tools/ModelEdit/ltamgr/ltamgr.lib",
                        "src/LT2/lithshared/built/Release/Lib_StdLith_alloc/Lib_StdLith.lib",
-                       "src/LT2/lithshared/built/Release/RegMgr/regmgr.lib"],
+                       "src/LT2/lithshared/built/ReleaseTalon/RegMgr/regmgr.lib"],
          app=[(0x00401000, 0x00437170)]),
     # ---- the world processors ------------------------------------------
     # AvP2 v1.0's (2001-10-03, cl 12.00.8966) writes AvP2's world version

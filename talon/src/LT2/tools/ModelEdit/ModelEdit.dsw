@@ -18,7 +18,7 @@ Package=<4>
 
 ###############################################################################
 
-Project: "LT2_RegMgr"=..\..\lithshared\regmgr\regmgr60.dsp - Package Owner=<4>
+Project: "LT2_RegMgr_Talon"=..\..\lithshared\regmgr\regmgr60_Talon.dsp - Package Owner=<4>
 
 Package=<5>
 {{{
@@ -54,7 +54,7 @@ Package=<4>
     Project_Dep_Name LT2_StdLith_alloc
     End Project Dependency
     Begin Project Dependency
-    Project_Dep_Name LT2_RegMgr
+    Project_Dep_Name LT2_RegMgr_Talon
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name ME_LTAMgr
