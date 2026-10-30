@@ -594,3 +594,301 @@ is allocated every ChildInfo leaks: the delete loop at 0x430f45 runs only
 on success, and one whose own Load fails is never stored.
 
 Not fixed yet.
+
+### Right-clicking an empty part of a project bar list can crash
+
+DEdit.exe 0x4016a8, 0x407c4a, 0x408465 and 0x40d3f0 (CModelDlg,
+CSoundDlg, CSpriteDlg and CWorldsDlg::OnContextMenu,
+src/LT2/tools/DEdit/ModelDlg.cpp, SoundDlg.cpp, SpriteDlg.cpp,
+WorldsDlg.cpp; identical). Each loads its popup menu and takes its
+first submenu, but when the click is not over an item it carries on
+without returning, and TrackPopupMenu is called through the NULL submenu
+pointer.
+
+Not fixed yet.
+
+### Create New Sprite never creates the sprite
+
+DEdit.exe 0x403b2d (CProjectBar::OnPopupCreateNewSprite,
+src/LT2/tools/DEdit/Controls/ProjectBar.cpp; identical). The flag that
+says the name was accepted is never set TRUE: the test at 0x403c9c reads
+a stack slot nothing in the function writes, so whether the sprite is made
+depends on what was left there.
+
+Not fixed yet.
+
+### Importing textures ignores whether the copies worked
+
+DEdit.exe 0x409a5e..0x409afb (CTextureDlg::DoImportOperation,
+src/LT2/tools/DEdit/TextureDlg.cpp; identical). The results of copying
+the imported images into the project are not checked: a failed copy goes
+on as if it had worked.
+
+Not fixed yet.
+
+### A TGA that fails to load is reported as a PCX
+
+DEdit.exe 0x40bddf (CTextureDlg::CopyImageToTexture,
+src/LT2/tools/DEdit/TextureDlg.cpp; identical). When a .tga can't be
+loaded the message shown is IDS_CANTLOADPCX.
+
+Not fixed yet.
+
+### The large texture preview never draws the texture's name
+
+DEdit.exe 0x409601 (CTextureDlg::RenderLargeImage,
+src/LT2/tools/DEdit/TextureDlg.cpp; near). The name is drawn only
+when the dialog's m_hFont is set, and nothing ever sets it.
+
+Not fixed yet.
+
+### Importing an OBJ file's texture coordinates throws them away
+
+DEdit.exe 0x412916 (CObjInterface::ImportObjTexCoords,
+src/LT2/tools/DEdit/FileFormats/CObjInterface.cpp; identical). The `vt`
+lines are parsed, and the values are discarded instead of stored.
+
+Not fixed yet.
+
+### IntersectRay's backface test is the reverse of Build 69's
+
+DEdit.exe 0x40fdd9 (CBasePoly::IntersectRay,
+src/LT2/tools/DEdit/World/BasePoly.cpp; identical). The bBackface test
+is inverted against Build 69's: a ray from behind the poly is the one
+accepted. Whether DEdit's 2001 callers rely on it has not been checked.
+
+Not fixed yet.
+
+### A self-closing dialog retries its timer for ever
+
+DEdit.exe 0x414566 (CTimedCloseDlg::OnPaint, the names ours, a dialog of
+an unknown module after ColumnCtrl's, src/LT2/tools/DEdit/Controls/ColumnCtrl.cpp
+for now; identical). On
+its first paint it sets its timer (id and elapse 0) and, when SetTimer
+fails, jumps back and calls it again, with nothing to end the loop.
+
+Not fixed yet.
+
+### Vertices drawn in the parallel views get garbage depth
+
+DEdit.exe 0x41a2f6 (D3DRender::DrawVert, src/LT2/tools/DEdit/draw/draw_d3d.cpp;
+identical). In a parallel view the vertex's z and rhw are left
+uninitialised, and the box is clipped against the y limit where the x
+limit is meant.
+
+Not fixed yet.
+
+### Shading a textured poly can take the square root of a negative number
+
+DEdit.exe 0x419a31 (D3DRender::DrawTexturedPoly,
+src/LT2/tools/DEdit/draw/draw_d3d.cpp; near). The shade is made
+from the square roots of the normal's components, which are negative for
+half the polies: the colour is NaN.
+
+Not fixed yet.
+
+### Object dimensions keep the smaller box
+
+DEdit.exe 0x41d6ea (DrawBase::DrawObject, src/LT2/tools/DEdit/draw/DrawBase.cpp;
+identical). Combining an object's dims with its model's, the smaller
+value is kept for each axis where the larger is meant. Build 69 has the
+same.
+
+Not fixed yet.
+
+### New World can go ahead on an unset flag
+
+DEdit.exe 0x4178b1 (CDEditApp::OnFileNewWorld, src/LT2/tools/DEdit/DEdit.cpp;
+identical). The flag that decides whether the world is created is read
+without being set on one path.
+
+Not fixed yet.
+
+### Closing a world saves it without asking
+
+DEdit.exe 0x4179da (CDEditApp::OnFileCloseWorld, src/LT2/tools/DEdit/DEdit.cpp;
+identical). Close World saves the world (CRegionDoc::SaveRegion) and
+closes it, with no question whether to save the changes; closing the
+window asks. It may be meant.
+
+Not fixed yet.
+
+### Making a poly's texture space orthogonal subtracts a number from Q
+
+DEdit.exe 0x42555d (CEditPoly::SetTextureSpace,
+src/LT2/tools/DEdit/World/EditPoly.cpp; near). When P and Q aren't
+perpendicular, Q is to have its P component removed, `Q -= P * P.Dot(Q)`;
+the code is `Q -= P.Dot(Q)`, subtracting the dot product from each of Q's
+components (0x425611..0x425627), so Q comes out skewed. AvP2's
+Processor.exe has the same code (0x41a610).
+
+Not fixed yet.
+
+### The main toolbar is titled "an unnamed file"
+
+DEdit.exe 0x42e4ab (CMainFrame::OnCreate, src/LT2/tools/DEdit/Frames/MainFrm.cpp;
+identical). The toolbar's title is loaded from string 61446 ("an unnamed
+file") where 61448 ("Standard") is meant, and the status bar's panes are
+sized from an empty string.
+
+Not fixed yet.
+
+### Run World's checks on the world's name don't work
+
+DEdit.exe 0x43086b (CMainFrame::OnRunWorld, src/LT2/tools/DEdit/Frames/MainFrm.cpp;
+identical). A path length is compared with itself, so the test is always
+true; and the .dat name is made by dropping the last three characters of
+the world's name, so a .lta world runs as "name..dat".
+
+Not fixed yet.
+
+### Building a rez file overwrites its first file's first four bytes
+
+DEdit.exe 0x4312f2 (BuildRezFile, src/LT2/tools/DEdit/MakeRezFile.cpp;
+identical). The directory's offset is written at the start of the file
+after the first packed file has been written there, over its first four
+bytes.
+
+Not fixed yet.
+
+### The default script editor is empty
+
+DEdit.exe 0x42edff (CMainFrame::RestoreRegistryInfo,
+src/LT2/tools/DEdit/Frames/MainFrm.cpp; identical). The default
+is loaded from string 32797, which the image's string table hasn't: with
+nothing in the registry the script editor is "".
+
+Not fixed yet.
+
+### Selecting a sprite frame removes it
+
+DEdit.exe 0x42bd0f (CFrameList::OnSelchange,
+src/LT2/tools/DEdit/Controls/FrameList.cpp; identical). The selection
+change is handled as a double click, and the sprite editor's double-click
+handler (0x460e06) removes the frame: selecting a frame deletes it.
+
+Not fixed yet.
+
+### Dropping on a list item appends "**" to its text
+
+DEdit.exe 0x431d96 (CMyListCtrl::OnButtonUp, src/LT2/tools/DEdit/mlistctrl.cpp;
+identical). Ending a drag over an item appends "**" to the item's
+text.
+
+Not fixed yet.
+
+### The display options never read "Show surface color"
+
+DEdit.exe 0x44e111 (CPropPageDisplay::OnInitDialog,
+src/LT2/tools/DEdit/dlgs/PropPageDisplay.cpp; identical). The check box
+is not set from the options, so OK saves it FALSE whatever it was.
+
+Not fixed yet.
+
+### The Direct3D options never save "blurry textures"
+
+DEdit.exe 0x44e9ae (CPropPageOptionsD3D::UpdateDisplayOptions,
+src/LT2/tools/DEdit/dlgs/PropPageOptionsD3D.cpp; identical). Every other
+control is written back to the options; the blurry-textures check box is
+not.
+
+Not fixed yet.
+
+### The primitive options report that saving failed
+
+DEdit.exe 0x43fe4a (COptionsPrimitives::Save,
+src/LT2/tools/DEdit/Options/OptionsPrimitives.cpp; identical). It saves
+and returns FALSE.
+
+Not fixed yet.
+
+### The preferences' Browse has no file filter, and OK reads past a buffer
+
+DEdit.exe 0x443b37 (CPreferencesDlg, src/LT2/tools/DEdit/Dlgs/PreferencesDlg.cpp;
+identical). Browse loads its filter from string 32796, which the image
+hasn't, so the file dialog has none; OnOK reads at most 256 characters
+into a 512-byte buffer, so a longer path is cut short.
+
+Not fixed yet.
+
+### A region view's menu items are always enabled
+
+DEdit.exe 0x455523 (CRegionView::EnableAMenuItem,
+src/LT2/tools/DEdit/Views/RegionView.cpp; not matched yet: ours still has
+Build 69's test). It calls EnableMenuItem with 0, MF_ENABLED|MF_BYCOMMAND,
+whatever the values it is given: no item it is used for is ever greyed.
+
+Not fixed yet.
+
+### Select Detail Brushes leaves the wait cursor up
+
+DEdit.exe 0x45ad15 (CRegionView::OnSelectDetailBrushes,
+src/LT2/tools/DEdit/Views/RegionView.cpp; near). It calls
+BeginWaitCursor and never EndWaitCursor.
+
+Not fixed yet.
+
+### Hide and Unhide Inverse crash with no region
+
+DEdit.exe 0x45adff and 0x45ae4d (CRegionView's hide/unhide-inverse
+handlers, src/LT2/tools/DEdit/Views/RegionView.cpp; identical). They
+take the root node at the region pointer plus 0x18 without checking the
+region: with none they read address 0x18.
+
+Not fixed yet.
+
+### Two trackers are named "OrbitVertex"
+
+DEdit.exe 0x453cd7 and 0x453d78 (CRegionView::InitTracker,
+src/LT2/tools/DEdit/Views/RegionView.cpp; identical). The left-click
+light node selection tracker (OnSelectLightNode) is given the name of the
+tracker before it, "OrbitVertex": a lookup by name finds the first.
+
+Not fixed yet.
+
+### Nearest-colour matching returns the last colour close enough
+
+DEdit.exe 0x462154 (LTTexture's NearestColor,
+src/LT2/tools/DEdit/Misc/Texture.cpp; identical). The best distance is
+never updated, so every palette entry within 765 replaces the previous
+choice: the result is the last such entry, not the nearest; alpha is
+ignored.
+
+Not fixed yet.
+
+### Writing an 8-bit DTX leaks its stream and floods the debug output
+
+DEdit.exe 0x4624a7 (Write8BitDTX, src/LT2/tools/DEdit/Misc/Texture.cpp;
+identical). On failure the stream is not released, and every pixel
+written is also sent to OutputDebugString.
+
+Not fixed yet.
+
+### Converting a texture's format can leave freed mipmaps in use
+
+DEdit.exe 0x460311 (ConvertTextureData,
+src/LT2/tools/DEdit/Misc/TextureHelper.cpp; identical). The old mipmaps
+are freed for any target format but replaced only for 32-bit and
+compressed ones, leaving the texture pointing at freed memory for the
+others; the new data, from new[], is freed with delete.
+
+Not fixed yet.
+
+### A docking bar's non-client paint releases its DC twice
+
+DEdit.exe 0x47130d (CMRCSizeControlBar::OnNcPaint,
+src/LT2/tools/DEdit/MRCEXT/SIZECONT.CPP; identical). ReleaseDC is called
+twice for the one GetWindowDC.
+
+Not fixed yet.
+
+### Two trackers read members their constructors never set
+
+DEdit.exe 0x4756cf and 0x475df1 (CRVTrackerDrawPoly's constructor and the
+reader of m_bAllowCancel, +0xcc, src/LT2/tools/DEdit/Trackers/RVTrackerDrawPoly.cpp;
+identical) and 0x4773ae (CRVTrackerNavMove, +0xb8, read and negated,
+src/LT2/tools/DEdit/Trackers/RVTrackerNavMove.cpp; near). Neither
+member is initialised, so whether a poly drawing can be cancelled, and the
+navigation's starting value, depend on what was in the heap.
+
+Not fixed yet.
