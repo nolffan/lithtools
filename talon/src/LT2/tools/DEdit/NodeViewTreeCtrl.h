@@ -41,10 +41,9 @@ public:
 	virtual		~CNodeViewTreeCtrl();
 	void		OnButtonUp( );
 	void		MoveItem( HTREEITEM hNode, HTREEITEM hParent );	
-	void		SelectTree( HTREEITEM hItem, bool bRecurse, bool bMultiSelect=false, bool bNotifySelectionChange=true );
-	void		SelectTree( CWorldNode *pNode, bool bRecurse, bool bMultiSelect=false, bool bNotifySelectionChange=true );
+	void		SelectTree( HTREEITEM hItem, BOOL bRecurse, BOOL bNotifySelectionChange=TRUE );
+	void		SelectTree( CWorldNode *pNode, BOOL bRecurse, BOOL bNotifySelectionChange=TRUE );
 
-	HTREEITEM	FindItem( HTREEITEM hItem, CWorldNode *pNode );
 	HTREEITEM	TransferItem(HTREEITEM hitem, HTREEITEM hNewParent);
 
 	BOOL		PreTranslateMessage(MSG* pMsg);
@@ -81,7 +80,6 @@ protected:
 	afx_msg void OnBeginLabelEdit(LPNMHDR pnmhdr, LRESULT *pLResult);
 	afx_msg void OnItemExpanded(LPNMHDR pnmhdr, LRESULT *pLResult);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
-	afx_msg void OnLButtonDblClk( UINT nFlags, CPoint point );	//(YF 11-27)
 	afx_msg void OnEditPaste();
 	afx_msg void OnEditPasteAlternate();
 	afx_msg void OnEditCopy();

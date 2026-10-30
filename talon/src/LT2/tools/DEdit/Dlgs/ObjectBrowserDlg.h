@@ -49,33 +49,19 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 public:
-
-	const CString&	GetSelectedName() const	{ return m_sSelectedName; }
-
-	//handle leaving the dialog
-	virtual void	OnOK();
-	virtual void	OnCancel();
-
 	// Sets the selected object
-	void			SetSelectedObject(const CString& sObjectName);
+	void			SetSelectedObject(CBaseEditObj *pObject);
+	void			SetSelectedObject(CString sObjectName);
 
 	// Sets whether or not the specified control should be visible or not
 	void			SetControlVisible(int nID, BOOL bVisible=TRUE);
 
+	// Returns the selected object
+	CBaseEditObj	*GetSelectedObject()	{ return m_pSelectedObject; }
+
 protected:
-
-	//cleans up all the data associated with the tree that we allocated
-	void		CleanUpTreeUserData(HTREEITEM hItem);
-	void		CleanUpUserData();
-
-	//inserts an object into the list control
-	void		InsertObjectIntoList(const CString& sPrepend, CBaseEditObj* pObj, CPrefabRef* pPrefab);
-
-	//inserts an object into the tree control
-	void		InsertObjectIntoTree(const CString& sPrepend, CBaseEditObj* pObj, CPrefabRef* pPrefab);
-
-	//recursively searches the tree for prefabs, and recurses into their tree adding objects
-	void		RecurseAddObjects(CWorldNode* pRoot, const CString& sPrepend, CPrefabRef* pPrefab);
+	// Fills the tree control with the objects grouped by their class
+	void		BuildObjectTree(CTreeCtrl *pTree);
 
 	// Updates the control states (visible and enabled) based on the
 	// options that are selected.
@@ -83,29 +69,11 @@ protected:
 
 	// Selects a specific object in the tree.  Returns TRUE if the object
 	// has been selected.  The tree is searched recursively.
-	BOOL		RecurseSelectObject(HTREEITEM hParentItem, const CString& sName);
-
-
-	//easy accessors for accessing the data of an item from the list or tree
-	CBaseEditObj*	GetListObject(int nIndex);
-	CBaseEditObj*	GetTreeObject(HTREEITEM hItem);
-
-	CPrefabRef*		GetListPrefab(int nIndex);
-	CPrefabRef*		GetTreePrefab(HTREEITEM hItem);
-
-	// Returns the selected object
-	CBaseEditObj	*GetSelectedObject()	{ return m_pSelectedObject; }
-	CPrefabRef		*GetSelectedPrefab()	{ return m_pSelectedPrefab; }
+	BOOL		RecurseSelectObject(CTreeCtrl *pTree, HTREEITEM hParentItem, CBaseEditObj *pObject);
 
 protected:
-
 	BOOL			m_bIsDialogValid;		// This is TRUE after OnInitDialog and before DestroyWindow
-	
 	CBaseEditObj	*m_pSelectedObject;		// Contains the currently selected object
-	CPrefabRef		*m_pSelectedPrefab;		// Contains the currently selected prefab (note that if this is non-null the locate and select will operate on this)
-
-	//the name of the object that should be selected after the dialog is set up
-	CString			m_sSelectedName;	
 
 	// This is the array of controls that should be made invisible upon
 	// the dialog opening.

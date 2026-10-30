@@ -40,19 +40,6 @@ public:
 	void		SetUseClassField(BOOL bUse)		{ m_bUseClassField=bUse; }
 	void		SetClassField(CString sClass)	{ m_sClassField=sClass; }
 
-	// Options for the property field
-	bool		GetUsePropertyField()			{ return m_bNodesWithProperty; }
-	bool		GetMatchValue()					{ return m_bMatchValue; }
-	int			GetPropType()					{ return m_nPropType; }
-	CString		GetPropName()					{ return m_sPropName; }
-	CString		GetPropValue()					{ return m_sPropValue; }
-
-	void		SetUsePropertyField(bool bProp)	{ m_bNodesWithProperty = bProp; }
-	void		SetMatchValue(bool bMatch)		{ m_bMatchValue = bMatch; }
-	void		SetPropType(int nType)			{ m_nPropType = nType; }
-	void		SetPropName(CString sName)		{ m_sPropName = sName; }
-	void		SetPropValue(CString sValue)	{ m_sPropValue = sValue; }
-
 	// The selection operation
 	int			GetSelectionOperation()					{ return m_nSelectionOperation; }
 	void		SetSelectionOperation(int nOperation)	{ m_nSelectionOperation=nOperation; }
@@ -67,12 +54,6 @@ protected:
 
 	BOOL		m_bUseClassField;		// True if the class field should be used
 	CString		m_sClassField;			// The class field
-
-	CString		m_sPropName;			// The name of the property
-	int			m_nPropType;			// The index of the property type in the combobox
-	CString		m_sPropValue;			// The value string for the property
-	bool		m_bNodesWithProperty;	// True if the property field should be used
-	bool		m_bMatchValue;			// True if we want to require a specific value for the property
 
 	int			m_nSelectionOperation;	// The selection operation (0-select 1-deselect)
 

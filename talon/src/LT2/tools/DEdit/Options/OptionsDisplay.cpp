@@ -27,11 +27,6 @@ extern TCHAR szRegKeyCompany[];
 extern TCHAR szRegKeyApp[];
 extern TCHAR szRegKeyVer[];
 
-//default values
-#define DEFAULT_VERTEX_SIZE				2
-#define DEFAULT_HANDLE_SIZE				4
-#define DEFAULT_PERSPECTIVE_FAR_Z		20000
-
 /************************************************************************/
 // Load an item
 BOOL CDisplayColorItem::Load(COptionsBase &options)
@@ -51,7 +46,7 @@ BOOL CDisplayColorItem::Load(COptionsBase &options)
 	sscanf(sValue, "%d %d %d", &r, &g, &b);
 	
 	// Set the color
-	SetColor(RGB(r, g, b));
+	m_crColor=RGB(r, g, b);
 
 	return TRUE;
 }
@@ -81,30 +76,17 @@ COptionsDisplay::COptionsDisplay()
 	ResetToDefaultColors();
 
 	// Set the default display options		
-	SetShadePolygons(TRUE);
-	SetShowSurfaceColor(FALSE);
-	SetVertexDrawRule(kVertexDrawSelectedOnly);
-
-	SetShowLighting(TRUE);
+	m_bShadePolygons=TRUE;
+	m_bShowSurfaceColor=FALSE;
+	m_nVertexDrawRule=kVertexDrawSelectedOnly;
+	m_nVertexSize=2;
+	m_nHandleSize=4;
 
 	// Set the default D3D options
-	SetZBufferLines(FALSE);
-	SetDefaultD3DDevice(0);
-	SetDefaultD3DMode(0);
-	
-	//set the defail detail texture options
-	SetDetailTexEnabled(TRUE);
-	SetDetailTexAdditive(TRUE);
-	SetDetailTexScale(1.0f);
-	SetDetailTexAngle(0.0f);
-
-	SetVertexSize(DEFAULT_VERTEX_SIZE);
-	SetHandleSize(DEFAULT_HANDLE_SIZE);
-
-	SetPerspectiveFarZ(DEFAULT_PERSPECTIVE_FAR_Z);
-
-	SetShowClassIcons(TRUE);
-	SetClassIconSize(30);
+	m_bZBufferLines=FALSE;
+	m_bUseD3DAsDefault=FALSE;
+	m_nDefaultD3DDevice=0;
+	m_nDefaultD3DMode=0;
 }
 
 COptionsDisplay::~COptionsDisplay()
@@ -116,60 +98,35 @@ COptionsDisplay::~COptionsDisplay()
 void COptionsDisplay::ResetToDefaultColors()
 {
 	// Setup the color maps
-	m_colorArray[kColorBackground]=					CDisplayColorItem("ColorBackground",	"Background",		RGB(72,72,72));
-	m_colorArray[kColorMajorGrid]=					CDisplayColorItem("ColorMajorGrid",		"MajorGrid",		RGB(60,60,60));
-	m_colorArray[kColorMinorGrid]=					CDisplayColorItem("ColorMinorGrid",		"MinorGrid",		RGB(95,95,95));	
-	m_colorArray[kColorBrushDrawLines]=				CDisplayColorItem("ColorBrush",			"Brush",			RGB(255,255,255));
-	m_colorArray[kColorBrushDrawLinesConcave]=		CDisplayColorItem("ColorBrushConcave",	"Brush Concave",	RGB(255,0,255));
-	m_colorArray[kColorBrushDrawLinesIntersect]=	CDisplayColorItem("ColorBrushIntersect","Brush Intersect",	RGB(255,0,0));
-	m_colorArray[kColorNormals]=					CDisplayColorItem("ColorNormals",		"Normals",			RGB(66,255,255));
-	m_colorArray[kColorSelectedBrush]=				CDisplayColorItem("ColorSelectedBrush",	"Selected Brush",	RGB(255,255,0));
-	m_colorArray[kColorFrozenBrush]=				CDisplayColorItem("ColorFrozenBrush",	"Frozen Brush",		RGB(0,0,255));
-	m_colorArray[kColorObject]=						CDisplayColorItem("ColorObject",		"Object",			RGB(255,0,0));	
-	m_colorArray[kColorSelectedObject]=				CDisplayColorItem("ColorSelectedObject","Selected Object",	RGB(255,255,255));
-	m_colorArray[kColorObjectRadius]=				CDisplayColorItem("ColorObjectRadius",	"Object Radius",	RGB(0,255,255));
-	m_colorArray[kColorObjectLink]=					CDisplayColorItem("ColorObjectLink",	"Object Link",		RGB(255,255,0));
-	m_colorArray[kColorObjectFOV]=					CDisplayColorItem("ColorObjectFOV",		"Object FOV",		RGB(0,255,255));	
-	m_colorArray[kColorObjectOrthoFrustum]=			CDisplayColorItem("ColorObjectOrthoFrustum","Object Ortho Frustum",		RGB(0,255,255));	
-	m_colorArray[kColorObjectDims]=					CDisplayColorItem("ColorObjectDims",	"Object Dims",		RGB(255,255,255));			
-	m_colorArray[kColorPath]=						CDisplayColorItem("ColorPath",			"Path",				RGB(255,255,0));			
-	m_colorArray[kColorSelectedFace]=				CDisplayColorItem("ColorSelectedFace",	"Selected Face",	RGB(255,0,0));
-	m_colorArray[kColorSelectedEdge]=				CDisplayColorItem("ColorSelectedEdge",	"Selected Edge",	RGB(0,255,0));
-	m_colorArray[kColorBoundingBox]=				CDisplayColorItem("ColorBoundingBox",	"Bounding Box",		RGB(192,192,192));	
-	m_colorArray[kColorOrigin]=						CDisplayColorItem("ColorOrigin",		"Origin",			RGB(255,255,0));	
-	m_colorArray[kColorMarker]=						CDisplayColorItem("ColorMarker",		"Marker",			RGB(0,255,0));
-	m_colorArray[kColorHandleOutline]=				CDisplayColorItem("ColorHandleOutline",	"Handle Outline",	RGB(255,255,255));
-	m_colorArray[kColorHandleFill]=					CDisplayColorItem("ColorHandleFill",	"Handle Fill",		RGB(0,0,0));
-	m_colorArray[kColorVertexOutline]=				CDisplayColorItem("ColorVertexOutline",	"Vertex Outline",	RGB(255,0,0));
-	m_colorArray[kColorVertexFill]=					CDisplayColorItem("ColorVertexFill",	"Vertex Fill",		RGB(255,0,0));
-	m_colorArray[kColorTaggedVerticeOutline]=		CDisplayColorItem("ColorTaggedVerticeOutline",	"Tagged Vertice Outline",	RGB(255,255,0));	
-	m_colorArray[kColorTaggedVerticeFill]=			CDisplayColorItem("ColorTaggedVerticeFill",		"Tagged Vertice Fill",		RGB(255,255,0));	
-	m_colorArray[kColorImmediateVertice] =			CDisplayColorItem("ColorImmediateVertice", "Immediate Vertex", RGB(50, 255, 50));
-	m_colorArray[kColorObjectOrientationX] =		CDisplayColorItem("ColorObjectOrientationX", "Object X Axis", RGB(255, 0, 0));
-	m_colorArray[kColorObjectOrientationY] =		CDisplayColorItem("ColorObjectOrientationY", "Object Y Axis", RGB(0, 255, 0));
-	m_colorArray[kColorObjectOrientationZ] =		CDisplayColorItem("ColorObjectOrientationZ", "Object Z Axis", RGB(0, 0, 255));
-	
+	m_colorArray[kColorBackground]=CDisplayColorItem("ColorBackground", "Background", RGB(72,72,72));
+	m_colorArray[kColorMajorGrid]=CDisplayColorItem("ColorMajorGrid", "MajorGrid", RGB(60,60,60));
+	m_colorArray[kColorMinorGrid]=CDisplayColorItem("ColorMinorGrid", "MinorGrid", RGB(95,95,95));
+	m_colorArray[kColorBrushDrawLines]=CDisplayColorItem("ColorBrush", "Brush", RGB(255,255,255));
+	m_colorArray[kColorSelectedBrush]=CDisplayColorItem("ColorSelectedBrush", "Selected Brush", RGB(255,255,0));
+	m_colorArray[kColorObject]=CDisplayColorItem("ColorObject", "Object", RGB(255,0,0));
+	m_colorArray[kColorSelectedObject]=CDisplayColorItem("ColorSelectedObject", "Selected Object", RGB(255,255,255));
+	m_colorArray[kColorObjectRadius]=CDisplayColorItem("ColorObjectRadius", "Object Radius", RGB(0,255,255));
+	m_colorArray[kColorObjectLink]=CDisplayColorItem("ColorObjectLink", "Object Link", RGB(255,255,0));
+	m_colorArray[kColorObjectFOV]=CDisplayColorItem("ColorObjectFOV", "Object FOV", RGB(0,255,255));
+	m_colorArray[kColorObjectDims]=CDisplayColorItem("ColorObjectDims", "Object Dims", RGB(255,255,255));
+	m_colorArray[kColorPath]=CDisplayColorItem("ColorPath", "Path", RGB(255,255,0));
+	m_colorArray[kColorSelectedFace]=CDisplayColorItem("ColorSelectedFace", "Selected Face", RGB(255,0,0));
+	m_colorArray[kColorSelectedEdge]=CDisplayColorItem("ColorSelectedEdge", "Selected Edge", RGB(0,255,0));
+	m_colorArray[kColorBoundingBox]=CDisplayColorItem("ColorBoundingBox", "Bounding Box", RGB(192,192,192));
+	m_colorArray[kColorOrigin]=CDisplayColorItem("ColorOrigin", "Origin", RGB(255,255,0));
+	m_colorArray[kColorMarker]=CDisplayColorItem("ColorMarker", "Marker", RGB(0,255,0));
+	m_colorArray[kColorHandleOutline]=CDisplayColorItem("ColorHandleOutline", "Handle Outline", RGB(255,255,255));
+	m_colorArray[kColorHandleFill]=CDisplayColorItem("ColorHandleFill", "Handle Fill", RGB(0,0,0));
+	m_colorArray[kColorVertexOutline]=CDisplayColorItem("ColorVertexOutline", "Vertex Outline", RGB(255,0,0));
+	m_colorArray[kColorVertexFill]=CDisplayColorItem("ColorVertexFill", "Vertex Fill", RGB(255,0,0));
+	m_colorArray[kColorTaggedVerticeOutline]=CDisplayColorItem("ColorTaggedVerticeOutline", "Tagged Vertice Outline", RGB(255,255,0));
+	m_colorArray[kColorTaggedVerticeFill]=CDisplayColorItem("ColorTaggedVerticeFill", "Tagged Vertice Fill", RGB(255,255,0));
+	m_colorArray[kColorLeakFinder]=CDisplayColorItem("ColorLeakFinder", "Leak Finder", RGB(255,255,0));
+	m_colorArray[kColorImmediateVertice]=CDisplayColorItem("ColorImmediateVertice", "Immediate Vertex", RGB(50,255,50));
 }
 
 /************************************************************************/
-// Sets the directory to be used when loading class icons
-void COptionsDisplay::SetClassIconsDir(const char* pszDir)
-{
-	m_sClassIconsDir  = pszDir;
-
-	//make all the slashes standard
-	m_sClassIconsDir.Replace('/', '\\');
-
-	//add a trailing slash if needed
-	if(m_sClassIconsDir.GetLength() && (m_sClassIconsDir[m_sClassIconsDir.GetLength() - 1] != '\\'))
-	{
-		m_sClassIconsDir += '\\';
-	}
-
-}
-
-/************************************************************************/
-// Loads the display options to the registry
+// Loads the display options from the registry
 BOOL COptionsDisplay::Load()
 {
 	// Load each color item
@@ -179,61 +136,21 @@ BOOL COptionsDisplay::Load()
 		GetColorItem(i)->Load(*this);
 	}	
 
-	CString sVal;
-	sVal.Format("%f", MATH_PI / 2);
-	SetViewAngle(atof(GetStringValue("ViewAngle", sVal)));
-	SetUseAspectRatio(GetBoolValue("UseAspectRatio", FALSE));
+	m_bShadePolygons=GetBoolValue("ShadePolygons", TRUE);
+	m_bShowSurfaceColor=GetBoolValue("ShowSurfaceColor", FALSE);
+	m_nVertexSize=GetDWordValue("VertexSize", 2);
+	m_nHandleSize=GetDWordValue("HandleSize", 4);
+	m_nVertexDrawRule=GetDWordValue("VertexDrawRule", kVertexDrawSelectedOnly);
 
-	// Load the shade polygons value
-	SetShadePolygons(GetBoolValue("ShadePolygons", TRUE));
-
-	// Load the "show surface color" value
-	SetShowSurfaceColor(GetBoolValue("ShowSurfaceColor", FALSE));
-
-	// Load the vertex/handle sizes
-	SetVertexSize(GetDWordValue("VertexSize", DEFAULT_VERTEX_SIZE));
-	SetHandleSize(GetDWordValue("HandleSize", DEFAULT_HANDLE_SIZE));
-
-	// Load the vertex draw rule
-	SetVertexDrawRule(GetDWordValue("VertexDrawRule", kVertexDrawSelectedOnly));
-
-	//load the Far Z clipping plane
-	SetPerspectiveFarZ(GetDWordValue("PerspectiveFarZ", DEFAULT_PERSPECTIVE_FAR_Z));
-
-	//load if the object boxes should be oriented
-	SetOrientObjectBoxes(GetBoolValue("OrientObjectBoxes", TRUE));
-
-
-	SetShowSelectedDecals(GetBoolValue("ShowSelectedDecals", TRUE));
-
-	SetHideFrozenNodes(GetBoolValue("HideFrozenNodes", FALSE));
-
-	//load the tint options
-	SetTintSelected(GetBoolValue("TintSelected", TRUE));
-	SetTintFrozen(GetBoolValue("TintFrozen", TRUE));
-
-	/////////////////////////////
 	// Load the D3D options
-	SetSaturateLightmaps(GetBoolValue("SaturateLightmaps", TRUE));
-	SetDefaultD3DDevice(GetDWordValue("DefaultD3DDevice", 0));
+	m_bUseD3DAsDefault=GetBoolValue("UseD3DAsDefault", FALSE);
+	m_nDefaultD3DDevice=GetDWordValue("DefaultD3DDevice", 0);
+	m_nDefaultD3DMode=GetDWordValue("DefaultD3DMode", 0);
 
 	// Always set the mipmap offset to zero
-	SetMipMapOffset(GetDWordValue("MipMapOffset", 0));	
-	//m_dwMipMapOffset=0;
+	m_dwMipMapOffset=0;
 
-	// Load the Z-Buffer lines value
-	SetZBufferLines(GetBoolValue("ZBufferLines", TRUE));
-
-	//save the class icon information
-	SetShowClassIcons(GetBoolValue("ShowClassIcons", TRUE));
-	SetClassIconsDir(GetStringValue("ClassIconsDir", "ClassIcons\\"));
-	SetClassIconSize(GetDWordValue("ClassIconSize", 12));
-
-	//load the detail texture options
-	SetDetailTexEnabled(GetBoolValue("DetailTexEnable", TRUE));
-	SetDetailTexAdditive(GetBoolValue("DetailTexAdditive", TRUE));
-	SetDetailTexScale(atof(GetStringValue("DetailTexScale", "1.0")));
-	SetDetailTexAngle(atof(GetStringValue("DetailTexAngle", "0.0")));
+	m_bZBufferLines=GetBoolValue("ZBufferLines", FALSE);
 
 	return TRUE;
 }
@@ -249,64 +166,44 @@ BOOL COptionsDisplay::Save()
 		GetColorItem(i)->Save(*this);
 	}	
 
-	CString sVal;
-	sVal.Format("%f", GetViewAngle());
-	SetStringValue("ViewAngle",					sVal);
-	SetBoolValue("UseAspectRatio",				IsUseAspectRatio());
+	SetBoolValue("ShadePolygons",		m_bShadePolygons);
+	SetBoolValue("ShowSurfaceColor",	m_bShowSurfaceColor);
+	SetDWordValue("VertexSize",			m_nVertexSize);
+	SetDWordValue("HandleSize",			m_nHandleSize);
+	SetDWordValue("VertexDrawRule",		m_nVertexDrawRule);
+	SetBoolValue("ZBufferLines",		m_bZBufferLines);
 
-	// Save the shade polygons value
-	SetBoolValue("ShadePolygons",				IsShadePolygons());
-
-	// Save the "show surface color" value
-	SetBoolValue("ShowSurfaceColor",			IsShowSurfaceColor());
-
-	// Save the vertex/handle sizes
-	SetDWordValue("VertexSize",					GetVertexSize());
-	SetDWordValue("HandleSize",					GetHandleSize());
-
-	// Save the vertex draw rule
-	SetDWordValue("VertexDrawRule",				GetVertexDrawRule());
-
-	// save the far Z distance
-	SetDWordValue("PerspectiveFarZ",			GetPerspectiveFarZ());
-
-	//save if we want the object boxes oriented
-	SetBoolValue("OrientObjectBoxes",			IsOrientObjectBoxes());
-
-	//save the tint options
-	SetBoolValue("TintSelected",				IsTintSelected());
-	SetBoolValue("TintFrozen",					IsTintFrozen());
-
-	SetBoolValue("ShowSelectedDecals",			IsShowSelectedDecals());
-	SetBoolValue("HideFrozenNodes",				IsHideFrozenNodes());
-
-	//save the class icons options
-	SetBoolValue("ShowClassIcons",				IsShowClassIcons());
-	SetStringValue("ClassIconsDir",				GetClassIconsDir());
-	SetDWordValue("ClassIconSize",				GetClassIconSize());
-
-	/////////////////////////////
 	// Save the D3D options
-
-	// Save the Z-Buffer lines value
-	SetBoolValue("ZBufferLines",				IsZBufferLines());
-	SetBoolValue("SaturateLightmaps",			IsSaturateLightmaps());
-
-	SetDWordValue("DefaultD3DDevice",			GetDefaultD3DDevice());
-	SetDWordValue("DefaultD3DMode",				GetDefaultD3DMode());	
-	SetDWordValue("MipMapOffset",				GetMipMapOffset());
-
-	//save the detail texture settings
-	SetBoolValue("DetailTexEnable",				IsDetailTexEnabled());
-	SetBoolValue("DetailTexAdditive",			IsDetailTexAdditive());
-
-	//for formatting the floats
-	sVal.Format("%f", GetDetailTexScale());
-	SetStringValue("DetailTexScale",			sVal);
-
-	sVal.Format("%f", GetDetailTexAngle());
-	SetStringValue("DetailTexAngle",			sVal);
+	SetBoolValue("UseD3DAsDefault",		m_bUseD3DAsDefault);
+	SetDWordValue("DefaultD3DDevice",	m_nDefaultD3DDevice);
+	SetDWordValue("DefaultD3DMode",		m_nDefaultD3DMode);	
+	SetDWordValue("MipMapOffset",		m_dwMipMapOffset);
 
 	return TRUE;
 }
 
+/************************************************************************/
+// Returns a color
+COLORREF COptionsDisplay::GetColor(int nColorType)
+{
+	CDisplayColorItem *pItem=GetColorItem(nColorType);
+	if (pItem)
+	{
+		return pItem->GetColor();
+	}
+	else
+	{
+		return RGB(255,255,255);
+	}
+}
+
+/************************************************************************/
+// Returns a color item
+CDisplayColorItem *COptionsDisplay::GetColorItem(int nColorType)
+{
+	if (nColorType >= 0 && nColorType < kNumColorOptions)
+	{
+		return &m_colorArray[nColorType];
+	}
+	return NULL;
+}

@@ -396,6 +396,11 @@ public:
 
 	CPreWorld*				FindWorldModel(const char *pName);
 
+#ifdef DIRECTEDITOR_BUILD
+	// DEdit: poly iPoly of world model iWorld, or NULL (0x446328).
+	CPrePoly*				FindPoly(uint32 iWorld, uint32 iPoly);
+#endif
+
 	// These just call thru to all their worlds.
 	void					MinimizeSurfaceTCoords();
 	

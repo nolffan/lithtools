@@ -29,11 +29,7 @@ CPropPageOptionsD3D::CPropPageOptionsD3D() : CPropertyPage(CPropPageOptionsD3D::
 	//{{AFX_DATA_INIT(CPropPageOptionsD3D)
 	m_bBlurryTextures				= FALSE;
 	m_bZBufferLines					= FALSE;
-	m_bSaturateLightmaps			= TRUE;
-	m_bDetailTexEnable				= TRUE;
-	m_bDetailTexAdditive			= TRUE;
-	m_sDetailTexScale				= "1.0";
-	m_sDetailTexAngle				= "0.0";
+	m_bUseD3DAsDefault				= FALSE;
 	//}}AFX_DATA_INIT
 }
 
@@ -49,26 +45,17 @@ void CPropPageOptionsD3D::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_COMBO_D3DDEVICES, m_comboD3Ddevices);
 	DDX_Check(pDX, IDC_BLURRY_TEXTURES, m_bBlurryTextures);
 	DDX_Check(pDX, IDC_CHECK_ZBUFFER_LINES, m_bZBufferLines);
-	DDX_Check(pDX, IDC_CHECK_DETAIL_TEX_ENABLE, m_bDetailTexEnable);
-	DDX_Check(pDX, IDC_CHECK_DETAIL_TEX_ADDITIVE, m_bDetailTexAdditive);
-	DDX_Check(pDX, IDC_CHECK_SATURATE_LIGHTMAPS, m_bSaturateLightmaps);
-	DDX_Text(pDX, IDC_DETAIL_TEX_SCALE, m_sDetailTexScale);
-	DDX_Text(pDX, IDC_DETAIL_TEX_ANGLE, m_sDetailTexAngle);
+	DDX_Check(pDX, IDC_CHECK_USE_D3D_AS_DEFAULT, m_bUseD3DAsDefault);
 	//}}AFX_DATA_MAP
 }
 
 
 BEGIN_MESSAGE_MAP(CPropPageOptionsD3D, CPropertyPage)
 	//{{AFX_MSG_MAP(CPropPageOptionsD3D)
-	ON_BN_CLICKED(IDC_CHECK_ZBUFFER_LINES, GenericUpdateAll)
-	ON_BN_CLICKED(IDC_CHECK_DETAIL_TEX_ENABLE,	GenericUpdateAll)
-	ON_BN_CLICKED(IDC_CHECK_DETAIL_TEX_ADDITIVE, GenericUpdateAll)
-	ON_BN_CLICKED(IDC_CHECK_SATURATE_LIGHTMAPS, GenericUpdateAll)
-	ON_EN_CHANGE(IDC_DETAIL_TEX_SCALE, GenericUpdateAll)
-	ON_EN_CHANGE(IDC_DETAIL_TEX_ANGLE, GenericUpdateAll)
-	ON_CBN_SELCHANGE(IDC_COMBO_D3DDEVICES, GenericUpdateAll)
-	ON_CBN_SELCHANGE(IDC_COMBO_D3D_MODE, GenericUpdateAll)
-	ON_BN_CLICKED(IDC_BLURRY_TEXTURES, OnBlurryTextures)
+	ON_BN_CLICKED(IDC_CHECK_ZBUFFER_LINES, OnCheckZBufferLines)
+	ON_BN_CLICKED(IDC_CHECK_USE_D3D_AS_DEFAULT, OnCheckUseD3DAsDefault)
+	ON_CBN_SELCHANGE(IDC_COMBO_D3DDEVICES, OnSelchangeCombo)
+	ON_CBN_SELCHANGE(IDC_COMBO_D3D_MODE, OnSelchangeCombo)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -107,15 +94,8 @@ BOOL CPropPageOptionsD3D::OnInitDialog()
 
 	// Get the D3D values
 	m_bZBufferLines				= pDisplayOptions->IsZBufferLines();	
-	m_bSaturateLightmaps		= pDisplayOptions->IsSaturateLightmaps();
 	m_bBlurryTextures			= (BOOL)pDisplayOptions->GetMipMapOffset();
-	
-	// Set up the detail texture info
-	m_bDetailTexEnable			= pDisplayOptions->IsDetailTexEnabled();
-	m_bDetailTexAdditive		= pDisplayOptions->IsDetailTexAdditive();
-
-	m_sDetailTexScale.Format("%.2f", pDisplayOptions->GetDetailTexScale());
-	m_sDetailTexAngle.Format("%.2f", pDisplayOptions->GetDetailTexAngle());
+	m_bUseD3DAsDefault			= pDisplayOptions->IsUseD3DAsDefault();
 
 	m_comboD3Ddevices.SetCurSel(pDisplayOptions->GetDefaultD3DDevice());
 	m_comboD3Dmode.SetCurSel(pDisplayOptions->GetDefaultD3DMode());
@@ -130,7 +110,8 @@ BOOL CPropPageOptionsD3D::OnInitDialog()
 }
 
 /************************************************************************/
-// Updates the display options with the current dialog data
+// Updates the display options with the current dialog data.  The blurry
+// textures check (the mipmap offset) is read but never written back.
 void CPropPageOptionsD3D::UpdateDisplayOptions()
 {
 	// Update the data
@@ -138,87 +119,57 @@ void CPropPageOptionsD3D::UpdateDisplayOptions()
 
 	// The display options class
 	COptionsDisplay *pDisplayOptions=GetApp()->GetOptions().GetDisplayOptions();
-	if (!pDisplayOptions)
+	if (pDisplayOptions)
 	{
-		ASSERT(FALSE);
-		return;
+		pDisplayOptions->SetZBufferLines(m_bZBufferLines);	
+		pDisplayOptions->SetUseD3DAsDefault(m_bUseD3DAsDefault);
+
+		// Set the default device
+		int nSelection=m_comboD3Ddevices.GetCurSel();
+		if (nSelection != CB_ERR)
+		{
+			pDisplayOptions->SetDefaultD3DDevice(nSelection);
+		}
+
+		// Set the default mode
+		nSelection=m_comboD3Dmode.GetCurSel();
+		if (nSelection != CB_ERR)
+		{
+			pDisplayOptions->SetDefaultD3DMode(nSelection);
+		}
 	}
-
-	// Set the Z buffer line status
-	pDisplayOptions->SetZBufferLines(m_bZBufferLines);	
-	pDisplayOptions->SetSaturateLightmaps(m_bSaturateLightmaps);
-
-	pDisplayOptions->SetMipMapOffset(m_bBlurryTextures ? 1 : 0);
-
-	// Set the default device
-	int nSelection=m_comboD3Ddevices.GetCurSel();
-	if (nSelection != CB_ERR)
-	{
-		pDisplayOptions->SetDefaultD3DDevice(nSelection);
-	}
-
-	// Set the default mode
-	nSelection=m_comboD3Dmode.GetCurSel();
-	if (nSelection != CB_ERR)
-	{
-		pDisplayOptions->SetDefaultD3DMode(nSelection);
-	}
-
-	//set up the detail texture options
-	pDisplayOptions->SetDetailTexEnabled(m_bDetailTexEnable);
-	pDisplayOptions->SetDetailTexAdditive(m_bDetailTexAdditive);
-	pDisplayOptions->SetDetailTexScale(atof(m_sDetailTexScale));
-	pDisplayOptions->SetDetailTexAngle(atof(m_sDetailTexAngle));
 }
 
 /************************************************************************/
 // Update the enabled status of the controls
 void CPropPageOptionsD3D::UpdateEnabledStatus()
 {
-	//detail texture settings
-	GetDlgItem(IDC_CHECK_DETAIL_TEX_ADDITIVE)->EnableWindow(m_bDetailTexEnable);
-	GetDlgItem(IDC_DETAIL_TEX_SCALE)->EnableWindow(m_bDetailTexEnable);
-	GetDlgItem(IDC_DETAIL_TEX_ANGLE)->EnableWindow(m_bDetailTexEnable);
-
-	GetDlgItem(IDC_STATIC_DETAIL_TEX_SCALE)->EnableWindow(m_bDetailTexEnable);
-	GetDlgItem(IDC_STATIC_DETAIL_TEX_ANGLE)->EnableWindow(m_bDetailTexEnable);
+	GetDlgItem(IDC_STATIC_DEVICE_TEXT)->EnableWindow(m_bUseD3DAsDefault);
+	GetDlgItem(IDC_STATIC_MODE_TEXT)->EnableWindow(m_bUseD3DAsDefault);
+	GetDlgItem(IDC_COMBO_D3DDEVICES)->EnableWindow(m_bUseD3DAsDefault);
+	GetDlgItem(IDC_COMBO_D3D_MODE)->EnableWindow(m_bUseD3DAsDefault);
 }
 
-void CPropPageOptionsD3D::UpdateAll(bool bRedrawViews)
+/************************************************************************/
+void CPropPageOptionsD3D::OnCheckZBufferLines() 
 {
-	// Update the data
-	UpdateData();
-	
-	// Update the display options
 	UpdateDisplayOptions();
 
-	// Update the enabled status of the controls
-	UpdateEnabledStatus();
-
-	if(bRedrawViews)
-	{
-		RedrawAllDocuments();
-	}
-}
-
-
-void CPropPageOptionsD3D::GenericUpdateAll()
-{
-	UpdateAll(true);
-}
-
-void CPropPageOptionsD3D::OnBlurryTextures()
-{
-	// Update the data
-	UpdateData();
-	
-	// Update the display options
-	UpdateDisplayOptions();
-
-	// Update the enabled status of the controls
-	UpdateEnabledStatus();
-
-	dib_FreeAllTextures();
-
+	// Redraw all of the documents
 	RedrawAllDocuments();
+}
+
+/************************************************************************/
+void CPropPageOptionsD3D::OnCheckUseD3DAsDefault() 
+{
+	UpdateData();
+	UpdateDisplayOptions();
+	UpdateEnabledStatus();
+}
+
+/************************************************************************/
+void CPropPageOptionsD3D::OnSelchangeCombo() 
+{
+	UpdateData();
+	UpdateDisplayOptions();
 }

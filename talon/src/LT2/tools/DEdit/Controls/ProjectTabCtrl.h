@@ -35,14 +35,6 @@ public:
 	// Set the project bar pointer
 	void	SetProjectBar(CProjectBar *pProjectBar)		{ m_pProjectBar=pProjectBar; }
 
-	// This sets the image for the currently selected tab
-
-	void	SetCurrentTabImage();				// no image specified
-	void	SetCurrentTabImage(int nIndex);		// image specified
-
-	// Sets all tab images to the appropriate icon
-	void	SetTabImages();
-
 	// Generated message map functions
 protected:
 	//{{AFX_MSG(CProjectTabCtrl)

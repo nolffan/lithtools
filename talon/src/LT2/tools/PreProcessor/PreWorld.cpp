@@ -972,6 +972,23 @@ PReal CPreMainWorld::CalcLMCompressionRatio()
 }
 
 
+#ifdef DIRECTEDITOR_BUILD
+// DEdit: poly iPoly of world model iWorld, or NULL (0x446328).
+CPrePoly* CPreMainWorld::FindPoly(uint32 iWorld, uint32 iPoly)
+{
+	if(iWorld < m_WorldModels.GetSize())
+	{
+		CPreWorld *pWorld = m_WorldModels[iWorld];
+		GPOS pos = pWorld->m_Polies.FindIndex(iPoly);
+		if(pos)
+			return pWorld->m_Polies.GetAt(pos);
+	}
+
+	return NULL;
+}
+#endif
+
+
 CPreLightAnim* CPreMainWorld::FindLightAnim(const char *pName)
 {
 	uint32 i;

@@ -236,7 +236,7 @@ BOOL CObjectImporter::ProcessObject(CString sNameAndType, BOOL bUpdateObjects)
 		pDoc->BindNode(pObject, pRegion->GetActiveParentNode());
 
 		// Select the object
-		pDoc->SelectNode(pObject, false);	
+		pDoc->SelectNode(pObject, TRUE);
 	}
 
 	return TRUE;

@@ -48,15 +48,14 @@
 								CBaseProp( const char *pName );
 
 			virtual void		LoadData( CAbstractIO &file )	{}
-			virtual void		SaveData( CAbstractIO &file )	{}
 #ifdef DIRECTEDITOR_BUILD
-			// talon: Build 69's LTA virtuals, for DEdit (the 2001 one has an
-			// LTA world); where in its vtable is to be found.
+			// talon: DEdit's 2001 vtable (0x4dade8): LoadData, LoadDataLTA,
+			// SaveData, Copy, CreateSameKind, SetupString, SetupGenericProp
+			// and SameAs (below; the derived classes' SameAs take their own
+			// type and override nothing).
 			virtual void		LoadDataLTA( CLTANode* pNode )	{}
-			virtual uint32		DataSize( ) const { return 0; }
-			virtual void		SaveDataLTA( CLTAFile* pFile, uint32 level )	{}
-			virtual void		SaveDataLTA( CLTANodeBuilder &lb )	{}
 #endif
+			virtual void		SaveData( CAbstractIO &file )	{}
 			virtual void		Copy( CBaseProp *pOther );
 			virtual CBaseProp*	CreateSameKind()				{ return new CBaseProp(NULL); }
 			virtual void		SetupString(char *pStr) {}
@@ -70,6 +69,9 @@
 			// talon: not virtual in 2001: CBaseProp's vtable (0x475b38) has six
 			// slots -- LoadData, SaveData, Copy, CreateSameKind, SetupString,
 			// SetupGenericProp -- and no LTA ones or DataSize
+#ifdef DIRECTEDITOR_BUILD
+			virtual
+#endif
 			bool						SameAs(CBaseProp* pProp) 
 			{
 				if( m_Type == pProp->m_Type )
@@ -100,9 +102,6 @@
 			void		SaveData( CAbstractIO &file );
 #ifdef DIRECTEDITOR_BUILD
 				void		LoadDataLTA( CLTANode* pNode );
-				uint32		DataSize( ) const;
-				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
-				void		SaveDataLTA( CLTANodeBuilder &lb );
 #endif
 			void		Copy( CBaseProp *pOther );
 			virtual		CBaseProp*	CreateSameKind()				{ return new CStringProp(NULL); }
@@ -114,7 +113,11 @@
 
 			char		m_String[MAX_STRINGPROP_LEN+1];
 
+#ifdef DIRECTEDITOR_BUILD
+			bool	SameAs(CStringProp* pProp) 
+#else
 			bool	SameAs(CBaseProp* pProp) 
+#endif
 			{
 				if( CBaseProp::SameAs(pProp) )
 				{
@@ -138,9 +141,6 @@
 			void		SaveData( CAbstractIO &file );
 #ifdef DIRECTEDITOR_BUILD
 				void		LoadDataLTA( CLTANode* pNode );
-				uint32		DataSize( ) const;
-				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
-				void		SaveDataLTA( CLTANodeBuilder &lb );
 #endif
 			void		Copy( CBaseProp *pOther );
 			virtual		CBaseProp*	CreateSameKind()				{ return new CVectorProp(NULL); }
@@ -150,7 +150,11 @@
 			void		SetVector(CVector v)					{ m_Vector=v; }
 			CVector		m_Vector;
 
+#ifdef DIRECTEDITOR_BUILD
+			bool	SameAs(CVectorProp* pProp) 
+#else
 			bool	SameAs(CBaseProp* pProp) 
+#endif
 			{
 				if( CBaseProp::SameAs(pProp) )
 				{
@@ -174,9 +178,6 @@
 		void		SaveData( CAbstractIO &file );
 #ifdef DIRECTEDITOR_BUILD
 			void		LoadDataLTA( CLTANode* pNode );
-			uint32		DataSize( ) const;
-			void		SaveDataLTA( CLTAFile* pFile, uint32 level );
-			void		SaveDataLTA( CLTANodeBuilder &lb );
 #endif
 		void		Copy( CBaseProp *pOther );
 		virtual CBaseProp*	CreateSameKind() { return new CRotationProp(NULL); }
@@ -187,7 +188,11 @@
 		LTVector&	GetEulerAngles()				{return m_EulerAngles;}
 		void		SetEulerAngles(LTVector vec)	{m_EulerAngles = vec;}
 
+#ifdef DIRECTEDITOR_BUILD
+		bool	SameAs(CRotationProp* pProp) 
+#else
 		bool	SameAs(CBaseProp* pProp) 
+#endif
 		{
 			if( CBaseProp::SameAs(pProp) )
 			{
@@ -214,7 +219,11 @@
 			void				SetColor(CVector vColor)		{ SetVector(vColor); }
 			virtual CBaseProp*	CreateSameKind()				{ return new CColorProp(NULL); }
 
+#ifdef DIRECTEDITOR_BUILD
+			bool	SameAs(CColorProp* pProp) 
+#else
 			bool	SameAs(CBaseProp* pProp) 
+#endif
 			{
 				if( CVectorProp::SameAs(pProp) )
 				{
@@ -234,9 +243,6 @@
 			void		SaveData( CAbstractIO &file );
 #ifdef DIRECTEDITOR_BUILD
 				void		LoadDataLTA( CLTANode* pNode );
-				uint32		DataSize( ) const;
-				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
-				void		SaveDataLTA( CLTANodeBuilder &lb );
 #endif
 			void		Copy( CBaseProp *pOther );
 			void		SetupString(char *pStr);
@@ -247,7 +253,11 @@
 			void		SetValue(float fValue)					{ m_Value=fValue; }
 			float		m_Value;
 
+#ifdef DIRECTEDITOR_BUILD
+			bool	SameAs(CRealProp* pProp) 
+#else
 			bool	SameAs(CBaseProp* pProp) 
+#endif
 			{
 				if( CBaseProp::SameAs(pProp) )
 				{
@@ -269,9 +279,6 @@
 			void		SaveData( CAbstractIO &file );
 #ifdef DIRECTEDITOR_BUILD
 				void		LoadDataLTA( CLTANode* pNode );
-				uint32		DataSize( ) const;
-				void		SaveDataLTA( CLTAFile* pFile, uint32 level );
-				void		SaveDataLTA( CLTANodeBuilder &lb );
 #endif
 			void		Copy( CBaseProp *pOther );
 			void		SetupString(char *pStr);
@@ -282,7 +289,11 @@
 
 			char		m_Value;
 
+#ifdef DIRECTEDITOR_BUILD
+			bool		SameAs(CBoolProp* pProp) 
+#else
 			bool		SameAs(CBaseProp* pProp) 
+#endif
 			{
 				if( CBaseProp::SameAs(pProp) )
 				{
@@ -306,7 +317,9 @@
 			void					Term();
 
 			CBaseProp*				GetProp(const char *pName, BOOL bAssert=FALSE, uint32 *pIndex=NULL);
+#ifndef DIRECTEDITOR_BUILD
 			CBaseProp*				GetPropPartial(const char *pName, BOOL bAssert=FALSE, uint32 *pIndex=NULL);
+#endif
 			CBaseProp*				GetMatchingProp(const char *pName, int type);
 			// Note : This returns the first prop that matches ALL of the flags.  (Not just any of them)
 			CBaseProp*				GetPropByFlagsAndType(uint32 flags, int type, uint32 *index=NULL);
@@ -325,8 +338,10 @@
 
 			bool					SameAs(CPropList* pPropList);
 
+#ifndef DIRECTEDITOR_BUILD
 			//determines if the property lists are the same, but ignores properties listed in the filter
 			bool					SameAs(CPropList* pPropList, uint32 nNumFilters, const char** pszFilter);
+#endif
 
 		public:
 
@@ -336,17 +351,13 @@
 
 
 #ifdef DIRECTEDITOR_BUILD
-// talon: Build 69's, for DEdit's LTA world.
+// talon: DEdit's (0x44ddc8..0x44de66): no filters, no TBW or LTA save.
 class CPropListContainer
 {
 public:
 			CPropListContainer();
 	void	Init();
-	uint32	AddPropList(CPropList* propList, uint32 nNumFilters, const char** pszFilters);
 	uint32	AddPropList(CPropList* propList, bool alwaysAdd=false);
-
-	void	SaveLTA( CLTAFile* pFile, uint32 level );
-	void	SaveTBW( CAbstractIO& OutFile );
 
 	CPropList* GetElem(uint32 index) {return m_propList[index];} 
 	void	UnloadFromMemory();

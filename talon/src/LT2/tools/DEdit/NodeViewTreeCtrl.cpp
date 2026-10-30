@@ -14,7 +14,6 @@
 #include "regiondoc.h"
 #include "mainfrm.h"
 #include "regionview.h"
-#include "optionsmisc.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -46,7 +45,6 @@ BEGIN_MESSAGE_MAP(CNodeViewTreeCtrl, CMyTreeCtrl)
 	ON_NOTIFY_REFLECT(TVN_BEGINLABELEDIT, OnBeginLabelEdit)
 	ON_NOTIFY_REFLECT(TVN_ITEMEXPANDED, OnItemExpanded)
 	ON_WM_LBUTTONDOWN()
-	ON_WM_LBUTTONDBLCLK()
 	ON_COMMAND(ID_EDIT_PASTE, OnEditPaste)
 	ON_COMMAND(ID_EDIT_PASTE_ALTERNATE, OnEditPasteAlternate)
 	ON_COMMAND(ID_EDIT_COPY, OnEditCopy)
@@ -155,7 +153,7 @@ void CNodeViewTreeCtrl::MoveItem( HTREEITEM hNode, HTREEITEM hParent )
 	}
 
 	// Attach node to new parent...
-	pNodeView->GetDoc( )->Modify(new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
+	pNodeView->GetDoc( )->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);
 
 	pNodeView->GetDoc( )->GetRegion( )->AttachNode( pNode, pParentNode );
 	pNodeView->GetDoc( )->UpdateAllViews( NULL );
@@ -286,15 +284,10 @@ void CNodeViewTreeCtrl::SetNodeImage( HTREEITEM hItem, CWorldNode *pActiveParent
 	CNodeView *pNodeView = (CNodeView *)GetParent( );
 	CRegionDoc *pDoc=pNodeView->GetDoc();
 
-	if (pDoc)
+	// Get the active parent node if needed	
+	if (pDoc && pActiveParentNode == NULL)
 	{
-		CEditRegion *pRegion=pDoc->GetRegion( );
-
-		// Get the active parent node if needed	
-		if (pActiveParentNode == NULL)
-		{
-			pActiveParentNode=pRegion->GetActiveParentNode();
-		}
+		pActiveParentNode=pDoc->GetRegion( )->GetActiveParentNode();
 	}
 	
 	CWorldNode *pNode;
@@ -306,14 +299,11 @@ void CNodeViewTreeCtrl::SetNodeImage( HTREEITEM hItem, CWorldNode *pActiveParent
 	// Get the correct image...
 	switch( pNode->GetType( ))
 	{
-		case Node_Object:
-			nImage = NODE_OBJECT;
-			break;
 		case Node_Brush:
 			nImage = NODE_BRUSH;
 			break;
-		case Node_PrefabRef:
-			nImage = NODE_PREFABREF;
+		case Node_Object:
+			nImage = NODE_OBJECT;
 			break;
 		default:
 			nImage = NODE_NULL;
@@ -329,23 +319,20 @@ void CNodeViewTreeCtrl::SetNodeImage( HTREEITEM hItem, CWorldNode *pActiveParent
 	SetItemImage( hItem, nImage, nImage );
 
 	// Set the overlay
-	UINT mask = NODE_MASK_UNSELECTED;
-
-	if( pNode->IsFlagSet( NODEFLAG_HIDDEN ))
+	UINT mask;
+	if( pNode->IsFlagSet(NODEFLAG_SELECTED))
 	{
-		if( pNode->IsFlagSet(NODEFLAG_FROZEN))
-			mask = NODE_MASK_FROZEN_AND_HIDDEN;
-		else if( pNode->IsFlagSet(NODEFLAG_SELECTED))
+		if( pNode->IsFlagSet( NODEFLAG_HIDDEN ))
 			mask = NODE_MASK_SELECTED_AND_HIDDEN;
 		else
-			mask = NODE_MASK_HIDDEN;
+			mask = NODE_MASK_SELECTED;
 	}
 	else
 	{
-		if( pNode->IsFlagSet(NODEFLAG_FROZEN))
-			mask = NODE_MASK_FROZEN;
-		else if( pNode->IsFlagSet(NODEFLAG_SELECTED))
-			mask = NODE_MASK_SELECTED;
+		if( pNode->IsFlagSet( NODEFLAG_HIDDEN ))
+			mask = NODE_MASK_HIDDEN;
+		else
+			mask = NODE_MASK_UNSELECTED;
 	}		
 	
 	// Set the image state
@@ -369,7 +356,7 @@ void CNodeViewTreeCtrl::SetNodeImage( HTREEITEM hItem, CWorldNode *pActiveParent
 //  Purpose:	Selects a tree of nodes.
 //
 //------------------------------------------------------------------------------------------
-void CNodeViewTreeCtrl::SelectTree( HTREEITEM hItem, bool bRecurse, bool bMultiSelect, bool bNotifySelectionChange )
+void CNodeViewTreeCtrl::SelectTree( HTREEITEM hItem, BOOL bRecurse, BOOL bNotifySelectionChange )
 {
 	CWorldNode *pNode;
 	CRegionDoc *pDoc;
@@ -399,7 +386,7 @@ void CNodeViewTreeCtrl::SelectTree( HTREEITEM hItem, bool bRecurse, bool bMultiS
 	{
 		// Select the node and its children...
 		pDoc->GetRegion()->DoSelectionOperation( pNode, 
-				(GetMainFrame()->GetNodeSelectionMode()==MULTI_SELECTION) || bMultiSelect,
+				GetMainFrame()->GetNodeSelectionMode()==MULTI_SELECTION,
 				bRecurse );
 
 		// Make sure root is not selected...
@@ -418,49 +405,10 @@ void CNodeViewTreeCtrl::SelectTree( HTREEITEM hItem, bool bRecurse, bool bMultiS
 	Select( hItem, TVGN_CARET );
 }
 
-void CNodeViewTreeCtrl::SelectTree( CWorldNode *pNode, bool bRecurse, bool bMultiSelect, bool bNotifySelectionChange )
+void CNodeViewTreeCtrl::SelectTree( CWorldNode *pNode, BOOL bRecurse, BOOL bNotifySelectionChange )
 {
-//	SelectTree( FindItem( GetRootItem( ), pNode ), bRecurse, bMultiSelect, bNotifySelectionChange );
-	SelectTree( pNode->GetItem( ), bRecurse, bMultiSelect, bNotifySelectionChange );
-}
-
-//------------------------------------------------------------------------------------------
-//
-//  CNodeViewTreeCtrl::FindItem
-//
-//  Purpose:	Finds tree item from node.
-//
-//------------------------------------------------------------------------------------------
-HTREEITEM CNodeViewTreeCtrl::FindItem( HTREEITEM hItem, CWorldNode *pNode )
-{
-	HTREEITEM hChildItem, hFoundItem;
-
-	// This loop checks each of the sibling items...
-	do
-	{
-		// Check if we have found the item...
-		if( pNode == ( CWorldNode * )GetItemData( hItem ))
-			return hItem;
-
-		// Check if this item has children, if not then no sibling is the item...
-		if(( hChildItem = GetChildItem( hItem )) == NULL )
-			return NULL;
-
-		// This loop checks each of the children recursively...
-		do
-		{
-			// If the call returns a non-NULL value, the item was found
-			// somewhere in the descendants...
-			hFoundItem = FindItem( hChildItem, pNode );
-			if( hFoundItem != NULL )
-				return hFoundItem;
-		}
-		while(( hChildItem = GetNextItem( hChildItem, TVGN_NEXT )) != NULL);
-	}
-	while(( hItem = GetNextItem( hItem, TVGN_NEXT )) != NULL );
-
-	// All items were checked and nothing was found...
-	return NULL;
+//	SelectTree( FindItem( GetRootItem( ), pNode ), bRecurse, bNotifySelectionChange );
+	SelectTree( pNode->GetItem( ), bRecurse, bNotifySelectionChange );
 }
 
 void CNodeViewTreeCtrl::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
@@ -707,7 +655,7 @@ void CNodeViewTreeCtrl::OnEndLabelEdit(LPNMHDR pnmhdr, LRESULT *pLResult)
 		// Setup an undo.
 		CRegionDoc *pDoc = (( CNodeView * )GetParent( ))->GetDoc( );
 		if(pDoc != NULL)
-			pDoc->Modify(new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);		
+			pDoc->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pNode), TRUE);		
 
 		// Update the properties dialog
 		pDoc->SetupPropertiesDlg(FALSE);
@@ -715,22 +663,6 @@ void CNodeViewTreeCtrl::OnEndLabelEdit(LPNMHDR pnmhdr, LRESULT *pLResult)
 	*pLResult = FALSE;
 }
 
-/************************************************************************/
-//handle a double click, as either a double click if it is on any part but
-//the check boxes, or as a single click on those boxes
-void CNodeViewTreeCtrl::OnLButtonDblClk( UINT nFlags, CPoint point )
-{
-	UINT nHitTestFlag;
-	HitTest( point, &nHitTestFlag );
-	if( nHitTestFlag & TVHT_ONITEMSTATEICON )
-	{
-		// if a checkbox was double-clicked on, just treat it as a single-click.
-		OnLButtonDown( nFlags, point );
-		return;
-	}
-
-	CMyTreeCtrl::OnLButtonDblClk( nFlags, point );
-}
 /************************************************************************/
 // A tree item was expanded
 void CNodeViewTreeCtrl::OnItemExpanded(LPNMHDR pnmhdr, LRESULT *pLResult)
@@ -763,111 +695,24 @@ void CNodeViewTreeCtrl::OnItemExpanded(LPNMHDR pnmhdr, LRESULT *pLResult)
 
 void CNodeViewTreeCtrl::OnLButtonDown(UINT nFlags, CPoint point) 
 {
-	// TODO: Add your message handler code here and/or call default
-	HTREEITEM hItem;
 	UINT nHitTestFlag;
-	bool bMultiSelect = false;
-	
-	hItem = HitTest( point, &nHitTestFlag );
-	
-	if(( nHitTestFlag & TVHT_ONITEMSTATEICON ))
+	HTREEITEM hItem = HitTest( point, &nHitTestFlag );
+	if( nHitTestFlag & TVHT_ONITEMSTATEICON )
 	{
-		//make sure to grab the focus and select this item. This will make sure that properties
-		//are brought up to date
-		SetFocus();
-
-		UINT nSelHitTestFlag;
-		HitTest( CPoint( point.x + CHECKBOX_WIDTH, point.y ), &nSelHitTestFlag );
-		if( nSelHitTestFlag & TVHT_ONITEMSTATEICON )
+		// Select only the parent node if the control key is down
+		if (nFlags & MK_CONTROL)
 		{
-			// the first checkbox was clicked on.
-			CWorldNode* pNode = (CWorldNode*)GetItemData( hItem );
-			
-			//don't bother with trying to select it if it is frozen
-			if(pNode->IsFlagSet(NODEFLAG_FROZEN))
-			{
-				return;
-			}
-
-			//see if the user wants to select multiple nodes, we don't need to worry about
-			//this if we are already in multi select mode
-			if(	(GetMainFrame()->GetNodeSelectionMode() == SINGLE_SELECTION) && 
-				(nFlags & MK_CONTROL))
-			{
-				bMultiSelect = true;
-			}
-			
-			// Select only the parent node if the shift key is down
-			if (nFlags & MK_SHIFT)
-			{
-				//We want to force the multi select to TRUE which allows the proper
-				//behavior since shift should act the same regardless of the mode.
-				SelectTree( hItem, false, true );
-			}
-			else
-			{
-				// Select the parent and the children
-				SelectTree( hItem, true, bMultiSelect );
-			}
+			SelectTree( hItem, FALSE );
 		}
-
-		//the user didn't click on the select box, they clicked on the freeze box,
-		//so it should be frozen
 		else
 		{
-			CWorldNode* pNode = (CWorldNode*)GetItemData( hItem );
-			BOOL bFreeze			= TRUE;
-			BOOL bFreezeChildren	= TRUE;
-
-			if( pNode->IsFlagSet( NODEFLAG_FROZEN ) )
-			{
-				bFreeze = FALSE;
-			}	
-
-			//see if they want to include the children or not
-			if( nFlags & MK_SHIFT )
-			{
-				bFreezeChildren = FALSE;
-			}
-
-			CNodeView* pNodeView = (CNodeView*)GetParent();
-			CRegionDoc* pDoc = pNodeView->GetDoc();
-			
-			// Setup the undo information
-			if(GetApp()->GetOptions().GetMiscOptions()->IsUndoFreezeHide())
-			{
-				PreActionList actionList;
-
-				if (bFreezeChildren)
-				{
-					POSITION pos = pDoc->GetFirstViewPosition();
-					CRegionView* pView = ( CRegionView * )pDoc->GetNextView( pos );
-					if( pView == NULL )  ASSERT(false);
-
-					pView->UndoHelper(&actionList, pNode, NODEFLAG_FROZEN, !bFreeze);
-				}
-				else
-				{
-					actionList.AddTail(new CPreAction(ACTION_MODIFYNODE, pNode));	
-				}
-				pDoc->Modify(&actionList, TRUE);
-			}
-			else
-				pDoc->Modify();
-
-
-			pDoc->GetRegion()->FreezeNode(pNode, bFreeze, true, bFreezeChildren);
-			
-			// Update the node image
-			pNodeView->UpdateNodeImage( pNode );
-			
-			// Redraw the views
-			pDoc->RedrawAllViews( );
+			// Select the parent and the children
+			SelectTree( hItem, TRUE );
 		}
 	}
 	else
 	{
-		CMyTreeCtrl::OnLButtonDown(nFlags, point);		
+		CMyTreeCtrl::OnLButtonDown(nFlags, point);
 	}
 }
 

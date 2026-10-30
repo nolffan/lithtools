@@ -16,26 +16,6 @@
 static char THIS_FILE[] = __FILE__;
 #endif
 
-///////////////////////////////////////////////////////////////////////
-// Structure to hold data about an item
-class CBrowseObjectData
-{
-public:
-	CBrowseObjectData(CBaseEditObj* pObj = NULL, CPrefabRef* pPrefab = NULL) :
-		m_pPrefab(pPrefab),
-		m_pObject(pObj)
-	{
-	}
-
-	//the prefab that holds this object (NULL if none)
-	CPrefabRef*		m_pPrefab;
-
-	//the object in question
-	CBaseEditObj*	m_pObject;
-};
-
-
-
 /////////////////////////////////////////////////////////////////////////////
 // CObjectBrowserDlg dialog
 
@@ -86,37 +66,44 @@ BOOL CObjectBrowserDlg::OnInitDialog()
 	// The dialog is valid
 	m_bIsDialogValid=TRUE;
 
-	//clear the selection
-	m_pSelectedObject = NULL;
-	m_pSelectedPrefab = NULL;
-
-	// Get the active region doc
-	CRegionDoc *pDoc=GetActiveRegionDoc();
-	ASSERT(pDoc);
-	
 	// Get the active region
-	CEditRegion *pRegion=pDoc->GetRegion();
-	ASSERT(pRegion);
+	CEditRegion *pRegion=GetActiveRegionDoc()->GetRegion();
 
-	RecurseAddObjects(pRegion->GetRootNode(), "", NULL);
-	
-	// Make sure that the root is expanded
-	m_treeObjects.Expand(TVI_ROOT, TVE_EXPAND);
+	// Add each object to the list
+	DWORD i;
+	for (i=0; i < pRegion->m_Objects.GetSize(); i++)
+	{
+		CBaseEditObj *pObject=pRegion->m_Objects[i];
+
+		// Add the string and associate this index with the object
+		int nIndex=m_listObjects.AddString(pObject->GetName());
+		m_listObjects.SetItemData(nIndex, (DWORD)pObject);
+	}
+
+	// Fill the tree
+	BuildObjectTree(&m_treeObjects);
 
 	// Update the control states
 	UpdateControlStates();
 
 	// Select the selected object
-	if(!m_sSelectedName.IsEmpty())
+	if (m_pSelectedObject)
 	{
-		//select the object with the name
-		SetSelectedObject(m_sSelectedName);
+		SetSelectedObject(m_pSelectedObject);
 	}
 
 	// Hide the controls that are to be invisible
-	for (int i=0; i < m_controlInvisibleArray.GetSize(); i++)
+	int n;
+	for (n=0; n < m_controlInvisibleArray.GetSize(); n++)
 	{
-		GetDlgItem(m_controlInvisibleArray[i])->ShowWindow(SW_HIDE);
+		GetDlgItem(m_controlInvisibleArray[n])->ShowWindow(SW_HIDE);
+	}
+
+	// Disable these controls if there isn't a selected object
+	if (!m_pSelectedObject)
+	{
+		GetDlgItem(IDC_BUTTON_LOCATE)->EnableWindow(FALSE);
+		GetDlgItem(IDC_BUTTON_SELECT)->EnableWindow(FALSE);		
 	}
 
 	return TRUE;  // return TRUE unless you set the focus to a control
@@ -163,42 +150,108 @@ void CObjectBrowserDlg::OnDestroy()
 }
 
 /************************************************************************/
-// Selects an object based on its name
-void CObjectBrowserDlg::SetSelectedObject(const CString& sObjectName)
+// Selects an object
+void CObjectBrowserDlg::SetSelectedObject(CBaseEditObj *pObject)
 {
+	m_pSelectedObject=pObject;
+
 	if (m_bIsDialogValid)
 	{	
-		// Disable these controls by default
-		GetDlgItem(IDC_BUTTON_LOCATE)->EnableWindow(FALSE);
-		GetDlgItem(IDC_BUTTON_SELECT)->EnableWindow(FALSE);		
+		// Select the object in the tree
+		RecurseSelectObject(&m_treeObjects, m_treeObjects.GetRootItem(), m_pSelectedObject);
 
-		RecurseSelectObject(m_treeObjects.GetRootItem(), sObjectName);
-
-		int nNumItems = m_listObjects.GetCount();
-		// Search the list of objects for an object with the specified name
-		for (int i=0; i < nNumItems; i++)
+		// Search the list for the object
+		int i;
+		for (i=0; i < m_listObjects.GetCount(); i++)
 		{
-			// Compare the object name with the specified name
-			CString sName;
-			m_listObjects.GetText(i, sName);
-			if (sName.CompareNoCase(sObjectName) == 0)
+			CBaseEditObj *pListObject=(CBaseEditObj *)m_listObjects.GetItemData(i);
+			if ((CBaseEditObj *)m_listObjects.GetItemData(i) == m_pSelectedObject)
 			{
 				m_listObjects.SetCurSel(i);
-				m_pSelectedObject = GetListObject(i);
-				m_pSelectedPrefab = GetListPrefab(i);
 				break;
 			}
 		}
 
-		if(m_pSelectedObject || m_pSelectedPrefab)
+		// Enable the view and select buttons
+		GetDlgItem(IDC_BUTTON_LOCATE)->EnableWindow(TRUE);
+		GetDlgItem(IDC_BUTTON_SELECT)->EnableWindow(TRUE);		
+	}
+}
+
+/************************************************************************/
+// Selects an object based on its name
+void CObjectBrowserDlg::SetSelectedObject(CString sObjectName)
+{
+	// Get the active region
+	CEditRegion *pRegion=GetActiveRegionDoc()->GetRegion();
+
+	// Search the objects for one with the specified name
+	DWORD i;
+	for (i=0; i < pRegion->m_Objects.GetSize(); i++)
+	{
+		CBaseEditObj *pObject=pRegion->m_Objects[i];
+		if (sObjectName.CompareNoCase(pObject->GetName()) == 0)
 		{
-			// Enable the ok, view, and select buttons
-			GetDlgItem(IDC_BUTTON_LOCATE)->EnableWindow(TRUE);
-			GetDlgItem(IDC_BUTTON_SELECT)->EnableWindow(TRUE);		
+			SetSelectedObject(pObject);
+			break;
 		}
 	}
+}
 
-	m_sSelectedName = sObjectName;
+/************************************************************************/
+// Fills the tree control with the objects grouped by their class
+void CObjectBrowserDlg::BuildObjectTree(CTreeCtrl *pTree)
+{
+	// Get the active region
+	CEditRegion *pRegion=GetActiveRegionDoc()->GetRegion();
+
+	pTree->DeleteAllItems();
+
+	HTREEITEM hRootItem=pTree->GetRootItem();
+
+	DWORD i;
+	for (i=0; i < pRegion->m_Objects.GetSize(); i++)
+	{
+		CBaseEditObj *pObject=pRegion->m_Objects[i];
+
+		// Find the parent node for this object
+		HTREEITEM hParentItem=NULL;
+
+		// Start with the first sibling of the root
+		HTREEITEM hSibling=pTree->GetChildItem(hRootItem);
+		while (hSibling)
+		{
+			// Compare the items label to the class name for this object			
+			bool bFound=(pTree->GetItemText(hSibling).CompareNoCase(pObject->GetClassName()) == 0);
+			if (bFound)
+			{
+				hParentItem=hSibling;
+				break;
+			}
+
+			// Go to the next sibling
+			hSibling=pTree->GetNextSiblingItem(hSibling);
+		}
+
+		// If a parent wasn't found, then add the parent item to the root
+		if (hParentItem == NULL)
+		{
+			// Add the new item
+			hParentItem=pTree->InsertItem(pObject->GetClassName(), hRootItem, TVI_SORT);
+
+			// Make the parent item bold
+			pTree->SetItemState(hParentItem, TVIS_BOLD, TVIS_BOLD );			
+		}
+
+		// Add this object underneith the parent
+		HTREEITEM hItem=pTree->InsertItem(pObject->GetName(), hParentItem, TVI_SORT);		
+
+		// Associate this item with the object
+		pTree->SetItemData(hItem, (DWORD)pObject);
+	}
+
+	// Make sure that the root is expanded
+	pTree->Expand(hRootItem, TVE_EXPAND);
 }
 
 /************************************************************************/
@@ -239,60 +292,57 @@ void CObjectBrowserDlg::OnSelchangeListObjects()
 	int nIndex=m_listObjects.GetCurSel();
 	if (nIndex != LB_ERR)
 	{
-		CString sText;
-		m_listObjects.GetText(nIndex, sText);
-
 		// Select the object
-		SetSelectedObject(sText);				
+		SetSelectedObject((CBaseEditObj *)m_listObjects.GetItemData(nIndex));
 	}
 }
 
 /************************************************************************/
 // Selects a specific object in the tree.  Returns TRUE if the object
 // has been selected.  The tree is searched recursively.
-BOOL CObjectBrowserDlg::RecurseSelectObject(HTREEITEM hParentItem, const CString& sName)
+BOOL CObjectBrowserDlg::RecurseSelectObject(CTreeCtrl *pTree, HTREEITEM hParentItem, CBaseEditObj *pObject)
 {
 	// Check this node
-	if (m_treeObjects.GetItemText(hParentItem).CompareNoCase(sName) == 0)
+	if ((CBaseEditObj *)pTree->GetItemData(hParentItem) == pObject)
 	{
-		m_treeObjects.SelectItem(hParentItem);
-		m_treeObjects.EnsureVisible(hParentItem);
+		pTree->SelectItem(hParentItem);
+		pTree->EnsureVisible(hParentItem);
 
 		return TRUE;
 	}
 
 	// Check the sibling nodes
-	HTREEITEM hSiblingNode=m_treeObjects.GetNextSiblingItem(hParentItem);
+	HTREEITEM hSiblingNode=pTree->GetNextSiblingItem(hParentItem);
 	while (hSiblingNode)
 	{
 		// Check this node
-		if (m_treeObjects.GetItemText(hSiblingNode).CompareNoCase(sName) == 0)
+		if ((CBaseEditObj *)pTree->GetItemData(hSiblingNode) == pObject)
 		{
-			m_treeObjects.SelectItem(hSiblingNode);
-			m_treeObjects.EnsureVisible(hSiblingNode);
+			pTree->SelectItem(hSiblingNode);
+			pTree->EnsureVisible(hSiblingNode);
 
 			return TRUE;
 		}
 		
 		// Check the children nodes
-		if (m_treeObjects.ItemHasChildren(hSiblingNode))
+		if (pTree->ItemHasChildren(hSiblingNode))
 		{
 			// Recurse into the child node
-			if (RecurseSelectObject(m_treeObjects.GetChildItem(hSiblingNode), sName))
+			if (RecurseSelectObject(pTree, pTree->GetChildItem(hSiblingNode), pObject))
 			{
 				return TRUE;
 			}
 		}
 
 		// Get the next sibling
-		hSiblingNode=m_treeObjects.GetNextSiblingItem(hSiblingNode);
+		hSiblingNode=pTree->GetNextSiblingItem(hSiblingNode);
 	}
 
 	// Check the children nodes
-	if (m_treeObjects.ItemHasChildren(hParentItem))
+	if (pTree->ItemHasChildren(hParentItem))
 	{
 		// Recurse into the child node
-		if (RecurseSelectObject(m_treeObjects.GetChildItem(hParentItem), sName))
+		if (RecurseSelectObject(pTree, pTree->GetChildItem(hParentItem), pObject))
 		{
 			return TRUE;
 		}
@@ -308,11 +358,8 @@ void CObjectBrowserDlg::OnSelchangedTreeObjects(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	NM_TREEVIEW* pNMTreeView = (NM_TREEVIEW*)pNMHDR;
 	
-	// Get the item of the newly selected object
-	HTREEITEM hNewItem=pNMTreeView->itemNew.hItem;
-
 	// Select the object
-	SetSelectedObject(m_treeObjects.GetItemText(hNewItem));
+	SetSelectedObject((CBaseEditObj *)m_treeObjects.GetItemData(pNMTreeView->itemNew.hItem));
 	
 	*pResult = 0;
 }
@@ -350,18 +397,13 @@ void CObjectBrowserDlg::OnButtonSelect()
 	CEditRegion *pRegion=pDoc->GetRegion();
 	ASSERT(pRegion);
 
+	CBaseEditObj *pSelectedObject = GetSelectedObject();
+
 	// Check to see if this node is already selected
-	CWorldNode *pSelectedObject = GetSelectedPrefab();
-	if(!pSelectedObject)
-		pSelectedObject = GetSelectedObject();
-
-	if(!pSelectedObject)
-		return;
-
-	int i;
-	for (i=0; i < pRegion->GetNumSelections(); i++)
+	DWORD i;
+	for (i=0; i < pRegion->m_Selections.GetSize(); i++)
 	{
-		if (pSelectedObject == pRegion->GetSelection(i))
+		if (pSelectedObject == pRegion->m_Selections[i])
 		{
 			// This node is already selected so we don't need
 			// to continue on with the selection operation.
@@ -397,194 +439,13 @@ void CObjectBrowserDlg::OnButtonLocate()
 	ASSERT(pRegion);
 
 	// Get the selected object
-	CWorldNode *pObject = GetSelectedPrefab();
-	if(!pObject)
-		pObject = GetSelectedObject();
-
-	if(!pObject)
-		return;
-
-	// Center the marker on the selected object
-	pRegion->m_vMarker=pObject->GetPos();
-
-	// Center the views on the marker
-	GetMainFrame()->CenterViewsAtVector(pRegion->m_vMarker, TRUE);
-}
-
-//cleans up all the data associated with the tree that we allocated
-void CObjectBrowserDlg::CleanUpTreeUserData(HTREEITEM hItem)
-{
-	//bail out on invalid objects...
-	if(hItem == NULL)
-		return;
-
-	//free the user data with this object...
-	if(hItem != TVI_ROOT)
+	CBaseEditObj *pObject=GetSelectedObject();
+	if (pObject)
 	{
-		CBrowseObjectData* pData = (CBrowseObjectData*)m_treeObjects.GetItemData(hItem);
+		// Center the marker on the selected object
+		pRegion->m_vMarker=pObject->GetPos();
 
-		//clean it up
-		delete pData;
-
-		//and now clear out that info...
-		m_treeObjects.SetItemData(hItem, 0);
-	
-		//now move along onto our siblings
-		CleanUpTreeUserData(m_treeObjects.GetNextSiblingItem(hItem));
-	}
-
-	//recurse into the children...
-	CleanUpTreeUserData(m_treeObjects.GetChildItem(hItem));
-
-}
-
-void CObjectBrowserDlg::CleanUpUserData()
-{
-	 CleanUpTreeUserData(TVI_ROOT);
-
-	 //free all of the list items
-	 for(int nItem = 0; nItem < m_listObjects.GetCount(); nItem++)
-	 {
-		 //clean up this item
-		CBrowseObjectData* pData = (CBrowseObjectData*)m_listObjects.GetItemData(nItem);
-
-		//clean it up
-		delete pData;
-
-		//and now clear out that info...
-		m_listObjects.SetItemData(nItem, 0);
-	 }
-}
-
-void CObjectBrowserDlg::OnOK()
-{
-	CleanUpUserData();
-	CDialog::OnOK();
-}
-
-void CObjectBrowserDlg::OnCancel()
-{
-	CleanUpUserData();
-	CDialog::OnCancel();
-}
-
-//inserts an object into the list control
-void CObjectBrowserDlg::InsertObjectIntoList(const CString& sPrepend, CBaseEditObj* pObject, CPrefabRef* pPrefab)
-{
-	// Add the string
-	int nIndex = m_listObjects.AddString(sPrepend + pObject->GetName());
-
-	// Associate this index with the object
-	m_listObjects.SetItemData(nIndex, (DWORD)new CBrowseObjectData(pObject, pPrefab));
-}
-
-//inserts an object into the tree control
-void CObjectBrowserDlg::InsertObjectIntoTree(const CString& sPrepend, CBaseEditObj* pObject, CPrefabRef* pPrefab)
-{
-	// Find the parent node for this object
-	HTREEITEM hParentItem=NULL;
-
-	// Start with the first sibling of the root
-	HTREEITEM hSibling= m_treeObjects.GetChildItem(TVI_ROOT);
-	while (hSibling)
-	{
-		// Compare the items label to the class name for this object			
-		if (m_treeObjects.GetItemText(hSibling) == pObject->GetClassName())
-		{
-			hParentItem=hSibling;
-			break;
-		}
-
-		// Go to the next sibling
-		hSibling=m_treeObjects.GetNextSiblingItem(hSibling);
-	}
-
-	// If a parent wasn't found, then add the parent item to the root
-	if (hParentItem == NULL)
-	{
-		// Add the new item
-		hParentItem=m_treeObjects.InsertItem(pObject->GetClassName(), TVI_ROOT, TVI_SORT);
-
-		// Make the parent item bold
-		m_treeObjects.SetItemState(hParentItem, TVIS_BOLD, TVIS_BOLD );			
-	}
-
-	// Add this object underneith the parent
-	HTREEITEM hItem=m_treeObjects.InsertItem(sPrepend + pObject->GetName(), hParentItem, TVI_SORT);		
-
-	// Associate this item with the object
-	m_treeObjects.SetItemData(hItem, (DWORD)new CBrowseObjectData(pObject, pPrefab));
-}
-
-//recursively searches the tree for prefabs, and recurses into their tree adding objects
-void CObjectBrowserDlg::RecurseAddObjects(CWorldNode* pNode, const CString& sPrepend, CPrefabRef* pPrefab)
-{
-	//handle NULL nodes that can sometimes occur
-	if(!pNode)
-		return;
-
-	//see if this object is a prefab ref
-	if(pNode->GetType() == Node_PrefabRef)
-	{
-		//add our name onto the string
-		CString sNewPrepend = sPrepend;
-		sNewPrepend += pNode->GetName();
-		sNewPrepend += ".";
-
-		CPrefabRef* pNewPrefab = (CPrefabRef*)pNode;
-
-		//add objects, but only update the prefab object if we aren't already inside of one, 
-		//since we can't select the inner prefab object
-		RecurseAddObjects((CWorldNode*)pNewPrefab->GetPrefabTree(), sNewPrepend, (pPrefab) ? pPrefab : pNewPrefab);
-	}
-	//see if this object is a node
-	else if(pNode->GetType() == Node_Object)
-	{
-		InsertObjectIntoList(sPrepend, pNode->AsObject(), pPrefab);
-		InsertObjectIntoTree(sPrepend, pNode->AsObject(), pPrefab);
-	}
-
-	//recurse into children
-	GPOS Pos = pNode->m_Children;
-	while(Pos)
-	{
-		CWorldNode* pChild = pNode->m_Children.GetNext(Pos);
-
-		RecurseAddObjects(pChild, sPrepend, pPrefab);
+		// Center the views on the marker
+		GetMainFrame()->CenterViewsAtVector(pRegion->m_vMarker, TRUE);
 	}
 }
-
-//easy accessors for accessing the data of an item from the list or tree
-CBaseEditObj* CObjectBrowserDlg::GetListObject(int nIndex)
-{
-	CBrowseObjectData* pData = (CBrowseObjectData*)m_listObjects.GetItemData(nIndex);
-	if(pData)
-		return pData->m_pObject;
-	return NULL;
-}
-
-CBaseEditObj* CObjectBrowserDlg::GetTreeObject(HTREEITEM hItem)
-{
-	CBrowseObjectData* pData = (CBrowseObjectData*)m_treeObjects.GetItemData(hItem);
-	if(pData)
-		return pData->m_pObject;
-	return NULL;
-}
-
-CPrefabRef* CObjectBrowserDlg::GetListPrefab(int nIndex)
-{
-	CBrowseObjectData* pData = (CBrowseObjectData*)m_listObjects.GetItemData(nIndex);
-	if(pData)
-		return pData->m_pPrefab;
-	return NULL;
-}
-
-CPrefabRef* CObjectBrowserDlg::GetTreePrefab(HTREEITEM hItem)
-{
-	CBrowseObjectData* pData = (CBrowseObjectData*)m_treeObjects.GetItemData(hItem);
-	if(pData)
-		return pData->m_pPrefab;
-	return NULL;
-}
-
-

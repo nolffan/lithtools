@@ -35,39 +35,14 @@ COptionsRun::~COptionsRun()
 // Load the options
 BOOL COptionsRun::Load()
 {
-#ifdef _PUBLIC_DEVELOPMENT
 	// Load the executable path
-	m_sExecutable=GetStringValue("ExecutablePath", "LithTechDev.exe");
-#else // _PUBLIC_DEVELOPMENT
-	// Load the executable path
-	m_sExecutable=GetStringValue("ExecutablePath", "LithTech.exe");
-#endif // _PUBLIC_DEVELOPMENT
+	m_sExecutable=GetStringValue("ExecutablePath", "lithtech.exe");
 
 	// Load the working directory
-	m_sWorkingDirectory=GetStringValue("WorkingDirectory", "..");
+	m_sWorkingDirectory=GetStringValue("WorkingDirectory", "..\\Game");
 
 	// Load the program arguments
-	m_sProgramArguments=GetStringValue("ProgramArguments", "-rez engine.rez -rez Game +runworld \"%WorldName%\"");
-
-	// Load the packer directory
-	m_sPackerDirectory=GetStringValue("PackerDirectory", ".");
-
-	return TRUE;
-}
-
-BOOL COptionsRun::LoadFromOptionsFile()
-{
-	// Load the executable path
-	m_sExecutable=GetStringValueFromOptionsFile("ExecutablePath", m_sExecutable);
-
-	// Load the working directory
-	m_sWorkingDirectory=GetStringValueFromOptionsFile("WorkingDirectory", m_sWorkingDirectory);
-
-	// Load the program arguments
-	m_sProgramArguments=GetStringValueFromOptionsFile("ProgramArguments", m_sProgramArguments);
-
-	// Load the packer directory
-	m_sPackerDirectory=GetStringValueFromOptionsFile("PackerDirectory", m_sPackerDirectory);
+	m_sProgramArguments=GetStringValue("ProgramArguments", "-rez AVP2 +runworld %WorldName%");
 
 	return TRUE;
 }
@@ -85,26 +60,5 @@ BOOL COptionsRun::Save()
 	// Save the program arguments
 	SetStringValue("ProgramArguments", m_sProgramArguments);
 
-	// Save the packer directory
-	SetStringValue("PackerDirectory", m_sPackerDirectory);
-
 	return TRUE;
 }
-
-BOOL COptionsRun::SaveToOptionsFile()
-{
-	// Load the executable path
-	SetStringValueToOptionsFile("ExecutablePath", m_sExecutable);
-
-	// Load the working directory
-	SetStringValueToOptionsFile("WorkingDirectory", m_sWorkingDirectory);
-
-	// Load the program arguments
-	SetStringValueToOptionsFile("ProgramArguments", m_sProgramArguments);
-
-	// Load the packer directory
-	SetStringValueToOptionsFile("PackerDirectory", m_sPackerDirectory);
-
-	return TRUE;
-}
-

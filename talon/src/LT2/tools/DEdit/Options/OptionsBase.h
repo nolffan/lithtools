@@ -46,12 +46,6 @@ public:
 	BOOL	GetBinaryValue (LPCSTR strValueName, void* pBuffer, DWORD dwBufferSize);	
 	BOOL	GetBoolValue (LPCSTR strValueName, BOOL bDefault=FALSE, BOOL *pbSuccess=NULL);
 
-	// retrieve options-file values
-	CString	GetStringValueFromOptionsFile(LPCSTR strValueName, CString sDefault="", BOOL *pbSuccess=NULL);
-	
-	// set options-file values
-	BOOL	SetStringValueToOptionsFile(LPCSTR strValueName, LPCSTR sValue);
-
 protected:
 	CGenRegMgr	*m_pRegMgr;		// The registry manager
 	CString		m_sRegRoot;		// The root registry path

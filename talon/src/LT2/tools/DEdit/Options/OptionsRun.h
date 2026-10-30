@@ -26,25 +26,20 @@ public:
 	BOOL		Load();
 	BOOL		Save();
 
-	BOOL		LoadFromOptionsFile();	// support for project-based run options
-	BOOL		SaveToOptionsFile();	// support for project-based run options
 
 	// Access to the options
-	const CString&	GetExecutable() const					{ return m_sExecutable; }
-	const CString&	GetWorkingDirectory() const				{ return m_sWorkingDirectory; }
-	const CString&	GetProgramArguments() const	 			{ return m_sProgramArguments; }
-	const CString&	GetPackerDirectory() const				{ return m_sPackerDirectory; }
+	CString		GetExecutable() const						{ return m_sExecutable; }
+	CString		GetWorkingDirectory() const				{ return m_sWorkingDirectory; }
+	CString		GetProgramArguments() const				{ return m_sProgramArguments; }
 
-	void		SetExecutable(const char* sExecutable)		{ m_sExecutable=sExecutable; }
-	void		SetWorkingDirectory(const char* sDirectory)	{ m_sWorkingDirectory=sDirectory; }
-	void		SetProgramArguments(const char* sArguments)	{ m_sProgramArguments=sArguments; }
-	void		SetPackerDirectory(const char* sDirectory)	{ m_sPackerDirectory=sDirectory; } 
+	void		SetExecutable(CString sExecutable)			{ m_sExecutable=sExecutable; }
+	void		SetWorkingDirectory(CString sDirectory)		{ m_sWorkingDirectory=sDirectory; }
+	void		SetProgramArguments(CString sArguments)		{ m_sProgramArguments=sArguments; }
 
 protected:
 	CString		m_sExecutable;			// The executable to run
 	CString		m_sWorkingDirectory;	// The working directory
 	CString		m_sProgramArguments;	// The program arguments
-	CString		m_sPackerDirectory;
 };
 
 #endif 

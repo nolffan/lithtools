@@ -18,12 +18,6 @@ COptionsAdvancedSelect::COptionsAdvancedSelect()
 	m_bUseClassField=FALSE;		// True if the class field should be used
 	m_sClassField="";			// The class field
 
-	m_sPropName="";				// The name of the property
-	m_nPropType=0;				// The index of the property type in the combobox
-	m_sPropValue="true/false";	// The value string for the property
-	m_bNodesWithProperty=false;	// True if the property field should be used
-	m_bMatchValue=false;		// True if we want to require a specific value for the property
-
 	m_nSelectionOperation=0;	// The selection operation (0-select 1-deselect)
 
 	m_bShowResults=FALSE;		// Show the results of the operation?
@@ -44,12 +38,6 @@ BOOL COptionsAdvancedSelect::Load()
 	m_bUseClassField=GetBoolValue("UseClassField", FALSE);
 	m_sClassField=GetStringValue("ClassField");
 
-	m_sPropName=GetStringValue("PropertyName");
-	m_nPropType=GetDWordValue("PropertyType", 0);			
-	m_sPropValue=GetStringValue("PropertyValue");		
-	m_bNodesWithProperty=GetBoolValue("UsePropertyField", FALSE);	
-	m_bMatchValue=GetBoolValue("MatchValue", FALSE);		
-
 	m_nSelectionOperation=GetDWordValue("SelectionOperation", 0);
 	m_bShowResults=GetBoolValue("ShowResults",FALSE);
 
@@ -65,12 +53,6 @@ BOOL COptionsAdvancedSelect::Save()
 
 	SetBoolValue("UseClassField", m_bUseClassField);
 	SetStringValue("ClassField", m_sClassField);
-
-	SetStringValue("PropertyName", m_sPropName);
-	SetDWordValue("PropertyType", m_nPropType);			
-	SetStringValue("PropertyValue", m_sPropValue);		
-	SetBoolValue("UsePropertyField", m_bNodesWithProperty);	
-	SetBoolValue("MatchValue", m_bMatchValue);
 
 	SetDWordValue("SelectionOperation", m_nSelectionOperation);
 	SetBoolValue("ShowResults", m_bShowResults);

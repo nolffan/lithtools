@@ -39,7 +39,7 @@ void CProjectTabControlBar::OnButtonHide()
 	CProjectBar *pProjectBar=GetMainFrame()->GetProjectBar();
 
 	// Get the frame window
-	CFrameWnd* pFrameWnd = (CFrameWnd*)m_pDockSite; //GetParentFrame();
+	CFrameWnd* pFrameWnd = GetParentFrame();
 	ASSERT(pFrameWnd);
 
 	// Make sure that the control bar gets hidden

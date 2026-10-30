@@ -127,7 +127,12 @@
 			// for is not known yet.
 			CMoArray<CPolyVert>	m_Unknown_0c;
 			uint32				m_Unknown_20;
+#ifdef DIRECTEDITOR_BUILD
+			// DEdit: the poly's lightmap (0x4442b7 decompresses it).
+			class CPreLightMap	*m_Unknown_24;
+#else
 			uint32				m_Unknown_24;
+#endif
 
 			LMMWorld			*m_pWorld;		// Used by LightMapMaker.
 

@@ -29,21 +29,12 @@ public:
 	enum { IDD = IDD_PROPPAGE_DISPLAY };
 	CSpinButtonCtrl	m_spinVertexSize;
 	CSpinButtonCtrl	m_spinHandleSize;
-	CSpinButtonCtrl m_spinClassIconSize;
 	CListBox	m_listColorChoices;
+	BOOL	m_bShadePolygons;
 	BOOL	m_bShowSurfaceColor;
-	BOOL	m_bOrientObjectBoxes;
-	BOOL	m_bShowSelectedDecals;
 	int		m_nHandleSize;
 	int		m_nVertexSize;
 	int		m_nVertexDrawRule;
-	int		m_nPerspectiveFarZ;
-	int		m_nClassIconSize;
-	BOOL	m_bTintSelected;
-	BOOL	m_bTintFrozen;
-	BOOL	m_bShadePolygons;
-	BOOL	m_bShowClassIcons;
-	CString	m_sClassIconDir;
 	//}}AFX_DATA
 
 
@@ -66,9 +57,7 @@ protected:
 	afx_msg void OnStaticColorBox();
 	afx_msg void OnDestroy();
 	afx_msg void OnButtonReset();
-	afx_msg void UpdateDataHandler();
 	afx_msg void UpdateDataHandlerAndDraw();
-	afx_msg void OnBrowseClassIcons();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

@@ -31,12 +31,8 @@ public:
 	CComboBox	m_comboD3Dmode;
 	CComboBox	m_comboD3Ddevices;
 	BOOL		m_bBlurryTextures;
-	BOOL		m_bSaturateLightmaps;
 	BOOL		m_bZBufferLines;
-	BOOL		m_bDetailTexEnable;
-	BOOL		m_bDetailTexAdditive;
-	CString		m_sDetailTexScale;
-	CString		m_sDetailTexAngle;
+	BOOL		m_bUseD3DAsDefault;
 	//}}AFX_DATA
 
 
@@ -52,16 +48,13 @@ protected:
 	// Generated message map functions
 	//{{AFX_MSG(CPropPageOptionsD3D)
 	virtual BOOL OnInitDialog();
-	afx_msg void GenericUpdateAll();
-	afx_msg void OnBlurryTextures();
+	afx_msg void OnCheckZBufferLines();
+	afx_msg void OnCheckUseD3DAsDefault();
+	afx_msg void OnSelchangeCombo();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
 protected:
-
-	//updates everything
-	void		UpdateAll(bool bRedrawViews = false);
-
 	// Updates the display options with the current dialog data
 	void		UpdateDisplayOptions();
 
