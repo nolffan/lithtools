@@ -75,7 +75,7 @@ uint32	GetNodePropertiesSize(CWorldNode* pNode);
 
 // talon: the 2001 CopyObjectList (0x40f2e0; Processing.cpp's name for it,
 // called at 0x440baa): it leaves out the hidden objects with bIgnoreHidden.
-void	CopyRegionObjects( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out, BOOL bIgnoreHidden );
+void	CopyRegionObjects( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out );	// talon: NOLF's, 0x417ce0
 // Duplicates the node heirarchy between two lists of objects.  
 // Note that the objects must be in exactly the same order in the list.
 // Returns false on failure

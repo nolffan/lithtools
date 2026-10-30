@@ -236,31 +236,20 @@ void SaveObjectList(CAbstractIO &file, CMoArray<CBaseEditObj*> &theList)
 // (NODEFLAG_HIDDEN, 0x40f328) with bIgnoreHidden, and copies only the
 // properties and the class name (no m_Vert, no DoCopy). Unlike Build 69's
 // it does not test what new returned.
-void CopyRegionObjects(CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out, BOOL bIgnoreHidden)
+// talon: NOLF's (0x417ce0, called at 0x450140): two arguments, every
+// object copied (no bIgnoreHidden).
+void CopyRegionObjects(CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out)
 {
-	uint32			i, nObjects, iOut;
+	uint32			i;
 
-	nObjects = 0;
 	DeleteAndClearArray( out );
+	out.SetSize( in.GetSize() );
 
 	for( i=0; i < in.GetSize(); i++ )
 	{
-		if(!bIgnoreHidden || !(in[i]->m_Flags & NODEFLAG_HIDDEN))
-			nObjects++;
-	}
-
-	out.SetSize( nObjects );
-
-	iOut = 0;
-	for( i=0; i < in.GetSize(); i++ )
-	{
-		if(bIgnoreHidden && (in[i]->m_Flags & NODEFLAG_HIDDEN))
-			continue;
-
-		out[iOut] = new CBaseEditObj;
-		out[iOut]->m_PropList.CopyValues(&in[i]->m_PropList);
-		strcpy(out[iOut]->m_TypeName, in[i]->m_TypeName);
-		iOut++;
+		out[i] = new CBaseEditObj;
+		out[i]->m_PropList.CopyValues(&in[i]->m_PropList);
+		strcpy(out[i]->m_TypeName, in[i]->m_TypeName);
 	}
 }
 
@@ -289,4 +278,13 @@ void CBaseEditObj::DoCopy(CWorldNode *pOther)
 	m_Vert.operator=((const LTVector&)vert);
 
 	CWorldNode::DoCopy(pOther);
+}
+
+
+// talon: 0x4180c0, the processor's: `return TRUE` (node_ops'
+// SetupBrushProperties calls it, 0x431c20). Build 69's sets the node up from
+// its class; the 2001 processor has no class information to do it with.
+BOOL SetupWorldNode(const char *pClassName, CWorldNode *pNode, CEditRegion *pRegion)
+{
+	return TRUE;
 }
