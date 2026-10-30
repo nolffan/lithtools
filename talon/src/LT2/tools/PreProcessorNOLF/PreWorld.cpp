@@ -21,10 +21,55 @@ using namespace std;
 #include "dtxmgr.h"
 #include "genltstream.h"
 #include "de_memory.h"
+#include "copy_lists.h"
 
 // talon: the 2001 PreWorld.cpp (0x430a40..0x43e5a0), from Build 69's with
 // the DAT format, light animations, AI volumes, sub-BSPs and physics blocks
 // of 2001. The names of what Build 69 lacks are ours.
+
+
+// talon: NOLF's PreWorld.cpp starts with these (0x442f08, 0x442f45,
+// 0x442f6f): VC6 code, before g_NodeStack's initializer.
+void BuildSurfacePolyLists(CGLinkedList<CPreSurface*> &surfaces, CGLinkedList<CPrePoly*> &polies)
+{
+	GPOS pos;
+	CPrePoly *pPoly;
+
+	TermSurfacePolyLists(surfaces);
+
+	for(pos=polies; pos; )
+	{
+		pPoly = polies.GetNext(pos);
+		pPoly->GetSurface()->m_PolyList.AddTail(pPoly, &pPoly->m_PolyListNode);
+	}
+}
+
+
+// 0x4309e0
+void TermSurfacePolyLists(CGLinkedList<CPreSurface*> &surfaces)
+{
+	GPOS pos;
+
+	for(pos=surfaces; pos; )
+		surfaces.GetNext(pos)->m_PolyList.RemoveAll();
+}
+
+
+// 0x430a10
+void SetNodeIndices(CNodeList &theList)
+{
+	uint32 curIndex;
+	CNode *pNode;
+	GPOS pos;
+
+	curIndex = 0;
+	for(pos=theList; pos; )
+	{
+		pNode = theList.GetNext(pos);
+		pNode->m_Index = curIndex;
+		curIndex++;
+	}
+}
 
 
 // A stack of nodes for walking BSP trees without recursion (the name is
@@ -106,6 +151,8 @@ uint32 CPreLightAnim::CalcFrameDataSize()
 	CPreLightFrame *pFrame;
 
 
+	// talon: NOLF's (0x443114): every poly has a lightmap, none tested
+	// for NULL, and no vertex colours.
 	size = 0;
 	for(iFrame=0; iFrame < m_Frames; iFrame++)
 	{
@@ -113,14 +160,7 @@ uint32 CPreLightAnim::CalcFrameDataSize()
 
 		for(iMap=0; iMap < pFrame->m_PolyMaps; iMap++)
 		{
-			if(pFrame->m_PolyMaps[iMap])
-				size += pFrame->m_PolyMaps[iMap]->m_Data.GetSize();
-		}
-
-		for(iMap=0; iMap < pFrame->m_Unknown_14; iMap++)
-		{
-			if(pFrame->m_Unknown_14[iMap])
-				size += pFrame->m_Unknown_14[iMap]->GetSize() * 3;
+			size += pFrame->m_PolyMaps[iMap]->m_Data.GetSize();
 		}
 	}
 
@@ -166,7 +206,6 @@ CPreMainWorld::CPreMainWorld()
 {
 	m_pInfoString	= "";
 	m_Unknown_f0	= 0;
-	m_WorldModels.SetCacheSize(1024);
 }
 
 
@@ -208,11 +247,12 @@ void CPreMainWorld::TermGeometry()
 BOOL LoadObjectList(CAbstractIO &file, CMoArray<CBaseEditObj*> &objects);
 void SaveObjectList(CAbstractIO &file, CMoArray<CBaseEditObj*> &objects);
 
-static void CopyStream(CAbstractIO &dest, CAbstractIO &src, uint32 endPos);
 
 
 // 0 if it loaded, 1 if the version is wrong, otherwise corrupt.
-uint32 CPreMainWorld::LoadFile(CAbstractIO &file, BOOL bLoadObjects)
+// talon: NOLF's takes no bLoadObjects (0x44336f returns with ret 4) and
+// always loads the objects.
+uint32 CPreMainWorld::LoadFile(CAbstractIO &file)
 {
 	CCompressedIO	compressedIO;
 	uint32			version, objectDataPos, lightDataPos, dummy, infoLen;
@@ -277,12 +317,9 @@ uint32 CPreMainWorld::LoadFile(CAbstractIO &file, BOOL bLoadObjects)
 			}
 		}
 
-		if(bLoadObjects)
-			LoadObjectList(file, m_Objects);
-		else
-			file.SeekTo(lightDataPos);
+		LoadObjectList(file, m_Objects);
 
-		// 0x43178b: the failure path (Term, 2) is laid out before success.
+		// 0x4435c4: the two failures share one Term (cross-jumped).
 		if(!LoadLightAnims(file))
 		{
 			Term();
@@ -305,73 +342,8 @@ uint32 CPreMainWorld::LoadFile(CAbstractIO &file, BOOL bLoadObjects)
 }
 
 
-// Copies inFile (a DAT file) to outFile with these objects.
-BOOL CPreMainWorld::SaveObjectsOnly(CAbstractIO &outFile, CAbstractIO &inFile)
-{
-	uint32 version, objectDataPos, lightDataPos, dummy, infoLen;
-	char *pInfoString;
 
 
-	inFile >> version;
-	inFile >> objectDataPos;
-	inFile >> lightDataPos;
-	if(version != CURRENT_DAT_VERSION)
-		return FALSE;
-
-	inFile >> dummy;
-	inFile >> dummy;
-	inFile >> dummy;
-	inFile >> dummy;
-	inFile >> dummy;
-	inFile >> dummy;
-	inFile >> dummy;
-	inFile >> dummy;
-
-	inFile >> infoLen;
-	pInfoString = new char[infoLen+1];
-	inFile.Read(pInfoString, infoLen);
-	delete pInfoString;
-
-	outFile << version;
-	CFileMarker objectMarker(outFile, FALSE);
-	CFileMarker lightMarker(outFile, FALSE);
-	outFile << (uint32)0 << (uint32)0 << (uint32)0 << (uint32)0;
-	outFile << (uint32)0 << (uint32)0 << (uint32)0 << (uint32)0;
-
-	outFile << (uint32)strlen(m_pInfoString);
-	outFile.Write(m_pInfoString, strlen(m_pInfoString));
-
-	// The world models as they are.
-	CopyStream(outFile, inFile, objectDataPos);
-
-	objectMarker.Mark();
-	SaveObjectList(outFile, m_Objects);
-
-	// The lighting as it is.
-	lightMarker.Mark();
-	inFile.SeekTo(lightDataPos);
-	CopyStream(outFile, inFile, inFile.GetLen());
-
-	return TRUE;
-}
-
-
-static void CopyStream(CAbstractIO &dest, CAbstractIO &src, uint32 endPos)
-{
-	uint8 buf[16], theByte;
-
-	while(src.GetCurPos() < endPos-16)
-	{
-		src.Read(buf, 16);
-		dest.Write(buf, 16);
-	}
-
-	while(src.GetCurPos() < endPos)
-	{
-		src.Read(&theByte, 1);
-		dest.Write(&theByte, 1);
-	}
-}
 
 
 BOOL CPreMainWorld::SaveFile(CAbstractIO &file)
@@ -453,21 +425,18 @@ BOOL CPreMainWorld::SaveFile(CAbstractIO &file)
 }
 
 
+// talon: NOLF's (0x443af8): every count is 32 bits, no data-size check,
+// no vertex colours, and the poly array comes from GetLMPoly's list walk.
 BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 {
-	CMoArray<CPrePoly*> polies(0);
-	uint32 nPolyRefs, nFrames, nMaps, nAnims, iAnim, iPoly;
-	int dataSize, totalData;
-	uint16 nAnimPolies, worldIndex, polyIndex, dataLen, iFrame, iMap, iVert;
-	uint8 nAnimFrames, nVerts, j;
+	CMoArray<CPrePoly*> polies;
+	uint32 nPolyRefs, nFrames, dataSize, nMaps, nAnims, iAnim, iPoly;
+	uint32 nAnimPolies, dataLen;
+	uint16 worldIndex, polyIndex, iFrame, iMap;
 	CPreLightAnim *pAnim;
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
-	CMoArray<uint32> *pColors;
-	uint8 r[256], g[256], b[256];
 
-
-	SetupPolyArrays();
 
 	file >> nPolyRefs;
 	file >> nFrames;
@@ -484,8 +453,6 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 		}
 	}
 
-	totalData = 0;
-
 	for(iAnim=0; iAnim < m_LightAnims; iAnim++)
 	{
 		pAnim = m_LightAnims[iAnim];
@@ -494,7 +461,7 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 			return FALSE;
 
 		file.Read(&pAnim->m_bShadowMap, sizeof(pAnim->m_bShadowMap));
-		file >> nAnimFrames;
+		file >> nFrames;
 		file >> nAnimPolies;
 
 		if(!pAnim->m_Polies.SetSize(nAnimPolies))
@@ -517,7 +484,7 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 		}
 
 		CPreLightFrame *pNullFrame = NULL;
-		if(!pAnim->m_Frames.SetSizeInit(nAnimFrames, pNullFrame) || !AllocateArray(pAnim->m_Frames, (CPreLightFrame*)NULL))
+		if(!pAnim->m_Frames.SetSizeInit(nFrames, pNullFrame) || !AllocateArray(pAnim->m_Frames, (CPreLightFrame*)NULL))
 		{
 			DeleteAndClearArray(pAnim->m_Frames);
 			return FALSE;
@@ -545,43 +512,7 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 				if(!pMap->m_Data.SetSize(dataLen))
 					return FALSE;
 
-				totalData += dataLen;
-				if(totalData > dataSize)
-					return FALSE;
-
 				file.Read(pMap->m_Data.GetArray(), dataLen);
-			}
-
-			// The vertex colors.
-			if(!pFrame->m_Unknown_14.SetSize(pAnim->m_Polies.GetSize()) || !AllocateArray(pFrame->m_Unknown_14, (CMoArray<uint32>*)NULL))
-			{
-				DeleteAndClearArray(pFrame->m_Unknown_14);
-				return FALSE;
-			}
-
-			for(iVert=0; iVert < pFrame->m_Unknown_14; iVert++)
-			{
-				pColors = pFrame->m_Unknown_14[iVert];
-
-				file >> nVerts;
-				if(!pColors->SetSize(nVerts))
-					return FALSE;
-
-				totalData += nVerts * 3;
-				if(totalData > dataSize)
-					return FALSE;
-
-				for(j=0; j < nVerts; j++)
-					file >> r[j];
-
-				for(j=0; j < nVerts; j++)
-					file >> g[j];
-
-				for(j=0; j < nVerts; j++)
-					file >> b[j];
-
-				for(j=0; j < nVerts; j++)
-					(*pColors)[j] = (r[j] << 16) | (g[j] << 8) | b[j];
 			}
 		}
 	}
@@ -590,31 +521,22 @@ BOOL CPreMainWorld::LoadLightAnims(CAbstractIO &file)
 }
 
 
-// 0x432a40. Near (811 bytes against 813): the vertex-colour loops'
-// bound (nVerts, zero-extended) is loaded before the Write of nVerts in
-// the shipped code (0x432c7e), after it in ours (tried: the cast in the
-// Write, the assignment inside it). The frame count is a uint8 local:
-// the shipped code loads it as a byte (0x432b4c), and so does ours only
-// from a local, not from the cast in the chain. Retail bug: the frame
-// count, the poly count and each poly's vertex count are written as
-// uint8, uint16 and uint8, the data for all of them after; more than 255
-// frames (or 65535 polies) desyncs the file for LoadLightAnims.
+// talon: NOLF's (0x443df1): the counts as 32 bits, every poly's lightmap
+// (none tested for NULL), no vertex colours. (AvP2's writes the counts as
+// uint8 and uint16, its retail bug.)
 BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 {
-	uint32 i, iFrame;
+	uint32 i, iFrame, iAnim;
 	CPreLightAnim *pAnim;
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
-	CMoArray<uint32> *pColors;
-	uint8 nVerts, nAnimFrames;
-	uint32 j;
 
 
 	if(!CheckLightAnims())
 		return FALSE;
 
 	{
-		uint32 iAnim, nMaps, dataSize, nFrames, nPolyRefs;
+		uint32 nMaps, dataSize, nFrames, nPolyRefs;
 
 		nMaps = 0;
 		dataSize = 0;
@@ -638,14 +560,14 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 
 	file << m_LightAnims.GetSize();
 
-	for(uint32 iAnim=0; iAnim < m_LightAnims; iAnim++)
+	for(iAnim=0; iAnim < m_LightAnims; iAnim++)
 	{
 		pAnim = m_LightAnims[iAnim];
 
 		file.WriteString(pAnim->m_Name);
-		// 0x432b4c: one chain, its operands loaded before the first Write.
-		nAnimFrames = (uint8)pAnim->m_Frames.GetSize();
-		file << (uint32)pAnim->m_bShadowMap << nAnimFrames << (uint16)pAnim->m_Polies.GetSize();
+		file << (uint32)pAnim->m_bShadowMap;
+		file << pAnim->m_Frames.GetSize();
+		file << pAnim->m_Polies.GetSize();
 
 		for(i=0; i < pAnim->m_Polies; i++)
 		{
@@ -660,38 +582,8 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 			for(i=0; i < pFrame->m_PolyMaps; i++)
 			{
 				pMap = pFrame->m_PolyMaps[i];
-				if(pMap)
-				{
-					file << (uint16)pMap->m_Data.GetSize();
-					file.Write(pMap->m_Data.GetArray(), pMap->m_Data.GetSize());
-				}
-				else
-				{
-					file << (uint16)0;
-				}
-			}
-
-			for(i=0; i < pFrame->m_Unknown_14; i++)
-			{
-				pColors = pFrame->m_Unknown_14[i];
-				if(pColors)
-				{
-					nVerts = (uint8)pColors->GetSize();
-					file << nVerts;
-
-					for(j=0; j < nVerts; j++)
-						file << (uint8)((*pColors)[j] >> 16);
-
-					for(j=0; j < nVerts; j++)
-						file << (uint8)((*pColors)[j] >> 8);
-
-					for(j=0; j < nVerts; j++)
-						file << (uint8)(*pColors)[j];
-				}
-				else
-				{
-					file << (uint8)0;
-				}
+				file << pMap->m_Data.GetSize();
+				file.Write(pMap->m_Data.GetArray(), pMap->m_Data.GetSize());
 			}
 		}
 	}
@@ -700,55 +592,31 @@ BOOL CPreMainWorld::SaveLightAnims(CAbstractIO &file)
 }
 
 
-// Fills each world model's poly array from its poly list.
-// 0x432d70. Near (200 bytes against 213): the shipped code calls
-// m_Unknown_30's _DeleteAndDestroyArray (0x411640) inside the inlined
-// SetSize, ours expands it (the inline budget); the rest is registers.
-// m_Unknown_30 is a CMoArray<CPrePoly*> in 2001 (CPreWorld's constructor
-// stores that vtable, 0x4746b8, at 0x433c19), but retyping it removes
-// the CMoArray<void*> instance and moves _$E216 off 0x430a90 (the
-// declaration-count flip, guide 09).
-void CPreMainWorld::SetupPolyArrays()
-{
-	uint32 i, iPoly;
-	CPreWorld *pWorld;
-	GPOS pos;
-
-	for(i=0; i < m_WorldModels; i++)
-	{
-		pWorld = m_WorldModels[i];
-
-		pWorld->m_Unknown_30.SetSize(pWorld->m_Polies.GetSize());
-
-		iPoly = 0;
-		for(pos=pWorld->m_Polies; pos; )
-		{
-			pWorld->m_Unknown_30[iPoly] = pWorld->m_Polies.GetNext(pos);
-			iPoly++;
-		}
-	}
-}
-
-
 CPrePoly* CPreMainWorld::GetLMPoly(const CPrePolyRef *pRef)
 {
 	CPreWorld *pWorld;
+	GPOS pos;
 
 	if(pRef->m_iWorld >= m_WorldModels.GetSize())
 		return NULL;
 
 	pWorld = m_WorldModels[pRef->m_iWorld];
-	if(pRef->m_iPoly >= pWorld->m_Unknown_30.GetSize())
+	if(pRef->m_iPoly >= pWorld->m_Polies.GetSize())
 		return NULL;
 
-	return (CPrePoly*)pWorld->m_Unknown_30[pRef->m_iPoly];
+	// talon: NOLF walks the poly list (FindIndex, 0x44abd5): no poly array.
+	pos = pWorld->m_Polies.FindIndex(pRef->m_iPoly);
+	if(!pos)
+		return NULL;
+
+	return (CPrePoly*)pos;
 }
 
 
 // Whether the light animations fit the world: their polies exist and
 // their lightmaps are the polies' sizes (the name is ours).
-// 0x432e90. Near (280 bytes against 284): registers (the shipped code
-// keeps this in esi, spilled and reloaded inside the poly loop).
+// talon: NOLF's (0x444008): every poly has a lightmap, and no vertex
+// colours to check.
 BOOL CPreMainWorld::CheckLightAnims()
 {
 	uint32 iAnim, iFrame, iPoly;
@@ -756,8 +624,6 @@ BOOL CPreMainWorld::CheckLightAnims()
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
 	CPrePoly *pPoly;
-
-	SetupPolyArrays();
 
 	for(iAnim=0; iAnim < m_LightAnims; iAnim++)
 	{
@@ -782,28 +648,23 @@ BOOL CPreMainWorld::CheckLightAnims()
 			for(iPoly=0; iPoly < pFrame->m_PolyMaps; iPoly++)
 			{
 				pMap = pFrame->m_PolyMaps[iPoly];
-				if(pMap)
-				{
-					pPoly = GetLMPoly(&pAnim->m_Polies[iPoly]);
-					if(!pPoly)
-						return FALSE;
 
-					if(pMap->m_Width != pPoly->m_LMWidth)
-						return FALSE;
+				pPoly = GetLMPoly(&pAnim->m_Polies[iPoly]);
+				if(!pPoly)
+					return FALSE;
 
-					if(pMap->m_Height != pPoly->m_LMHeight)
-						return FALSE;
+				if(pMap->m_Width != pPoly->m_LMWidth)
+					return FALSE;
 
-					if(pMap->m_Width > 32)
-						return FALSE;
+				if(pMap->m_Height != pPoly->m_LMHeight)
+					return FALSE;
 
-					if(pMap->m_Height > 32)
-						return FALSE;
-				}
+				if(pMap->m_Width > 32)
+					return FALSE;
+
+				if(pMap->m_Height > 32)
+					return FALSE;
 			}
-
-			if(pFrame->m_Unknown_14.GetSize() != pAnim->m_Polies.GetSize())
-				return FALSE;
 		}
 	}
 
@@ -859,9 +720,8 @@ void CPreMainWorld::RemoveAllLightMaps()
 }
 
 
-// The lightmaps' size as 32-bit pixels over their compressed size (the
-// name is ours).
-// 0x433520. Near, size-exact: registers (this in ebp, pFrame spilled).
+// The lightmaps' size as 16-bit pixels over their compressed size (the
+// name is ours; NOLF's, 0x44419d, tests no lightmap for NULL).
 // Retail bug: with no light animation data the divisor is 0 (0/0, a NaN
 // in the statistics); and the uint32 divisor is divided as a signed
 // 32-bit integer (fidivl, 0x433609).
@@ -872,8 +732,6 @@ PReal CPreMainWorld::CalcLMCompressionRatio()
 	CPreLightFrame *pFrame;
 	CPreLightMap *pMap;
 	CPrePoly *pPoly;
-
-	SetupPolyArrays();
 
 	compressed = 0;
 	uncompressed = 0;
@@ -890,9 +748,9 @@ PReal CPreMainWorld::CalcLMCompressionRatio()
 				for(iPoly=0; iPoly < pAnim->m_Polies; iPoly++)
 				{
 					pMap = pFrame->m_PolyMaps[iPoly];
-					if(pMap && (pPoly = GetLMPoly(&pAnim->m_Polies[iPoly])))
+					if(pPoly = GetLMPoly(&pAnim->m_Polies[iPoly]))
 					{
-						uncompressed += pPoly->m_LMHeight * pPoly->m_LMWidth * 4;
+						uncompressed += pPoly->m_LMHeight * pPoly->m_LMWidth * 2;
 						compressed += pMap->m_Data.GetSize();
 					}
 				}
@@ -1016,25 +874,21 @@ BOOL CPreMainWorld::SetupLeafPolies()
 // CPreWorld.
 // ----------------------------------------------------------------------- //
 
-// 0x433af0: the members' constructors (m_Polies's vtable 0x4746b8 stored
-// at 0x433b02, m_Nodes's 0x4753ec, m_PBlocks's, with Clear expanded at
-// 0x433b3f..0x433b68), then these.
+// talon: NOLF's (0x4444d9): the members' constructors (m_PBlocks's calls
+// Clear, 0x44453a, with an unwind state stored: Clear, compiled after this,
+// isn't known not to throw yet), then these.
 CPreSubBsp::CPreSubBsp()
 {
-	m_RootNode = NODE_OUT;
 	m_Unknown_2c = 0;
+	m_RootNode = NODE_OUT;
 	m_Unknown_30.Init();
 }
 
 
-// 0x433b80, here between the two constructors. Inline: CPreSubBsp's
-// constructor expands it, CPreWorld's calls this copy (0x433c40, its
-// inline budget) with no unwind-state store before the call. Without the
-// throw() ours stores one (movb $4, 382 bytes against 377): the copy is
-// compiled after CPreWorld's constructor, too late for VC6 to see that it
-// cannot throw. Not inline, CPreSubBsp's constructor calls it (161
-// against 140).
-inline void PBlockTable::Clear() throw()
+// talon: NOLF's (0x44453a), not inline: both constructors call it, and
+// CPreWorld's, compiled after it, knows it can't throw (no unwind-state
+// store before the call, 0x4445b7).
+void PBlockTable::Clear()
 {
 	m_vBlockSize.Init();
 	m_vMin.Init();
@@ -1186,7 +1040,10 @@ void CPreWorld::TermGeometry()
 
 	m_Points.Term();
 	m_TextureNames.Term();
-	m_WorldTranslation.Init(0, 0, 0);
+	// talon: by member (0x4448d3 stores through this, not a pointer).
+	m_WorldTranslation.x = 0.0f;
+	m_WorldTranslation.y = 0.0f;
+	m_WorldTranslation.z = 0.0f;
 }
 
 
@@ -1323,8 +1180,9 @@ void CheckSaveNodes_R(SaveNode **ppNodes, uint16 iNode)
 // For each poly, the light animations it's in (0x4361f0).
 BOOL CPreWorld::GetPolyLightAnims(CMoArray< CMoArray<PolyAnimRef> > &polyAnims, uint32 &nRefs)
 {
-	uint32 iWorld, iAnim, iRef, iPoly;
+	uint32 iWorld, iAnim, iRef;
 	CPreLightAnim *pAnim;
+	CPrePolyRef *pRef;
 	PolyAnimRef ref;
 
 	nRefs = 0;
@@ -1341,15 +1199,16 @@ BOOL CPreWorld::GetPolyLightAnims(CMoArray< CMoArray<PolyAnimRef> > &polyAnims, 
 
 		for(iRef=0; iRef < pAnim->m_Polies.GetSize(); iRef++)
 		{
-			if(pAnim->m_Polies[iRef].m_iWorld == iWorld)
+			// talon: NOLF's reads through a pointer to the ref (0x445bca).
+			pRef = &pAnim->m_Polies[iRef];
+			if(pRef->m_iWorld == iWorld)
 			{
-				iPoly = pAnim->m_Polies[iRef].m_iPoly;
-				if(iPoly >= polyAnims.GetSize())
+				if(pRef->m_iPoly >= polyAnims.GetSize())
 					return FALSE;
 
 				ref.m_iAnim = (uint16)iAnim;
 				ref.m_iRef = (uint16)iRef;
-				polyAnims[iPoly].Append(ref);
+				polyAnims[pRef->m_iPoly].Append(ref);
 				nRefs++;
 			}
 		}
@@ -2277,10 +2136,11 @@ void CPreWorld::SetPlaneIndices()
 
 void CPreWorld::SetLeafIndices()
 {
-	uint16 i;
+	uint32 i;
 
+	// talon: NOLF's counts in 32 bits (0x447b9b).
 	for(i=0; i < m_Leaves.GetSize(); i++)
-		m_Leaves[i]->m_Index = i;
+		m_Leaves[i]->m_Index = (uint16)i;
 }
 
 
@@ -2652,6 +2512,62 @@ void CPreWorld::RemoveAllNodes()
 }
 
 
+// talon: NOLF's (0x4484f7, SaveFile calls it after SetupIndexMap): each
+// point's normal, the mean of the normals of up to 16 of the polies on it.
+// The names are ours.
+struct VertexPolies
+{
+				VertexPolies()	{m_nPolies = 0;}
+
+	CPrePoly	*m_Polies[16];
+	uint32		m_nPolies;
+};
+
+BOOL CPreWorld::CalcVertexNormals(CMoWordArray &indexMap, CMoArray<PVector> &normals)
+{
+	CMoArray<VertexPolies> vertPolies;
+	VertexPolies *pVert;
+	GPOS pos;
+	CPrePoly *pPoly;
+	uint32 i;
+
+	if(!vertPolies.SetSize(m_Points.GetSize()) || !normals.SetSize(m_Points.GetSize()))
+		return FALSE;
+
+	for(pos=m_Polies; pos; )
+	{
+		pPoly = m_Polies.GetNext(pos);
+
+		for(i=0; i < pPoly->NumVerts(); i++)
+		{
+			pVert = &vertPolies[indexMap[pPoly->Index(i)]];
+			if(pVert->m_nPolies < 16)
+			{
+				pVert->m_Polies[pVert->m_nPolies] = pPoly;
+				pVert->m_nPolies++;
+			}
+		}
+	}
+
+	for(i=0; i < vertPolies; i++)
+	{
+		pVert = &vertPolies[i];
+
+		normals[i].Init();
+		for(uint32 j=0; j < pVert->m_nPolies; j++)
+			normals[i] += pVert->m_Polies[j]->Normal();
+
+		normals[i] /= (PReal)pVert->m_nPolies;
+		normals[i].Norm();
+
+		if(normals[i].MagSqr() < 0.01f)
+			normals[i].Init(0.0f, 1.0f, 0.0f);
+	}
+
+	return TRUE;
+}
+
+
 // ----------------------------------------------------------------------- //
 //      ROUTINE:        CEditBrush::JoinPolies
 //      PURPOSE:        Joins as many polies in the current plane as possible.
@@ -2971,7 +2887,6 @@ void CPreWorld::GetSurfaceBoundingBox(PreSurfaceUser *pUser, PVector *pMin, PVec
 {
 	GPOS pos;
 	CPrePoly *pPoly;
-	uint32 i;
 
 	pMin->Init((PReal)MAX_CREAL, (PReal)MAX_CREAL, (PReal)MAX_CREAL);
 	VEC_NEGATE(*pMax, *pMin);
@@ -2980,19 +2895,9 @@ void CPreWorld::GetSurfaceBoundingBox(PreSurfaceUser *pUser, PVector *pMin, PVec
 	{
 		pPoly = m_Polies.GetNext(pos);
 
+		// talon: NOLF's calls the base poly's ExtendBounds (0x448d33).
 		if(pPoly->m_pSurface == pUser->m_pSurface)
-		{
-			for(i=0; i < pPoly->NumVerts(); i++)
-			{
-				if(pPoly->Pt(i).x < pMin->x) pMin->x = pPoly->Pt(i).x;
-				if(pPoly->Pt(i).y < pMin->y) pMin->y = pPoly->Pt(i).y;
-				if(pPoly->Pt(i).z < pMin->z) pMin->z = pPoly->Pt(i).z;
-
-				if(pPoly->Pt(i).x > pMax->x) pMax->x = pPoly->Pt(i).x;
-				if(pPoly->Pt(i).y > pMax->y) pMax->y = pPoly->Pt(i).y;
-				if(pPoly->Pt(i).z > pMax->z) pMax->z = pPoly->Pt(i).z;
-			}
-		}
+			pPoly->m_BasePoly.ExtendBounds(*pMin, *pMax);
 	}
 }
 
@@ -3134,7 +3039,7 @@ public:
 
 BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 {
-	int i;
+	uint32 i;
 
 	file >> pTable->m_nBlocks[0];
 	file >> pTable->m_nBlocks[1];
@@ -3143,16 +3048,10 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 	pTable->m_nBlocksTotal = pTable->m_nBlocks[2] * pTable->m_nBlocks[0] * pTable->m_nBlocks[1];
 
 	pTable->m_pBlocks = (PBlock*)dalloc_z(pTable->m_nBlocksTotal * sizeof(PBlock));
+	// talon: NOLF's calls Clear (0x44453a); its loop is unsigned.
 	if(!pTable->m_pBlocks && (int)pTable->m_nBlocksTotal > 0)
 	{
-		pTable->m_vBlockSize.Init();
-		pTable->m_vMin.Init();
-		pTable->m_nBlocks[2] = 0;
-		pTable->m_nBlocksXY = 0;
-		pTable->m_nBlocksTotal = 0;
-		pTable->m_pBlocks = NULL;
-		pTable->m_nBlocks[0] = 0;
-		pTable->m_nBlocks[1] = 0;
+		pTable->Clear();
 		return FALSE;
 	}
 
@@ -3164,7 +3063,7 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 	file >> pTable->m_vMin.z;
 
 	// 0x4387b9: the block is indexed afresh for each use.
-	for(i=0; i < (int)pTable->m_nBlocksTotal; i++)
+	for(i=0; i < pTable->m_nBlocksTotal; i++)
 	{
 		file >> pTable->m_pBlocks[i].m_nNodes;
 		file >> pTable->m_pBlocks[i].m_iRoot;
@@ -3178,7 +3077,7 @@ BOOL CPreWorld::LoadPBlockTable(CAbstractIO &file, PBlockTable *pTable)
 
 void CPreWorld::SavePBlockTable(CAbstractIO &file, PBlockTable *pTable)
 {
-	int i;
+	uint32 i;
 
 	file << pTable->m_nBlocks[0] << pTable->m_nBlocks[1] << pTable->m_nBlocks[2];
 	pTable->m_nBlocksXY = pTable->m_nBlocks[0] * pTable->m_nBlocks[1];
@@ -3188,7 +3087,8 @@ void CPreWorld::SavePBlockTable(CAbstractIO &file, PBlockTable *pTable)
 	file << pTable->m_vMin.x << pTable->m_vMin.y << pTable->m_vMin.z;
 
 	// 0x43891b: the block is indexed afresh for each use.
-	for(i=0; i < (int)pTable->m_nBlocksTotal; i++)
+	// talon: NOLF's loop is unsigned (0x447338).
+	for(i=0; i < pTable->m_nBlocksTotal; i++)
 	{
 		CheckSaveNodes_R((SaveNode**)&pTable->m_pBlocks[i].m_pData, pTable->m_pBlocks[i].m_iRoot);
 		file << pTable->m_pBlocks[i].m_nNodes;
@@ -3213,21 +3113,17 @@ static inline NODEREF IndexToNode(uint32 index, CMoArray<CNode*> &nodes)
 }
 
 
-// 0x437fc0. Near (960 bytes against 957): the calls are the shipped ones
-// but the last: nodes's destructor at the end calls BaseDelete (0x43835b) in the
-// shipped code and ours expands it (the inline budget; frame 0x3c against
-// 0x44). Append, not AddTail: AddTail stays out of line then, as shipped
-// (0x43d3a0, called at 0x4381ce).
+// talon: NOLF's (0x446be2).
 BOOL CPreWorld::LoadSubBsp(CAbstractIO &file, CMoArray<CPrePoly*> &polies, CPreSubBsp *pBsp)
 {
 	CMoArray<CNode*> nodes;
-	CNode *pNode, *pNullNode;
-	CPrePoly *pNullPoly;
-	uint32 i, nNodes, index, polyIndex;
+	CNode *pNode;
+	uint32 i, nNodes, index, nPolies;
 
-	pNullNode = NULL;
 	file >> nNodes;
-	if(!nodes.SetSizeInit(nNodes, pNullNode))
+	// talon: SetSizeInit2's by-value NULL lands in a dead parameter slot
+	// (0x446c22), as shipped.
+	if(!nodes.SetSizeInit2(nNodes, NULL))
 		return FALSE;
 
 	for(i=0; i < nodes; i++)
@@ -3244,14 +3140,14 @@ BOOL CPreWorld::LoadSubBsp(CAbstractIO &file, CMoArray<CPrePoly*> &polies, CPreS
 	{
 		pNode = nodes[i];
 
-		file >> polyIndex;
-		if(polyIndex >= polies.GetSize())
+		file >> index;
+		if(index >= polies.GetSize())
 		{
 			DeleteAndClearArray(nodes);
 			return FALSE;
 		}
 
-		pNode->m_pPoly = polies[polyIndex];
+		pNode->m_pPoly = polies[index];
 
 		file >> index;
 		pNode->m_Sides[0] = IndexToNode(index, nodes);
@@ -3263,29 +3159,28 @@ BOOL CPreWorld::LoadSubBsp(CAbstractIO &file, CMoArray<CPrePoly*> &polies, CPreS
 	file >> index;
 	pBsp->m_RootNode = IndexToNode(index, nodes);
 
-	pBsp->m_Nodes.Term();
-	for(i=0; i < nodes; i++)
-		pBsp->m_Nodes.Append(nodes[i]);
+	// talon: NOLF's calls StdLith's CopyArrayToGList (0x44b490).
+	CopyArrayToGList(nodes, pBsp->m_Nodes);
 
-	file >> index;
-	pNullPoly = NULL;
-	if(!pBsp->m_Polies.SetSizeInit(index, pNullPoly))
+	file >> nPolies;
+	if(!pBsp->m_Polies.SetSizeInit2(nPolies, NULL))
 		return FALSE;
 
-	for(i=0; i < index; i++)
+	for(i=0; i < nPolies; i++)
 	{
-		file >> polyIndex;
-		if(polyIndex >= polies.GetSize())
+		file >> index;
+		if(index >= polies.GetSize())
 			return FALSE;
 
-		pBsp->m_Polies[i] = polies[polyIndex];
+		pBsp->m_Polies[i] = polies[index];
 	}
 
 	if(!LoadPBlockTable(file, &pBsp->m_PBlocks))
 		return FALSE;
 
-	CAbstractIOLTStream(&file) >> pBsp->m_Unknown_00[0] >> pBsp->m_Unknown_00[1] >>
-		pBsp->m_Unknown_00[2] >> pBsp->m_Unknown_00[3] >> pBsp->m_Unknown_04;
+	// talon: CPreSubBsp's first 8 bytes are a NodePath (world_tree.h), read
+	// by its LTStream_Read (0x446e61, out of line).
+	CAbstractIOLTStream(&file) >> *(NodePath*)pBsp->m_Unknown_00;
 	CAbstractIOLTStream(&file) >> pBsp->m_Unknown_30;
 
 	return TRUE;
@@ -3318,25 +3213,28 @@ void CPreWorld::SaveSubBsp(CAbstractIO &file, CPreSubBsp *pBsp)
 
 	SavePBlockTable(file, &pBsp->m_PBlocks);
 
-	CAbstractIOLTStream(&file) << pBsp->m_Unknown_00[0] << pBsp->m_Unknown_00[1] <<
-		pBsp->m_Unknown_00[2] << pBsp->m_Unknown_00[3] << pBsp->m_Unknown_04;
+	// talon: the NodePath's LTStream_Write (0x4470e7, out of line).
+	CAbstractIOLTStream(&file) << *(NodePath*)pBsp->m_Unknown_00;
 	CAbstractIOLTStream(&file) << pBsp->m_Unknown_30;
 }
 
 
-// The world in the 2001 .dat form (0x436ad0).
+// The world in NOLF's .dat form (0x445c23): the surfaces from the list
+// with their planes, the points after the surface users with each point's
+// normal (CalcVertexNormals), no texture vectors per poly.
 BOOL CPreWorld::SaveFile(CAbstractIO &file)
 {
-	CMoArray<CPrePoly*> unused;
+	CMoArray<const char*> unused;
 	CMoByteArray pointsUsed;
 	CMoWordArray indexMap;
 	PolyEdges edges;
+	CMoArray<PVector> normals;
 	CMoArray< CMoArray<PolyAnimRef> > polyAnims;
 	CMoArray<PolyAnimRef> *pAnims;
-	uint32 i, j, iPoly, nPointsUsed, nSurfaces, nRefs, nameLen;
+	uint32 i, j, iPoly, nPointsUsed, nRefs, nameLen;
 	GPOS pos;
 	LPOS lPos;
-	CPrePoly *pPoly, *pFound;
+	CPrePoly *pPoly;
 	CPrePlane *pPlane;
 	CPreSurface *pSurface;
 	CPreLeaf *pLeaf;
@@ -3365,17 +3263,13 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 
 	SetupIndexMap(pointsUsed, indexMap, nPointsUsed);
 	m_nPointsSaved = nPointsUsed;
+	CalcVertexNormals(indexMap, normals);
 
 	file.WriteString(m_WorldName);
 	file << nPointsUsed;
 	file << m_Planes.GetSize();
 
-	CMoArray<CPreSurface*> surfaces;
-	CMoArray<uint32> surfaceMap;
-
-	GetUniqueSurfaces(surfaces, surfaceMap);
-	nSurfaces = surfaces.GetSize();
-	file << nSurfaces;
+	file << TagUsedSurfaces();
 
 	file << m_Unknown_04.GetSize();
 	file << m_Polies.GetSize();
@@ -3465,9 +3359,9 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 	}
 
 	// The surfaces.
-	for(i=0; i < nSurfaces; i++)
+	for(pos=m_Surfaces; pos; )
 	{
-		pSurface = surfaces[i];
+		pSurface = m_Surfaces.GetNext(pos);
 
 		if(pSurface->m_bUsed)
 		{
@@ -3482,6 +3376,7 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 			file << pSurface->m_TextureQ.z;
 
 			file << FindTextureName(pSurface->m_pTextureName, m_TextureNames);
+			file << pSurface->m_pPlane->GetIndex();
 			file << pSurface->m_Flags;
 			file << pSurface->m_bDetail;
 			file << pSurface->m_Ambient[0];
@@ -3500,17 +3395,6 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 			}
 
 			file << pSurface->m_TextureFlags;
-		}
-	}
-
-	// The points.
-	for(i=0; i < m_Points; i++)
-	{
-		if(pointsUsed[i])
-		{
-			file << m_Points[i].x;
-			file << m_Points[i].y;
-			file << m_Points[i].z;
 		}
 	}
 
@@ -3534,18 +3418,7 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 			file << (*pAnims)[j].m_iRef;
 		}
 
-		file << surfaceMap[pPoly->m_pSurface->m_UseIndex];
-		file << pPoly->m_pSurface->m_pPlane->GetIndex();
-
-		file << pPoly->m_pSurface->m_TextureO.x;
-		file << pPoly->m_pSurface->m_TextureO.y;
-		file << pPoly->m_pSurface->m_TextureO.z;
-		file << pPoly->m_pSurface->m_TextureP.x;
-		file << pPoly->m_pSurface->m_TextureP.y;
-		file << pPoly->m_pSurface->m_TextureP.z;
-		file << pPoly->m_pSurface->m_TextureQ.x;
-		file << pPoly->m_pSurface->m_TextureQ.y;
-		file << pPoly->m_pSurface->m_TextureQ.z;
+		file << pPoly->m_pSurface->m_UseIndex;
 
 		for(j=0; j < pPoly->NumVerts(); j++)
 		{
@@ -3594,20 +3467,7 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 
 		file.WriteString((char*)pUser->m_pName);
 		file << (uint32)0;
-
-		pFound = NULL;
-		for(GPOS polyPos=m_Polies; polyPos; )
-		{
-			pPoly = m_Polies.GetNext(polyPos);
-			if(pPoly->m_pSurface == pUser->m_pSurface)
-			{
-				pFound = pPoly;
-				break;
-			}
-		}
-
-		file << pFound->m_nName;
-		file << (uint16)surfaceMap[pUser->m_pSurface->m_UseIndex];
+		file << (uint16)pUser->m_pSurface->m_UseIndex;
 
 		PVector vBoxMin, vBoxMax;
 		GetSurfaceBoundingBox(pUser, &vBoxMin, &vBoxMax);
@@ -3620,6 +3480,20 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 		file << vDims.x;
 		file << vDims.y;
 		file << vDims.z;
+	}
+
+	// The points, each with its normal.
+	for(i=0; i < m_Points; i++)
+	{
+		if(pointsUsed[i])
+		{
+			file << m_Points[i].x;
+			file << m_Points[i].y;
+			file << m_Points[i].z;
+			file << normals[i].x;
+			file << normals[i].y;
+			file << normals[i].z;
+		}
 	}
 
 	SavePBlockTable(file, &m_PBlocks);

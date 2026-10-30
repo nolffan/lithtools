@@ -277,6 +277,10 @@ public:
 
 	void				RemoveAllNodes();
 
+	// talon: NOLF's, the points' normals for the DAT file (0x4484f7; the
+	// name is ours).
+	BOOL				CalcVertexNormals(CMoWordArray &indexMap, CMoArray<PVector> &normals);
+
 // Polygon joining stuff.
 public:
 
@@ -333,7 +337,6 @@ public:
 
 	// The leaves hull making found (CPreLeaf::m_Index indexes it).
 	CMoArray<CPreLeaf*>			m_Leaves;
-	CMoArray<void*>				m_Unknown_30;
 
 	// This list is setup in BrushToWorld then emptied after BSP generation.
 	CGLinkedList<CPrePoly*>		m_OriginalBrushPolies;
@@ -402,10 +405,6 @@ public:
 	uint32					CalcLMDataSize();
 	void					RemoveAllLightMaps();
 
-	// talon: fills each world model's poly array (0x30) from its poly
-	// list (0x432d70; the name is ours).
-	void					SetupPolyArrays();
-
 	void					RemoveLightAnim(CPreLightAnim *pAnim);
 
 	// talon: the light animation named pName, or NULL (0x433620).
@@ -434,13 +433,14 @@ public:
 	// talon: the lightmap grid size (the lighting reads it through this).
 	PReal					GetLMGridSize() const	{return m_LMGridSize;}
 
-	// talon, W1: the DAT file (0x431470, 0x431c00, 0x431820; the names are
-	// ours). LoadFile returns 0 if it loaded, 1 for a wrong version, 2 if
-	// it is corrupt (or a world model's error). SaveObjectsOnly copies
-	// inFile, a DAT file, to outFile with these objects.
-	virtual uint32			LoadFile(CAbstractIO &file, BOOL bLoadObjects);
+	// talon: the DAT file (0x44336f, 0x44361f; the names are ours).
+	// LoadFile returns 0 if it loaded, 1 for a wrong version, 2 if it is
+	// corrupt (or a world model's error).
+	// NOLF's vtable (0x4834c0) has LoadFile and SaveFile only, and its
+	// LoadFile takes the file alone (0x44336f, ret 4) and always loads the
+	// objects (AvP2's has bLoadObjects and SaveObjectsOnly).
+	virtual uint32			LoadFile(CAbstractIO &file);
 	virtual BOOL			SaveFile(CAbstractIO &file);
-	virtual BOOL			SaveObjectsOnly(CAbstractIO &outFile, CAbstractIO &inFile);
 
 	// talon, W1: the light animations' part of it (0x432380, 0x432a40), and
 	// the vis BSP's leaves' polies after loading (0x433880).

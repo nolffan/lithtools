@@ -559,45 +559,5 @@ PReal GetPlaneDist(const CPrePlane *pPlane)
 	return pPlane->m_Dist;
 }
 
-
-// 0x430960
-void BuildSurfacePolyLists(CGLinkedList<CPreSurface*> &surfaces, CGLinkedList<CPrePoly*> &polies)
-{
-	GPOS pos;
-	CPrePoly *pPoly;
-
-	TermSurfacePolyLists(surfaces);
-
-	for(pos=polies; pos; )
-	{
-		pPoly = polies.GetNext(pos);
-		pPoly->GetSurface()->m_PolyList.AddTail(pPoly, &pPoly->m_PolyListNode);
-	}
-}
-
-
-// 0x4309e0
-void TermSurfacePolyLists(CGLinkedList<CPreSurface*> &surfaces)
-{
-	GPOS pos;
-
-	for(pos=surfaces; pos; )
-		surfaces.GetNext(pos)->m_PolyList.RemoveAll();
-}
-
-
-// 0x430a10
-void SetNodeIndices(CNodeList &theList)
-{
-	uint32 curIndex;
-	CNode *pNode;
-	GPOS pos;
-
-	curIndex = 0;
-	for(pos=theList; pos; )
-	{
-		pNode = theList.GetNext(pos);
-		pNode->m_Index = curIndex;
-		curIndex++;
-	}
-}
+// talon: BuildSurfacePolyLists, TermSurfacePolyLists and SetNodeIndices
+// are PreWorld.cpp's in NOLF (VC6 code, 0x442f08..0x442f9a).

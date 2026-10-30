@@ -14,12 +14,16 @@
 #include "proputils.h"
 #include "processing.h"
 
-// talon: 0x42d7f0..0x42dc00 in the image.
+// talon: 0x43ee40..0x43f2b0 in the image, in its order (CMoArray<uint8>'s
+// destructor, 0x43ee00, is this object's template code); Term is inline
+// (no copy of its own in the image; Compress* expand it).
 
 CPreLightMap::CPreLightMap()
 {
 	m_Width = m_Height = 0;
 }
+
+
 
 
 void CPreLightMap::Term()
@@ -29,16 +33,18 @@ void CPreLightMap::Term()
 }
 
 
+// talon: NOLF's lightmaps are 16 bits a pixel: AllBlack (0x43eec0) checks
+// width*height*2 bytes of a 2048-byte buffer, and CompressLightMap's buffer
+// is 2048 bytes too (0x43ef53, sub $0x828).
 BOOL CPreLightMap::AllBlack()
 {
-	uint32 tempData[LIGHTMAP_MAX_TOTAL_PIXELS];
+	uint16 tempData[LIGHTMAP_MAX_TOTAL_PIXELS];
 	uint8 *pBytes;
 	uint32 i, nBytes;
 
-	pBytes = (uint8*)tempData;
 	if(m_Unknown_08)
 	{
-		if(!DecompressShadowMap(pBytes))
+		if(!DecompressShadowMap((uint8*)tempData))
 			return FALSE;
 
 		nBytes = m_Width * m_Height;
@@ -48,9 +54,13 @@ BOOL CPreLightMap::AllBlack()
 		if(!Decompress(tempData))
 			return FALSE;
 
-		nBytes = m_Width * m_Height * 4;
+		nBytes = m_Width * m_Height * 2;
 	}
 
+	// talon: near (138 bytes against 140): the shipped loop's second
+	// (unrolled) test reads through a register holding pBytes, ours
+	// through the frame.
+	pBytes = (uint8*)tempData;
 	for(i=0; i < nBytes; i++)
 	{
 		if(pBytes[i] != 0)
@@ -61,9 +71,9 @@ BOOL CPreLightMap::AllBlack()
 }
 
 
-BOOL CPreLightMap::CompressLightMap(uint32 width, uint32 height, uint32 *pData)
+BOOL CPreLightMap::CompressLightMap(uint32 width, uint32 height, uint16 *pData)
 {
-	uint32 compressedData[LIGHTMAP_MAX_TOTAL_PIXELS];
+	uint16 compressedData[LIGHTMAP_MAX_TOTAL_PIXELS];
 	uint32 dataLen;
 
 	Term();
@@ -82,13 +92,15 @@ BOOL CPreLightMap::CompressLightMap(uint32 width, uint32 height, uint32 *pData)
 }
 
 
-BOOL CPreLightMap::Decompress(uint32 *pData)
-{
-	return DecompressLMData((uint32*)m_Data.GetArray(), m_Data.GetSize(), pData);
-}
 
 
-BOOL CPreLightMap::CompressShadowMap(uint32 width, uint32 height, uint32 *pData)
+// talon: near (0x43f0a0, size-exact): the inlined m_Data.SetSize adds the
+// cache size to dataLen in the other order (add %eax,%esi; the shipped
+// code, add %esi,%eax). icl 4.0 gives one of CompressLightMap and this the
+// shipped order and the other not, depending on what else the object
+// holds (with 32-bit pixels and an inline Term it was the other way round),
+// not on either function's statement or declaration order.
+BOOL CPreLightMap::CompressShadowMap(uint32 width, uint32 height, uint16 *pData)
 {
 	uint8 compressedData[LIGHTMAP_MAX_TOTAL_PIXELS];
 	uint32 dataLen;
@@ -109,10 +121,6 @@ BOOL CPreLightMap::CompressShadowMap(uint32 width, uint32 height, uint32 *pData)
 }
 
 
-BOOL CPreLightMap::DecompressShadowMap(uint8 *pData)
-{
-	return ::DecompressShadowMap(m_Data.GetArray(), m_Data.GetSize(), pData);
-}
 
 
 void CFullLightMap::ColorFill( CVector color )
@@ -130,4 +138,16 @@ void CFullLightMap::ColorFill( CVector color )
 			pCur++;
 		}
 	}
+}
+
+
+BOOL CPreLightMap::DecompressShadowMap(uint8 *pData)
+{
+	return ::DecompressShadowMap(m_Data.GetArray(), m_Data.GetSize(), pData);
+}
+
+
+BOOL CPreLightMap::Decompress(uint16 *pData)
+{
+	return DecompressLMData((uint16*)m_Data.GetArray(), m_Data.GetSize(), pData);
 }

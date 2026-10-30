@@ -11,9 +11,8 @@
 //
 //------------------------------------------------------------------
 
-// talon: the 2001 CFullLightMap, from the lightmap maker's use of it
-// (0x416270, and its member at CLightMapMaker+0x13c). CPreLightMap is not
-// laid out yet.
+// talon: the 2001 CFullLightMap, from the lightmap maker's use of it.
+// CPreLightMap is NOLF's (0x43ee40..0x43f2b0; AllBlack 0x43eec0).
 
 #ifndef __PRELIGHTMAP_H__
 	#define __PRELIGHTMAP_H__
@@ -32,19 +31,20 @@
 
 						CPreLightMap();
 
-		// talon: 0x42d870.
+		// talon: no copy in the image: icl expands it everywhere and the link
+		// drops the unreferenced one.
 		void			Term();
 
 		// TRUE if every pixel is black (0x42d8b0).
 		BOOL			AllBlack();
 
-		// talon, P4: fill it from 0xRRGGBB pixels, compressed as a lightmap
-		// (0x42d930) or as a shadow map (0x42da60). The names are ours.
-		BOOL			CompressLightMap(uint32 width, uint32 height, uint32 *pData);
-		BOOL			CompressShadowMap(uint32 width, uint32 height, uint32 *pData);
+		// talon: fill it from NOLF's 16-bit (555) pixels, compressed as a
+		// lightmap (0x43ef50) or as a shadow map (0x43f0a0). The names are ours.
+		BOOL			CompressLightMap(uint32 width, uint32 height, uint16 *pData);
+		BOOL			CompressShadowMap(uint32 width, uint32 height, uint16 *pData);
 
-		// talon: back to pixels (0x42da40) or to a shadow map's bytes (0x42db60).
-		BOOL			Decompress(uint32 *pData);
+		// talon: back to pixels (0x43f280) or to a shadow map's bytes (0x43f250).
+		BOOL			Decompress(uint16 *pData);
 		BOOL			DecompressShadowMap(uint8 *pData);
 
 	public:
