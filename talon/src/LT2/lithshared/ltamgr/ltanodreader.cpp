@@ -11,9 +11,8 @@
 //list is properly closed. This can be used to pull certain sections of a file
 //out. Note that this is sequential, and if you want to back up, the file
 //should be closed and reopened
-CLTANode* CLTANodeReader::LoadNode(CLTAReader* pReader, const char* pszStartValue, ILTAAllocator* pAllocator)
+CLTANode* CLTANodeReader::LoadNode(CLTAReader* pReader, const char* pszStartValue)
 {
-	ASSERT(pAllocator);
 	ASSERT(pReader);
 	ASSERT(pszStartValue);
 
@@ -79,7 +78,7 @@ CLTANode* CLTANodeReader::LoadNode(CLTAReader* pReader, const char* pszStartValu
 	}while(1);
 
 	//the builder
-	CLTANodeBuilder Builder(pAllocator);
+	CLTANodeBuilder Builder;
 
 	//set it up
 	Builder.Init();
@@ -148,9 +147,8 @@ CLTANode* CLTANodeReader::LoadNode(CLTAReader* pReader, const char* pszStartValu
 
 //this will open up the specified file and load the file entirely into a node
 //tree
-bool CLTANodeReader::LoadEntireFile(const char* pszFilename, bool bCompressed, CLTANode* pParent, ILTAAllocator* pAllocator)
+bool CLTANodeReader::LoadEntireFile(const char* pszFilename, bool bCompressed, CLTANode* pParent)
 {
-	ASSERT(pAllocator);
 	ASSERT(pszFilename);
 
 	//first try and open up the file
@@ -162,13 +160,12 @@ bool CLTANodeReader::LoadEntireFile(const char* pszFilename, bool bCompressed, C
 		return false;
 	}
 
-	return LoadEntireFile(Reader, pParent, pAllocator);	
+	return LoadEntireFile(Reader, pParent);	
 }
 
 //same as above, but you can specify an already opened file
-bool CLTANodeReader::LoadEntireFile(CLTAReader& InFile, CLTANode* pParent, ILTAAllocator* pAllocator)
+bool CLTANodeReader::LoadEntireFile(CLTAReader& InFile, CLTANode* pParent)
 {
-	ASSERT(pAllocator);
 
 	//make sure the file is valid
 	if(InFile.IsValid() == false)
@@ -178,7 +175,7 @@ bool CLTANodeReader::LoadEntireFile(CLTAReader& InFile, CLTANode* pParent, ILTAA
 
 
 	//the builder
-	CLTANodeBuilder Builder(pAllocator);
+	CLTANodeBuilder Builder;
 
 	//set it up
 	Builder.Init();

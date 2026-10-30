@@ -2,46 +2,25 @@
 // RVTrackerFocus.h - Implementation for the focus tracker 
 
 #include "bdefs.h"
-#include "mainfrm.h"
 #include "rvtrackerfocus.h"
-#include "eventnames.h"
-#include "OptionsControls.h"
 
 int CRVTrackerFocus::m_bLocked = FALSE;
 
 CRVTrackerFocus::CRVTrackerFocus(LPCTSTR pName, CRegionView *pView) :
 	CRegionViewTracker(pName, pView),
 	m_bWasActive(FALSE),
-	m_pLockTracker(NULL)
+	m_pLockEvent(NULL)
 {
 	m_bAutoCenter = FALSE;
 	m_bAutoHide = FALSE;
 	m_bPhantomEnd = FALSE;
 
 	RefreshKeyList();
-
-	FlushTracker();
 }
 
 CRVTrackerFocus::~CRVTrackerFocus()
 {
-	delete m_pLockTracker; 
-}
-
-void CRVTrackerFocus::FlushTracker()
-{
-	//setup the new tracker
-	delete m_pLockTracker;
-
-	m_pLockTracker = new CRegionViewTracker(UIE_LOCK_FOCUS, m_pView);
-	if(m_pLockTracker)
-	{
-		m_pLockTracker->SetAutoCapture(FALSE);
-		m_pLockTracker->SetAutoCenter(FALSE);
-		m_pLockTracker->SetAutoHide(FALSE);
-	}
-
-	CRegionViewTracker::FlushTracker();
+	delete m_pLockEvent; 
 }
 
 BOOL CRVTrackerFocus::OnStart()
@@ -50,17 +29,9 @@ BOOL CRVTrackerFocus::OnStart()
 	if (m_bWasActive || m_bLocked)
 		return FALSE;
 
-	//make sure that the user is in a mode that the mouse will be automatically 
-	//captured
-	if(!GetApp()->GetOptions().GetControlsOptions()->IsAutoCaptureFocus())
-	{
-		return FALSE;
-	}
-
 	// Set the focus
 	m_pView->SetFocus();
 	m_pView->GetParentFrame()->SetActiveView(m_pView);
-	m_pView->OnActivateView(TRUE, m_pView, NULL);
 	m_bWasActive = TRUE;
 
 	// Update the keyboard state
@@ -77,14 +48,12 @@ void CRVTrackerFocus::OnCancel()
 
 void CRVTrackerFocus::WatchEvent(const CUIEvent &cEvent)
 {
-	if (m_pLockTracker)
+	if (m_pLockEvent)
 	{
-		BOOL bOldActive = m_pLockTracker->GetActive();
-		m_pLockTracker->ProcessEvent(cEvent);
-		if(m_pLockTracker->GetActive() != bOldActive)
-		{		
-			m_bLocked = m_pLockTracker->GetActive();
-		}
+		if (cEvent == *m_pLockEvent)
+			m_bLocked = TRUE;
+		else if (m_pLockEvent->IsInverse(cEvent))
+			m_bLocked = FALSE;
 	}
 
 	CRegionViewTracker::WatchEvent(cEvent);

@@ -189,12 +189,6 @@ public:
 
 	// command handlers for standard menus
 	void OnHide();
-	virtual void OnHideCurrent()	{}
-	virtual void OnUnhideAll()		{}
-	virtual void OnShowIcons()		{}
-
-	// Whether to show tab icons
-	bool m_bShowIcons;
 
 	void OnToggleAllowDocking();
 	void OnFloatAsMDI();

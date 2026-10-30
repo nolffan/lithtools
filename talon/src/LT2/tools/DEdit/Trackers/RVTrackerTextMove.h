@@ -6,28 +6,25 @@
 
 #include "rvtracker.h"
 
+// talon: the 2001 tracker (vtable 0x4dfd38, 0x110 bytes) moves the texture
+// of one polygon, the immediate one (OnStart 0x47962c), where Build 69 moves
+// every selected polygon's; its keys are events (the constructor 0x47938d)
 class CRVTrackerTextureMove : public CRegionViewTracker
 {
 protected:
 
-	CRegionViewTracker *m_pRotateTracker, *m_pScaleTracker, *m_pStepTracker;
-	BOOL m_bRotate, m_bScale, m_bStep;
+	// The polygon and its original texture space
+	CEditPoly *m_pPoly;
+	CVector m_vOriginalO, m_vOriginalP, m_vOriginalQ;
 
-	//array to hold the selected polygons as well as their original PQ vectors
-	CMoArray<CTexturedPlane*>	m_Textures;
-	CMoArray<LTVector>			m_TextureNormals;
-	CMoArray<CWorldNode*>		m_UndoNodes;
-	CMoArray<LTVector>			m_OriginalO;
-	CMoArray<LTVector>			m_OriginalP;	
-	CMoArray<LTVector>			m_OriginalQ;
+	CUIEvent *m_pRotateEvent, *m_pScaleEvent, *m_pStepEvent;
+	BOOL m_bRotate, m_bScale, m_bStep;
 
 	int32 m_iTotalRotate;
 	int32 m_iTotalScaleX, m_iTotalScaleY;
 	int32 m_iTotalOfsX, m_iTotalOfsY;
 
 	BOOL m_bSaveUndo;
-
-	void SetupChildTracker(CRegionViewTracker* pTracker);
 
 public:
 	CRVTrackerTextureMove(LPCTSTR pName = "", CRegionView *pView = NULL);
@@ -40,8 +37,13 @@ public:
 	virtual BOOL OnUpdate(const CUIEvent &cEvent);
 	virtual BOOL OnEnd();
 
-	virtual void FlushTracker();
-
+	// talon: vtable slots 0xe8..0xfc (0x479475..0x4794f8); names unknown
+	virtual void SetRotateEvent(const CUIEvent &cEvent) { delete m_pRotateEvent; m_pRotateEvent = cEvent.Clone(); };
+	virtual const CUIEvent *GetRotateEvent() const { return m_pRotateEvent; };
+	virtual void SetScaleEvent(const CUIEvent &cEvent) { delete m_pScaleEvent; m_pScaleEvent = cEvent.Clone(); };
+	virtual const CUIEvent *GetScaleEvent() const { return m_pScaleEvent; };
+	virtual void SetStepEvent(const CUIEvent &cEvent) { delete m_pStepEvent; m_pStepEvent = cEvent.Clone(); };
+	virtual const CUIEvent *GetStepEvent() const { return m_pStepEvent; };
 };
 
 #endif //__RVTRACKERTEXTMOVE_H__

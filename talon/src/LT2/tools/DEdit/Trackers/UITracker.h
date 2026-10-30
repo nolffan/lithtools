@@ -30,12 +30,9 @@ public:
 	virtual void WatchEvent(const CUIEvent &cEvent) {};
 	// Cancel tracking
 	virtual void Cancel() { SetActive(FALSE); };
-	//Called when another event masks this event (this occurs when a user activates
-	//a tracker, then another tracker which requires more events)
-	virtual void WasMasked()	{ SetActive(FALSE); };
 
-	//called whenever the hotkey list is changed, essentially resetting the tracker
-	virtual void FlushTracker()	{ Cancel(); };
+	// talon: the 2001 tracker has no WasMasked or FlushTracker (Build 69's
+	// hotkey configuration): its vtable (0x4df1a0) ends at Cancel, slot 0x1c.
 };
 
 typedef CMoArray<CUITracker *> CUITrackerList;

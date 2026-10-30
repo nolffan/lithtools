@@ -3,7 +3,6 @@
 
 #include "bdefs.h"
 #include "rvtrackernavmove.h"
-#include "eventnames.h"
 
 CRVTrackerNavMove::CRVTrackerNavMove(LPCTSTR pName, CRegionView *pView) :
 	CRegionViewTracker(pName, pView)
@@ -11,60 +10,33 @@ CRVTrackerNavMove::CRVTrackerNavMove(LPCTSTR pName, CRegionView *pView) :
 	m_bAutoCenter		= FALSE;
 	m_bAutoHide			= TRUE;
 
-	m_bPerp				= FALSE;
-	m_pPerpTracker		= NULL;
-	
-	m_bFast				= FALSE;
-	m_pFastTracker		= NULL;
+	m_bPerp = FALSE;
+	m_pPerpEvent = new CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT);
+
+	m_bFast = FALSE;
+	m_pFastEvent = new CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT);
 
 	m_bIdleOnly			= TRUE;
-
-	FlushTracker();
 }
 
 CRVTrackerNavMove::~CRVTrackerNavMove()
 {
-	delete m_pPerpTracker;
-	delete m_pFastTracker;
+	delete m_pPerpEvent;
+	delete m_pFastEvent;
 }
 
-void CRVTrackerNavMove::FlushTracker()
-{
-	delete m_pPerpTracker;
-	m_pPerpTracker = new CRegionViewTracker(UIE_NAV_MOVE_PERP, m_pView);
-	SetupChildTracker(m_pPerpTracker);
-
-	delete m_pFastTracker;
-	m_pFastTracker = new CRegionViewTracker(UIE_NAV_MOVE_FAST, m_pView);
-	SetupChildTracker(m_pFastTracker);
-
-	CRegionViewTracker::FlushTracker();
-}
-
-void CRVTrackerNavMove::SetupChildTracker(CRegionViewTracker* pTracker)
-{
-	if(pTracker)
-	{
-		pTracker->SetAutoCapture(FALSE);
-		pTracker->SetAutoHide(FALSE);
-		pTracker->SetAutoCenter(FALSE);
-	}
-}
-
-// Watch for the shift key to be pressed
+// Watch for the mouse buttons
 void CRVTrackerNavMove::WatchEvent(const CUIEvent &cEvent)
 {
-	if(m_pFastTracker)
-	{
-		m_pFastTracker->ProcessEvent(cEvent);
-		m_bFast = m_pFastTracker->GetActive();
-	}
+	if (cEvent == *m_pPerpEvent)
+		m_bPerp = TRUE;
+	else if (cEvent.IsInverse(*m_pPerpEvent))
+		m_bPerp = FALSE;
 
-	if(m_pPerpTracker)
-	{
-		m_pPerpTracker->ProcessEvent(cEvent);
-		m_bPerp = m_pPerpTracker->GetActive();
-	}
+	if (cEvent == *m_pFastEvent)
+		m_bFast = TRUE;
+	else if (cEvent.IsInverse(*m_pFastEvent))
+		m_bFast = FALSE;
 
 	// Call the base class watch event
 	CRegionViewTracker::WatchEvent(cEvent);

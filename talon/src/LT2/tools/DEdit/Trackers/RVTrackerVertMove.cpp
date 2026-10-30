@@ -3,7 +3,6 @@
 
 #include "bdefs.h"
 #include "rvtrackervertmove.h"
-#include "eventnames.h"
 
 CRVTrackerVertMove::CRVTrackerVertMove(LPCTSTR pName, CRegionView *pView, ESelectMode eSelMode) :
 	CRegionViewTracker(pName, pView),
@@ -13,54 +12,30 @@ CRVTrackerVertMove::CRVTrackerVertMove(LPCTSTR pName, CRegionView *pView, ESelec
 	m_bAutoHide = TRUE;
 
 	m_bPerp = FALSE;
-	m_pPerpTracker = NULL;
+	m_pPerpEvent = new CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT);
 
 	m_bSnap = TRUE;
-	m_pSnapTracker = NULL;
+	m_pSnapEvent = new CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT);
 }
 
 CRVTrackerVertMove::~CRVTrackerVertMove()
 {
-	delete m_pPerpTracker;
-	delete m_pSnapTracker;
-}
-
-void CRVTrackerVertMove::FlushTracker()
-{
-	delete m_pSnapTracker;
-	m_pSnapTracker = new CRegionViewTracker(UIE_MOVE_VERT_SNAP, m_pView);
-	SetupChildTracker(m_pSnapTracker);
-
-	delete m_pPerpTracker;
-	m_pPerpTracker = new CRegionViewTracker(UIE_MOVE_VERT_PERP, m_pView);
-	SetupChildTracker(m_pPerpTracker);
-
-	CRegionViewTracker::FlushTracker();
-}
-
-void CRVTrackerVertMove::SetupChildTracker(CRegionViewTracker* pTracker)
-{
-	if(pTracker)
-	{
-		pTracker->SetAutoCapture(FALSE);
-		pTracker->SetAutoHide(FALSE);
-		pTracker->SetAutoCenter(FALSE);
-	}
+	delete m_pPerpEvent;
+	delete m_pSnapEvent;
 }
 
 // Watch for the toggle events to happen
 void CRVTrackerVertMove::WatchEvent(const CUIEvent &cEvent)
 {
-	if(m_pPerpTracker)
-	{
-		m_pPerpTracker->ProcessEvent(cEvent);
-		m_bPerp = m_pPerpTracker->GetActive();
-	}
-	if(m_pSnapTracker)
-	{
-		m_pSnapTracker->ProcessEvent(cEvent);
-		m_bSnap = !m_pSnapTracker->GetActive();
-	}
+	if (cEvent == *m_pPerpEvent)
+		m_bPerp = TRUE;
+	else if (cEvent.IsInverse(*m_pPerpEvent))
+		m_bPerp = FALSE;
+
+	if (cEvent == *m_pSnapEvent)
+		m_bSnap = FALSE;
+	else if (cEvent.IsInverse(*m_pSnapEvent))
+		m_bSnap = TRUE;
 
 	// Call the base class watch event
 	CRegionViewTracker::WatchEvent(cEvent);

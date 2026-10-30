@@ -1,14 +1,10 @@
 #include "ltanodebuilder.h"
 #include "ltaconverter.h"
-#include "iltaallocator.h"
 
-CLTANodeBuilder::CLTANodeBuilder(ILTAAllocator* pAllocator) :
-	m_pAllocator(pAllocator),
+CLTANodeBuilder::CLTANodeBuilder() :
 	m_nStackPos(0),
 	m_nCachePos(0)
 {
-	//make sure that we have a valid allocator associated with this builder
-	ASSERT(m_pAllocator);
 
 	//need to clear out all the cache rows
 	for(uint32 nCurrRow = 0; nCurrRow < MAX_CACHE_ROWS; nCurrRow++)
@@ -111,7 +107,7 @@ CLTANode* CLTANodeBuilder::PopAndTrack()
 
 
 	//create the node
-	CLTANode* pNewNode = m_pAllocator->AllocateNode();
+	CLTANode* pNewNode = new CLTANode(nNumNodes);
 
 	//make sure the allocation succeeded.
 	if(pNewNode == NULL)
@@ -122,13 +118,12 @@ CLTANode* CLTANodeBuilder::PopAndTrack()
 		//in a critical state anyway, so it may not be a big concern
 		for(uint32 nCurrElem = 0; nCurrElem < nNumNodes; nCurrElem++)
 		{
-			m_pAllocator->FreeNode(GetCacheElement(m_nCachePos + nCurrElem));
+			delete GetCacheElement(m_nCachePos + nCurrElem);
 		}
 
 		return NULL;
 	}
 
-	pNewNode->AllocateElements(nNumNodes, m_pAllocator);
 
 	//now we read in all the elements into the new node
 	for(uint32 nCurrElem = 0; nCurrElem < nNumNodes; nCurrElem++)
@@ -140,7 +135,7 @@ CLTANode* CLTANodeBuilder::PopAndTrack()
 	//push this new node onto the stack
 	if(AddElement(pNewNode) == false)
 	{
-		m_pAllocator->FreeNode(pNewNode);
+		delete pNewNode;
 		return NULL;
 	}
 
@@ -209,15 +204,13 @@ CLTANode* CLTANodeBuilder::GetCacheElement(uint32 nID)
 bool CLTANodeBuilder::AddValue(const char* pszValue, bool bString)
 {
 	//need to create the new node
-	CLTANode* pNewNode = m_pAllocator->AllocateNode();
+	CLTANode* pNewNode = new CLTANode(pszValue, bString);
 
 	//make sure the allocation succeeded
 	if(pNewNode == NULL)
 	{
 		return false;
 	}
-
-	pNewNode->SetValue(pszValue, bString, m_pAllocator);
 
 	//now we add this to the cache
 	if(AddElement(pNewNode) == false)
@@ -305,7 +298,7 @@ bool CLTANodeBuilder::MoveElements(CLTANodeBuilder& MoveFrom)
 		if(AddElement(pList[nCurrElem]) == false)
 		{
 			//hmmm....this is odd. At least make sure there isn't a memory leak
-			m_pAllocator->FreeNode(pList[nCurrElem]);
+			delete pList[nCurrElem];
 			bRV = false;
 		}
 	}
@@ -374,7 +367,7 @@ uint32 CLTANodeBuilder::DetachHeads(CLTANode** ppNodeList, uint32 nMaxListSize)
 		}
 		else
 		{
-			m_pAllocator->FreeNode(GetCacheElement(nCurrNode));
+			delete GetCacheElement(nCurrNode);
 		}
 	}
 
@@ -416,7 +409,7 @@ uint32 CLTANodeBuilder::DetachHeadsTo(CLTANode* pNewParentNode)
 	//now add the list to the parent
 	for(uint32 nCurrChild = 0; nCurrChild < nNumChildren; nCurrChild++)
 	{
-		pNewParentNode->AppendElement(ppChildList[nCurrChild], m_pAllocator);
+		pNewParentNode->AppendElement(ppChildList[nCurrChild]);
 	}
 
 	//free the list now

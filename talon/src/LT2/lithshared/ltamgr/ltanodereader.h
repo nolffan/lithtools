@@ -23,9 +23,6 @@
 #	include "ltareader.h"
 #endif
 
-//forward declaration for the allocator class that is needed to handle LTA memory
-//management
-class ILTAAllocator;
 
 class CLTANodeReader
 {
@@ -39,18 +36,15 @@ public:
 	//should be closed and reopened. Another thing to note is that this value
 	//must come after a (. so, (a, b) with LoadNode("b") would return NULL, since
 	//the b does not come after the push
-	static CLTANode* LoadNode(	CLTAReader* pReader, const char* pszStartValue, 
-								ILTAAllocator* pAllocator);
+	static CLTANode* LoadNode(	CLTAReader* pReader, const char* pszStartValue);
 
 
 	//this will open up the specified file and load the file entirely into a node
 	//tree. This tree will be added as children to the specified node
-	static bool LoadEntireFile(	const char* pszFilename, bool bCompressed, CLTANode* pParent, 
-								ILTAAllocator* pAllocator);
+	static bool LoadEntireFile(	const char* pszFilename, bool bCompressed, CLTANode* pParent);
 
 	//same as above, but you can specify an already opened file
-	static bool LoadEntireFile(	CLTAReader& InFile, CLTANode* pParent, 
-								ILTAAllocator* pAllocator);
+	static bool LoadEntireFile(	CLTAReader& InFile, CLTANode* pParent);
 	
 private:
 

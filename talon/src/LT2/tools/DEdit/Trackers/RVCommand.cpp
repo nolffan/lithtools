@@ -87,7 +87,7 @@ BOOL CRegionViewCommand::OnStart()
 	if (GetFireOnStart()) 
 		bResult = OnCommand(); 
 	
-	return bResult && (GetEndEventList().GetSize() > 0); 
+	return bResult && (m_cEndEventList.GetSize() > 0); 
 }
 	
 BOOL CRegionViewCommand::OnEnd() 

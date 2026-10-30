@@ -9,6 +9,9 @@
 #include "regionview.h"
 #include "trackermgr.h"
 
+// talon: the 2001 tracker (vtable 0x4df0b8, 0xb8 bytes: the constructor
+// 0x47410a) keeps its own start and end event lists (Build 69 reads them
+// from the hotkey configuration), and has no wheel delta or FlushTracker.
 class CRegionViewTracker : public CUITracker
 {
 protected:
@@ -29,13 +32,6 @@ protected:
 	BOOL IsInverseEvent(const CUIEventList &cList, const CUIEvent &cEvent, DWORD *pIndex = NULL) const;
 	// Clear an event list
 	void ClearEventList(CUIEventList &cList);
-	//called to flush out the tracker, usually when focus is lost or the hotkeys
-	//have been changed
-	virtual void FlushTracker();
-
-	//Called when another event masks this event (this occurs when a user activates
-	//a tracker, then another tracker which requires more events)
-	virtual void WasMasked()	{ m_cWaitingEventList.RemoveAll(); SetActive(FALSE); };
 
 	CRegionView		*m_pView;
 
@@ -66,8 +62,9 @@ protected:
 	// Whether or not to wait for an extra end if someone else takes over before we should.
 	BOOL			m_bPhantomEnd;
 
-	//the amount that the mouse wheel has turned
-	int32			m_nWheelDelta;
+	// The events which start and end the tracker
+	CUIEventList m_cStartEventList;
+	CUIEventList m_cEndEventList;
 
 	// The events which are waiting until the tracker changes states
 	CUIEventList m_cWaitingEventList;
@@ -89,6 +86,15 @@ public:
 	// Call to scroll the frame view & adjust the tracking positions
 	virtual void DoAutoScroll();
 
+	// Start/end list control
+	virtual void AddStartEvent(const CUIEvent &cEvent) { AddEvent(m_cStartEventList, cEvent, TRUE); };
+	virtual void RemoveStartEvent(const CUIEvent &cEvent) { RemoveEvent(m_cStartEventList, cEvent, TRUE); };
+	virtual BOOL IsStartEvent(const CUIEvent &cEvent) const { return IsEvent(m_cStartEventList, cEvent); };
+
+	virtual void AddEndEvent(const CUIEvent &cEvent) { AddEvent(m_cEndEventList, cEvent, FALSE); };
+	virtual void RemoveEndEvent(const CUIEvent &cEvent) { RemoveEvent(m_cEndEventList, cEvent, FALSE); };
+	virtual BOOL IsEndEvent(const CUIEvent &cEvent) const { return IsEvent(m_cEndEventList, cEvent); };
+
 	// Waiting list control
 	virtual void AddWaitingEvent(const CUIEvent &cEvent) { AddEvent(m_cWaitingEventList, cEvent, GetActive()); };
 	virtual void RemoveWaitingEvent(const CUIEvent &cEvent) { RemoveEvent(m_cWaitingEventList, cEvent, GetActive()); };
@@ -99,8 +105,11 @@ public:
 	virtual BOOL GetPhantomEnd() const { return m_bPhantomEnd; };
 	virtual void SetPhantomEnd(BOOL bPhantom) { m_bPhantomEnd = bPhantom; };
 
-	virtual const CUIEventList &GetStartEventList() const;
-	virtual const CUIEventList &GetEndEventList() const;
+	virtual const CUIEventList &GetStartEventList() const { return m_cStartEventList; };
+	virtual void SetStartEventList(const CUIEventList &cEventList) { ClearEventList(m_cStartEventList); m_cStartEventList.CopyArray(cEventList); };
+
+	virtual const CUIEventList &GetEndEventList() const { return m_cEndEventList; };
+	virtual void SetEndEventList(const CUIEventList &cEventList) { ClearEventList(m_cEndEventList); m_cEndEventList.CopyArray(cEventList); };
 
 	virtual const CUIEventList &GetWaitingEventList() const { return m_cWaitingEventList; };
 	virtual void SetWaitingEventList(const CUIEventList &cEventList) { m_cWaitingEventList.CopyArray(cEventList); };
@@ -138,9 +147,6 @@ public:
 	virtual BOOL GetAutoCapture() const { return m_bAutoCapture; };
 	virtual void SetAutoCapture(BOOL bAutoCapture) { m_bAutoCapture = bAutoCapture; };
 
-	virtual int32 GetWheelDelta() const	{return m_nWheelDelta;}
-	virtual void  SetWheelDelta(int32 nDelta) {m_nWheelDelta = nDelta;}
-
 	// Event Processing and watching
 	virtual BOOL ProcessEvent(const CUIEvent &cEvent);
 	virtual void WatchEvent(const CUIEvent &cEvent);
@@ -163,6 +169,10 @@ public:
 	virtual BOOL OnEnd() { return TRUE; };
 	// Called when the tracker is cancelled (calls OnEnd by default)
 	virtual void OnCancel() { OnEnd(); };
+	// talon: stand-in: Build 69's FlushTracker, not in the 2001 class (no
+	// vtable slot: 0x4df0b8 ends at OnCancel), kept non-virtual only so
+	// the trackers not yet brought back to 2001 still compile.
+	void FlushTracker() { m_cWaitingEventList.RemoveAll(); m_cWaitingEventList.CopyArray(GetStartEventList()); Cancel(); };
 };
 
 #endif //__RVTRACKER_H__

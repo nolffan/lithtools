@@ -68,7 +68,6 @@ BOOL CRVTrackerBrushSize::OnEnd()
 	CVector		endVal = GetHandleCoordinate(m_iCurHandle);
 
 	CEditBrush	*pBrush;
-	CBaseEditObj *pObject;
 	CVector		*pVec;
 	CWorldNode	*pNode;
 
@@ -131,28 +130,23 @@ BOOL CRVTrackerBrushSize::OnEnd()
 			{
 				pVec = &pBrush->m_Points[j];
 
-				(*pVec) -= originVal;
-				(*pVec).x *= scaleAmt.x;
-				(*pVec).y *= scaleAmt.y;
-				(*pVec).z *= scaleAmt.z;
-				(*pVec) += originVal;
+				pVec->x = (pVec->x - originVal.x) * scaleAmt.x + originVal.x;
+				pVec->y = (pVec->y - originVal.y) * scaleAmt.y + originVal.y;
+				pVec->z = (pVec->z - originVal.z) * scaleAmt.z + originVal.z;
 			}
-			
-			pRegion->UpdateBrush(pBrush);
 		}
-		else if((pNode->GetType() == Node_Object) || (pNode->GetType() == Node_PrefabRef))
+		else if(pNode->GetType() == Node_Object)
 		{
-			LTVector vVec = pNode->GetPos();
+			pVec = &pNode->GetPos();
 
-			vVec -= originVal;
-			vVec.x *= scaleAmt.x;
-			vVec.y *= scaleAmt.y;
-			vVec.z *= scaleAmt.z;
-			vVec += originVal;
-
-			pNode->SetPos(vVec);
+			pVec->x = (pVec->x - originVal.x) * scaleAmt.x + originVal.x;
+			pVec->y = (pVec->y - originVal.y) * scaleAmt.y + originVal.y;
+			pVec->z = (pVec->z - originVal.z) * scaleAmt.z + originVal.z;
 		}
 	}
+
+	pRegion->UpdatePlanes();
+	pRegion->CleanupGeometry();
 
 	pDoc->UpdateSelectionBox();
 

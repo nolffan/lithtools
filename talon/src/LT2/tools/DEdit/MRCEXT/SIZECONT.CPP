@@ -108,7 +108,6 @@ CMRCSizeControlBar::CMRCSizeControlBar(int nStyle)
     m_PrevSize.cx = 0xffff;         // dummy values so WindowPosChanged will respond correctly
     m_bPrevFloating = 3;            // neither TRUE not FALSE;
 	m_nGripperSize=18;
-	m_bShowIcons = true;
 
 	m_FloatingPosition  = CPoint(0,0);	
 	m_dwAllowDockingState = 0;
@@ -169,9 +168,6 @@ BEGIN_MESSAGE_MAP(CMRCSizeControlBar, CControlBar)
 	ON_WM_LBUTTONDOWN()
 	//}}AFX_MSG_MAP
 	ON_COMMAND(ID_MRC_HIDE, OnHide)
-	ON_COMMAND(ID_MRC_HIDE_CURRENT, OnHideCurrent) // Hide the current tab
-	ON_COMMAND(ID_MRC_UNHIDE_ALL, OnUnhideAll) // Unhide all hidden tabs
-	ON_COMMAND(ID_MRC_SHOW_ICONS, OnShowIcons) // Show/Hide the tab icons
 	ON_COMMAND(ID_MRC_ALLOWDOCKING, OnToggleAllowDocking)
 	ON_COMMAND(ID_MRC_MDIFLOAT,	OnFloatAsMDI)
 	ON_MESSAGE(WM_ADDCONTEXTMENUITEMS, OnAddContextMenuItems)
@@ -446,32 +442,19 @@ LONG CMRCSizeControlBar::OnAddContextMenuItems(WPARAM wParam, LPARAM lParam)
 	// if allowed - add the float as MDI floating window
 	if (m_Style & SZBARF_ALLOW_MDI_FLOAT)
 	{	
-		VERIFY(strMenu.LoadString(IDS_PROJ_BAR_FLOAT));
+		VERIFY(strMenu.LoadString(ID_MRC_MDIFLOAT));
 		Menu.AppendMenu(style, ID_MRC_MDIFLOAT, strMenu);
 	}
 	
-	
-	VERIFY(strMenu.LoadString(IDS_PROJ_BAR_HIDE_CURRENT));
-	Menu.AppendMenu(MF_STRING, ID_MRC_HIDE_CURRENT, strMenu);
-
-	VERIFY(strMenu.LoadString(IDS_PROJ_BAR_UNHIDE_ALL));
-	Menu.AppendMenu(MF_STRING, ID_MRC_UNHIDE_ALL, strMenu);
-	
-	VERIFY(strMenu.LoadString(IDS_PROJ_BAR_HIDE));
-	Menu.AppendMenu(MF_STRING, ID_MRC_HIDE, strMenu);
-
-	VERIFY(strMenu.LoadString(IDS_PROJ_BAR_SHOW_ICONS));
-	Menu.AppendMenu(MF_STRING, ID_MRC_SHOW_ICONS, strMenu);
-
-	// Set checkmark appropriately
-	Menu.CheckMenuItem(ID_MRC_SHOW_ICONS, m_bShowIcons ? MF_CHECKED : MF_UNCHECKED );
-
 	if (!bMDIFloating && (dwDockStyle != 0 || m_dwAllowDockingState != 0))	// ie docking is actually allowed ...
 	{
 		DWORD style = (dwDockStyle != 0 ? MF_STRING | MF_CHECKED : MF_STRING);
-		VERIFY(strMenu.LoadString(IDS_PROJ_BAR_ALLOW_DOCKING));
+		VERIFY(strMenu.LoadString(ID_MRC_ALLOWDOCKING));
 		Menu.AppendMenu(style, ID_MRC_ALLOWDOCKING, strMenu);
 	}
+
+	VERIFY(strMenu.LoadString(ID_MRC_HIDE));
+	Menu.AppendMenu(MF_STRING, ID_MRC_HIDE, strMenu);
 
 	Menu.Detach();	// detatch MFC object
 	return TRUE;
@@ -510,7 +493,7 @@ void CMRCSizeControlBar::OnToggleAllowDocking()
 		}
 		EnableDocking(0);				// disable docking
 	}
-	else if(m_pDockSite)
+	else
 	{
 		EnableDocking (m_dwAllowDockingState);	// re-enable docking...
 	}
@@ -610,7 +593,9 @@ void CMRCSizeControlBar::OnNcPaint()
         NcPaintGripper(&dc, rcClient);
 	}
 
-    //ReleaseDC(&dc);
+    // talon: 2001 (0x47140f) releases the DC here, and CWindowDC's destructor
+    // releases it again (retail bug)
+    ReleaseDC(&dc);
 }
 
 void CMRCSizeControlBar::NcPaintGripper(CDC* pDC, CRect rcClient)

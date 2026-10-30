@@ -23,9 +23,6 @@ public:
 
 private:
 
-	//skip tracker
-	CRegionViewTracker		*m_pSkipTracker;
-
 	// Keep track of when the dialog pops up for proper focus handling
 	BOOL m_bShowingDialog;
 
@@ -108,8 +105,6 @@ private:
 
 	// Clear a polygon set
 	void ClearPolyList(CTWPolyList &aList) const;
-
-	void FlushTracker();
 };
 
 #endif //__RVTRACKERTEXTWRAP_H__

@@ -3,80 +3,29 @@
 
 #include "bdefs.h"
 #include "rvtrackerdrawpoly.h"
-#include "eventnames.h"
 
+// talon: m_bAllowCancel is never initialised (the constructor 0x4756cf):
+// a retail bug, kept
 CRVTrackerDrawPoly::CRVTrackerDrawPoly(LPCTSTR pName, CRegionView *pView) :
 	CRegionViewTracker(pName, pView)
 {
 	m_bAutoCenter			= FALSE;
 	m_bAutoHide				= FALSE;
-	m_bFinishDrawingPoly	= FALSE;
-	m_bVertSnap				= FALSE;
-	m_bAllowCancel			= TRUE;
-	m_pUndoTracker			= NULL;
-	m_pNewVertexTracker		= NULL;	
-	m_pSplitTracker			= NULL;
-	m_pRotateTracker		= NULL;
-	m_pInsertEdgeTracker	= NULL;
-	m_pVertSnapTracker		= NULL;
-	m_pCloseTracker			= NULL;
 
-	FlushTracker();
+	m_pUndoEvent			= new CUIKeyEvent(UIEVENT_KEYDOWN, VK_BACK);
+	m_pNewVertexEvent		= new CUIKeyEvent(UIEVENT_KEYDOWN, VK_SPACE);
+	m_pSplitEvent			= new CUIKeyEvent(UIEVENT_KEYUP, 'S');
+	m_pRotateEvent			= new CUIKeyEvent(UIEVENT_KEYUP, 'R');
+	m_pNewEdgeEvent			= new CUIKeyEvent(UIEVENT_KEYUP, 'E');
 }
 
 CRVTrackerDrawPoly::~CRVTrackerDrawPoly()
 {
-	delete m_pUndoTracker;
-	delete m_pNewVertexTracker;
-	delete m_pSplitTracker;
-	delete m_pRotateTracker;
-	delete m_pInsertEdgeTracker;
-	delete m_pVertSnapTracker;
-	delete m_pCloseTracker;
-}
-
-void CRVTrackerDrawPoly::FlushTracker()
-{
-	//out with the old and in with the new
-	delete m_pUndoTracker;
-	m_pUndoTracker = new CRegionViewTracker(UIE_DRAW_POLY_UNDO, m_pView);
-	SetupChildTracker(m_pUndoTracker);
-
-	delete m_pNewVertexTracker;
-	m_pNewVertexTracker = new CRegionViewTracker(UIE_DRAW_POLY_NEW_VERTEX, m_pView);
-	SetupChildTracker(m_pNewVertexTracker);
-
-	delete m_pSplitTracker;
-	m_pSplitTracker = new CRegionViewTracker(UIE_DRAW_POLY_SPLIT, m_pView);
-	SetupChildTracker(m_pSplitTracker);
-
-	delete m_pRotateTracker;
-	m_pRotateTracker = new CRegionViewTracker(UIE_DRAW_POLY_ROTATE, m_pView);
-	SetupChildTracker(m_pRotateTracker);
-
-	delete m_pInsertEdgeTracker;
-	m_pInsertEdgeTracker = new CRegionViewTracker(UIE_DRAW_POLY_INSERT_EDGE, m_pView);
-	SetupChildTracker(m_pInsertEdgeTracker);
-
-	delete m_pVertSnapTracker;
-	m_pVertSnapTracker = new CRegionViewTracker(UIE_DRAW_POLY_VERT_SNAP, m_pView);
-	SetupChildTracker(m_pVertSnapTracker);
-
-	delete m_pCloseTracker;
-	m_pCloseTracker = new CRegionViewTracker(UIE_DRAW_POLY_CLOSE, m_pView);
-	SetupChildTracker(m_pCloseTracker);
-
-	CRegionViewTracker::FlushTracker();
-}
-
-void CRVTrackerDrawPoly::SetupChildTracker(CRegionViewTracker* pTracker)
-{
-	if(pTracker)
-	{
-		pTracker->SetAutoCapture(FALSE);
-		pTracker->SetAutoHide(FALSE);
-		pTracker->SetAutoCenter(FALSE);
-	}
+	delete m_pUndoEvent;
+	delete m_pNewVertexEvent;
+	delete m_pSplitEvent;
+	delete m_pRotateEvent;
+	delete m_pNewEdgeEvent;
 }
 
 BOOL CRVTrackerDrawPoly::OnStart()
@@ -84,14 +33,6 @@ BOOL CRVTrackerDrawPoly::OnStart()
 	// Make sure they're in the right edit mode for this..
 	if ((m_pView->GetEditMode() != BRUSH_EDITMODE) && (m_pView->GetEditMode() != GEOMETRY_EDITMODE))
 		return FALSE;
-
-	//make sure that they weren't waiting for a polygon to finish, this fixes
-	//a weird issue where a new tracker would get started after one just finished,
-	//causing another brush drawing to begin right after the old one finished
-	if(m_bFinishDrawingPoly)
-	{
-		return FALSE;
-	}
 
 	CEditVert		vert;
 
@@ -123,74 +64,19 @@ BOOL CRVTrackerDrawPoly::OnStart()
 
 BOOL CRVTrackerDrawPoly::OnUpdate(const CUIEvent &cEvent)
 {
-
-	//see if they want to finish drawing the polygon
-	if(m_bFinishDrawingPoly)
-	{
-		// Make sure we don't cancel when the focus goes away
-		m_bAllowCancel = FALSE;
-		// Create the brush
-		m_pView->FinishDrawingPoly();
-		m_bAllowCancel = TRUE;
-
-		//we are no longer drawing a poly, so we can start another one
-		m_bFinishDrawingPoly = FALSE;
-
-		return FALSE;
-	}
-
 	BOOL bCancel = FALSE;
 
 	// Handle any events that happen
-	if (m_pUndoTracker)
-	{
-		BOOL bOldActive = m_pUndoTracker->GetActive();
-		m_pUndoTracker->ProcessEvent(cEvent);
-		if((bOldActive == FALSE) && m_pUndoTracker->GetActive())
-			bCancel = OnUndo();
-	}
-	if (m_pNewVertexTracker)
-	{
-		BOOL bOldActive = m_pNewVertexTracker->GetActive();
-		m_pNewVertexTracker->ProcessEvent(cEvent);
-		if((bOldActive == FALSE) && m_pNewVertexTracker->GetActive())
-			bCancel = OnNewVertex();
-	}
-	if (m_pSplitTracker)
-	{
-		BOOL bOldActive = m_pSplitTracker->GetActive();
-		m_pSplitTracker->ProcessEvent(cEvent);
-		if((bOldActive == FALSE) && m_pSplitTracker->GetActive())
-			bCancel = OnSplit();
-	}
-	if (m_pRotateTracker)
-	{
-		BOOL bOldActive = m_pRotateTracker->GetActive();
-		m_pRotateTracker->ProcessEvent(cEvent);
-		if((bOldActive == FALSE) && m_pRotateTracker->GetActive())
-			bCancel = OnRotate();
-	}
-	if (m_pInsertEdgeTracker)
-	{
-		BOOL bOldActive = m_pInsertEdgeTracker->GetActive();
-		m_pInsertEdgeTracker->ProcessEvent(cEvent);
-		if((bOldActive == FALSE) && m_pInsertEdgeTracker->GetActive())
-			bCancel = OnNewEdge();
-	}
-	if(m_pVertSnapTracker)
-	{
-		m_pVertSnapTracker->ProcessEvent(cEvent);
-		m_bVertSnap = m_pVertSnapTracker->GetActive();
-	}
-	if(m_pCloseTracker)
-	{
-		BOOL bOldActive = m_pCloseTracker->GetActive();
-		m_pCloseTracker->ProcessEvent(cEvent);
-		if((bOldActive == FALSE) && m_pCloseTracker->GetActive())
-			bCancel = ClosePoly();
-	}
-
-		
+	if (cEvent == *m_pUndoEvent)
+		bCancel = OnUndo();
+	if (cEvent == *m_pNewVertexEvent)
+		bCancel = OnNewVertex();
+	if (cEvent == *m_pSplitEvent)
+		bCancel = OnSplit();
+	if (cEvent == *m_pRotateEvent)
+		bCancel = OnRotate();
+	if (cEvent == *m_pNewEdgeEvent)
+		bCancel = OnNewEdge();
 
 	if (bCancel)
 		// End the tracker 
@@ -211,7 +97,13 @@ BOOL CRVTrackerDrawPoly::OnUpdate(const CUIEvent &cEvent)
 	{
 		case EDIT_DRAWINGPOLY:
 		{
-			UpdateDrawPolyVertex(m_cCurPt);
+			m_pView->UpdateDrawPolyVertex(m_cCurPt);
+			break;
+		}
+		// talon: 2001's second drawing state (0x475b32)
+		case EDIT_SPLITTINGPOLY:
+		{
+			m_pView->UpdateSplitPolyVertex(m_cCurPt);
 			break;
 		}
 	}
@@ -233,7 +125,7 @@ BOOL CRVTrackerDrawPoly::OnEnd()
 	while (pBrush->m_Points >= 3)
 	{
 		pBrush->m_Points.Pop();
-		UpdateDrawPolyVertex(m_cCurPt);
+		m_pView->UpdateDrawPolyVertex(m_cCurPt);
 	}
 
 	// Reset the edit state
@@ -257,7 +149,7 @@ BOOL CRVTrackerDrawPoly::OnUndo()
 	if( pBrush->m_Points >= 3 )
 	{
 		pBrush->m_Points.Pop();
-		UpdateDrawPolyVertex(m_cCurPt);
+		m_pView->UpdateDrawPolyVertex(m_cCurPt);
 	}
 	else
 	{
@@ -275,50 +167,41 @@ BOOL CRVTrackerDrawPoly::OnUndo()
 
 BOOL CRVTrackerDrawPoly::OnNewVertex()
 {
+	BOOL bEnd = FALSE;
+
 	CEditBrush *pBrush = &m_pView->DrawingBrush();
 
 	switch (m_pView->m_EditState)
 	{
 		case EDIT_DRAWINGPOLY:
 		{
-			//first off, try and get the vertex from the mouse position
-			LTVector vVertPos = CalcCurrMouseVert(m_cCurPt);
+			CEditVert vert;
 
-			//only bother with this point if it is unique
-			pBrush->m_Points.Last() = vVertPos;
-			pBrush->m_Points.Append( CEditVert(vVertPos) );
-			
-			//make sure we didn't just add a redundant vertex
-			uint32 nNumPts = pBrush->m_Points.GetSize();
-			if((nNumPts >= 3) && pBrush->m_Points[nNumPts - 3].Equals(vVertPos, 0.5f))
+			if( m_pView->GetVertexFromPoint(m_cCurPt, vert) )
 			{
-				//it is redundant, pop off this new vertex
-				pBrush->m_Points.Pop();
-			}
-			else
-			{
-				//now see if we have hit the starting vertex
-				if( pBrush->m_Points[0].Equals(pBrush->m_Points.Last(), 1.0f) )
+				if( !m_pView->IsPerspectiveViewType( ))
 				{
-					//we have hit the beginning, but lets make sure that it is a valid
-					//polygon
-					if(pBrush->m_Points.GetSize() < 5)
-					{
-						//note that the 5 is because the first must be duplicated, so
-						//a triangle would need 4 verts, etc, then there is the extra one
-						//for the current position
-
-						//we don't have enough, don't let them close that point
-						pBrush->m_Points.Pop();
-					}
-					else
-					{
-						//they have closed a valid brush
-						// Let go of the input focus
-						ReleaseCapture();
-						m_bFinishDrawingPoly = TRUE;
-					}
+					CVector vOffset;
+					vOffset = m_pView->EditGrid( ).Forward( );
+					vOffset = m_pView->EditGrid( ).Forward( ) * vOffset.Dot( m_pView->GetRegion( )->m_vMarker );
+					vert += vOffset;
 				}
+
+				pBrush->m_Points.Last() = vert;
+				pBrush->m_Points.Append( vert );
+			}
+
+			// See if we've closed the polygon
+			if( pBrush->m_Points[0].Equals(pBrush->m_Points.Last(), 1.0f) && (pBrush->m_Points > 3) )
+			{
+				// Let go of the input focus
+				ReleaseCapture();
+				// Make sure we don't cancel when the focus goes away
+				m_bAllowCancel = FALSE;
+				// Create the brush
+				m_pView->FinishDrawingPoly();
+				m_bAllowCancel = TRUE;
+				bEnd = TRUE;
 			}
 				
 			break;
@@ -329,7 +212,7 @@ BOOL CRVTrackerDrawPoly::OnNewVertex()
 	m_pView->GetDocument()->UpdateAllViews(m_pView);
 	m_pView->DrawRect();
 
-	return FALSE;
+	return bEnd;
 }
 
 BOOL CRVTrackerDrawPoly::OnSplit()
@@ -618,86 +501,4 @@ BOOL CRVTrackerDrawPoly::OnNewEdge()
 	m_pView->GetRegion()->CleanupGeometry(&brushList);
 
 	return TRUE;
-}
-
-void CRVTrackerDrawPoly::UpdateDrawPolyVertex(CPoint &point )
-{
-	//just update the last position
-	m_pView->DrawingBrush().m_Points.Last() = CalcCurrMouseVert(point);
-}
-
-//given a point on the screen, it will calculate the point on the edit grid that should
-//be used for the brush
-LTVector CRVTrackerDrawPoly::CalcCurrMouseVert(CPoint& point)
-{
-	LTVector vFinalVec;
-
-	// Move the current poly's last vertex.
-	// Invalidate the largest rect from where it was, its current position, and the previous vertex.
-	if( m_bVertSnap )
-	{
-		CVertRef Vert = m_pView->GetClosestVert( point, false, NULL, false );
-		
-		if( Vert.IsValid() )
-		{
-			//we now have a vertex, but we need to make sure that it intersects the edit grid,
-			//so we want to shoot a ray straight towards the grid from the vertex and find
-			//out where it hits. That will then be our point.
-			
-			//find out the distance of this point away from the grid
-			CReal fDist = m_pView->EditGrid().Normal().Dot(Vert()) - m_pView->EditGrid().Dist();
-
-			//now move it onto the grid
-			vFinalVec = Vert() - m_pView->EditGrid().Normal() * fDist;
-		}
-	}
-	else
-	{
-		LTVector vIntersection;
-
-		if( m_pView->GetVertexFromPoint(point, vIntersection) && (m_pView->DrawingBrush().m_Points > 0) )
-		{
-			if( !m_pView->IsPerspectiveViewType( ))
-			{
-				LTVector vOffset;
-				vOffset = m_pView->EditGrid( ).Forward( );
-				vOffset = m_pView->EditGrid( ).Forward( ) * vOffset.Dot( m_pView->GetRegion()->m_vMarker );
-				vIntersection += vOffset;
-			}
-			vFinalVec = vIntersection;
-		}
-	}
-
-	return vFinalVec;
-}
-
-//called to close the polygon. If there are enough vertices, this will
-//connect the first and last points together and finishes the polygon
-BOOL CRVTrackerDrawPoly::ClosePoly()
-{
-	CEditBrush *pBrush = &m_pView->DrawingBrush();
-
-	//first off, make sure we have enough vertices
-	if(pBrush->m_Points.GetSize() < 4)
-	{
-		//note that the 4 is because the first must be duplicated, so
-		//a triangle would need 4 verts, etc, then there is the extra one
-		//for the current position
-
-		//we can bail (false keeps the tracker going)
-		return FALSE;
-	}
-
-	//pop off the last point which is only being tracked
-	pBrush->m_Points.Last() = pBrush->m_Points[0];
-
-	//we have enough vertices, so let us add the first one again, and finish
-	pBrush->m_Points.Append( pBrush->m_Points[0] );
-
-	//they have closed a valid brush
-	// Let go of the input focus
-	ReleaseCapture();
-	m_bFinishDrawingPoly = TRUE;
-
-	return FALSE;
 }

@@ -20,14 +20,15 @@ public:
 
 	CVector m_vStartVec;
 
-	// Tracking for the snapping mode
-	CRegionViewTracker* m_pSnapTracker;
+	// Tracking for the snapping mode: 2001's keys are events (the constructor
+	// 0x47b7b3), where Build 69 has child trackers from the hotkeys
 	BOOL m_bSnapState, m_bSnap;
 	CVector m_vSnapDist;
+	CUIEvent *m_pSnapEvent;
 
 	// Track whether or not to use perpendicular mode
-	CRegionViewTracker* m_pPerpTracker;
 	BOOL m_bPerp;
+	CUIEvent *m_pPerpEvent;
 
 	virtual BOOL OnStart();
 	virtual BOOL OnUpdate(const CUIEvent &cEvent);
@@ -35,8 +36,9 @@ public:
 
 	virtual void WatchEvent(const CUIEvent &cEvent);
 
-	void FlushTracker();
-	void SetupChildTracker(CRegionViewTracker* pTracker);
+	// talon: vtable 0x4dff98 slots 0xe8 (0x47b996), 0xec (0x47b9bd); names unknown
+	virtual void SetSnapEvent(const CUIEvent &cEvent) { delete m_pSnapEvent; m_pSnapEvent = cEvent.Clone(); };
+	virtual void SetPerpEvent(const CUIEvent &cEvent) { delete m_pPerpEvent; m_pPerpEvent = cEvent.Clone(); };
 
 protected:
 	// Get a vertex position from the given point

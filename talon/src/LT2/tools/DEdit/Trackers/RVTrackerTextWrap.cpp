@@ -5,7 +5,6 @@
 #include "rvtrackertextwrap.h"
 #include "texture.h"
 #include "AutoTextureOptionsDlg.h"
-#include "eventnames.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Tracker implementation
@@ -13,35 +12,17 @@
 CRVTrackerTextureWrap::CRVTrackerTextureWrap(LPCTSTR pName, CRegionView *pView) :
 	CRVTrackerTag(pName, pView)
 {
-	m_pSkipTracker		= NULL;
 	m_bAutoCenter		= FALSE;
 	m_bAutoHide			= TRUE;
 	m_bShowingDialog	= FALSE;
-
-	FlushTracker();
 }
 
 CRVTrackerTextureWrap::~CRVTrackerTextureWrap()
 {
-	delete m_pSkipTracker;
-}
-
-void CRVTrackerTextureWrap::FlushTracker()
-{
-	delete m_pSkipTracker;
-	m_pSkipTracker = new CRegionViewTracker(UIE_TEXTURE_WRAP_SKIP, m_pView);
-	SetupChildTracker(m_pSkipTracker);
-
-	CRVTrackerTag::FlushTracker();
 }
 
 void CRVTrackerTextureWrap::WatchEvent(const CUIEvent &cEvent)
 { 
-	if(m_pSkipTracker)
-	{
-		m_pSkipTracker->ProcessEvent(cEvent);
-	}
-
 	CRegionViewTracker::WatchEvent(cEvent); 
 }
 
@@ -152,12 +133,7 @@ BOOL CRVTrackerTextureWrap::OnEnd()
 	// Load the options from the registry
 	cDlg.LoadOptionsFromReg();
 
-	//if the skip tracker is active, just avoid the dialog
-	int nModalResult;
-	if(m_pSkipTracker && m_pSkipTracker->GetActive())
-		nModalResult = IDOK;
-	else
-		nModalResult = cDlg.DoModal();
+	int nModalResult = cDlg.DoModal();
 
 	m_bShowingDialog = FALSE;
 

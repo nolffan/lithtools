@@ -21,20 +21,19 @@ public:
 	CVector m_vScaleRefPt, m_vPerpNormal;
 
 
+	// Track whether or not to use perpendicular mode: 2001's key is an event
+	// (the constructor 0x47bf0d), where Build 69 has a child tracker
+	BOOL m_bPerp;
+	CUIEvent *m_pPerpEvent;
+
 	virtual BOOL OnStart();
 	virtual BOOL OnUpdate(const CUIEvent &cEvent);
 	virtual BOOL OnEnd();
 
 	virtual void WatchEvent(const CUIEvent &cEvent);
 
-	virtual void FlushTracker();
-
-private:
-
-	// Track whether or not to use perpendicular mode
-	BOOL m_bPerp;
-	CRegionViewTracker*		m_pPerpTracker;
-
+	// talon: vtable 0x4e0090 slot 0xe8 (0x47c066); name unknown
+	virtual void SetPerpEvent(const CUIEvent &cEvent) { delete m_pPerpEvent; m_pPerpEvent = cEvent.Clone(); };
 };
 
 #endif //__RVTRACKERVERTSCALE_H__

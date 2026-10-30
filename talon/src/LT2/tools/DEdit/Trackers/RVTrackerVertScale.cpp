@@ -3,7 +3,6 @@
 
 #include "bdefs.h"
 #include "rvtrackervertscale.h"
-#include "eventnames.h"
 
 CRVTrackerVertScale::CRVTrackerVertScale(LPCTSTR pName, CRegionView *pView, ESelectMode eSelMode) :
 	CRegionViewTracker(pName, pView),
@@ -13,39 +12,21 @@ CRVTrackerVertScale::CRVTrackerVertScale(LPCTSTR pName, CRegionView *pView, ESel
 	m_bAutoHide = TRUE;
 
 	m_bPerp = FALSE;
-	m_pPerpTracker = NULL;
-
-	FlushTracker();
+	m_pPerpEvent = new CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT);
 }
 
 CRVTrackerVertScale::~CRVTrackerVertScale()
 {
-	delete m_pPerpTracker;
-}
-
-void CRVTrackerVertScale::FlushTracker()
-{
-	delete m_pPerpTracker;
-	m_pPerpTracker = new CRegionViewTracker(UIE_SCALE_POLY_EXTRUDE, m_pView);
-
-	if(m_pPerpTracker)
-	{
-		m_pPerpTracker->SetAutoCapture(FALSE);
-		m_pPerpTracker->SetAutoHide(FALSE);
-		m_pPerpTracker->SetAutoCenter(FALSE);
-	}
-
-	CRegionViewTracker::FlushTracker();
+	delete m_pPerpEvent;
 }
 
 // Watch for the toggle events to happen
 void CRVTrackerVertScale::WatchEvent(const CUIEvent &cEvent)
 {
-	if(m_pPerpTracker)
-	{
-		m_pPerpTracker->ProcessEvent(cEvent);
-		m_bPerp = m_pPerpTracker->GetActive();
-	}
+	if (cEvent == *m_pPerpEvent)
+		m_bPerp = TRUE;
+	else if (cEvent.IsInverse(*m_pPerpEvent))
+		m_bPerp = FALSE;
 
 	// Call the base class watch event
 	CRegionViewTracker::WatchEvent(cEvent);

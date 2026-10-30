@@ -26,7 +26,7 @@ class CLTANodeBuilder
 {
 public:
 
-	CLTANodeBuilder(ILTAAllocator* pAllocator);
+	CLTANodeBuilder();
 	~CLTANodeBuilder();
 
 	//initializes the builder for a new building
@@ -137,9 +137,6 @@ private:
 
 	//the position in the stack
 	uint32	m_nStackPos;
-
-	//the allocator used to handle allocations of nodes
-	ILTAAllocator*	m_pAllocator;
 };
 
 #endif

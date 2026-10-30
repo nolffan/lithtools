@@ -23,7 +23,7 @@ public:
 
 	// Member access functions
 	virtual CUITracker *GetActiveTracker() const { return m_pActiveTracker; };
-	virtual void SetActiveTracker(CUITracker *pTracker);
+	virtual void SetActiveTracker(CUITracker *pTracker) { m_pActiveTracker = pTracker; };
 
 	virtual const CUITrackerList &GetTrackerList() const { return m_cTrackerList; };
 	virtual void SetTrackerList(CUITrackerList &cOtherList) { ClearTrackerList(); m_cTrackerList.CopyArray(cOtherList); };
@@ -43,11 +43,16 @@ public:
 	// Cancel all tracking
 	virtual void Cancel();
 
-	//called to flush all events that are currently being processed
-	virtual void FlushTrackers();
+	// talon: two empty notifications (vtable 0x4e0274 slots 0x28 and 0x2c,
+	// both 0x418e17, `ret 8`): ProcessEvent calls the first when a tracker
+	// takes over (0x47cfad) and the second when the active tracker keeps
+	// the event (0x47cf5b). Their names are not in the image.
+	virtual void OnTrackerActivate(CUITracker *pTracker, const CUIEvent &cEvent) {};
+	virtual void OnTrackerProcess(CUITracker *pTracker, const CUIEvent &cEvent) {};
 
-	//sorts the trackers so that those with the most number of keys are processed first
-	virtual void SortTrackers();
+	// talon: stand-in: Build 69 only, not a virtual and not in the 2001 class:
+	// RegionView.cpp (part 7) still calls it.
+	void FlushTrackers() { Cancel(); };
 };
 
 #endif //__TRACKERMGR_H__

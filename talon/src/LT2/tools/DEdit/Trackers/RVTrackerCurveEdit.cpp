@@ -72,7 +72,7 @@ BOOL CRVTrackerCurveEdit::OnStart()
 	if(m_iCurObject == 0xFFFFFFFF)
 		return FALSE;
 
-	m_pView->GetRegionDoc()->Modify(new CPreAction(ACTION_MODIFYNODE, pRegion->m_Objects[m_iCurObject]), TRUE);
+	m_pView->GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pRegion->m_Objects[m_iCurObject]), TRUE);
 
 	return TRUE;
 }

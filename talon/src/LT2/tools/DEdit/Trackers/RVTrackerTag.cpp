@@ -6,8 +6,6 @@
 #include "propertiesdlg.h"
 #include "nodeview.h"
 #include "rvtrackertag.h"
-#include "optionsmisc.h"
-#include "eventnames.h"
 
 CRVTrackerTag::CRVTrackerTag(LPCTSTR pName, CRegionView *pView, int iFlags) :
 	CRegionViewTracker(pName, pView)
@@ -16,61 +14,35 @@ CRVTrackerTag::CRVTrackerTag(LPCTSTR pName, CRegionView *pView, int iFlags) :
 	m_bAutoHide			= FALSE;
 
 	m_bAdd				= FALSE;
-	m_pAddTracker		= NULL;
+	m_pAddEvent			= new CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT);
 
 	m_bInvert			= FALSE;
-	m_pInvertTracker	= NULL;
+	m_pInvertEvent		= new CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL);
 
 	m_bObject	= !!(iFlags & FLAG_OBJECT);
 	m_bBrush	= !!(iFlags & FLAG_BRUSH);
 	m_bGeometry = !!(iFlags & FLAG_GEOMETRY);
-
-	FlushTracker();
+	m_bLight = !!(iFlags & FLAG_LIGHT);
 }
 
 CRVTrackerTag::~CRVTrackerTag()
 {
-	delete m_pAddTracker;
-	delete m_pInvertTracker;
+	delete m_pAddEvent;
+	delete m_pInvertEvent;
 }
-
-void CRVTrackerTag::FlushTracker()
-{
-	delete m_pAddTracker;
-	m_pAddTracker = new CRegionViewTracker(UIE_TAG_ADD, m_pView);
-	SetupChildTracker(m_pAddTracker);
-
-	delete m_pInvertTracker;
-	m_pInvertTracker = new CRegionViewTracker(UIE_TAG_INVERT, m_pView);
-	SetupChildTracker(m_pInvertTracker);
-
-	CRegionViewTracker::FlushTracker();
-}
-
-void CRVTrackerTag::SetupChildTracker(CRegionViewTracker* pTracker)
-{
-	if(pTracker)
-	{
-		pTracker->SetAutoCapture(FALSE);
-		pTracker->SetAutoHide(FALSE);
-		pTracker->SetAutoCenter(FALSE);
-	}
-}
-
 
 // Watch for the shift key to be pressed
 void CRVTrackerTag::WatchEvent(const CUIEvent &cEvent)
 {
-	if(m_pAddTracker)
-	{
-		m_pAddTracker->ProcessEvent(cEvent);
-		m_bAdd = m_pAddTracker->GetActive();
-	}
-	if(m_pInvertTracker)
-	{
-		m_pInvertTracker->ProcessEvent(cEvent);
-		m_bInvert = m_pInvertTracker->GetActive();
-	}
+	if (cEvent == *m_pAddEvent)
+		m_bAdd = TRUE;
+	else if (cEvent.IsInverse(*m_pAddEvent))
+		m_bAdd = FALSE;
+
+	if (cEvent == *m_pInvertEvent)
+		m_bInvert = TRUE;
+	else if (cEvent.IsInverse(*m_pInvertEvent))
+		m_bInvert = FALSE;
 
 	// Call the base class watch event
 	CRegionViewTracker::WatchEvent(cEvent);
@@ -84,6 +56,7 @@ BOOL CRVTrackerTag::OnStart()
 	bModeOK |= (iEditMode == BRUSH_EDITMODE) && m_bBrush;
 	bModeOK |= (iEditMode == OBJECT_EDITMODE) && m_bObject;
 	bModeOK |= (iEditMode == GEOMETRY_EDITMODE) && m_bGeometry;
+	bModeOK |= (iEditMode == LIGHT_EDITMODE) && m_bLight;
 	if (!bModeOK)
 		return FALSE;
 
@@ -110,17 +83,8 @@ BOOL CRVTrackerTag::OnUpdate(const CUIEvent &cEvent)
 	return TRUE;
 }
 
-void CRVTrackerTag::SelectNode(CEditRegion *pRegion, CWorldNode *pNode, HTREEITEM hItem, ESelectMode eMode, BOOL bSelectInTree)
+void CRVTrackerTag::SelectNode(CEditRegion *pRegion, CWorldNode *pNode, HTREEITEM hItem, ESelectMode eMode)
 {
-	//make sure that we aren't trying to select a frozen node
-	if( pNode->IsFlagSet(NODEFLAG_FROZEN) )
-	{
-		return;				
-	}
-
-	// Only open the parent folder in the Node View if the options allow it
-	if (!GetApp()->GetOptions().GetMiscOptions()->IsParentFolder())  bSelectInTree = false;
-
 	switch (eMode)
 	{
 		case SELECT_OFF :
@@ -130,15 +94,11 @@ void CRVTrackerTag::SelectNode(CEditRegion *pRegion, CWorldNode *pNode, HTREEITE
 		case SELECT_ON :
 			// Select the node
 			pRegion->SelectNode(pNode);
-			// Select the node if desired
-			if(bSelectInTree)
-			{
-				GetNodeView()->m_NodeViewTree.Select(hItem, TVGN_CARET);
-			}
+			GetNodeView()->m_NodeViewTree.Select(hItem, TVGN_CARET);
 			break;
 		case SELECT_INVERT :
 			// Invert the selection
-			SelectNode(pRegion, pNode, hItem, (pNode->IsFlagSet(NODEFLAG_SELECTED)) ? SELECT_OFF : SELECT_ON, bSelectInTree);
+			SelectNode(pRegion, pNode, hItem, (pNode->IsFlagSet(NODEFLAG_SELECTED)) ? SELECT_OFF : SELECT_ON);
 			break;
 	}
 }
@@ -255,7 +215,6 @@ BOOL CRVTrackerTag::OnEnd()
 
 				for(i=0; i < taggedVerts; i++)
 				{
-					BOOL bLastItem = (i == taggedVerts - 1) ? TRUE : FALSE;
 
 					pBrush = taggedVerts[i].m_pBrush;
 
@@ -264,12 +223,12 @@ BOOL CRVTrackerTag::OnEnd()
 					{
 						if(!pBrush->IsFlagSet(NODEFLAG_SELECTED) || (eSelectMode == SELECT_OFF))
 						{
-							SelectNode(pRegion, pBrush->AsNode(), pBrush->GetItem(), eSelectMode, bLastItem);
+							SelectNode(pRegion, pBrush->AsNode(), pBrush->GetItem(), eSelectMode);
 						}
 					}
 					else
 					{
-						SelectNode(pRegion, pBrush->AsNode(), pBrush->GetItem(), eSelectMode, bLastItem);
+						SelectNode(pRegion, pBrush->AsNode(), pBrush->GetItem(), eSelectMode);
 						// Remove duplicate references to the same brush
 						for (DWORD j = i + 1; j < taggedVerts; j++)
 							if (taggedVerts[i].m_pBrush == taggedVerts[j].m_pBrush)
@@ -295,7 +254,7 @@ BOOL CRVTrackerTag::OnEnd()
 						pRegion->ClearSelections();
 
 					// Set the selection state
-					SelectNode(pRegion, pBrush->AsNode(), pBrush->GetItem(), eSelectMode, TRUE);
+					SelectNode(pRegion, pBrush->AsNode(), pBrush->GetItem(), eSelectMode);
 				}
 			}
 
@@ -333,13 +292,13 @@ BOOL CRVTrackerTag::OnEnd()
 		CMoArray<CWorldNode*> objects;
 		DWORD i;
 
-		m_pView->GetObjectsInRect(m_cRect, objects, TRUE);
+		m_pView->GetObjectsInRect(m_cRect, objects);
 
 		if (!objects.GetSize())
 		{
-			CWorldNode *obj = m_pView->GetClosestObject( m_cCurPt, FALSE, NULL, TRUE );
-			if (obj)
-				objects.Add(obj);
+			CObjectRef obj = m_pView->GetClosestObject( m_cCurPt, FALSE );
+			if (obj.IsValid())
+				objects.Add(obj());
 		}
 
 		if (objects.GetSize())
@@ -351,12 +310,16 @@ BOOL CRVTrackerTag::OnEnd()
 
 			for( i = 0; i < objects.GetSize( ); i++ )
 			{
-				BOOL bLastItem = (i == objects.GetSize() - 1) ? TRUE : FALSE;
-				SelectNode(pRegion, objects[i], objects[i]->GetItem(), eSelectMode, bLastItem);
+				SelectNode(pRegion, objects[i], objects[i]->GetItem(), eSelectMode);
 			}
 
 			m_pView->GetRegionDoc()->NotifySelectionChange();
 		}
+	}
+	// Tagging lightmap texels (0x4790b3)
+	else if (iEditMode == LIGHT_EDITMODE)
+	{
+		m_pView->TagLightTexelsInRect(m_cRect);
 	}
 	
 	m_pView->m_TagDrawRect.SetRect( -1, -1, -1, -1 );

@@ -4,7 +4,6 @@
 #include "bdefs.h"
 #include "..\dedit.h"
 #include "rvtracker.h"
-#include "globalhotkeydb.h"
 
 CRegionViewTracker::CRegionViewTracker(LPCTSTR pName, CRegionView *pView) : 
 	CUITracker(pName), 
@@ -19,14 +18,15 @@ CRegionViewTracker::CRegionViewTracker(LPCTSTR pName, CRegionView *pView) :
 	m_cRect(0,0,0,0),
 	m_cLastRect(0,0,0,0),
 	m_dwLastUpdateTime(0),
-	m_dwTimeDelta(0),
-	m_nWheelDelta(0)
+	m_dwTimeDelta(0)
 {
-	FlushTracker();
 }
 
 CRegionViewTracker::~CRegionViewTracker() 
 {
+	ClearEventList(m_cStartEventList);
+	ClearEventList(m_cEndEventList);
+
 	// Manually clear the override manager to avoid double-frees
 	CUITrackerList *pTrackerList = ((CUITrackerList *)&(m_cOverrideMgr.GetTrackerList()));
 	// Note : Using RemoveAll will call the deconstructor, which we don't want..
@@ -48,7 +48,7 @@ BOOL CRegionViewTracker::StartTracker()
 
 	if (GetActive())
 	{
-		if (GetAutoCapture() && GetView() && GetEndEventList().GetSize())
+		if (GetAutoCapture() && GetView() && m_cEndEventList.GetSize())
 			GetView()->SetCapture();
 		if (GetAutoCenter())
 			CenterCursor();
@@ -225,45 +225,26 @@ BOOL CRegionViewTracker::ProcessEvent(const CUIEvent &cEvent)
 		bForceEnd = !Update(cEvent);
 	}
 
+	// Wait for the waiting list to empty
+	if (!bForceEnd && GetWaitingEventList().GetSize())
+		return GetActive();
+
 	// Find out whether or not we're trying to activate
 	if ((!GetActive()) && (!bForceEnd))
 	{
-		//see if we have any events waiting
-		if(GetWaitingEventList().GetSize())
-		{
-			return GetActive();
-		}
-
 		// Only activate if we've got a start event list
 		if (GetStartEventList().GetSize())
-		{
-			// Start the tracker
 			StartTracker();
-			SetWaitingEventList(GetEndEventList());
-		}
 	}
 	else
 	{
 		// Only de-activate if we've got an end event list or OnUpdate wanted us to
-		if ((GetEndEventList().GetSize() > GetWaitingEventList().GetSize()) || bForceEnd)
-		{
-			// End the tracker
+		if (GetEndEventList().GetSize() || bForceEnd)
 			EndTracker();
-			// Toggle the waiting list
-			SetWaitingEventList(GetStartEventList());
-
-			//since this element just caused us to become inactive, that could mean that there
-			//are still a bunch of keys depressed if mutliple were needed to activate. If
-			//this is truly an inverse keypress, we should just use this as the waiting list
-			DWORD nIndex;
-			if(IsInverseEvent(GetStartEventList(), cEvent, &nIndex))
-			{
-				m_cWaitingEventList.RemoveAll();
-				m_cWaitingEventList.Add(GetStartEventList()[nIndex]);
-			}
-		}
 	}
 
+	// Toggle the waiting list
+	SetWaitingEventList((GetActive()) ? GetEndEventList() : GetStartEventList());
 
 	return GetActive();
 }
@@ -271,18 +252,15 @@ BOOL CRegionViewTracker::ProcessEvent(const CUIEvent &cEvent)
 // Keep track of the waiting list
 void CRegionViewTracker::WatchEvent(const CUIEvent &cEvent)
 {
-	const CUIEventList	&StartEventList	= GetStartEventList();
-	const CUIEventList	&EndEventList	= GetEndEventList();
-
 	// If using phantom end mode, and a watch event comes through w/o a waiting list, require a re-start
 	if (GetPhantomEnd() && (!GetActive() && !GetWaitingEventList().GetSize()))
 	{
-		m_cWaitingEventList.CopyArray(EndEventList);
-		m_cWaitingEventList.AppendArray(StartEventList);
+		m_cWaitingEventList.CopyArray(GetEndEventList());
+		m_cWaitingEventList.AppendArray(GetStartEventList());
 	}
 
 	// Figure out which list we're waiting on
-	const CUIEventList &cList = (GetActive()) ? EndEventList : StartEventList;
+	const CUIEventList &cList = (GetActive()) ? GetEndEventList() : GetStartEventList();
 
 	DWORD uIndex;
 
@@ -303,8 +281,6 @@ void CRegionViewTracker::WatchEvent(const CUIEvent &cEvent)
 	switch (cEvent.GetType())
 	{
 		// Keep track of the mouse location
-		case UIEVENT_MOUSEWHEEL:
-			SetWheelDelta(((const CUIMouseEvent *)&cEvent)->GetWheelDelta());
 		case UIEVENT_MOUSEUP :
 		case UIEVENT_MOUSEDOWN :
 		case UIEVENT_MOUSEMOVE :
@@ -416,36 +392,3 @@ void CRegionViewTracker::DoAutoScroll()
 		SetCurPt(cNewPt);
 	}
 }
-
-//used by the below functions to return if it cannot find the appropriate list
-//so it returns an empty one
-static CUIEventList g_EmptyList;
-
-const CUIEventList & CRegionViewTracker::GetStartEventList() const
-{
-	const CHotKey* pHotKey = CGlobalHotKeyDB::m_DB.GetHotKey(GetName());
-	if(pHotKey)
-	{
-		return pHotKey->GetStartEventList();
-	}
-	return g_EmptyList;
-}
-
-const CUIEventList & CRegionViewTracker::GetEndEventList() const
-{
-	const CHotKey* pHotKey = CGlobalHotKeyDB::m_DB.GetHotKey(GetName());
-	if(pHotKey)
-	{
-		return pHotKey->GetEndEventList();
-	}
-	return g_EmptyList;
-}
-
-void CRegionViewTracker::FlushTracker()
-{
-	m_cWaitingEventList.RemoveAll();
-	m_cWaitingEventList.CopyArray(GetStartEventList());
-
-	CUITracker::FlushTracker();
-}
-

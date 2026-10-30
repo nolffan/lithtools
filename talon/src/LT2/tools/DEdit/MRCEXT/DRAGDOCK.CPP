@@ -605,13 +605,14 @@ void CDragDockContext::ToggleDocking()
 			CFrameWnd *pMainFrame=(CFrameWnd *)AfxGetMainWnd();
 
 			// Make sure that the control bar is docked to a correct side
-			if (m_pBar->m_dwDockStyle & CBRS_ALIGN_LEFT)
-			{
-				pMainFrame->DockControlBar(m_pBar, AFX_IDW_DOCKBAR_LEFT);
-			}
-			else if (m_pBar->m_dwDockStyle & CBRS_ALIGN_RIGHT)
+			// talon: 2001 (0x46fdca) tests the right side first
+			if (m_pBar->m_dwDockStyle & CBRS_ALIGN_RIGHT)
 			{
 				pMainFrame->DockControlBar(m_pBar, AFX_IDW_DOCKBAR_RIGHT);
+			}
+			else if (m_pBar->m_dwDockStyle & CBRS_ALIGN_LEFT)
+			{
+				pMainFrame->DockControlBar(m_pBar, AFX_IDW_DOCKBAR_LEFT);
 			}
 			else if (m_pBar->m_dwDockStyle & CBRS_ALIGN_TOP)
 			{

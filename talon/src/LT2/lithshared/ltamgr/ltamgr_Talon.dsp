@@ -89,10 +89,6 @@ SOURCE=.\ltahuffmantree.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\ltaloadonlyalloc.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\ltanode.cpp
 # End Source File
 # Begin Source File

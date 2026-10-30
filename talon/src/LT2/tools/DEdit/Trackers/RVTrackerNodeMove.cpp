@@ -3,7 +3,6 @@
 
 #include "bdefs.h"
 #include "rvtrackernodemove.h"
-#include "eventnames.h"
 
 CRVTrackerNodeMove::CRVTrackerNodeMove(LPCTSTR pName, CRegionView *pView, int iFlags) :
 	CRegionViewTracker(pName, pView),
@@ -15,10 +14,10 @@ CRVTrackerNodeMove::CRVTrackerNodeMove(LPCTSTR pName, CRegionView *pView, int iF
 	m_bAutoHide			= FALSE;
 
 	m_bLockAxis			= FALSE;
-	m_pLockAxisTracker	= NULL;
+	m_pLockAxisEvent	= new CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT);
 
 	m_bClone			= (iFlags & FLAG_CLONE) != 0;
-	m_pCloneTracker		= NULL;
+	m_pCloneEvent		= new CUIKeyEvent(UIEVENT_KEYDOWN, 'D');
 
 	m_bSnap				= (iFlags & FLAG_SNAP) != 0;
 	m_bHandle			= (iFlags & FLAG_HANDLE) != 0;
@@ -27,46 +26,21 @@ CRVTrackerNodeMove::CRVTrackerNodeMove(LPCTSTR pName, CRegionView *pView, int iF
 
 CRVTrackerNodeMove::~CRVTrackerNodeMove()
 {
-	delete m_pLockAxisTracker;
-	delete m_pCloneTracker;
-}
-
-void CRVTrackerNodeMove::FlushTracker()
-{
-	delete m_pLockAxisTracker;
-	m_pLockAxisTracker = new CRegionViewTracker(UIE_NODE_MOVE_LOCK_AXIS, m_pView);
-	SetupChildTracker(m_pLockAxisTracker);
-
-	delete m_pCloneTracker;
-	m_pCloneTracker = new CRegionViewTracker(UIE_NODE_MOVE_CLONE, m_pView);
-	SetupChildTracker(m_pCloneTracker);
-
-	CRegionViewTracker::FlushTracker();
-}
-
-void CRVTrackerNodeMove::SetupChildTracker(CRegionViewTracker* pTracker)
-{
-	if(pTracker)
-	{
-		pTracker->SetAutoCapture(FALSE);
-		pTracker->SetAutoHide(FALSE);
-		pTracker->SetAutoCenter(FALSE);
-	}
+	delete m_pLockAxisEvent;
+	delete m_pCloneEvent;
 }
 
 // Watch for the shift key to be pressed
 void CRVTrackerNodeMove::WatchEvent(const CUIEvent &cEvent)
 {
-	if (m_pLockAxisTracker)
-	{
-		m_pLockAxisTracker->ProcessEvent(cEvent);
-		m_bLockAxis = m_pLockAxisTracker->GetActive();
-	}
-	if (m_pCloneTracker)
-	{
-		m_pCloneTracker->ProcessEvent(cEvent);
-		m_bClone = m_pCloneTracker->GetActive();
-	}
+	if (cEvent == *m_pLockAxisEvent)
+		m_bLockAxis = TRUE;
+	else if (cEvent.IsInverse(*m_pLockAxisEvent))
+		m_bLockAxis = FALSE;
+	else if (cEvent == *m_pCloneEvent)
+		m_bClone = TRUE;
+	else if (cEvent.IsInverse(*m_pCloneEvent))
+		m_bClone = FALSE;
 
 	// Call the base class watch event
 	CRegionViewTracker::WatchEvent(cEvent);

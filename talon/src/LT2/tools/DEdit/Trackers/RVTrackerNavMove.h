@@ -12,13 +12,17 @@ public:
 	CRVTrackerNavMove(LPCTSTR pName = "", CRegionView *pView = NULL);
 	virtual ~CRVTrackerNavMove();
 
-	// Track whether or not the right mouse button is down
-	BOOL m_bPerp;
-	CRegionViewTracker *m_pPerpTracker;
+	// talon: a member the 2001 class has before its own (0xb8), never
+	// initialised; see the .cpp
+	int m_nUnknownB8;
 
-	// Track whether or not the left mouse button is down
+	// Track whether or not the mouse buttons are down: 2001's are events (the
+	// constructor), where Build 69 has child trackers from the hotkeys
+	BOOL m_bPerp;
+	CUIEvent *m_pPerpEvent;
+
 	BOOL m_bFast;
-	CRegionViewTracker *m_pFastTracker;
+	CUIEvent *m_pFastEvent;
 
 	// Only update on idle processing
 	BOOL m_bIdleOnly;
@@ -29,9 +33,9 @@ public:
 
 	virtual void WatchEvent(const CUIEvent &cEvent);
 
-	virtual void FlushTracker();
-
-	void SetupChildTracker(CRegionViewTracker* pTracker);
+	// talon: vtable slots 0xe8 (0x477248), 0xec (0x47771f); names unknown
+	virtual void SetPerpEvent(const CUIEvent &cEvent) { delete m_pPerpEvent; m_pPerpEvent = cEvent.Clone(); };
+	virtual void SetFastEvent(const CUIEvent &cEvent) { delete m_pFastEvent; m_pFastEvent = cEvent.Clone(); };
 };
 
 #endif //__RVTRACKERNAVMOVE_H__

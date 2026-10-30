@@ -45,12 +45,4 @@
 #	include "..\ltamgr\ltaparseutils.h"
 #endif
 
-#ifndef __LTALOADONLYALLOC_H__
-#	include "..\ltamgr\ltaloadonlyalloc.h"
-#endif
-
-#ifndef __LTADEFAULTALLOC_H__
-#	include "..\ltamgr\ltadefaultalloc.h"
-#endif
-
 #endif

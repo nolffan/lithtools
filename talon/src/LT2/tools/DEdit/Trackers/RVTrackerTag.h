@@ -16,36 +16,35 @@ protected:
 	};
 
 	// Supporting function for selecting a node
-	//takes elements needed to select a specific node, as well as whether or not
-	//it should select it in the node view. This is for performance reasons since
-	//if a large list of nodes is being selected, only the last one should be jumped to
-	//since jumping to each one requires a TON of unneeded drawing of the list -JohnO
-	void SelectNode(CEditRegion *pRegion, CWorldNode *pNode, HTREEITEM hItem, ESelectMode eMode, BOOL bSelectInTree = TRUE);
+	void SelectNode(CEditRegion *pRegion, CWorldNode *pNode, HTREEITEM hItem, ESelectMode eMode);
 
 	// Find the polygon that's closest to the ray
 	CPolyRef FindBestPoly(CEditRay ray);
 
 public:
+	// talon: 2001 has a fourth mode flag, for LIGHT_EDITMODE (OnStart 0x478b89,
+	// the constructor 0x4789d8); its name is not in the image
 	enum EctorFlags { 
 		FLAG_NONE = 0,
 		FLAG_OBJECT = 1, 
 		FLAG_BRUSH = 2,
 		FLAG_GEOMETRY = 4,
+		FLAG_LIGHT = 8,
 		FLAG_ALL = 31
 	};
 
 	CRVTrackerTag(LPCTSTR pName = "", CRegionView *pView = NULL, int iFlags = FLAG_NONE);
 	virtual ~CRVTrackerTag();
 
-	BOOL m_bObject, m_bBrush, m_bGeometry;
+	BOOL m_bObject, m_bBrush, m_bGeometry, m_bLight;
 
 	// Track whether or not the "add" key is down
-	CRegionViewTracker* m_pAddTracker;
 	BOOL m_bAdd;
+	CUIEvent *m_pAddEvent;
 
 	// Track whether or not the "invert" key is down
-	CRegionViewTracker* m_pInvertTracker;
 	BOOL m_bInvert;
+	CUIEvent *m_pInvertEvent;
 
 	virtual BOOL OnStart();
 	virtual BOOL OnUpdate(const CUIEvent &cEvent);
@@ -54,8 +53,10 @@ public:
 
 	virtual void WatchEvent(const CUIEvent &cEvent);
 
-	void FlushTracker();
-	void SetupChildTracker(CRegionViewTracker* pTracker);
+	// talon: the add and invert keys (vtable 0x4dfc40 slots 0xe8, 0xec: 0x478aeb,
+	// 0x478b12); Build 69 has child trackers from the hotkeys. Names unknown.
+	virtual void SetAddEvent(const CUIEvent &cEvent) { delete m_pAddEvent; m_pAddEvent = cEvent.Clone(); };
+	virtual void SetInvertEvent(const CUIEvent &cEvent) { delete m_pInvertEvent; m_pInvertEvent = cEvent.Clone(); };
 };
 
 #endif //__RVTRACKERTAG_H__

@@ -1,44 +1,48 @@
 #include "ltanode.h"
 #include "ltaconverter.h"
-#include "iltaallocator.h"
 
 //the decimal accuracy for converting from double to str
 #define LTA_DECIMAL_ACCURACY	6
 
 //default constructor. Creates an atom with no value
-CLTANode::CLTANode()
+CLTANode::CLTANode() :
+	m_nFlags(0),
+	m_pData(NULL)
 {
-	NodeConstructor();
 }
 
-//function constructor. This is so that allocators can initialize a node
-//that they create from their own memory banks
-void CLTANode::NodeConstructor()
+//creates a list with room for the specified number of elements (2001,
+//0x48bcb0)
+CLTANode::CLTANode(uint32 nNumElements) :
+	m_nFlags(0),
+	m_pData(NULL)
 {
-	m_nFlags	= 0;
-	m_pData		= NULL;
+	AllocateElements(nNumElements);
 }
 
+//creates an atom with the specified value (2001, 0x48bcd0)
+CLTANode::CLTANode(const char* pszValue, bool bString) :
+	m_nFlags(MASK_VALUE),
+	m_pData(NULL)
+{
+	SetValue(pszValue, bString);
+}
 
 CLTANode::~CLTANode()
 {
-	//make sure we aren't leaking memory. If we are, this node needs to have
-	//Free called on it before it is deleted
-	assert(m_pData == NULL);
+	Free();
 }
 
 
 //allocates room for the specified number of elements. Doing this will
 //make the node a list and not an atom
-bool CLTANode::AllocateElements(uint32 nNumElements, ILTAAllocator* pAllocator)
+bool CLTANode::AllocateElements(uint32 nNumElements)
 {
-	ASSERT(pAllocator);
-
 	//clean up old stuff
-	Free(pAllocator);
+	Free();
 
 	//allocate the array
-	m_pData = pAllocator->AllocateBlock(sizeof(CLTANode*) * nNumElements);
+	m_pData = new CLTANode* [nNumElements];
 
 	//sanity check
 	if(m_pData == NULL)
@@ -54,13 +58,12 @@ bool CLTANode::AllocateElements(uint32 nNumElements, ILTAAllocator* pAllocator)
 }
 
 //appends an element onto the end of the element list
-bool CLTANode::AppendElement(CLTANode* pElement, ILTAAllocator* pAllocator)
+bool CLTANode::AppendElement(CLTANode* pElement)
 {
-	ASSERT(pAllocator);
 	ASSERT(IsList());
 	
 	//resize the array
-	CLTANode** pNewBuffer = (CLTANode**)pAllocator->AllocateBlock(sizeof(CLTANode*) * (GetNumElements() + 1));
+	CLTANode** pNewBuffer = new CLTANode* [GetNumElements() + 1];
 
 	//make sure it worked
 	if(pNewBuffer == NULL)
@@ -75,7 +78,7 @@ bool CLTANode::AppendElement(CLTANode* pElement, ILTAAllocator* pAllocator)
 	pNewBuffer[GetNumElements()] = pElement;
 
 	//delete the old buffer
-	pAllocator->FreeBlock(m_pData);
+	delete [] (CLTANode**)m_pData;
 
 	//and set up the new buffer
 	m_pData = pNewBuffer;
@@ -87,24 +90,22 @@ bool CLTANode::AppendElement(CLTANode* pElement, ILTAAllocator* pAllocator)
 
 //frees the memory associated with the node. If it is a list, it 
 //will also free all the children nodes
-void CLTANode::Free(ILTAAllocator* pAllocator)
+void CLTANode::Free()
 {
-	ASSERT(pAllocator);
-
 	if(IsAtom())
 	{
-		pAllocator->FreeBlock(m_pData);
+		delete [] (char*)m_pData;
 	}
 	else
 	{
 		//first delete all the children
 		for(uint32 nCurrElement = 0; nCurrElement < m_nFlags; nCurrElement++)
 		{
-			pAllocator->FreeNode(GetElement(nCurrElement));
+			delete GetElement(nCurrElement);
 		}
 
 		//now clear the entire array
-		pAllocator->FreeBlock(m_pData);
+		delete [] (CLTANode**)m_pData;
 	}
 
 	m_nFlags	= 0;
@@ -112,20 +113,20 @@ void CLTANode::Free(ILTAAllocator* pAllocator)
 }
 
 //sets the value of the atom. Will not work if this already has children
-bool CLTANode::SetValue(const char* pszValue, bool bString, ILTAAllocator* pAllocator)
+bool CLTANode::SetValue(const char* pszValue, bool bString)
 {
-	return SetValue(pszValue, bString, strlen(pszValue), pAllocator);
+	return SetValue(pszValue, bString, strlen(pszValue));
 }
 
 
 //sets the value of the atom. Will not work if this already has children
-bool CLTANode::SetValue(const char* pszValue, bool bString, uint32 nLen, ILTAAllocator* pAllocator)
+bool CLTANode::SetValue(const char* pszValue, bool bString, uint32 nLen)
 {
 	//clean it up
-	Free(pAllocator);
+	Free();
 
 	//allocate the new buffer
-	m_pData = pAllocator->AllocateBlock(sizeof(char) * (nLen + 1));
+	m_pData = new char [nLen + 1];
 
 	//memory check
 	if(m_pData == NULL)
@@ -149,32 +150,32 @@ bool CLTANode::SetValue(const char* pszValue, bool bString, uint32 nLen, ILTAAll
 	return true;
 }
 
-bool CLTANode::SetValue(int32 nVal, ILTAAllocator* pAllocator)
+bool CLTANode::SetValue(int32 nVal)
 {
 	//buffer used for setting the value
 	static char pszBuffer[32];
 
 	uint32 nLen = CLTAConverter::IntToStr(nVal, pszBuffer, 32);
 
-	return SetValue(pszBuffer, false, nLen, pAllocator);
+	return SetValue(pszBuffer, false, nLen);
 }
 
-bool CLTANode::SetValue(double fVal, ILTAAllocator* pAllocator)
+bool CLTANode::SetValue(double fVal)
 {
 	//buffer used for setting the value
 	static char pszBuffer[32];
 
 	uint32 nLen = CLTAConverter::RealToStr(fVal, pszBuffer, 32);
 
-	return SetValue(pszBuffer, false, nLen, pAllocator);
+	return SetValue(pszBuffer, false, nLen);
 }
 
-bool CLTANode::SetValue(bool bVal, ILTAAllocator* pAllocator)
+bool CLTANode::SetValue(bool bVal)
 {
 	//buffer used for setting the value
 	static char pszBuffer[32];
 
 	uint32 nLen = CLTAConverter::BoolToStr(bVal, pszBuffer, 32);
 
-	return SetValue(pszBuffer, false, nLen, pAllocator);
+	return SetValue(pszBuffer, false, nLen);
 }

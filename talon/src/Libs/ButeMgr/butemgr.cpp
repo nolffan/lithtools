@@ -565,9 +565,12 @@ void CButeMgr::DisplayMessage(const char* szMsg, ...)
 	va_start(v, szMsg);
 	CString sTmp;
 	sTmp.FormatV(szMsg, v);
-	m_sErrorString.Format("ButeMgr (%s, %d):  %s", m_sAttributeFilename, m_lineNumber, sTmp);
+	// 2001 (0x484810): the file name only when there is one, no TRACE
+	if (!m_sAttributeFilename.IsEmpty())
+		m_sErrorString.Format("File \"%s\", line %d :  %s", m_sAttributeFilename.GetBuffer(0), m_lineNumber, sTmp.GetBuffer(0));
+	else
+		m_sErrorString.Format("Line %d :  %s", m_lineNumber, sTmp.GetBuffer(0));
 
-	TRACE("%s\n", m_sErrorString.GetBuffer(0));
 	if (m_pDisplayFunc)
 		(*m_pDisplayFunc)(m_sErrorString.GetBuffer(0));
 }
@@ -868,7 +871,11 @@ bool CButeMgr::StatementList()
 		if (m_token == TagBegTok || m_token == EofTok)
 			return true;
 		else if (m_token != IdTok)
+		{
+			// 2001 (0x48550f): says so
+			DisplayMessage("A formatting error in the attribute file was encountered.");
 			return false;
+		}
 	}
 	return true;
 }

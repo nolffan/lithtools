@@ -1,9 +1,4 @@
 #include "ltanodeiterator.h"
-#include "ltadefaultalloc.h"
-
-//allocator to be used in creating the root node. This is thread safe since
-//it is just new and delete
-CLTADefaultAlloc g_DefaultAlloc;
 
 
 //create an iterator starting at this root
@@ -11,10 +6,10 @@ CLTANodeIterator::CLTANodeIterator(CLTANode* pRoot) :
 	m_nStackPos(0)
 {
 	//create a new node to be the parent
-	CLTANode* pParent = g_DefaultAlloc.AllocateNode();
+	CLTANode* pParent = new CLTANode;
 
 	//add this item as a child
-	pParent->AppendElement(pRoot, &g_DefaultAlloc);
+	pParent->AppendElement(pRoot);
 
 	//add the node to the stack
 	m_pNodeStack[m_nStackPos] = pParent;
@@ -28,7 +23,7 @@ CLTANodeIterator::~CLTANodeIterator()
 	if(m_pNodeStack[0])
 	{
 		m_pNodeStack[0]->SetElement(NULL, 0);
-		g_DefaultAlloc.FreeNode(m_pNodeStack[0]);
+		delete m_pNodeStack[0];
 	}
 }
 

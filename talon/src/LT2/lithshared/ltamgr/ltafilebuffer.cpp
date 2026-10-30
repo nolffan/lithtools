@@ -98,13 +98,9 @@ bool CLTAFileBuffer::Close()
 	//clean up the cache
 	FreeCache();
 
-	//determine if an error occurred
-	bool bRV = true; 
-
-	//close the file
+	//close the file (2001, 0x48c8e0: no ferror check)
 	if(m_pFile)
 	{
-		bRV = ferror(m_pFile) ? false : true;
 		fclose(m_pFile);
 		m_pFile = NULL;
 	}
@@ -112,7 +108,7 @@ bool CLTAFileBuffer::Close()
 	//set the mode to invalid
 	m_eMode = OPEN_ERROR;
 
-	return bRV;
+	return true;
 }
 
 //determines the mode the file was opened in

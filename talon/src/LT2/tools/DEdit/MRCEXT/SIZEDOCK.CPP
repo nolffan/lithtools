@@ -266,7 +266,7 @@ void CSizableMiniDockFrameWnd::OnNcLButtonDown(UINT nHitTest, CPoint point)
 		else if (nHitTest == HTSYSMENU)
 		{
 			// do the system menu - ie give move,size,hide, etc options as would Win95.						
-			//InvertSysMenu();
+			InvertSysMenu();	// talon: 2001 (0x471fb4, 0x472015)
 			CPoint pt(0,0);
 			ClientToScreen(&pt);
 			CRect rcSysIcon;
@@ -276,7 +276,7 @@ void CSizableMiniDockFrameWnd::OnNcLButtonDown(UINT nHitTest, CPoint point)
 			
 			CMenu * pSysMenu = GetSystemMenu(FALSE);
 			int nCmd = pSysMenu->TrackPopupMenu(TPM_LEFTALIGN | TPM_RETURNCMD, pt.x, pt.y, this, & rcSysIcon);
-			//InvertSysMenu();
+			InvertSysMenu();
 			if (nCmd != 0)
 			{
 				SendMessage(WM_SYSCOMMAND, nCmd, 0);
@@ -353,22 +353,12 @@ enum CSizableMiniDockFrameWnd::ContainedBarType CSizableMiniDockFrameWnd::GetCon
 					{
 						CString strHide;
 
-						if(pBar->m_Style & SZBARF_HIDE_ON_CLOSE)
+						// talon: 2001 (0x472164) has no SZBARF_HIDE_ON_CLOSE "Dock" case
+						if (strHide.LoadString(AFX_IDS_HIDE))
 						{
-							if (strHide.LoadString(AFX_IDS_HIDE))
-							{
-								// modify menu text to be "Hide" instrad of close
-								VERIFY(pSysMenu->ModifyMenu(SC_CLOSE, MF_BYCOMMAND | MF_STRING, SC_CLOSE, strHide));  
-							} 
-						}
-						else
-						{
-							if (strHide.LoadString(AFX_IDS_DOCK))
-							{
-								// modify menu text to be "Dock" instrad of close
-								VERIFY(pSysMenu->ModifyMenu(SC_CLOSE, MF_BYCOMMAND | MF_STRING, SC_CLOSE, strHide));  
-							} 
-						}
+							// modify menu text to be "Hide" instrad of close
+							VERIFY(pSysMenu->ModifyMenu(SC_CLOSE, MF_BYCOMMAND | MF_STRING, SC_CLOSE, strHide));  
+						} 
 
 						/*
 						CString strClose;

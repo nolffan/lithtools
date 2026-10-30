@@ -3,7 +3,6 @@
 
 #include "bdefs.h"
 #include "rvtrackernoderotate.h"
-#include "eventnames.h"
 
 CRVTrackerNodeRotate::CRVTrackerNodeRotate(LPCTSTR pName, CRegionView *pView) :
 	CRegionViewTracker(pName, pView)
@@ -11,39 +10,22 @@ CRVTrackerNodeRotate::CRVTrackerNodeRotate(LPCTSTR pName, CRegionView *pView) :
 	m_bAutoCenter	= FALSE;
 	m_bAutoHide		= TRUE;
 
-	m_pStepTracker	= NULL;
-	m_bStep			= TRUE;
-
-	FlushTracker();
+	m_bStep			= FALSE;
+	m_pStepEvent	= new CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT);
 }
 
 CRVTrackerNodeRotate::~CRVTrackerNodeRotate()
 {
-	delete m_pStepTracker;
-}
-
-void CRVTrackerNodeRotate::FlushTracker()
-{
-	delete m_pStepTracker;
-	m_pStepTracker = new CRegionViewTracker(UIE_NODE_ROTATE_STEP, m_pView);
-	if(m_pStepTracker)
-	{
-		m_pStepTracker->SetAutoCapture(FALSE);
-		m_pStepTracker->SetAutoCenter(FALSE);
-		m_pStepTracker->SetAutoHide(FALSE);
-	}
-
-	CRegionViewTracker::FlushTracker();
+	delete m_pStepEvent;
 }
 
 void CRVTrackerNodeRotate::WatchEvent(const CUIEvent &cEvent)
 {
 	// Keep track of the step toggle
-	if(m_pStepTracker)
-	{
-		m_pStepTracker->ProcessEvent(cEvent);
-		m_bStep = !m_pStepTracker->GetActive();
-	}
+	if (cEvent == *m_pStepEvent)
+		m_bStep = TRUE;
+	else if (cEvent.IsInverse(*m_pStepEvent))
+		m_bStep = FALSE;
 
 	CRegionViewTracker::WatchEvent(cEvent);
 }

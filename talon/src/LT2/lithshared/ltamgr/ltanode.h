@@ -21,31 +21,28 @@
 #define MASK_STRING				((uint32)0x40000000)
 #define MASK_NUMELEMENTS		((uint32)0x3FFFFFFF)
 
-//forward declaration for the allocator interface
-class ILTAAllocator;
-
 class CLTANode
 {
 public:
 
 	//default constructor. Creates an atom with no value
 	CLTANode();
+	// 2001 (0x48bcb0, 0x48bcd0): a list of n elements, an atom with a value
+	CLTANode(uint32 nNumElements);
+	CLTANode(const char* pszValue, bool bString);
 	~CLTANode();
 
-	//function constructor. This is so that allocators can initialize a node
-	//that they create from their own memory banks
-	void NodeConstructor();
 
 	//allocates room for the specified number of elements. Doing this will
 	//make the node a list and not an atom
-	bool AllocateElements(uint32 nNumElements, ILTAAllocator* pAllocator);
+	bool AllocateElements(uint32 nNumElements);
 
 	//appends an element onto the end of the element list
-	bool AppendElement(CLTANode* pElement, ILTAAllocator* pAllocator);
+	bool AppendElement(CLTANode* pElement);
 
 	//frees the memory associated with the node. If it is a list, it 
 	//will also free all the children nodes
-	void Free(ILTAAllocator* pAllocator);
+	void Free();
 
 	//determines if the node is a list or not (no value, only children)
 	inline bool IsList() const;
@@ -70,16 +67,16 @@ public:
 	inline const CLTANode* GetElement(uint32 nIndex) const;
 
 	//sets the value of the atom. Will not work if this already has children
-	bool SetValue(const char* pszValue, bool bString, ILTAAllocator* pAllocator);
+	bool SetValue(const char* pszValue, bool bString);
 
 	//sets the value of the atom. Will not work if this already has children.
 	//this version is for if you already know the length of the string
-	bool SetValue(const char* pszValue, bool bString, uint32 nStrLen, ILTAAllocator* pAllocator);
+	bool SetValue(const char* pszValue, bool bString, uint32 nStrLen);
 
 	//sets the value to a specific type of value (converts to a string)
-	bool SetValue(int32 nVal, ILTAAllocator* pAllocator);
-	bool SetValue(double fVal, ILTAAllocator* pAllocator);
-	bool SetValue(bool bVal, ILTAAllocator* pAllocator);
+	bool SetValue(int32 nVal);
+	bool SetValue(double fVal);
+	bool SetValue(bool bVal);
 
 	//gets the value of the atom
 	inline const char* GetValue() const;

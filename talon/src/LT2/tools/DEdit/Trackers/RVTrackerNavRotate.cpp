@@ -3,68 +3,40 @@
 
 #include "bdefs.h"
 #include "rvtrackernavrotate.h"
-#include "optionscontrols.h"
-#include "eventnames.h"
 
 CRVTrackerNavRotate::CRVTrackerNavRotate(LPCTSTR pName, CRegionView *pView) :
 	CRegionViewTracker(pName, pView)
 {
 	m_bAutoCenter		= FALSE;
 	m_bAutoHide			= TRUE;
-	m_bForward			= FALSE;
-	m_bBackward			= FALSE;
+
+	m_bForward = FALSE;
+	m_pForwardEvent = new CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT);
+
+	m_bBackward = FALSE;
+	m_pBackwardEvent = new CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT);
+
 	m_bIdleOnly			= TRUE;
-
-	m_pForwardTracker	= NULL;
-	m_pBackwardTracker	= NULL;
-
-	FlushTracker();
 }
 
 CRVTrackerNavRotate::~CRVTrackerNavRotate()
 {
-	delete m_pForwardTracker;
-	delete m_pBackwardTracker;
+	delete m_pForwardEvent;
+	delete m_pBackwardEvent;
 }
 
-void CRVTrackerNavRotate::FlushTracker()
-{
-	delete m_pForwardTracker;
-	m_pForwardTracker = new CRegionViewTracker(UIE_NAV_ROTATE_FORWARD, m_pView);
-	SetupChildTracker(m_pForwardTracker);
-
-	delete m_pBackwardTracker;
-	m_pBackwardTracker = new CRegionViewTracker(UIE_NAV_ROTATE_BACKWARD, m_pView);
-	SetupChildTracker(m_pBackwardTracker);
-
-	CRegionViewTracker::FlushTracker();
-}
-
-void CRVTrackerNavRotate::SetupChildTracker(CRegionViewTracker* pTracker)
-{
-	if(pTracker)
-	{
-		pTracker->SetAutoCapture(FALSE);
-		pTracker->SetAutoHide(FALSE);
-		pTracker->SetAutoCenter(FALSE);
-	}
-}
-
-
-// Watch for the shift key to be pressed
+// Watch for the mouse buttons
 void CRVTrackerNavRotate::WatchEvent(const CUIEvent &cEvent)
 {
-	if(m_pForwardTracker)
-	{
-		m_pForwardTracker->ProcessEvent(cEvent);
-		m_bForward = m_pForwardTracker->GetActive();
-	}
+	if (cEvent == *m_pForwardEvent)
+		m_bForward = TRUE;
+	else if (cEvent.IsInverse(*m_pForwardEvent))
+		m_bForward = FALSE;
 
-	if(m_pBackwardTracker)
-	{
-		m_pBackwardTracker->ProcessEvent(cEvent);
-		m_bBackward = m_pBackwardTracker->GetActive();
-	}
+	if (cEvent == *m_pBackwardEvent)
+		m_bBackward = TRUE;
+	else if (cEvent.IsInverse(*m_pBackwardEvent))
+		m_bBackward = FALSE;
 
 	// Call the base class watch event
 	CRegionViewTracker::WatchEvent(cEvent);
@@ -101,10 +73,6 @@ BOOL CRVTrackerNavRotate::OnUpdate(const CUIEvent &cEvent)
 	
 		xAngle = (CReal)(m_cCurPt.y - m_cLastPt.y) * 0.005f;
 		yAngle = (CReal)(m_cCurPt.x - m_cLastPt.x) * 0.005f;
-
-		// invert mouse y if the user has this option set
-		if( GetApp()->GetOptions().GetControlsOptions()->IsInvertMouseY() )
-			xAngle *= -1.0f;
 
 		pNav->ORotY( yAngle );
 		pNav->ORotX( xAngle );
