@@ -439,3 +439,158 @@ Max is told the load succeeded and handed no storage. Every other failure
 path sets `*status` through ProcessImageIOError first.
 
 Not fixed yet.
+
+### Cancelling Add Child Model's Browse clears the typed names
+
+ModelEdit.exe 0x401116 (CAddChildModelDlg::OnBrowse,
+src/LT2/tools/ModelEdit/AddChildModelDlg.cpp; identical). If the file
+dialog is cancelled, the edit field is still set from
+`m_ofn.lpstrFileTitle`, which is empty, so whatever was typed is lost.
+Joining the chosen names, `sprintf(szNames, "%s; %s", szNames, p)` reads
+and writes the same buffer.
+
+Not fixed yet.
+
+### Several keyframe-window commands read past their arrays
+
+ModelEdit.exe 0x407869 and 0x407bf1 (FindKeyframeX, GetNearestKeyframe,
+src/LT2/tools/ModelEdit/KeyframeWnd.cpp; identical). Left of the first
+keyframe FindKeyframeX returns -1, and GetNearestKeyframe reads
+`m_XVal[-1]` (a selection box dragged from the far left). OnCreateKeyframe
+(0x409283) reads `m_KeyFrames[n+1]` when the marker is on the last
+keyframe, and OnDeleteTaggedKeyframes (0x408e98) and OnMouseMove read
+`m_XVal[count]` when their loops run to the end.
+
+Not fixed yet.
+
+### The keyframe menu crashes with no animation loaded
+
+ModelEdit.exe 0x4086d3, 0x408784, 0x408837, 0x408da8, 0x408e98 and
+0x409283 (the clip, tag and create handlers,
+src/LT2/tools/ModelEdit/KeyframeWnd.cpp; identical). They dereference
+m_pModelAnim without a NULL check. Build 69 guards them with
+CanPerformOperation.
+
+Not fixed yet.
+
+### A string of 2047 characters or a long symbol overruns the LTA lexer's buffer
+
+ModelEdit.exe 0x40b410 (CLTALexAnalizer::analize_stream,
+src/LT2/tools/shared/model/ltalex.cpp; near). A string of 2047 characters
+or more reports both error messages and comes back as a symbol with the
+output unchanged; symbols have no bounds check at all, so a long one
+overruns the 2048-byte static buffer at 0x493f20.
+
+Not fixed yet.
+
+### Loading an LTA model leaks on a parse error
+
+ModelEdit.exe 0x40bcba (ltaModelLoad) and 0x40efd7 (ltaLoadChildModel),
+src/LT2/tools/shared/model/ltaModel.cpp (near; identical). On a parse
+error ltaModelLoad leaks the model, the parse tree, the MetaModel and the
+stream (and the stream and model too if either can't be allocated);
+ltaLoadChildModel leaks the model.
+
+Not fixed yet.
+
+### LTA child models free a strdup'd name with delete
+
+ModelEdit.exe 0x40d9d0 (ChildModel's destructor,
+src/LT2/tools/shared/model/ltaModel.cpp; identical). The name is allocated
+with strdup and freed with `delete`.
+
+Not fixed yet.
+
+### A weight set without a weights list crashes the LTA import
+
+ModelEdit.exe 0x40dc88 (cmd_SetWeightSets,
+src/LT2/tools/shared/model/ltaModel.cpp; identical). A weight set with no
+`(weights ...)` list dereferences NULL, and one with no name is given
+SetName(NULL).
+
+Not fixed yet.
+
+### The LTA import adds every socket in the file, not only add-sockets'
+
+ModelEdit.exe 0x40d339 (cmd_ApplyAddSockets,
+src/LT2/tools/shared/model/ltaModel.cpp; identical). It collects every
+`socket` list anywhere in the parse tree, not just those under
+`add-sockets`.
+
+Not fixed yet.
+
+### A failed LTA load goes on with a NULL model
+
+ModelEdit.exe 0x417130 (CModelEditDlg::DoLoadModel,
+src/LT2/tools/ModelEdit/ModelEditDlg.cpp; near). After "Failed to load lta
+file" it carries on and dereferences the NULL model at 0x417326. Every
+load also leaks the child-model remapping map it news for the load request
+(0x417194): Model::Load never frees it either.
+
+Not fixed yet.
+
+### Add Child Model loads each child with the whole list as its name
+
+ModelEdit.exe 0x41d57c (CModelEditDlg::OnAddChildModel,
+src/LT2/tools/ModelEdit/ModelEditDlg.cpp; near). The name the child path
+is built from is a copy of the whole "; "-separated list, not the current
+token, so with more than one child each load is given a bad file name; on
+the LTA path the name the messages print is never set.
+
+Not fixed yet.
+
+### Animation Cleanup misjudges every keyframe's position
+
+ModelEdit.exe 0x41b692 (GetKeyframePercent,
+src/LT2/tools/ModelEdit/ModelEditDlg.cpp; identical). It divides by `prev
+- next` as an unsigned value, so the result is near 0, not the keyframe's
+place between its neighbours, and the cleanup's error estimates are wrong.
+
+Not fixed yet.
+
+### Piece Info copies its changes one piece past the end
+
+ModelEdit.exe 0x41eaf8 (CModelEditDlg::OnPieceInfo,
+src/LT2/tools/ModelEdit/ModelEditDlg.cpp; near). The loop copying the
+changes to the other selected pieces runs while `i <= NumPieces()`.
+
+Not fixed yet.
+
+### Model info shows each LOD's memory under the next LOD's heading
+
+ModelEdit.exe 0x421bad (CModelInfoDlg::OnInitDialog,
+src/LT2/tools/ModelEdit/ModelInfoDlg.cpp; identical). Under "LOD i+1" it
+prints LOD i's memory: LOD 0 is counted twice and the last LOD never
+shown.
+
+Not fixed yet.
+
+### The OpenGL error box has its text and title swapped
+
+ModelEdit.exe 0x4255e6 (CRenderWnd::OnCreate,
+src/LT2/tools/ModelEdit/RenderWnd.cpp; identical). The MessageBox's title
+is "Could not create OpenGL context" and its text "Error". Build 69 has
+the same.
+
+Not fixed yet.
+
+### Keyframe interpolation reads one keyframe past the end
+
+ModelEdit.exe 0x429dd3 (AnimNode::InterpolateKeyFrame) and 0x42a213
+(ModelAnim::InterpolateKeyFrame), src/LT2/tools/shared/model/model.cpp
+(identical; the names are ours). The keyframe indices are checked with `>`
+against NumKeyFrames(), so an index equal to the count passes and the
+function reads and writes one keyframe past the array.
+
+Not fixed yet.
+
+### Model::Load reports success for a model it rejected
+
+ModelEdit.exe 0x430914 and 0x430986 (Model::Load,
+src/LT2/tools/shared/model/model_load.cpp; near). A header it rejects (a
+bad version) returns 0, LT_OK, after Term(); a failed m_LODs.SetSize
+returns 0 without calling Term(). On any error after the first child model
+is allocated every ChildInfo leaks: the delete loop at 0x430f45 runs only
+on success, and one whose own Load fails is never stored.
+
+Not fixed yet.
