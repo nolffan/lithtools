@@ -41,11 +41,11 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "..\..\built\ReleaseTalon\LTAMgr"
-# PROP Intermediate_Dir "..\..\built\ReleaseTalon\LTAMgr"
+# PROP Output_Dir "..\built\ReleaseTalon\LTAMgr"
+# PROP Intermediate_Dir "..\built\ReleaseTalon\LTAMgr"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\..\LT2\lithshared\stl" /I "..\..\..\LT2\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\stl" /I "..\..\sdk\inc" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FD /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe
@@ -53,7 +53,7 @@ BSC32=bscmake.exe
 # ADD BSC32 /nologo
 LIB32=link.exe -lib
 # ADD BASE LIB32 /nologo
-# ADD LIB32 /nologo /out:"..\..\built\ReleaseTalon\LTAMgr\ltamgr.lib"
+# ADD LIB32 /nologo /out:"..\built\ReleaseTalon\LTAMgr\ltamgr.lib"
 
 !ENDIF 
 

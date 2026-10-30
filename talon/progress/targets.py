@@ -63,7 +63,7 @@ TARGETS = [
                        "src/LT2/lithshared/built/ReleaseTalon/RegMgr/regmgr.lib",
                        "src/LT2/lithshared/built/Release/Lib_StdLith_alloc/Lib_StdLith.lib",
                        "src/LT2/lithshared/built/ReleaseTalon/DibMgr/dibmgr.lib",
-                       "src/Engine/built/ReleaseTalon/LTAMgr/ltamgr.lib",
+                       "src/LT2/lithshared/built/ReleaseTalon/LTAMgr/ltamgr.lib",
                        "src/LT2/lithshared/built/ReleaseTalon/Lib_ZLib/Lib_ZLib.lib"],
          middleware=[(0x0047d040, 0x00483020)],
          app=[(0x00401000, 0x0048d740), (0x004a25f0, 0x004a7d00)]),
