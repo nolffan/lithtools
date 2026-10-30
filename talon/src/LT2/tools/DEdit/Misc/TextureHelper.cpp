@@ -805,7 +805,7 @@ bool SaveCubeMap( LoadedBitmap* bitmaps, DStream* stream )
 {
 	TextureData* data[6];
 	bool success = true;
-	unsigned int dataSize = 0;
+	uint32 dataSize = 0;
 
 	for( int i = 0; i < 6; i++ )
 	{

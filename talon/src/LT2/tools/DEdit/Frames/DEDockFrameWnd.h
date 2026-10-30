@@ -3,7 +3,7 @@
 
 #undef DWORD
 #include "afxpriv.h"
-#define DWORD unsigned int
+#define DWORD unsigned long	// talon: the LT2 SDK's uint32 (Build 69's is unsigned int)
 #include "mrcpriv.h"
 
 /////////////////////////////////////////////////////////////////////////////

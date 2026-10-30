@@ -35,7 +35,7 @@
 #include "occimpl.h"
 #endif
 #undef DWORD
-#define DWORD unsigned int
+#define DWORD unsigned long	// talon: the LT2 SDK's uint32 (Build 69's is unsigned int)
 
 typedef struct _Rect_And_Hwnd
 {

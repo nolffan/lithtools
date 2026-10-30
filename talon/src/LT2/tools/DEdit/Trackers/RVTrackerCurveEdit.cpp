@@ -50,7 +50,7 @@ BOOL CRVTrackerCurveEdit::OnStart()
 		for(iTangent=0; iTangent < 2; iTangent++)
 		{
 			propFlags = (iTangent == 0) ? PF_BEZIERPREVTANGENT : PF_BEZIERNEXTTANGENT;
-			pProp = (CVectorProp*)pObj->m_PropList.GetPropByFlagsAndType(propFlags, PT_VECTOR, (unsigned int*)&iCtrlProp);
+			pProp = (CVectorProp*)pObj->m_PropList.GetPropByFlagsAndType(propFlags, PT_VECTOR, (uint32*)&iCtrlProp);
 			if(!pProp)
 				continue;
 
