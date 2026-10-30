@@ -14,10 +14,12 @@
 //
 //------------------------------------------------------------------
 
-// talon: the 2001 one, 0x40f620..0x410110, written from the image: the
-// texture planes, CEditPoly (one texture, its triangles, the .ed
-// load/save; its vtable 0x474880). Build 69's other functions are not in
-// the image.
+// talon: DEdit's 2001 one, 0x424b98..0x4257d8 (then the CMoArray
+// templates it instantiates), written from the image: the texture planes,
+// CEditPoly (one texture, its triangles, the LTA and .ed loaders; its
+// vtable 0x4d7828), and the texture ID Build 69 moved to CTexturedPlane.
+// Build 69's functions that the image has not are at the end, for the
+// rest of DEdit until it is brought back to 2001.
 
 // Includes....
 #include "bdefs.h"
@@ -31,7 +33,6 @@
 #include "de_world.h"
 #include "ltamgr.h"
 #include "ltasaveutils.h"
-#include "uvtoopq.h"
 #include "PolyLightMap.h"
 
 
@@ -66,15 +67,27 @@ CVector g_RightVectors[] =
 };
 
 
+// talon: DEdit's 2001 surface flags for "spriteanimate" and "surf_xzonly"
+// (0x424fd7, 0x424fbe), not Build 69's.
+#define TALON_SURF_SPRITEANIMATE	(1<<14)
+#define TALON_SURF_XZONLY			(1<<16)
+
+
+// 0x424cc4.
+CEditPoly::CEditPoly()
+{
+	CommonConstructor( );
+}
+
+
+// 0x424d06: not inlined (each constructor calls it).
 inline void CEditPoly::CommonConstructor( )
 {
-	m_pUser1				= NULL;
-	m_Unknown_78			= 0;
+	m_pTextureName			= "Default";
 	m_pBrush				= NULL;
 	m_Unknown_30			= 0;
 	m_Unknown_2c			= 0;
-
-	m_pTextureName			= "Default";
+	m_pTextureFile			= NULL;
 	m_SurfaceFlags			= 0;
 
 	P.Init( 1.0f, 0.0f, 0.0f );
@@ -88,21 +101,14 @@ inline void CEditPoly::CommonConstructor( )
 }
 
 
-// CEditPoly::CEditPoly (0x40f7c0).
-CEditPoly::CEditPoly()
-{
-	CommonConstructor( );
-}
-
-
-// talon: Build 69's
+// 0x424d5c.
 CEditPoly::CEditPoly( CEditPoly *pCopyFrom )
 {
 	CommonConstructor( );
 	CopyEditPoly( pCopyFrom );
 }
 
-// CEditPoly::CEditPoly( CEditBrush *pBrush ) (0x40f8f0).
+// 0x424dae.
 CEditPoly::CEditPoly( CEditBrush *pBrush )
 {
 	CommonConstructor( );
@@ -110,20 +116,72 @@ CEditPoly::CEditPoly( CEditBrush *pBrush )
 }
 
 
-// CEditPoly::~CEditPoly (0x40f9e0).
+// 0x424df4.
 CEditPoly::~CEditPoly()
 {
 	Term();
 }
 
 
-// CEditPoly::Term (0x40faa0).
+// 0x424e55.
 void CEditPoly::Term()
 {
 	DeleteAndClearArray(m_Triangles);
 	m_Indices.SetSize(0);
 	m_Unknown_30 = 0;
 	m_Unknown_2c = 0;
+}
+
+
+#define NUM_TEXTURE_PLANES	(sizeof(g_TexturePlanes) / sizeof(CVector))
+
+// 0x424e7f: the 2001 LTA poly, by position: the base poly, its texture
+// info (O, P, Q, sticktopoly, the name), its flags and its shade.
+BOOL CEditPoly::LoadEditPolyLTA( CLTANode* pNode, CStringHolder *pStringHolder )
+{
+	BOOL retval = FALSE;
+	if ( LoadBasePolyLTA(pNode) )
+	{	
+		CLTANode* pTextureInfo	= pNode->GetElement(4); // shallow_find_list(pNode, "textureinfo");
+		CLTANode* pTemp;
+		uint32 i;
+
+		pTemp = pTextureInfo->GetElement(1);
+		O.x = GetFloat( pTemp->GetElement(0) );
+		O.y = GetFloat( pTemp->GetElement(1) );
+		O.z = GetFloat( pTemp->GetElement(2) );
+		pTemp = pTextureInfo->GetElement(2);
+		P.x = GetFloat( pTemp->GetElement(0) );
+		P.y = GetFloat( pTemp->GetElement(1) );
+		P.z = GetFloat( pTemp->GetElement(2) );
+		pTemp = pTextureInfo->GetElement(3);
+		Q.x = GetFloat( pTemp->GetElement(0) );
+		Q.y = GetFloat( pTemp->GetElement(1) );
+		Q.z = GetFloat( pTemp->GetElement(2) );
+
+		m_Unknown_70 = (CLTAConverter::StrToInt( PairCdrNode(pTextureInfo->GetElement(4))->GetValue() )) ? true : false;
+		m_pTextureName = pStringHolder->AddString( PairCdr(pTextureInfo->GetElement(5)) );
+
+		CLTANode* pFlags = pNode->GetElement(5);
+		m_SurfaceFlags = 0;
+		uint32 nFlags = pFlags->GetNumElements();
+		for( i=1; i < nFlags; i++ )
+		{
+			const char* pFlag = pFlags->GetElement(i)->GetValue();
+			if( strcmp(pFlag, "surf_xzonly") == 0 )
+				m_SurfaceFlags |= TALON_SURF_XZONLY;
+			else if( strcmp(pFlag, "spriteanimate") == 0 )
+				m_SurfaceFlags |= TALON_SURF_SPRITEANIMATE;
+		}
+
+		CLTANode* pShade = pNode->GetElement(6);
+		m_Ambient[0] = GetUint8( pShade->GetElement(1) );
+		m_Ambient[1] = GetUint8( pShade->GetElement(2) );
+		m_Ambient[2] = GetUint8( pShade->GetElement(3) );
+
+		retval=TRUE;
+	}
+	return retval;
 }
 
 
@@ -223,6 +281,17 @@ void CEditPoly::CopyAttributes( CBasePoly *pBase, CStringHolder *pStringHolder )
 	m_Ambient[2] = pOther->m_Ambient[2];
 	m_Unknown_70 = pOther->m_Unknown_70;
 	m_SurfaceFlags = pOther->m_SurfaceFlags;
+	m_pTextureFile = pOther->m_pTextureFile;
+}
+
+
+// 0x425338: the base poly's and its triangles'.
+void CEditPoly::DecrementPoints( uint32 index )
+{
+	CBasePoly::DecrementPoints(index);
+
+	for( WORD i=0; i < (WORD)m_Triangles.GetSize(); i++ )
+		m_Triangles[i]->DecrementPoints(index);
 }
 
 
@@ -242,6 +311,19 @@ void CEditPoly::UpdateTriangles()
 }
 
 
+// 0x4253e3: through the triangles (CBasePoly::IntersectRay, 0x40fcda).
+BOOL CEditPoly::IntersectRay( CEditRay &ray, CReal &t, BOOL bBackface )
+{
+	for( uint32 i=0; i < m_Triangles; i++ )
+	{
+		if( m_Triangles[i]->IntersectRay(ray, t, bBackface) )
+			return TRUE;
+	}
+
+	return FALSE;
+}
+
+
 // 0x410000: as Build 69 has it (CopyAttributes is the 2001 CBasePoly's only
 // virtual, slot 0).
 BOOL CEditPoly::CopyEditPoly( CEditPoly *pPoly, BOOL bCopyIndices, CStringHolder *pStringHolder )
@@ -256,188 +338,7 @@ BOOL CEditPoly::CopyEditPoly( CEditPoly *pPoly, BOOL bCopyIndices, CStringHolder
 }
 
 
-// talon: Build 69's, which the processors' copy of this file has no
-// use for: DEdit's.
-
-
-#define NUM_TEXTURE_PLANES	(sizeof(g_TexturePlanes) / sizeof(CVector))
-
-BOOL CEditPoly::LoadEditPolyLTA( CLTANode* pNode, CStringHolder *pStringHolder )
-{
-	BOOL retval = FALSE;
-	if ( LoadBasePolyLTA(pNode) )
-	{	
-		//Load in the information for the first texture
-		CLTANode* pTextureInfo	= pNode->GetElement(4); // shallow_find_list(pNode, "textureinfo");
-		GetTexture(0).LoadTextureInfoLTA(pTextureInfo, pStringHolder);
-
-		//Node 5 is reserved for the flags
-		//Node 6 is reserved for the shade
-		//Node 7 is reserved for the physics information
-		//Node 8 is reserved for the surface key
-
-		//initialize all of our surfaces jsut in case some aren't specified
-		for(uint32 nCurrTex = 1; nCurrTex < NUM_TEXTURES; nCurrTex++)
-		{
-			SetupBaseTextureSpace(nCurrTex);
-		}
-
-		//Node 9 is all of our additional textures, load them up
-		if(pNode->GetNumElements() >= 10)
-		{
-			//we have additional textures
-			CLTANode* pAdditional = pNode->GetElement(9);
-
-			//sanity checks
-			assert(pAdditional->IsList());
-			assert(pAdditional->GetNumElements() >= 2);
-			assert(pAdditional->GetElement(0)->IsAtom());
-			assert(pAdditional->GetElement(1)->IsList());
-			assert(strcmp(pAdditional->GetElement(0)->GetValue(), "textures") == 0);
-
-			//ok, so now we need to load in each texture
-			CLTANode* pTexList = pAdditional->GetElement(1);
-
-			for(uint32 nCurrTex = 0; nCurrTex < pTexList->GetNumElements(); nCurrTex++)
-			{
-				CLTANode* pTexture = pTexList->GetElement(nCurrTex);
-
-				//read in the index of this texture
-				uint32 nTex = atoi(pTexture->GetElement(0)->GetValue());
-
-				//only proceed if it is a valid index
-				if(nTex < NUM_TEXTURES)
-				{
-					GetTexture(nTex).LoadTextureInfoLTA(pTexture->GetElement(1), pStringHolder);
-				}
-			}
-		}
-
-		retval=TRUE;
-	}
-	return retval;
-}
-
-
-void CEditPoly::SaveEditPolyLTA( CLTAFile* pFile, uint32 level )
-{
-	PrependTabs(pFile, level);
-	pFile->WriteStr("( editpoly " );
-		SaveBasePolyLTA( pFile, level+1 );
-		
-		//save out the first texture
-		GetTexture(0).SaveTextureInfoLTA( pFile, level+1 );
-		GetTexture(0).SaveFlagsLTA( pFile, level + 1);
-		GetTexture(0).SaveShadeLTA( pFile, level + 1);
-		GetTexture(0).SavePhysicsMaterialLTA(pFile, level + 1);
-
-		//write out the surface key
-		PrependTabs(pFile, level + 1);
-		pFile->WriteStr("( surfacekey \"\" )");
-
-		//write out auxilery textures
-		PrependTabs(pFile, level + 1);
-		pFile->WriteStr("( textures ( ");
-		
-		//now save out each additional texture
-		for(uint32 nCurrTex = 1; nCurrTex < NUM_TEXTURES; nCurrTex++)
-		{
-			//save out this texture...
-			PrependTabs(pFile, level + 2);
-			pFile->WriteStrF("( %d ", nCurrTex);
-
-			//now save out this texture
-			GetTexture(nCurrTex).SaveTextureInfoLTA(pFile, level + 3);
-
-			//close off the texture tab
-			PrependTabs(pFile, level + 2);
-			pFile->WriteStr(") ");
-		}
-
-		//close off the texture list
-		PrependTabs(pFile, level + 1);
-		pFile->WriteStr(") ) ");
-	
-	PrependTabs(pFile, level);
-	pFile->WriteStr(") " );
-}
-
-
-
-void CEditPoly::DecrementPoints( uint32 index )
-{
-	CBasePoly::DecrementPoints(index);
-}
-
-
-
-BOOL CEditPoly::IntersectRay( CEditRay &ray, CReal &t, BOOL bBackface )
-{
-	ASSERT(NumVerts() > 1);
-
-	CReal dot1, dot2, div;
-	LTVector testPt;
-
-	// Trivial reject.
-	if( (Normal().Dot(ray.m_Pos) - Dist()) >= 0.0f )
-	{
-		// It's pointing away from (or is perpendicular to) the polygon.
-		if( Normal().Dot(ray.m_Dir) >= -0.001f )
-			return FALSE;
-	}
-	else
-	{
-		// Backfacing.
-		if( !bBackface )
-		{
-			return FALSE;
-		}
-		else
-		{
-			// It's pointing away from (or is perpendicular to) the polygon.
-			if( Normal().Dot(ray.m_Dir) <= 0.001f )
-				return FALSE;
-		}
-	}
-
-	dot1 = Normal().Dot( ray.m_Pos ) - Dist();
-	dot2 = Normal().Dot( ray.m_Pos + ray.m_Dir ) - Dist();
-
-	div = dot2 - dot1;
-	if(fabs(div) < 0.00001f)
-		t = 0.0f;
-	else
-		t = -dot1 / div;
-	
-	ASSERT( t >= 0 );
-
-	testPt = ray.m_Pos + (ray.m_Dir * t);
-	
-	// See if the intersection point lies inside the poly.
-	uint32 nFanPt  = NumVerts() - 1;
-	uint32 nPrevPt = 0;
-	uint32 nCurrPt = 1;
-
-	//the count of the number of triangles it is in
-	uint32 nInCount = 0;
-
-	for(; nCurrPt < NumVerts(); nPrevPt = nCurrPt, nCurrPt++)
-	{
-		//see if it the point is within the triangle defined by 
-		//the edges fanpt->prev, fanpt->curr
-		if( (g_TriArea2( Normal(), Pt(nFanPt),  Pt(nPrevPt), testPt ) > 0) ||
-			(g_TriArea2( Normal(), Pt(nPrevPt), Pt(nCurrPt), testPt ) > 0) ||
-			(g_TriArea2( Normal(), Pt(nCurrPt), Pt(nFanPt),  testPt ) > 0))
-			continue;
-
-		//we are in this tri
-		nInCount++;
-	}
-
-	return (nInCount % 2) ? TRUE : FALSE;
-}
-
-
+// 0x425454; Build 69's.
 void CEditPoly::Flip()
 {
 	uint32		i, temp;
@@ -454,8 +355,9 @@ void CEditPoly::Flip()
 }
 
 
-
-void CEditPoly::SetupBaseTextureSpace(uint32 nTex)
+// 0x4254b8: Build 69's for its one texture, but a SURF_XZONLY poly takes
+// the first plane.
+void CEditPoly::SetupBaseTextureSpace()
 {
 	uint32 i, closestPlane;
 	CReal dot, maxDot;
@@ -465,56 +367,114 @@ void CEditPoly::SetupBaseTextureSpace(uint32 nTex)
 	maxDot = (CReal)-MAX_CREAL;
 
 	closestPlane = 0;
-	for( i=0; i < NUM_TEXTURE_PLANES; i++ )
+	if( !(m_SurfaceFlags & TALON_SURF_XZONLY) )
 	{
-		dot = Normal().Dot( g_TexturePlanes[i] );
-		if( dot > maxDot )
+		for( i=0; i < NUM_TEXTURE_PLANES; i++ )
 		{
-			maxDot = dot;
-			closestPlane = i;
+			dot = Normal().Dot( g_TexturePlanes[i] );
+			if( dot > maxDot )
+			{
+				maxDot = dot;
+				closestPlane = i;
+			}
 		}
 	}
 
 	// SCHLEGZ 1/22/98: fixed problem with deleting previous mag
 	// MD 3/25/98: Polies now use explicit scale variables.
-	GetTexture(nTex).SetP(g_RightVectors[closestPlane]);
-	GetTexture(nTex).SetQ(GetTexture(nTex).GetP().Cross( g_TexturePlanes[closestPlane] ));
+	P = g_RightVectors[closestPlane];
+	Q = P.Cross( g_TexturePlanes[closestPlane] );
 }
 
 
-void CEditPoly::SetTextureSpace(uint32 nTex, const LTVector& newO, const LTVector& newP, const LTVector& newQ)
+// 0x42555d. P and Q made perpendicular when they are not, keeping their
+// lengths.
+//
+// talon: a retail bug, kept: Q is made perpendicular to P by subtracting
+// the dot product from each of its components (`Q -= dot`, the scalar
+// operator), not P scaled by it, so Q is not perpendicular afterwards
+// (0x425611..0x425627).
+void CEditPoly::SetTextureSpace(LTVector newO, LTVector newP, LTVector newQ)
 {
-	GetTexture(nTex).SetTextureSpace(GetTextureNormal(), newO, newP, newQ);
+	O = newO;
+	P = newP;
+	Q = newQ;
+
+	if( fabs(P.Dot(Q)) > 0.001 )
+	{
+		CReal fPMag = P.Mag();
+		CReal fQMag = Q.Mag();
+
+		P.Norm();
+		Q.Norm();
+
+		Q -= P.Dot(Q);
+		Q.Norm();
+
+		P *= fPMag;
+		Q *= fQMag;
+	}
 }
 
 
-// sets up OPQs based on uv coordinates for each vertex
-// takes an array of 6 floats, 2 per vertex for the first 3 verts plus the width and height of the texture
-bool CEditPoly::SetUVTextureSpace( uint32 nTex, const float* coords, const int texWidth, const int texHeight )
+// 0x42566d; Build 69's (TexturedPlane.cpp).
+static BOOL IsSpriteFilename(char *pName)
 {
-	if ( this->m_pBrush->m_Points == NULL || this->m_pBrush->m_Points.GetSize() < 3)  
-		return false; 
-
-	//build up a vertex list
-	ASSERT(this->NumVerts() >= 3);
-
-	LTVector vPos[3];
-	vPos[0] = m_pBrush->m_Points[Index(0)];
-	vPos[1] = m_pBrush->m_Points[Index(1)];
-	vPos[2] = m_pBrush->m_Points[Index(2)];
-
-	//now get the OPQ vectors
-	CTexturedPlane& Texture = GetTexture(nTex);
-
-	LTVector vO, vP, vQ;
-	bool bRV = ConvertUVToOPQ(vPos, coords, texWidth, texHeight, vO, vP, vQ);	
-
-	Texture.SetO(vO);
-	Texture.SetP(vP);
-	Texture.SetQ(vQ);
-
-	return bRV;
+	if(strlen(pName) > 3)
+		return stricmp(&pName[strlen(pName)-3], "spr") == 0;
+	else
+		return FALSE;
 }
+
+
+// 0x4256a1: Build 69's CTexturedPlane::UpdateTextureID without the detail
+// texture, setting the poly's sprite flag.
+void CEditPoly::UpdateTextureID()
+{
+	CMoFileIO file;
+	DWORD i, nFrames, frameRate, bTransparent, bTranslucent, key;
+	char str[256];
+
+	m_pTextureFile = NULL;
+
+	if(m_pTextureName)
+	{
+		if(IsSpriteFilename(m_pTextureName))
+		{
+			// Get the first frame for the sprite.
+			if(dfm_OpenFileRelative(GetFileMgr(), m_pTextureName, file))
+			{
+				file >> nFrames;
+				file >> frameRate;
+				file >> bTransparent;
+				file >> bTranslucent;
+				file >> key;
+
+				if(nFrames > 0)
+				{
+					if(file.ReadString(str, 256))
+					{
+						dfm_GetFileIdentifier(GetFileMgr(), str, &m_pTextureFile);
+					}
+				}
+				
+				file.Close();
+			}
+
+			m_SurfaceFlags |= TALON_SURF_SPRITEANIMATE;
+		}
+		else
+		{
+			m_SurfaceFlags &= ~TALON_SURF_SPRITEANIMATE;
+			dfm_GetFileIdentifier(GetFileMgr(), m_pTextureName, &m_pTextureFile);
+		}
+	}
+}
+
+
+// talon: Build 69's, not in the image: for the rest of DEdit until it is
+// brought back to 2001.
+
 
 
 //determines if this polygon is concave or not

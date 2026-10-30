@@ -65,7 +65,8 @@ public:
 
 	RegionLoadStatus		LoadFile( const char* filename, CEditProjectMgr* pProject, uint32& nVersion, bool& bBinary );
 
-	RegionLoadStatus		LoadLTA( const char* filename, CEditProjectMgr* pProject, uint32& nVersion );
+	// talon: 2001 (0x426fc2): no file version.
+	RegionLoadStatus		LoadLTA( const char* filename, CEditProjectMgr* pProject );
 	void					SaveLTA( CLTAFile* pFile );
 
 	RegionLoadStatus		LoadTBW( const char* filename, CEditProjectMgr* pProject, uint32& nVersion );
@@ -80,6 +81,13 @@ public:
 	void					SaveHeader( CAbstractIO &OutFile, uint32 version, BOOL bCompressed );
 	BOOL					RecurseAndLoadNode( CAbstractIO &InFile, CWorldNode *pNode, CEditProjectMgr *pProject );
 	void					RecurseAndSaveNode( CAbstractIO &OutFile, CWorldNode *pNode );
+
+#ifdef DIRECTEDITOR_BUILD
+	// talon: DEdit's (2001; the names ours): the world as a Quake .map file
+	// (0x427ff0), a line at a time (0x427fad).
+	void					MapPrintf( CAbstractIO &file, const char *pFormat, ... );
+	void					ExportMapFile( CAbstractIO &file );
+#endif
 
 	void					SaveHeaderLTA(CLTAFile* pFile, uint32 level, DWORD versionCode );
 	BOOL					RecurseAndLoadNodeLTA( CLTANode* pParseNode, CWorldNode *pNode, CEditProjectMgr* pProject );
@@ -111,6 +119,10 @@ public:
 	void					FixInvalidBrushes(CLinkedList<CEditBrush*> *pBrushes=NULL);
 	void					RemoveCollinearVertices(CLinkedList<CEditBrush*> *pBrushes=NULL);
 	void					RemoveDuplicatePoints(CLinkedList<CEditBrush*> *pBrushes=NULL);
+#ifdef DIRECTEDITOR_BUILD
+	// talon: DEdit's (2001, 0x4286d5; the name ours).
+	void					RemoveDuplicatePolies(CLinkedList<CEditBrush*> *pBrushes=NULL);
+#endif
 	void					UpdatePlanes(CLinkedList<CEditBrush*> *pBrushes=NULL);
 	void					FixInaccurateGeometry(CLinkedList<CEditBrush*> *pBrushes=NULL, float fThreshold = 0.01);
 				
@@ -318,6 +330,16 @@ public:
 // NOTE:	These lists of objects and brushes are not where things are deleted from.
 //			They're always deleted from the WorldNode tree!
 	
+#ifdef DIRECTEDITOR_BUILD
+	// talon: DEdit's (2001) CEditRegion is 0x144 bytes: m_pActiveParentNode
+	// at 0, then as the processor's but for this array of vectors at 0xb4,
+	// before m_Objects (0xc8): constructed and destroyed (0x426ac5), its
+	// vtable 0x4d77f8 a 12-byte element's (GenFindElement compares 12
+	// bytes, 0x4244b5): the leak finder's vertices (RegionView's
+	// OnWorldDebugLoadLeakFile fills it, 0x45c28a).
+	CMoArray<CVector>			m_Unknown_b4;
+#endif
+
 	// All the objects.
 	CMoArray<CBaseEditObj*>		m_Objects;
 	
@@ -343,14 +365,6 @@ public:
 	// talon: no prefab manager in 2001: the class is 0x128 bytes, laid out
 	// from its constructor (0x410110), m_LoadErrorCode at 0x124.
 
-#ifdef DIRECTEDITOR_BUILD
-	// talon: Build 69's prefab manager, for DEdit's link until its prefab
-	// code is brought back to 2001 (which has none: progress/DEdit-map.md).
-public:
-	CPrefabMgr*				GetPrefabMgr()		{return &m_PrefabMgr;}
-private:
-	CPrefabMgr				m_PrefabMgr;
-#endif
 };
 
 

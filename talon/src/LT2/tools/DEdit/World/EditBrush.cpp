@@ -164,7 +164,8 @@ void CEditBrush::SaveTBW( CAbstractIO& OutFile, BOOL bUnknown )
 			uint32 nNumBasePolies = pPoly->m_Triangles.GetSize();
 			OutFile << nNumBasePolies;
 
-			for(uint32 nCurrBasePoly = 0; nCurrBasePoly < pPoly->m_Triangles.GetSize(); nCurrBasePoly++)
+			uint32 nCurrBasePoly;
+			for(nCurrBasePoly = 0; nCurrBasePoly < pPoly->m_Triangles.GetSize(); nCurrBasePoly++)
 				pPoly->m_Triangles[nCurrBasePoly]->SaveBasePolyTBW(OutFile);
 		}
 		else
@@ -285,6 +286,9 @@ void CEditBrush::UpdateBSphere()
 */
 
 
+// 0x4202c6 (DEdit). The 2001 LoadLTA: the colour, the points (no vertex
+// colours) and the polies by position, and no UpdatePlanes or
+// UpdateBoundingInfo at the end.
 BOOL CEditBrush::LoadLTA( CLTANode* pNode, CStringHolder *pStringHolder )
 {
 	Term();
@@ -307,29 +311,10 @@ BOOL CEditBrush::LoadLTA( CLTANode* pNode, CStringHolder *pStringHolder )
 	for( uint32 i=1; i < listSize; i++ )
 	{
 		pCurPoint = pPoints->GetElement(i);
-		uint32 nNumChildren = pCurPoint->GetNumElements();
 
 		m_Points[i-1].x = GetFloat(pCurPoint->GetElement(0));
 		m_Points[i-1].y = GetFloat(pCurPoint->GetElement(1));
 		m_Points[i-1].z = GetFloat(pCurPoint->GetElement(2));
-
-		//see if they also have colors to be loaded in
-		if(nNumChildren >= 7)
-		{
-			//they have the vertex colors, read them in
-			m_Points[i-1].m_nR = GetUint8(pCurPoint->GetElement(3));
-			m_Points[i-1].m_nG = GetUint8(pCurPoint->GetElement(4));
-			m_Points[i-1].m_nB = GetUint8(pCurPoint->GetElement(5));
-			m_Points[i-1].m_nA = GetUint8(pCurPoint->GetElement(6));
-		}
-		else
-		{
-			//default these values to something standard...
-			m_Points[i-1].m_nR = 255;
-			m_Points[i-1].m_nG = 255;
-			m_Points[i-1].m_nB = 255;
-			m_Points[i-1].m_nA = 255;
-		}
 	}
 
 	CLTANode* pPolyList = PairCdrNode(pData->GetElement(2)); // PairCdrNode(shallow_find_list(pNode, "polylist" ));
@@ -342,48 +327,9 @@ BOOL CEditBrush::LoadLTA( CLTANode* pNode, CStringHolder *pStringHolder )
 			return FALSE;
 	}
 
-	UpdatePlanes();
-	UpdateBoundingInfo();
-
 	return TRUE;
 }
 
-
-
-void CEditBrush::SaveLTA( CLTAFile* pFile, uint32 level )
-{
-	//sanity check
-	ASSERT(pFile);
-
-	uint32	   i;
-	CEditPoly *pEditPoly = NULL;
-
-	//print out the entire node list
-	PrependTabs(pFile, level); 
-	pFile->WriteStrF("( polyhedron (", m_RegionBrushIndex );
-		PrependTabs(pFile, level+1); 
-		pFile->WriteStrF("( color %d %d %d )", r, g, b );
-		PrependTabs(pFile, level+1); 
-		pFile->WriteStr("( pointlist ");
-			for( i=0; i < m_Points; i++ ) {
-				PrependTabs(pFile, level+2);
-				pFile->WriteStrF("( %f %f %f %d %d %d %d )", m_Points[i].x,  m_Points[i].y, m_Points[i].z, m_Points[i].m_nR, m_Points[i].m_nG, m_Points[i].m_nB, m_Points[i].m_nA );
-			}
-		PrependTabs(pFile, level+1);
-		pFile->WriteStr(")");
-
-		PrependTabs(pFile, level+1);
-		pFile->WriteStr("( polylist (");
-			for( i=0; i < m_Polies; i++ )
-			{
-				pEditPoly = m_Polies[i];
-				pEditPoly->SaveEditPolyLTA( pFile, level+2 );
-			}
-		PrependTabs(pFile, level+1);
-		pFile->WriteStr(") )");
-	PrependTabs(pFile, level);
-	pFile->WriteStr(") )");
-}
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -1118,10 +1064,6 @@ void CEditBrush::RemoveDuplicatePoints( CReal distThresh )
 
 #ifdef DIRECTEDITOR_BUILD
 // Notification that a property of this object has changed
-void CEditBrush::OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const char *pModifiers )
-{
-	CWorldNode::OnPropertyChanged(pProperty, bNotifyGame, pModifiers);
-}
 #endif // DIRECTEDITOR_BUILD (talon: closes Build 69's block above)
 
 // talon: Build 69's

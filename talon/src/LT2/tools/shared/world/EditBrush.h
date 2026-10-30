@@ -167,11 +167,8 @@
 			//don't allow the copy constructor
 			CEditBrush( CEditBrush& pCopyFrom )	{}
 
-#ifdef DIRECTEDITOR_BUILD
-		// Notification that a property of this object has changed
-		virtual void			OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const char *pModifiers);
-
-#endif // DIRECTEDITOR_BUILD
+		// talon: no OnPropertyChanged in 2001: the vtable (0x4d75e8) is
+		// CWorldNode's five slots.
 
 				
 	};

@@ -48,7 +48,12 @@
 	{
 		public:
 
+#ifdef DIRECTEDITOR_BUILD
+			// talon: stand-in: Build 69's count, one in 2001 (GetTexture below).
+			enum	{ NUM_TEXTURES	= 1 };
+#else
 			enum	{ NUM_TEXTURES	= 2 };
+#endif
 
 								CEditPoly();
 								CEditPoly( CEditPoly *pCopyFrom );
@@ -96,9 +101,23 @@
 			
 			void				Flip();
 			
+#ifdef DIRECTEDITOR_BUILD
+			// talon: 2001 (0x4254b8): the closest of the six texture planes,
+			// or the floor's for a SURF_XZONLY poly; one texture.
+			void				SetupBaseTextureSpace();
+
+			// talon: 2001 (0x42555d): the vectors by value; one texture.
+			void				SetTextureSpace(LTVector newO, LTVector newP, LTVector newQ);
+
+			// talon: stand-ins: Build 69's per-texture forms, for the rest of
+			// DEdit until it is brought back to 2001.
+			void				SetupBaseTextureSpace(uint32 nTex)	{ SetupBaseTextureSpace(); }
+			void				SetTextureSpace(uint32 nTex, const LTVector& newO, const LTVector& newP, const LTVector& newQ)	{ SetTextureSpace(newO, newP, newQ); }
+#else
 			void				SetupBaseTextureSpace(uint32 nTex);
 
 			void				SetTextureSpace(uint32 nTex, const LTVector& newO, const LTVector& newP, const LTVector& newQ);
+#endif
 
 			// sets up OPQs based on uv coordinates of the first 3 verts
 			bool				SetUVTextureSpace(uint32 nTex, const float* coords, const int texWidth, const int texHeight );
@@ -126,21 +145,34 @@
 			CMoArray<CBasePoly*>	m_Triangles;	// 0x5c
 			uint32				m_Unknown_70;
 			char				*m_pTextureName;	// 0x74
+#ifdef DIRECTEDITOR_BUILD
+			// talon: DEdit's (2001), 0x80 bytes (`push $0x80` before each
+			// CEditPoly(CEditBrush*), 0x4203fa): the surface flags at 0x78,
+			// which the processor has at 0x84 (DEdit's .ed poly writes them
+			// after the texture, 0x425181; its LTA loader sets 0x10000 for
+			// "surf_xzonly" and 0x4000 for "spriteanimate", 0x424e7f), and the
+			// texture's file at 0x7c (UpdateTextureID, 0x4256a1); no m_pUser1.
+			uint32				m_SurfaceFlags;		// 0x78
+			struct DFileIdent_t	*m_pTextureFile;	// 0x7c
+
+			// talon: 2001 (0x4256a1): finds m_pTextureFile from the name (a
+			// sprite's first frame), and sets or clears the sprite flag.
+			void				UpdateTextureID();
+
+			// talon: stand-in: Build 69's textured planes, for the rest of
+			// DEdit until its texturing is brought back to the 2001 poly's
+			// one texture: one plane, laid over the poly's own O, P, Q, name
+			// and file (TexturedPlane.h), so that there is no storage of its
+			// own.
+			CTexturedPlane&			GetTexture(uint32 nTexture)			{ return *(CTexturedPlane*)&O; }
+			const CTexturedPlane&	GetTexture(uint32 nTexture) const	{ return *(const CTexturedPlane*)&O; }
+#else
 			uint32				m_Unknown_78;
 
 			// User data pointer .. used by the preprocessor to point to its surface.
 			void				*m_pUser1;			// 0x7c
 			uint32				m_Unknown_80;
 			uint32				m_SurfaceFlags;		// 0x84: the poly's own surface flags
-
-#ifdef DIRECTEDITOR_BUILD
-			// talon: stand-in: Build 69's two textured planes, for DEdit's
-			// link until its texturing is brought back to the 2001 poly's one
-			// texture (O, P, Q and m_pTextureName above).
-			CTexturedPlane&			GetTexture(uint32 nTexture)			{ assert(nTexture < NUM_TEXTURES); return m_Textures[nTexture]; }
-			const CTexturedPlane&	GetTexture(uint32 nTexture) const	{ assert(nTexture < NUM_TEXTURES); return m_Textures[nTexture]; }
-		private:
-			CTexturedPlane			m_Textures[NUM_TEXTURES];
 #endif
 	};
 

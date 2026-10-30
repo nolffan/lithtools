@@ -37,12 +37,6 @@
 	class CSoundDlg;
 	class CSpriteDlg;
 	class CPrefabDlg;
-	class CLevelErrorDlg;
-	class CLevelTexturesDlg;
-	class CObjectSearchDlg;
-	class CRenameResourceDlg;
-	class CLevelItemsDlg;
-	class CObjectSelFilterDlg;
 
 	CDEditApp*			GetApp();
 
@@ -61,13 +55,7 @@
 	CPrefabDlg*			GetPrefabDlg();
 
 	CColorSelectDlg*	GetColorSelectDlg();
-	CLevelErrorDlg*		GetLevelErrorDlg();
-	CLevelItemsDlg*		GetLevelItemsDlg();
-	CLevelTexturesDlg*	GetLevelTexturesDlg();
-	CObjectSearchDlg*	GetObjectSearchDlg();
-	CRenameResourceDlg* GetRenameResourceDlg();
 	CNodeView *			GetNodeView( );
-	CObjectSelFilterDlg*GetObjectSelFilterDlg();
 
 	CMainFrame*			GetMainFrame();	
 	CProjectBar*		GetProjectBar();

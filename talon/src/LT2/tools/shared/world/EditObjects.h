@@ -100,9 +100,6 @@ bool	DuplicateObjectHeirarchy( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditOb
 // AllocateSameKind (0x40f440), DoCopy (0x40f540) and GetUpperLeftCornerPos
 // (0x40f4a0).
 class CBaseEditObj : public CWorldNode 
-#ifdef DIRECTEDITOR_BUILD
-	, public ILTPreInterface	// [10/04/01 ARP] Only derive from this when building DEdit!
-#endif
 {
 
 // Member Operations...
@@ -133,16 +130,15 @@ public:
 
 #ifdef DIRECTEDITOR_BUILD
 
-	// Notification that a property of this object has changed
-	virtual void			OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const char *pModifiers);
+	// talon: DEdit's (2001): 0xb8 bytes (`push $0xb8` before each
+	// CBaseEditObj(), 0x427925), the dims after the vertex: the search flag
+	// at 0x8c (the constructor sets it to 1), the dims at 0x90 and their
+	// flags at 0xa4 (0x424080). No ILTPreInterface: the vtable (0x4d77e4)
+	// is CWorldNode's five slots, as the processor's.
 
 	// Initializes/Terminates the dims
 	void					InitDims();
 	void					TermDims()								{ m_dimsArray.SetSize(0); }
-
-	//this function must be called whenever the class name is updated
-	virtual void			UpdateClassName()						{ UpdateObjectClassImage(); }
-
 
 	// Access to the dims
 	int						GetNumDims()							{ return m_dimsArray.GetSize(); }
@@ -152,51 +148,20 @@ public:
 	BOOL					ShouldSearchForDims()					{ return m_bSearchForDims; }	
 	void					SetSearchForDims(BOOL bSearch)			{ m_bSearchForDims=bSearch; }
 
-	CModelHandle&			GetModelHandle()						{ return m_ModelHandle; }
-	void					SetModelHandle(CModelHandle& Handle)	{ m_ModelHandle = Handle; }
-
-	// releases the current model handle
-	void					ReleaseModelHandle();	
-
-	//updates the internal model handle
-	bool					UpdateModelHandle(const char* pszFileString, CModelMgr& ModelMgr);
-
-	//gets the radius of the object 
-	float					GetVisibleRadius() const				{ return m_fVisRadius; }
-
-	//sets the radius of the object (used for culling from the frustum)
-	void					SetVisibleRadius(float fRad)			{ m_fVisRadius = fRad; }
-
-	//updates the image used for this object
-	void					UpdateObjectClassImage();
-
-	struct DFileIdent_t*	m_pClassImageFile;
+	// talon: stand-ins: Build 69's class icon, model and visible radius,
+	// for the rest of DEdit until it is brought back to 2001, which has
+	// none of them: no icon, no radius (objects are culled as points).
+	static struct DFileIdent_t*	m_pClassImageFile;
+	void					UpdateClassName()						{}
+	void					UpdateObjectClassImage()				{}
+	float					GetVisibleRadius() const				{ return 0.0f; }
+	void					SetVisibleRadius(float fRad)			{}
 
 protected:
 
 	BOOL					m_bSearchForDims;		// Indicates if the dims should be searched for or not
 	CMoArray<CVector>		m_dimsArray;			// Array of the dims
 	CMoArray<DWORD>			m_dimsFlagArray;		// Array of dims flags	
-
-	float					m_fVisRadius;			// The visible radius of this object (for culling)
-
-	CModelHandle			m_ModelHandle;			// the handle to the loaded model
-	CModelMgr*				m_pModelMgr;			// the pointer to the model manager that the handle was obtained from
-
-////////////////////////////////////
-//	ILTPreInterface implementation
-protected:
-	
-	virtual LTRESULT Parse(ConParse *pParse);
-	virtual LTRESULT CPrint(const char *pMsg, ...);
-	virtual LTRESULT ShowDebugWindow(LTBOOL bShow);
-	virtual LTRESULT FindObject(const char *pName);
-	virtual const char* GetObjectClass( const char *pObjName );
-	virtual const char* GetProjectDir( );
-	virtual const char* GetWorldName( );
-	virtual LTRESULT GetPropGeneric( const char* pObjName, const char* pPropName, GenericProp *pProp );
-
-	virtual LTRESULT GetObject( const char* pObjName, CBaseEditObj **ppObj );
 
 #endif // DIRECTEDITOR_BUILD
 };

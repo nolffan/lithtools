@@ -60,20 +60,39 @@ class CTexturedPlane
 		//used to get the dimensions of the texture
 		uint32					GetBaseTextureWidth();
 		uint32					GetBaseTextureHeight();
+		void					UpdateTextureID();
+
+	// talon: stand-in: the plane is laid over a 2001 CEditPoly's fields
+	// (CEditPoly::GetTexture): O, P and Q at the poly's 0x34, the name at
+	// 0x74 and the texture's file at 0x7c. Nothing of Build 69's detail
+	// texture is in the image: always NULL.
+	protected:
+
+		LTVector				O, P, Q;
+
+	private:
+
+		uint8					m_PolyFields[0x1c];		// the poly's 0x58..0x74
+
+	public:
+
+		char					*m_pTextureName;		// the poly's 0x74
+		uint32					m_SurfaceFlags;			// the poly's 0x78
 
 		// NOTE: This ALWAYS points at a texture.  If m_pTextureName points at a sprite,
 		// then this points at the first frame of the sprite's animation.
-		struct DFileIdent_t		*m_pTextureFile;
-		struct DFileIdent_t		*m_pDetailTextureFile;
-		void					UpdateTextureID();
+		struct DFileIdent_t		*m_pTextureFile;		// the poly's 0x7c
+		static struct DFileIdent_t	*m_pDetailTextureFile;
 
-#endif
+#else
 
 		char					*m_pTextureName;
 
 	protected:
 
 		LTVector				O, P, Q;
+
+#endif
 
 };
 

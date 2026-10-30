@@ -41,7 +41,6 @@
 	#include "objectimporter.h"
 	#include "projectbar.h"
 	#include "iobjectplugin.h"
-	#include "modelmgr.h"
 	#include "optionsdisplay.h"
 	#include "genericprop_setup.h"
 	#include "prefabmgr.h"
@@ -286,6 +285,9 @@ void CopyRegionObjects(CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out
 CBaseEditObj::CBaseEditObj()
 {
 	m_Type				= Node_Object;
+#ifdef DIRECTEDITOR_BUILD
+	m_bSearchForDims	= TRUE;		// talon: 0x4240c4
+#endif
 }
 
 
@@ -558,48 +560,8 @@ static uint32 StringSize(const char* pszString)
 }
 
 
-uint32 GetNodePropertiesSize(CWorldNode* pObj)
-{
-	CBaseProp		*pProp;
-
-	uint32 nTotalSize = 0;
-
-	//length of the object data length
-	nTotalSize += 2;
-
-	// Write the object data.
-	if( strlen( pObj->GetClassName() ) < 256 )
-	{
-		nTotalSize += StringSize(pObj->GetClassName());
-	}
-	else
-	{
-		nTotalSize += StringSize("");
-	}
-
-	//the number of properties
-	nTotalSize += 4;
-
-	for(uint32 k=0; k	< pObj->m_PropList.m_Props; k++ )
-	{
-		pProp = pObj->m_PropList.m_Props[k];
-
-		if( strlen( pProp->m_Name ) < 256 )
-			nTotalSize += StringSize(pProp->m_Name);
-		else
-			nTotalSize += StringSize("");
-		
-		//type and flags
-		nTotalSize += 5;
-
-		//length of the property data
-		nTotalSize += 2;
-		
-		nTotalSize += pProp->DataSize();
-	}
-
-	return nTotalSize;
-}
+// talon: Build 69's GetNodePropertiesSize and GetObjectListSize are gone: 2001's
+// CBaseProp has no DataSize, and nothing calls them.
 
 
 void SaveNodePropertiesLTA(CLTAFile* pFile, CWorldNode *pObj, uint32 level)
@@ -623,17 +585,6 @@ void SaveNodePropertiesLTA(CLTAFile* pFile, CWorldNode *pObj, uint32 level)
 }
 
 
-uint32 GetObjectListSize(CMoArray<CBaseEditObj*> &theList)
-{
-	//4 bytes for the object count
-	uint32 nTotalSize = 4;
-
-	for(uint32 nCurrObj = 0; nCurrObj < theList.GetSize(); nCurrObj++)
-	{
-		nTotalSize += GetNodePropertiesSize(theList[nCurrObj]->AsNode());
-	}
-	return nTotalSize;
-}
 
 
 void CopyObjectList( CMoArray<CBaseEditObj*> &in, CMoArray<CBaseEditObj*> &out )
@@ -888,324 +839,10 @@ void CBaseEditObj::InitDims()
 }
 
 
-//updates the image used for this object
-void CBaseEditObj::UpdateObjectClassImage()
-{
-	//clear out the old object class image
-	m_pClassImageFile = NULL;
+// talon: Build 69's class icon, model handle, property notification and
+// ILTPreInterface are not in the 2001 class (EditObjects.h).
 
-	//we need to build up a texture name for this object of the form
-	// directory\classname.dtx
-	CString sFile(GetApp()->GetOptions().GetDisplayOptions()->GetClassIconsDir());
-	sFile.TrimLeft("\\/");
-	sFile.TrimRight("\\/");
-	sFile += "\\";
+// talon: stand-in (EditObjects.h).
+DFileIdent_t* CBaseEditObj::m_pClassImageFile = NULL;
 
-	//now add our class name
-	sFile += GetClassName();
-	sFile += ".dtx";
-	
-	//try and load in the image
-	if(dfm_GetFileIdentifier(GetFileMgr(), sFile, &m_pClassImageFile) != DFM_OK)
-	{
-		//we have failed
-		m_pClassImageFile = NULL;		
-	}
-}
-
-
-
-//determines if the designated file exists
-static BOOL DoesFileExist(const char* pszFileName)
-{
-	CFile InFile;
-	if(InFile.Open(pszFileName, CFile::modeRead) == TRUE)
-	{
-		InFile.Close();
-		return TRUE;
-	}
-
-	return FALSE;
-}
-
-// talon: stand-in: Build 69's StdLith has CHelpers::IsFileAbsolute, the LT2
-// one hasn't. Its test: a colon before the first slash.
-static BOOL IsFileAbsolute(const char* pFilename)
-{
-	for(uint32 nCurrChar = 0; (pFilename[nCurrChar] != '\0') && (pFilename[nCurrChar] != '\\') && (pFilename[nCurrChar] != '/'); nCurrChar++)
-	{
-		if(pFilename[nCurrChar] == ':')
-			return TRUE;
-	}
-	return FALSE;
-}
-
-
-
-//retreives the name of the file that should be used
-bool CBaseEditObj::UpdateModelHandle(const char* pszFileString, CModelMgr& ModelMgr)
-{
-	//build up the actual file name
-	CString sFileString(pszFileString);
-
-	CString sFilename;
-
-	//see if this is absolute or not
-	if(IsFileAbsolute(pszFileString))
-	{
-		sFilename = pszFileString;
-	}
-	else
-	{
-		sFilename = dfm_BuildName( GetProject()->m_BaseProjectDir, pszFileString);
-	}
-
-	//take off all the whitepsace on the string to be safe
-	sFilename.TrimLeft();
-	sFilename.TrimRight();
-
-	//now we need to get the extension
-	char pszFile[MAX_PATH];
-	char pszExtension[MAX_PATH];
-
-	CHelpers::ExtractFileNameAndExtension(sFilename, pszFile, pszExtension);
-
-	//see if we have a valid extension, and if we don't, we need to try different files
-	if((stricmp(pszExtension, "lta") != 0) && (stricmp(pszExtension, "ltc") != 0))
-	{
-		//first check for an LTA extension
-		sFilename.Format("%s.lta", pszFile);
-		if(::DoesFileExist(sFilename) == FALSE)
-		{
-			//no LTA extension
-			sFilename.Format("%s.ltc", pszFile);
-		}
-	}
-
-	//see if this filename happens to match the model we are currently using
-	const char* pszOldFilename = ModelMgr.GetFilename(GetModelHandle());
-
-	if(pszOldFilename)
-	{
-		if(stricmp(sFilename, pszOldFilename) == 0)
-		{
-			//the files match, don't bother trying to add it
-			return true;
-		}
-	}
-
-	//make sure that we add the reference first, to prevent releasing a model, to only
-	//load it back again
-	CModelHandle NewHandle;
-	ModelMgr.AddModel(sFilename, NewHandle);
-
-	if(!NewHandle.IsValid())
-	{
-		//we couldn't add the file, so release our old handle
-		ReleaseModelHandle();
-
-		//notify that there was a failure
-		return false;
-	}
-
-	//now release our stuff
-	ReleaseModelHandle();
-
-	SetModelHandle(NewHandle);
-	m_pModelMgr		= &ModelMgr;
-
-	return true;
-}
-
-
-// releases the current model handle
-void CBaseEditObj::ReleaseModelHandle()
-{
-	//release the old handle
-	if(m_pModelMgr)
-	{
-		m_pModelMgr->ReleaseHandle(GetModelHandle());
-		m_pModelMgr = NULL;
-	}
-}
-
-
-// Notification that a property of this object has changed
-void CBaseEditObj::OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const char *pModifiers)
-{
-	// talon: stand-in: Build 69's updates the model handle of a PF_MODEL property and
-	// notifies the object's plug-in of a PF_NOTIFYCHANGE one ([10/01/01 ARP]);
-	// the LT2 SDK has neither flag, nor IObjectPlugin::PreHook_PropChanged.
-}
-
-
-////////////////////////////////////
-//	ILTPreInterface implementation
-
-LTRESULT CBaseEditObj::Parse( ConParse *pParse )
-{
-	return pParse->Parse() ? LT_OK : LT_FINISHED;
-}
-
-
-LTRESULT CBaseEditObj::CPrint( const char *pMsg, ... )
-{
-	va_list marker;
-	char msg[500];
-
-	va_start(marker, pMsg);
-	vsprintf(msg, pMsg, marker);
-	va_end(marker);
-
-	AddDebugMessage(msg);
-
-	return LT_OK;
-}
-
-
-LTRESULT CBaseEditObj::ShowDebugWindow( LTBOOL bShow )
-{
-	GetDebugDlg()->ShowWindow( bShow );
-
-	return LT_OK;
-}
-
-
-LTRESULT CBaseEditObj::GetObject( const char* pObjName, CBaseEditObj **ppObj )
-{
-	// Get the document
-	CRegionDoc* pDoc = GetActiveRegionDoc();
-	if (!pDoc)
-	{		
-		return LT_ERROR;
-	}
-
-	// Get the region
-	CEditRegion* pRegion = pDoc->GetRegion();
-	if (!pRegion)
-	{	
-		return LT_ERROR;
-	}
-
-	CPrefabMgr* pPrefabMgr = pRegion->GetPrefabMgr();
-	if( !pPrefabMgr )
-	{
-		return LT_ERROR;
-	}
-
-	// Check if this object belongs to a prefab...
-
-	char szName[MAX_STRINGPROP_LEN] = {0};
-	SAFE_STRCPY( szName, pObjName );
-
-	char* pPrefabName = strtok( szName, "." );
-
-	CWorldNode* pNode = pRegion->FindNodeByName( pPrefabName );
-	if( pNode && pNode->GetType() == Node_PrefabRef )
-	{
-		// We have a prefab ref. Now get its actual loaded prefab and look for the object in it's region...
-		
-		CPrefabRef* pPrefabRef = (CPrefabRef*)pNode;
-		if( pPrefabRef )
-		{
-			char* pObjectName = strtok( NULL, "" );
-
-			if( pPrefabMgr->FindObjectsByNameInPrefab( pPrefabRef->GetPrefabFilename(), pObjectName, ppObj, 1 ) > 0 )
-			{
-				if( ppObj )
-				{
-					return LT_OK;
-				}
-			}
-		}
-	}
-
-	// Try to find the object
-
-	if( pRegion->FindObjectsByName( pObjName, ppObj, 1 ) > 0 )
-	{
-		if( ppObj )
-		{
-			return LT_OK;
-		}
-	}
-
-	return LT_NOTFOUND;
-}
-
-
-LTRESULT CBaseEditObj::FindObject( const char *pName )
-{
-	CBaseEditObj *pObj;
-	return GetObject( pName, &pObj );
-}
-
-
-const char* CBaseEditObj::GetObjectClass( const char *pObjName )
-{
-	CBaseEditObj *pObj = LTNULL;
-	if( GetObject( pObjName, &pObj ) == LT_OK )
-	{
-		return (pObj ? pObj->GetClassName() : LTNULL);
-	}
-	
-	return LTNULL;
-}
-
-
-const char* CBaseEditObj::GetProjectDir( )
-{
-	CEditProjectMgr *pEditProjMgr = GetProject();
-	if( !pEditProjMgr ) return LTNULL;
-
-	return (pEditProjMgr->m_BaseProjectDir.IsEmpty() ? LTNULL : (const char*)pEditProjMgr->m_BaseProjectDir);
-}
-	
-
-const char* CBaseEditObj::GetWorldName( )
-{
-	// Get the document
-	CRegionDoc *pDoc = GetActiveRegionDoc();
-	if( !pDoc )
-		return LTNULL;
-
-	return (pDoc->m_WorldName.IsEmpty() ? LTNULL : (const char*)pDoc->m_WorldName );
-}
-
-
-LTRESULT CBaseEditObj::GetPropGeneric( const char* pObjName, const char* pPropName, GenericProp *pProp )
-{
-	gp_Init( pProp );
-	
-	if( !pObjName[0] || !pPropName[0] )
-		return LT_NOTFOUND;
-
-	CBaseEditObj *pObject = LTNULL;
-	if( GetObject( pObjName, &pObject ) == LT_OK )
-	{
-		if( !pObject )
-			return LT_ERROR;
-
-		CPropList *pProps = pObject->GetPropertyList();
-			
-		if( !pProps )
-			return LT_NOTFOUND;
-
-		for( uint32 nCurrProp = 0; nCurrProp < pProps->GetSize(); ++nCurrProp )
-		{
-			// Get the property...
-			
-			CBaseProp *pCurProp = pProps->GetAt(nCurrProp);
-			
-			if( !_stricmp( pCurProp->GetName(), pPropName ))
-			{
-				pCurProp->SetupGenericProp( pProp );
-				
-				return LT_OK;
-			}
-		}
-	}
-
-	return LT_NOTFOUND;
-}
 #endif // DIRECTEDITOR_BUILD (talon: closes Build 69's block above)

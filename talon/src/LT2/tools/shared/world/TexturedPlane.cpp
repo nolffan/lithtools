@@ -9,6 +9,11 @@
 	#include "edithelpers.h"
 #endif
 
+#ifdef DIRECTEDITOR_BUILD
+// talon: stand-in: no detail texture in 2001 (TexturedPlane.h).
+DFileIdent_t* CTexturedPlane::m_pDetailTextureFile = NULL;
+#endif
+
 CTexturedPlane::CTexturedPlane()
 {
 #ifdef DIRECTEDITOR_BUILD
@@ -342,7 +347,7 @@ void CTexturedPlane::SetTextureSpace(const LTVector& N, const LTVector& newO, co
 				CString sFilename;
 				if( GetDetailTextureFilename( pTexture->m_Header.m_CommandString, sFilename ) )
 				{
-					dfm_GetFileIdentifier( GetFileMgr(), sFilename, &m_pDetailTextureFile );
+					// talon: stand-in: no detail texture in 2001 (TexturedPlane.h)
 				}
 			}
 		}

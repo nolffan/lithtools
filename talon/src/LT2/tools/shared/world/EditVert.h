@@ -41,7 +41,14 @@
 			// 0x40e5d5, 0x40ded8). From an LTVector, by reference
 			// (CBaseEditObj::DoCopy, 0x40f540).
 			void		operator = ( CEditVert other )			{ x=other.x; y=other.y; z=other.z; }
+#ifdef DIRECTEDITOR_BUILD
+			// talon: by value in DEdit (2001): a vector assigned to a CEditVert
+			// is copied to a 12-byte temporary first (ViewFunctions,
+			// 0x4678d6..0x4678fd).
+			void		operator = ( LTVector other )			{ x=other.x; y=other.y; z=other.z; }
+#else
 			void		operator = ( const LTVector& other )	{ x=other.x; y=other.y; z=other.z; }
+#endif
 
 	public:
 
@@ -49,20 +56,25 @@
 			LTVector	m_Transformed;
 			LTVector	m_Projected;
 
-			uint32		m_Unknown_24;
-
 #ifdef DIRECTEDITOR_BUILD
-			// talon: stand-in: Build 69's vertex flags and colour, for
-			// DEdit's link until its renderer is brought back to 2001 (whose
-			// vertices have none; m_Unknown_24 may be what it has).
+			// talon: DEdit's (2001): whether the vertex is inside the view
+			// frustum, a byte at 0x24 that the renderer stores from
+			// CViewRender::InsideFrustum (`mov %al,0x24(%esi)`, 0x41ee4e) and
+			// tests (`cmpb $0,0x24`, 0x41c0cd, 0x41e378); still 40 bytes.
+			uint8		m_bInFrustum;
+
+			// talon: stand-in: Build 69's vertex flags and clip-plane mask,
+			// for DEdit's link until its renderer is brought back to 2001:
+			// the in-frustum flag is the 2001 byte above, the clip planes in
+			// the padding after it. Build 69's per-vertex colour is gone.
 			enum	{	VERTFLAG_INFRUSTUM		= (1 << 0)	};
 
 			bool		IsInFrustum() const						{ return IsFlagSet(VERTFLAG_INFRUSTUM); }
 			void		SetInFrustum(bool bVal)					{ SetFlag(VERTFLAG_INFRUSTUM, bVal); }
 
-			bool		IsFlagSet(uint8 nFlag) const			{ return (m_nFlags & nFlag) ? true : false; }
-			void		EnableFlag(uint8 nFlag)					{ m_nFlags |= nFlag; }
-			void		DisableFlag(uint8 nFlag)				{ m_nFlags &= ~nFlag; }
+			bool		IsFlagSet(uint8 nFlag) const			{ return (m_bInFrustum & nFlag) ? true : false; }
+			void		EnableFlag(uint8 nFlag)					{ m_bInFrustum |= nFlag; }
+			void		DisableFlag(uint8 nFlag)				{ m_bInFrustum &= ~nFlag; }
 
 			void		SetFlag(uint8 nFlag, bool bVal)
 			{
@@ -72,12 +84,10 @@
 					DisableFlag(nFlag);
 			}
 
-			uint8		m_nFlags;
 			uint8		m_nClipPlanes;
-			uint8		m_nR;
-			uint8		m_nG;
-			uint8		m_nB;
-			uint8		m_nA;
+			uint8		m_Unknown_26[2];
+#else
+			uint32		m_Unknown_24;
 #endif
 	};
 

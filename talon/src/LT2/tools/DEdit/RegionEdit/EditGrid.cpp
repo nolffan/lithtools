@@ -44,7 +44,7 @@ CEditGrid::CEditGrid( LTVector pos, LTVector forward, LTVector up, CReal drawSiz
 }
 
 
-BOOL CEditGrid::IntersectRay( DWORD snapSize, CEditRay ray, LTVector &intersection, CReal *pT, BOOL bSnapToGrid )
+BOOL CEditGrid::IntersectRay( DWORD snapSize, CEditRay ray, LTVector &intersection, CReal *pT )
 {
 	CReal	dot1, dot2, t;
 	CReal	fSnapSize = (CReal)snapSize;
@@ -70,12 +70,6 @@ BOOL CEditGrid::IntersectRay( DWORD snapSize, CEditRay ray, LTVector &intersecti
 	intersection = ray.m_Pos + (ray.m_Dir * t);
 	if( pT )
 		*pT = t;
-
-	//if the user doesn't want to snap to the grid, just return here
-	if(!bSnapToGrid)
-	{
-		return TRUE;
-	}
 
 	// Snap to grid.
 	LTVector	temp = intersection - Pos();

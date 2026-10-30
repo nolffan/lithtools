@@ -24,20 +24,8 @@
 #include "nodeview.h"
 #include "regionview.h"
 #include "mainfrm.h"
-#include "levelerrordlg.h"
-#include "renameresourcedlg.h"
-#include "leveltexturesdlg.h"
-#include "objectsearchdlg.h"
-#include "levelitemsdlg.h"
-#include "objectselfilterdlg.h"
 
 static CColorSelectDlg		g_ColorSelectDlg;
-static CLevelErrorDlg		g_LevelErrorDlg;
-static CLevelItemsDlg		g_LevelItemsDlg;
-static CLevelTexturesDlg	g_LevelTexturesDlg;
-static CObjectSearchDlg		g_ObjectSearchDlg;
-static CRenameResourceDlg	g_RenameResourceDlg(NULL);
-static CObjectSelFilterDlg	g_ObjectSelFilterDlg;
 static uint32				g_nCurrTexture = 0;
 CMainFrame					*g_pMainFrame=NULL;
 
@@ -119,37 +107,6 @@ CColorSelectDlg* GetColorSelectDlg()
 	return &g_ColorSelectDlg;
 }
 
-CLevelErrorDlg* GetLevelErrorDlg()
-{
-	return &g_LevelErrorDlg;
-}
-
-CLevelItemsDlg* GetLevelItemsDlg()
-{
-	return &g_LevelItemsDlg;
-}
-
-CLevelTexturesDlg* GetLevelTexturesDlg()
-{
-	return &g_LevelTexturesDlg;
-}
-
-CObjectSearchDlg* GetObjectSearchDlg()
-{
-	return &g_ObjectSearchDlg;
-}
-
-CObjectSelFilterDlg* GetObjectSelFilterDlg()
-{
-	return &g_ObjectSelFilterDlg;
-}
-
-CRenameResourceDlg* GetRenameResourceDlg()
-{
-	return &g_RenameResourceDlg;
-}
-
-
 CMainFrame* GetMainFrame()
 {
 	return g_pMainFrame;
@@ -175,14 +132,11 @@ struct DFileMgr_t* GetFileMgr()
 
 CRegionDoc* GetActiveRegionDoc()
 {
-	CProjectBar *pBar;
+	// talon: 2001 (0x42355b): no new-document check (the 2001 project bar
+	// has no m_pNewRegionDoc).
 	CView *pView;
 	CFrameWnd *pFrameWnd;
 	CRegionDoc *pDoc;
-
-	// If a new document is currently being opened don't return the active one
-	if( GetProjectBar()->m_pNewRegionDoc )
-		return GetProjectBar()->m_pNewRegionDoc;
 
 	if((pFrameWnd = GetMainFrame()->GetActiveFrame()) &&
 		(pView = pFrameWnd->GetActiveView()) &&

@@ -44,7 +44,8 @@
 			LTVector&			Normal()			{ return Forward(); }
 			CReal				Dist()				{ return Normal().Dot( Pos() ); }
 
-			BOOL				IntersectRay( DWORD snapSize, CEditRay ray, LTVector &intersection, CReal *pT=NULL, BOOL bSnapToGrid = TRUE);
+			// talon: 2001 (0x4230d8, `ret $0x24`): no bSnapToGrid
+			BOOL				IntersectRay( DWORD snapSize, CEditRay ray, LTVector &intersection, CReal *pT=NULL );
 		
 		public:
 

@@ -122,7 +122,6 @@
 			void						LoadBinaries();
 			void						LoadTemplateClasses();
 			void						UnloadBinaries();
-			void						UpdateBUTFile();
 
 			void						MakeClassTree();
 			CProjectClass*				FindClassInArray(ClassDef *pClass, CMoArray<CProjectClass*> *pArray);

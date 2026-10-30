@@ -66,13 +66,16 @@ DWORD g_EDLoadVersion = 1249;
 DWORD g_EDSaveVersion = 1249;
 
 
+
+
+
 // ------------------------------------------------------------------ //
 // CEditRegion.
 // ------------------------------------------------------------------ //
 
 #pragma warning(disable:4355)
 
-// 0x410110.
+// 0x42694f.
 CEditRegion::CEditRegion()
 {
 	m_pStringHolder = &m_DefaultStringHolder;
@@ -82,11 +85,15 @@ CEditRegion::CEditRegion()
 	m_Objects.SetCacheSize( 100 );
 
 	m_vMarker.Init( 0.0f, 0.0f, 0.0f );
-	m_PathNodes.SetCacheSize( 50 );
 	m_nLastNavigatorPos=0;
 
 	m_RootNode.m_Flags |= NODEFLAG_WORLDROOT;
+	m_pActiveParentNode = &m_RootNode;
+
+	m_PathNodes.SetCacheSize( 50 );
 }
+
+#pragma warning(default:4355)
 
 #pragma warning(default:4355)
 
@@ -115,6 +122,285 @@ void CEditRegion::Term()
 		delete m_NavigatorPosArray[i];
 	}
 	m_NavigatorPosArray.SetSize(0);
+}
+
+
+// talon: Build 69's, which the processors' copy of this file has no
+// use for: DEdit's.
+
+#define MIN_DUPLICATE_DIST	0.001f
+#define CURRENT_TBW_VERSION	1
+#define LT_NUM_PROPERTYTYPES	(PT_ROTATION + 1)	// talon: the LT2 SDK's eight property types
+
+
+
+
+
+void LoadPropList(CLTANode* pPropList, CPropListContainer& container )
+{
+	// CLTANode* pPropList = PairCdrNode(propListArrayNode->GetElement(i));
+	static char	propName[256];
+	CPropList*	pDestPropList = new CPropList;
+
+	const uint32 proplistSize = pPropList->GetNumElements();
+	uint32 k = 0;
+	// (  string "Name"( )( data "Prop59") )
+	for( k=0; k < proplistSize; k++ )
+	{
+		
+		BYTE				propCode;
+		CBaseProp			*pProp;
+		CLTANode			*pPropNode = pPropList->GetElement(k);		
+		
+		const char* typeString = GetString(pPropNode->GetElement(0));
+
+		//default the property code to something invalid
+		propCode = LT_NUM_PROPERTYTYPES;
+		//do a quick binary split, to cut the number of strcmp's in half. Note, the
+		//value is found by sorting the strings, and getting the first letter of
+		//the first value in the upper half
+		if(typeString[0] < 'r')
+		{
+			//search the lower half of the strings
+			if( strcmp(typeString,"bool") == 0 )
+				propCode = PT_BOOL;
+			else if( strcmp(typeString,"color") == 0 )
+				propCode = PT_COLOR;
+			else if( strcmp(typeString,"flags") == 0 )
+				propCode = PT_FLAGS;
+			else if( strcmp(typeString,"longint") == 0 )
+				propCode = PT_LONGINT;
+		}
+		else
+		{
+			//search the upper half of the strings
+			if( strcmp(typeString,"real") == 0 )
+				propCode = PT_REAL;
+			else if( strcmp(typeString,"rotation") == 0 )
+				propCode = PT_ROTATION;
+			else if( strcmp(typeString,"string") == 0 )
+				propCode = PT_STRING;
+			else if( strcmp(typeString,"vector") == 0 )
+				propCode = PT_VECTOR;
+		}
+
+		strncpy(propName, GetString(pPropNode->GetElement(1)), 255);
+
+		if( (pProp = CreatePropFromCode(propCode, propName)) )
+		{
+			pProp->m_PropFlags = 0;
+			CLTANode* pFlagNode = pPropNode->GetElement(2);
+
+			const uint32 listSize = pFlagNode->GetNumElements();
+			for( uint32 numFlags = 0; numFlags < listSize; numFlags++ )
+			{
+				const char* flagsString = pFlagNode->GetElement(numFlags)->GetValue();
+				
+				//again do a binary split, see comments above
+				if(flagsString[0] < 'g')
+				{
+					if( strcmp(flagsString, "beziernexttangent") == 0 )	
+						pProp->m_PropFlags |= PF_BEZIERNEXTTANGENT;
+					else if( strcmp(flagsString, "bezierprevtangent") == 0 )	
+						pProp->m_PropFlags |= PF_BEZIERPREVTANGENT;
+					else if( strcmp(flagsString, "dims") == 0 )					
+						pProp->m_PropFlags |= PF_DIMS;
+					else if( strcmp(flagsString, "dynamiclist") == 0 )			
+						pProp->m_PropFlags |= PF_DYNAMICLIST;
+					else if( strcmp(flagsString, "fieldofview") == 0 )			
+						pProp->m_PropFlags |= PF_FIELDOFVIEW;
+					else if( strcmp(flagsString, "filename") == 0 )				
+						pProp->m_PropFlags |= PF_FILENAME;
+					else if( strcmp(flagsString, "fovradius") == 0 )			
+						pProp->m_PropFlags |= PF_FOVRADIUS;
+				}
+				else
+				{
+					if(strncmp(flagsString, "group", 5) == 0)
+					{
+						if( strcmp(flagsString, "groupowner") == 0 )	
+							pProp->m_PropFlags |= PF_GROUPOWNER;
+						else
+							pProp->m_PropFlags |= PF_GROUP1 << (atoi(flagsString + 5) - 1);	// talon: the LT2 SDK has no PF_GROUP(n)
+					}
+					else if( strcmp(flagsString, "hidden") == 0)				
+						pProp->m_PropFlags |= PF_HIDDEN;
+					else if( strcmp(flagsString, "localdims") == 0 )			
+						pProp->m_PropFlags |= PF_LOCALDIMS;
+					else if( strcmp(flagsString, "objectlink") == 0 )			
+						pProp->m_PropFlags |= PF_OBJECTLINK;
+					else if( strcmp(flagsString, "radius") == 0 )				
+						pProp->m_PropFlags |= PF_RADIUS;
+					else if( strcmp(flagsString, "staticlist") == 0 )			
+						pProp->m_PropFlags |= PF_STATICLIST;
+				}
+			}
+			
+			pProp->LoadDataLTA( pPropNode );
+			// pNode->m_PropList.m_Props.Append( pProp );
+			pDestPropList->m_Props.Append(pProp);
+		}
+	}
+	container.AddPropList( pDestPropList, true );
+}
+CPropListContainer g_loadPropListContainer;
+
+
+// 0x426fc2: the 2001 LTA world: the header's info string, the brushes,
+// the global property lists, the node tree and the navigator positions,
+// each node freed as it is read (no allocator in 2001's LTA library); no
+// file version.
+RegionLoadStatus CEditRegion::LoadLTA(const char* filename, CEditProjectMgr* pProject)
+{
+	RegionLoadStatus	status = REGIONLOAD_INVALIDFILE;
+	Term();
+
+	m_LoadErrorCode = -1;
+
+	CLTAReader Reader;
+
+	if(Reader.Open(filename, CLTAUtil::IsFileCompressed(filename))) 
+	{
+		//------------------------------
+		// let's start with the header
+		CLTANode* pHeader = CLTANodeReader::LoadNode(&Reader, "header");
+		
+		if(pHeader)
+		{
+			CLTANodeIterator NodeIter(pHeader);
+
+			m_pInfoString = m_pStringHolder->AddString(PairCdr(NodeIter.FindNextList("infostring")));
+
+			delete pHeader;
+		}
+
+		//--------------------------------
+		//Load in the polyhedron list
+
+		CLTANode* pPolyhedronList = CLTANodeReader::LoadNode(&Reader, "polyhedronlist");
+
+		if(pPolyhedronList)
+		{
+			CLTANode* pPolyhedronListHead = pPolyhedronList->GetElement(1);
+
+			for(uint32 nCurrPoly = 0; nCurrPoly < pPolyhedronListHead->GetNumElements(); nCurrPoly++)
+			{
+				CLTANode* pPolyhedron = pPolyhedronListHead->GetElement(nCurrPoly);
+
+				CEditBrush *pBrush = new CEditBrush;
+				m_QuickBrushIndexer.Append(pBrush);
+				m_Brushes.AddTail(pBrush);
+				
+				if( !pBrush->LoadLTA(pPolyhedron->GetElement(1), m_pStringHolder) )
+				{
+					m_LoadErrorCode = 1;
+					break;
+				}
+
+				//go ahead and clean up this poly, cut down on memory usage
+				//so it will hopefully remain faily constant
+				pPolyhedron->Free();
+			}
+			
+			delete pPolyhedronList;
+		}
+		else
+		{
+			//missed it, need to start over at the beginning of the file
+			Reader.Close();
+			Reader.Open(filename, CLTAUtil::IsFileCompressed(filename));
+		}
+
+		//--------------------------------
+		// let's do the globablproplist
+
+		g_loadPropListContainer.Init();
+
+		//get the main list of global properties
+		CLTANode* pPropList = CLTANodeReader::LoadNode(&Reader, "globalproplist");
+
+		//make sure we found it
+		if(pPropList)
+		{
+			//okay, not point to the head of the list we will use
+			CLTANode* pPropListHead = pPropList->GetElement(1);
+
+			//now run through and load in every property
+			for(uint32 nCurrProp = 0; nCurrProp < pPropListHead->GetNumElements(); nCurrProp++)
+			{		
+				CLTANode* pProp = pPropListHead->GetElement(nCurrProp);
+
+				//see if we hit the end
+				if(pProp == NULL)
+				{
+					break;
+				}
+
+				LoadPropList(pProp->GetElement(1), g_loadPropListContainer );
+
+				//unload the associated memory
+				pProp->Free();
+			}
+
+			delete pPropList;
+		}
+
+		//-------------------------------
+		// let's do the nodehierarchy
+		
+		//reset the file
+		Reader.Close();
+		Reader.Open(filename, CLTAUtil::IsFileCompressed(filename));
+
+		CLTANode* pNodehierarchy = CLTANodeReader::LoadNode(&Reader, "nodehierarchy");
+		if( pNodehierarchy )
+		{
+			CLTANodeIterator NodeIter(pNodehierarchy);
+
+			if( !RecurseAndLoadNodeLTA(	NodeIter.FindNextList("worldnode" ),
+										&m_RootNode, 
+										pProject) )
+			{
+				Term();
+				return REGIONLOAD_INVALIDFILE;
+			}
+
+			delete pNodehierarchy;
+		}
+		else
+		{
+			//missed it, need to reset the file
+			Reader.Close();
+			Reader.Open(filename, CLTAUtil::IsFileCompressed(filename));
+		}
+
+		g_loadPropListContainer.UnloadFromMemory();
+
+		//----------------------------------
+		// Load the navigator positions
+		
+		CLTANode* pNavigatorposList = CLTANodeReader::LoadNode(&Reader, "navigatorposlist");
+		if( pNavigatorposList )
+		{
+			m_NavigatorPosArray.LoadLTA( PairCdrNode(pNavigatorposList) );
+			delete pNavigatorposList;
+		}
+
+		m_RootNode.m_Flags |= NODEFLAG_WORLDROOT;
+		UpdatePolyTriangles();
+
+		// Update stuff.
+		status = REGIONLOAD_OK;
+	}
+	
+	Reader.Close();
+	
+	m_QuickBrushIndexer.Term();	
+
+	UpdatePlanes();
+	CleanupGeometry();
+
+	return status;
 }
 
 
@@ -365,865 +651,6 @@ BOOL CEditRegion::RecurseAndLoadNode( CAbstractIO &InFile, CWorldNode *pNode, CE
 
 	return TRUE;
 }
-
-
-// 0x4110a0 (the name ours).
-void CEditRegion::RecurseAndSaveNode( CAbstractIO &OutFile, CWorldNode *pNode )
-{
-	GPOS		pos;
-	CWorldNode	*pChild;
-
-	OutFile << (WORD)pNode->m_Children.GetSize();
-	for( pos=pNode->m_Children; pos; )
-	{
-		pChild = pNode->m_Children.GetNext(pos);
-
-		OutFile << (DWORD)pChild->m_Type;
-		if( pChild->m_Type == Node_Brush )
-			OutFile << pChild->AsBrush()->m_RegionBrushIndex;
-
-		RecurseAndSaveNode(OutFile, pChild);
-	}
-
-	SaveNodeProperties(OutFile, pNode);
-
-	OutFile << pNode->GetUniqueID();
-	OutFile << pNode->m_Flags;
-	if( pNode->GetNodeLabel() )
-		OutFile.WriteString((char*)pNode->GetNodeLabel());
-	else
-		OutFile.WriteString("");
-}
-
-
-// 0x411190.
-uint32 CEditRegion::GetTotalNumPolies()
-{
-	uint32 ret=0;
-	LPOS pos;
-
-	for(pos=m_Brushes; pos; )
-		ret += m_Brushes.GetNext(pos)->m_Polies.GetSize();
-
-	return ret;
-}
-
-
-// 0x4111c0.
-uint32 CEditRegion::GetTotalNumPoints()
-{
-	uint32 ret=0;
-	LPOS pos;
-
-	for(pos=m_Brushes; pos; )
-		ret += m_Brushes.GetNext(pos)->m_Points.GetSize();
-
-	return ret;
-}
-
-
-// 0x4111f0 (the name ours): remakes every poly's triangles (LoadFile's last
-// step).
-void CEditRegion::UpdatePolyTriangles()
-{
-	LPOS pos;
-	CEditBrush *pBrush;
-	uint32 i;
-
-	for(pos=m_Brushes; pos; )
-	{
-		pBrush = m_Brushes.GetNext(pos);
-
-		for(i=0; i < pBrush->m_Polies; i++)
-			pBrush->m_Polies[i]->UpdateTriangles();
-	}
-}
-
-
-// 0x411240: Build 69's without the frozen test.
-void CEditRegion::SelectNode( CWorldNode *pNode, BOOL bUpdateSelectionArray )
-{
-	// Determine if the selection array should be used
-	if (bUpdateSelectionArray)
-	{
-		// Find the selection
-		uint32	index = m_Selections.FindElement( pNode );
-		if( index == BAD_INDEX )
-		{
-			// Update the node flag
-			pNode->m_Flags |= NODEFLAG_SELECTED;
-
-			// Add the selection to the selection array
-			m_Selections.Append( pNode );
-		}
-	}
-	else
-	{
-		// Just update the node flag
-		pNode->m_Flags |= NODEFLAG_SELECTED;
-	}
-}
-
-
-// 0x411390: Build 69's without the early return for an unselected node.
-void CEditRegion::UnselectNode( CWorldNode *pNode, BOOL bUpdateSelectionArray )
-{
-	// Determine if the selection array should be used
-	if (bUpdateSelectionArray)
-	{
-		// Find the selection
-		uint32	index = m_Selections.FindElement( pNode );
-		if( index != BAD_INDEX )
-		{
-			// Update the node flag
-			pNode->m_Flags &= ~NODEFLAG_SELECTED;
-
-			// Add the selection to the selection array
-			m_Selections.Remove( index );
-		}
-	}
-	else
-	{
-		// Just update the node flag
-		pNode->m_Flags &= ~NODEFLAG_SELECTED;
-	}
-}
-
-
-// 0x411500.
-void CEditRegion::DetachNode( CWorldNode *pNode, BOOL bAttachToRoot )
-{
-	no_DetachNode((CEditRegion*)this, pNode, bAttachToRoot);
-}
-
-
-// 0x411520.
-void CEditRegion::ClearSelections()
-{
-	for( uint32 i=0; i < m_Selections; i++ )
-		m_Selections[i]->ClearFlag(NODEFLAG_SELECTED);
-
-	m_Selections.SetSize(0);
-}
-
-
-// talon: Build 69's, which the processors' copy of this file has no
-// use for: DEdit's.
-
-#define MIN_DUPLICATE_DIST	0.001f
-#define CURRENT_TBW_VERSION	1
-#define LT_NUM_PROPERTYTYPES	(PT_ROTATION + 1)	// talon: the LT2 SDK's eight property types
-
-CPropListContainer g_propListContainer;
-CPropListContainer g_loadPropListContainer;
-
-
-
-// ------------------------------------------------------------------ //
-// Helper functions.
-// ------------------------------------------------------------------ //
-
-//file marker utilities
-static uint32 PlaceMarker(CAbstractIO& Stream)
-{
-	uint32 nPos = Stream.GetCurPos();
-
-	//just write out a dummy 4 bytes for now
-	Stream << nPos;
-
-	return nPos;
-}
-
-
-static void UpdateMarker(CAbstractIO& Stream, uint32 nMarker)
-{
-	uint32 nPos = Stream.GetCurPos();
-	Stream.SeekTo(nMarker);
-
-	Stream << nPos;
-
-	Stream.SeekTo(nPos);
-}
-
-
-static CWorldNode* RecurseAndFindNodeByID(CWorldNode *pRoot, uint32 nID)
-{
-	CWorldNode *pRet;
-	GPOS pos;
-
-	if(pRoot->GetUniqueID() == nID)
-		return pRoot;
-
-	for(pos=pRoot->m_Children; pos; )
-	{
-		if(pRet = RecurseAndFindNodeByID(pRoot->m_Children.GetNext(pos), nID))
-			return pRet;
-	}
-
-	return NULL;
-}
-
-
-
-void LoadPropList(CLTANode* pPropList, CPropListContainer& container )
-{
-	// CLTANode* pPropList = PairCdrNode(propListArrayNode->GetElement(i));
-	static char	propName[256];
-	CPropList*	pDestPropList = new CPropList;
-
-	const uint32 proplistSize = pPropList->GetNumElements();
-	uint32 k = 0;
-	// (  string "Name"( )( data "Prop59") )
-	for( k=0; k < proplistSize; k++ )
-	{
-		
-		BYTE				propCode;
-		CBaseProp			*pProp;
-		CLTANode			*pPropNode = pPropList->GetElement(k);		
-		
-		const char* typeString = GetString(pPropNode->GetElement(0));
-
-		//default the property code to something invalid
-		propCode = LT_NUM_PROPERTYTYPES;
-		//do a quick binary split, to cut the number of strcmp's in half. Note, the
-		//value is found by sorting the strings, and getting the first letter of
-		//the first value in the upper half
-		if(typeString[0] < 'r')
-		{
-			//search the lower half of the strings
-			if( strcmp(typeString,"bool") == 0 )
-				propCode = PT_BOOL;
-			else if( strcmp(typeString,"color") == 0 )
-				propCode = PT_COLOR;
-			else if( strcmp(typeString,"flags") == 0 )
-				propCode = PT_FLAGS;
-			else if( strcmp(typeString,"longint") == 0 )
-				propCode = PT_LONGINT;
-		}
-		else
-		{
-			//search the upper half of the strings
-			if( strcmp(typeString,"real") == 0 )
-				propCode = PT_REAL;
-			else if( strcmp(typeString,"rotation") == 0 )
-				propCode = PT_ROTATION;
-			else if( strcmp(typeString,"string") == 0 )
-				propCode = PT_STRING;
-			else if( strcmp(typeString,"vector") == 0 )
-				propCode = PT_VECTOR;
-		}
-
-		strncpy(propName, GetString(pPropNode->GetElement(1)), 255);
-
-		if( (pProp = CreatePropFromCode(propCode, propName)) )
-		{
-			pProp->m_PropFlags = 0;
-			CLTANode* pFlagNode = pPropNode->GetElement(2);
-
-			const uint32 listSize = pFlagNode->GetNumElements();
-			for( uint32 numFlags = 0; numFlags < listSize; numFlags++ )
-			{
-				const char* flagsString = pFlagNode->GetElement(numFlags)->GetValue();
-				
-				//again do a binary split, see comments above
-				if(flagsString[0] < 'g')
-				{
-					if( strcmp(flagsString, "beziernexttangent") == 0 )	
-						pProp->m_PropFlags |= PF_BEZIERNEXTTANGENT;
-					else if( strcmp(flagsString, "bezierprevtangent") == 0 )	
-						pProp->m_PropFlags |= PF_BEZIERPREVTANGENT;
-					else if( strcmp(flagsString, "dims") == 0 )					
-						pProp->m_PropFlags |= PF_DIMS;
-					else if( strcmp(flagsString, "dynamiclist") == 0 )			
-						pProp->m_PropFlags |= PF_DYNAMICLIST;
-					else if( strcmp(flagsString, "fieldofview") == 0 )			
-						pProp->m_PropFlags |= PF_FIELDOFVIEW;
-					else if( strcmp(flagsString, "filename") == 0 )				
-						pProp->m_PropFlags |= PF_FILENAME;
-					else if( strcmp(flagsString, "fovradius") == 0 )			
-						pProp->m_PropFlags |= PF_FOVRADIUS;
-				}
-				else
-				{
-					if(strncmp(flagsString, "group", 5) == 0)
-					{
-						if( strcmp(flagsString, "groupowner") == 0 )	
-							pProp->m_PropFlags |= PF_GROUPOWNER;
-						else
-							pProp->m_PropFlags |= PF_GROUP1 << (atoi(flagsString + 5) - 1);	// talon: the LT2 SDK has no PF_GROUP(n)
-					}
-					else if( strcmp(flagsString, "hidden") == 0)				
-						pProp->m_PropFlags |= PF_HIDDEN;
-					else if( strcmp(flagsString, "localdims") == 0 )			
-						pProp->m_PropFlags |= PF_LOCALDIMS;
-					else if( strcmp(flagsString, "objectlink") == 0 )			
-						pProp->m_PropFlags |= PF_OBJECTLINK;
-					else if( strcmp(flagsString, "radius") == 0 )				
-						pProp->m_PropFlags |= PF_RADIUS;
-					else if( strcmp(flagsString, "staticlist") == 0 )			
-						pProp->m_PropFlags |= PF_STATICLIST;
-				}
-			}
-			
-			pProp->LoadDataLTA( pPropNode );
-			// pNode->m_PropList.m_Props.Append( pProp );
-			pDestPropList->m_Props.Append(pProp);
-		}
-	}
-	container.AddPropList( pDestPropList, true );
-}
-
-
-void LoadPropListTBW(CAbstractIO& InFile, CPropListContainer& container )
-{
-	static char	propName[256];
-	CPropList*	pDestPropList = new CPropList;
-
-	//read in the number of properties
-	uint32 nNumProps;
-	InFile >> nNumProps;
-
-	for(uint32 k=0; k < nNumProps; k++ )
-	{
-		uint8 nPropCode;
-		InFile >> nPropCode;
-
-		InFile.ReadString(propName, sizeof(propName));
-
-		CBaseProp* pProp = CreatePropFromCode(nPropCode, propName);
-
-		if( pProp )
-		{
-			uint32 nPropFlags;
-			InFile >> nPropFlags;
-			pProp->m_PropFlags = nPropFlags;
-			
-			pProp->LoadData( InFile );
-
-			pDestPropList->m_Props.Append(pProp);
-		}
-	}
-	container.AddPropList( pDestPropList, true );
-}
-
-
-static void UpdatePrefabLocationsV1ToV2(CWorldNode* pNode)
-{
-	//bail if not a valid node
-	if(!pNode)
-		return;
-
-	//update if it is a prefab
-	if(pNode->GetType() == Node_PrefabRef)
-	{
-		//we need to get the orientation to rotate the offset by
-		LTMatrix mObjTrans;
-		gr_SetupMatrixEuler(pNode->GetOr(), mObjTrans.m);
-
-		CPrefabRef* pRef = (CPrefabRef*)pNode;
-		pNode->SetPos(pNode->GetPos() - mObjTrans * pRef->GetPrefabCenter());
-	}
-
-	//recurse on the children
-	GPOS ChildPos = pNode->m_Children;
-	while(ChildPos)
-	{
-		CWorldNode* pChild = pNode->m_Children.GetNext(ChildPos);
-		UpdatePrefabLocationsV1ToV2(pChild);
-	}
-}
-
-
-//called after a level is loaded and set up to update any version incompatibilities.
-bool CEditRegion::PostLoadUpdateVersion(uint32 nVersion, bool& bModified)
-{
-	uint32 nFinalVersion = nVersion;
-
-	if(nFinalVersion == 1)
-	{
-		//the difference between 1 and 2 is the prefab locations were offset
-		UpdatePrefabLocationsV1ToV2(GetRootNode());
-		nFinalVersion = 2;
-	}
-
-	bModified = (nFinalVersion != nVersion);
-	return (nFinalVersion == REGION_LTA_VERSION) ? TRUE : FALSE;
-}
-
-
-// talon: Build 69's (the 2001 LoadFile, above, reads a stream)
-RegionLoadStatus CEditRegion::LoadFile( const char* filename, CEditProjectMgr* pProject, uint32& nVersion, bool& bBinary)
-{
-	//get the extension from the filename
-	const char* pszExtension = filename;
-
-	const char* pszCurr = filename;
-
-	while(*pszCurr)
-	{
-		if(*pszCurr == '.')
-			pszExtension = pszCurr;
-
-		pszCurr++;
-	}
-
-	//alright, now classify the file
-	if(stricmp(pszExtension, ".tbw") == 0)
-	{
-		bBinary = true;
-		return LoadTBW(filename, pProject, nVersion);
-	}
-	else
-	{
-		bBinary = false;
-		return LoadLTA(filename, pProject, nVersion);
-	}
-}
-
-RegionLoadStatus CEditRegion::LoadLTA(const char* filename, CEditProjectMgr* pProject, uint32& nFileVersion )
-{
-	RegionLoadStatus	status = REGIONLOAD_INVALIDFILE;
-	Term();
-
-	m_LoadErrorCode = -1;
-
-	//default the version to version 1
-	nFileVersion = 1;
-
-	CLTAReader Reader;
-	CLTALoadOnlyAlloc Allocator(1024 * 512);
-
-	if(Reader.Open(filename, CLTAUtil::IsFileCompressed(filename))) 
-	{
-		//------------------------------
-		// let's start with the header
-		CLTANode* pHeader = CLTANodeReader::LoadNode(&Reader, "header", &Allocator);
-		
-		if(pHeader)
-		{
-			CLTANodeIterator NodeIter(pHeader);
-
-			CLTANode* pInfoString = NodeIter.FindNextList("infostring");
-
-			m_pInfoString = m_pStringHolder->AddString((char*)
-								PairCdr(pInfoString));
-
-			//now load in the file version
-			CLTANodeIterator VersionIter(pHeader);
-
-			CLTANode* pVersionString = VersionIter.FindNextList("versioncode");
-
-			if(pVersionString && pVersionString->IsList()  && (pVersionString->GetNumElements() >= 2))
-			{
-				nFileVersion = atoi(PairCdr(pVersionString));			
-			}
-
-		}
-
-		//clean up that block
-		pHeader = NULL;
-		Allocator.FreeAllMemory();
-
-		//--------------------------------
-		//Load in the polyhedron list
-
-		CLTANode* pPolyhedronList = CLTANodeReader::LoadNode(&Reader, "polyhedronlist", &Allocator);
-
-		if(pPolyhedronList)
-		{
-			CLTANode* pPolyhedronListHead = pPolyhedronList->GetElement(1);
-
-			//start out at 1 to skip over the name element
-			for(uint32 nCurrPoly = 0; nCurrPoly < pPolyhedronListHead->GetNumElements(); nCurrPoly++)
-			{
-				CLTANode* pPolyhedron = pPolyhedronListHead->GetElement(nCurrPoly);
-			
-				//see if there are any more polyhedrons
-				ASSERT(pPolyhedron);
-
-				CEditBrush *pBrush = new CEditBrush;
-				// m_QuickBrushIndexer[i] = pBrush;
-				m_QuickBrushIndexer.Push(pBrush);
-				AddBrush(pBrush);
-				
-				if( !pBrush->LoadLTA(pPolyhedron->GetElement(1), m_pStringHolder) )
-				{
-					m_LoadErrorCode = 1;
-					break;
-				}
-
-				//go ahead and clean up this poly, cut down on memory usage
-				//so it will hopefully remain faily constant
-				//pPolyhedron->Free();
-			}
-			
-			//clean up the list of polyhedrons
-			pPolyhedronList		= NULL;
-			pPolyhedronListHead = NULL;
-		}
-		else
-		{
-			//missed it, need to start over at the beginning of the file
-			Reader.Close();
-			Reader.Open(filename, CLTAUtil::IsFileCompressed(filename));
-		}
-
-		//clean up
-		pPolyhedronList = NULL;
-		Allocator.FreeAllMemory();
-
-
-		//--------------------------------
-		// let's do the globablproplist
-
-		{
-			g_loadPropListContainer.Init();
-
-			//get the main list of global properties
-			CLTANode* pPropList = CLTANodeReader::LoadNode(&Reader, "globalproplist", &Allocator);
-
-			//make sure we found it
-			if(pPropList)
-			{
-				//okay, not point to the head of the list we will use
-				CLTANode* pPropListHead = pPropList->GetElement(1);
-				ASSERT(pPropListHead);
-
-				//now run through and load in every property
-
-				for(uint32 nCurrProp = 0; nCurrProp < pPropListHead->GetNumElements(); nCurrProp++)
-				{		
-					CLTANode* pProp = pPropListHead->GetElement(nCurrProp);
-
-					//see if we hit the end
-					if(pProp == NULL)
-					{
-						break;
-					}
-
-					LoadPropList(pProp->GetElement(1), g_loadPropListContainer );
-
-					//unload the associated memory
-					//pProp->Free();
-				}
-
-				//clear out the global lists
-				pPropList		= NULL;
-				pPropListHead	= NULL;
-			}
-
-			pPropList = NULL;
-			Allocator.FreeAllMemory();
-
-		}
-
-
-		//-------------------------------
-		// let's do the nodehierarchy
-		
-		//reset the file
-		Reader.Close();
-		Reader.Open(filename, CLTAUtil::IsFileCompressed(filename));
-
-		CLTANode* pNodehierarchy = CLTANodeReader::LoadNode(&Reader, "nodehierarchy", &Allocator);
-		if( pNodehierarchy )
-		{
-			CLTANodeIterator NodeIter(pNodehierarchy);
-
-			if( !RecurseAndLoadNodeLTA(	NodeIter.FindNextList("worldnode" ),
-										&m_RootNode, 
-										pProject) )
-			{
-				Term();
-				return REGIONLOAD_INVALIDFILE;
-			}
-
-			pNodehierarchy = NULL;
-		}
-		else
-		{
-			//missed it, need to reset the file
-			Reader.Close();
-			Reader.Open(filename, CLTAUtil::IsFileCompressed(filename));
-		}
-
-		g_loadPropListContainer.UnloadFromMemory();
-
-		//clean up the nodes
-		pNodehierarchy = NULL;
-		Allocator.FreeAllMemory();
-
-
-
-		//----------------------------------
-		// Load the navigator positions
-		
-		CLTANode* pNavigatorposList = CLTANodeReader::LoadNode(&Reader, "navigatorposlist", &Allocator);
-		if( pNavigatorposList )
-		{
-			m_NavigatorPosArray.LoadLTA( PairCdrNode(pNavigatorposList) );
-			pNavigatorposList = NULL;
-		}
-
-		//clean up the nodes
-		pNavigatorposList = NULL;
-		Allocator.FreeAllMemory();
-
-		m_RootNode.m_Flags |= NODEFLAG_WORLDROOT;
-		// Update stuff.
-		status = REGIONLOAD_OK;
-	}
-	
-	Reader.Close();
-	
-	m_QuickBrushIndexer.Term();	
-
-	return status;
-}
-
-
-void CEditRegion::SaveTBW( CAbstractIO& OutFile )
-{
-	//give brushes indices
-	uint32 i=0;
-	for(LPOS pos=m_Brushes; pos; )
-	{
-		m_Brushes.GetNext(pos)->m_RegionBrushIndex = i++;
-	}
-
-
-	//------------------------------
-	// let's start with the header
-	//write the version
-	uint32 nVersion = CURRENT_TBW_VERSION;
-	OutFile << nVersion;
-
-	//setup markers for the different sections
-	uint32 nPolyhedronMarker	= PlaceMarker(OutFile);
-	uint32 nPropertyMarker		= PlaceMarker(OutFile);
-	uint32 nNodeMarker			= PlaceMarker(OutFile);
-	uint32 nNavigatorMarker		= PlaceMarker(OutFile);
-
-	//now write out the info string
-	OutFile.WriteString(m_pInfoString);
-
-	//--------------------------------
-	//Load in the polyhedron list
-
-	{
-		UpdateMarker(OutFile, nPolyhedronMarker);
-
-		g_propListContainer.Init();
-
-		//write the number of brushes that we have
-		uint32 nNumBrushes = m_Brushes.GetSize();
-		OutFile << nNumBrushes;
-
-		for(LPOS pos = m_Brushes; pos; )
-			m_Brushes.GetNext(pos)->SaveTBW(OutFile, FALSE);	// talon: 2001's second argument
-	}
-
-	//-------------------------------
-	// let's do the nodehierarchy
-	{
-		UpdateMarker(OutFile, nNodeMarker);
-
-		RecurseAndSaveNodeTBW(OutFile, &m_RootNode);
-	}
-
-	//-------------------------------
-	// the property lists
-	{
-		UpdateMarker(OutFile, nPropertyMarker);
-
-		g_propListContainer.SaveTBW(OutFile);
-	}
-
-	//----------------------------------
-	// Save the navigator positions
-	{
-		UpdateMarker(OutFile, nNavigatorMarker);
-		m_NavigatorPosArray.SaveTBW( OutFile );
-	}
-}
-		
-
-
-RegionLoadStatus CEditRegion::LoadTBW(const char* filename, CEditProjectMgr* pProject, uint32& nFileVersion )
-{
-	RegionLoadStatus	status = REGIONLOAD_INVALIDFILE;
-	Term();
-
-	m_LoadErrorCode = -1;
-
-	//default the version to version 1
-	nFileVersion = 1;
-
-	//open up the file for reading
-	CMoFileIO InFile;
-	if(!InFile.Open(filename, "rb"))
-	{
-		return REGIONLOAD_INVALIDFILEVERSION;
-	}
-
-	//------------------------------
-	// let's start with the header
-	//read in the version
-	InFile >> nFileVersion;
-
-	//verify that the version matches
-	if(nFileVersion != CURRENT_TBW_VERSION)
-	{
-		InFile.Close();
-		return REGIONLOAD_INVALIDFILEVERSION;
-	}
-
-	//read in marker positions
-	uint32 nPolyhedronMarker;
-	uint32 nPropertyMarker;
-	uint32 nNodeMarker;
-	uint32 nNavigatorMarker;
-
-	InFile >> nPolyhedronMarker;
-	InFile >> nPropertyMarker;
-	InFile >> nNodeMarker;
-	InFile >> nNavigatorMarker;
-
-	//now read in the info string
-	char pszTempInfoString[512];
-	InFile.ReadString(pszTempInfoString, sizeof(pszTempInfoString));
-	m_pInfoString = m_pStringHolder->AddString(pszTempInfoString);
-
-	//--------------------------------
-	//Load in the polyhedron list
-
-	InFile.SeekTo(nPolyhedronMarker);
-	{
-		//read in the number of brushes that we have
-		uint32 nNumBrushes = 0;
-		InFile >> nNumBrushes;
-
-		//start out at 1 to skip over the name element
-		for(uint32 nCurrPoly = 0; nCurrPoly < nNumBrushes; nCurrPoly++)
-		{
-			CEditBrush *pBrush = new CEditBrush;
-			m_QuickBrushIndexer.Push(pBrush);
-			AddBrush(pBrush);
-			
-			if( !pBrush->LoadTBW(InFile, m_pStringHolder, 0) )	// talon: 2001's third argument
-			{
-				m_LoadErrorCode = 1;
-				break;
-			}
-		}
-	}
-
-	//--------------------------------
-	// let's do the globablproplist
-
-	InFile.SeekTo(nPropertyMarker);
-	{
-		g_loadPropListContainer.Init();
-
-		uint32 nNumProperties;
-		InFile >> nNumProperties;
-
-		//now run through and load in every property
-		for(uint32 nCurrProp = 0; nCurrProp < nNumProperties; nCurrProp++)
-		{		
-			LoadPropListTBW(InFile, g_loadPropListContainer );
-		}
-	}
-
-	//-------------------------------
-	// let's do the nodehierarchy
-	InFile.SeekTo(nNodeMarker);
-	{
-		if( !RecurseAndLoadNodeTBW(	InFile, &m_RootNode, pProject) )
-		{
-			Term();
-			return REGIONLOAD_INVALIDFILE;
-		}
-	}
-
-	g_loadPropListContainer.UnloadFromMemory();
-
-	//----------------------------------
-	// Load the navigator positions
-	InFile.SeekTo(nNavigatorMarker);
-	{
-		m_NavigatorPosArray.LoadTBW(InFile);
-	}
-
-	//setup the root node so it can't be removed
-	m_RootNode.m_Flags |= NODEFLAG_WORLDROOT;
-
-	// Update stuff.
-	status = REGIONLOAD_OK;
-	
-	m_QuickBrushIndexer.Term();	
-
-	return status;
-}
-
-
-void CEditRegion::SaveHeaderLTA(CLTAFile* pFile, uint32 level, uint32 versionCode)
-{
-	PrependTabs(pFile, level );
-	pFile->WriteStr("( header (");
-		PrependTabs(pFile, level+1 );
-		pFile->WriteStrF("( versioncode %d )", versionCode );
-		if( strlen(m_pInfoString) )
-		{
-			PrependTabs(pFile, level+1 );
-			pFile->WriteStrF("( infostring \"%s\" )", m_pInfoString );
-		}
-	PrependTabs(pFile, level );
-	pFile->WriteStr(") )");
-}
-
-
-void CEditRegion::SaveLTA(CLTAFile* pFile )
-{
-	uint32			i;
-	LPOS pos;
-	
-	// uint32 versionCode=g_LTAVersion;
-	
-	pFile->WriteStr("\n( world" );
-	
-	SaveHeaderLTA(pFile, 1, REGION_LTA_VERSION );
-	
-	// Give the brushes indices.
-	i=0;
-	for(pos=m_Brushes; pos; )
-	{
-		m_Brushes.GetNext(pos)->m_RegionBrushIndex = i++;
-	}
-
-	PrependTabs(pFile, 1);
-	pFile->WriteStr("( polyhedronlist (" );
-		for(pos=m_Brushes; pos; )
-		   m_Brushes.GetNext(pos)->SaveLTA(pFile, 2);
-	PrependTabs(pFile, 1);
-	pFile->WriteStr(") )" );
-
-	PrependTabs(pFile, 1);
-	g_propListContainer.Init();
-	pFile->WriteStr("( nodehierarchy " );
-		RecurseAndSaveNodeLTA( pFile, &m_RootNode,2);
-	PrependTabs(pFile, 1);
-
-	pFile->WriteStr(")" );
-
-	g_propListContainer.SaveLTA( pFile, 1 );
-	// g_propListContainer.UnloadFromMemory();
-
-	// Save the navigator positions	
-	m_NavigatorPosArray.SaveLTA(pFile, 1);
-
-	pFile->WriteStr("\n)");
-}
 		
 
 BOOL LoadNodePropertiesLTA(CLTANode* pParseNode,		CWorldNode *pNode, 
@@ -1306,79 +733,9 @@ BOOL CEditRegion::RecurseAndLoadNodeLTA( CLTANode* pParseNode, CWorldNode *pNode
 		{
 			pChild = new CBaseEditObj;
 		}
-		else if( strcmp(pNodeType, "prefabref" ) == 0 )
-		{
-			const char *pFilename = PairCdrNode(pCurrChild->GetElement(2))->GetValue(); // prefabfile
-			const char *pName = PairCdrNode(pCurrChild->GetElement(3))->GetValue(); // prefabname
-
-			pChild = GetPrefabMgr()->CreateUnboundRef(this, pNode, pFilename, pName);
-
-			//read in the position
-			CLTANode* pPosNode = pCurrChild->GetElement(4);
-			if(pPosNode->GetNumElements() == 4)
-			{
-				LTVector vPos;
-				vPos.x = (float)atof(pPosNode->GetElement(1)->GetValue());
-				vPos.y = (float)atof(pPosNode->GetElement(2)->GetValue());
-				vPos.z = (float)atof(pPosNode->GetElement(3)->GetValue());
-				pChild->SetPos(vPos);
-			}
-
-			//read in the orientations
-			CLTANode* pOrNode = pCurrChild->GetElement(5);
-			if(pOrNode->GetNumElements() == 4)
-			{
-				LTVector vOr;
-				vOr.x = (float)atof(pOrNode->GetElement(1)->GetValue());
-				vOr.y = (float)atof(pOrNode->GetElement(2)->GetValue());
-				vOr.z = (float)atof(pOrNode->GetElement(3)->GetValue());
-				pChild->SetOr(vOr);
-			}
-			
-			if (!pChild)
-			{
-				m_LoadErrorCode = 6;
-				return FALSE;
-			}
-		}
 		else if (strcmp(pNodeType, "patch") == 0)
 		{
 			//This is to support the old patches. We won't do anything, just ignore it
-		}
-		else if( strcmp(pNodeType, "prefabref" ) == 0 )
-		{
-			const char *pFilename = PairCdrNode(pCurrChild->GetElement(2))->GetValue(); // prefabfile
-			const char *pName = PairCdrNode(pCurrChild->GetElement(3))->GetValue(); // prefabname
-
-			pChild = GetPrefabMgr()->CreateUnboundRef(this, pNode, pFilename, pName);
-
-			//read in the position
-			CLTANode* pPosNode = pCurrChild->GetElement(4);
-			if(pPosNode->GetNumElements() == 4)
-			{
-				LTVector vPos;
-				vPos.x = (float)atof(pPosNode->GetElement(1)->GetValue());
-				vPos.y = (float)atof(pPosNode->GetElement(2)->GetValue());
-				vPos.z = (float)atof(pPosNode->GetElement(3)->GetValue());
-				pChild->SetPos(vPos);
-			}
-
-			//read in the orientations
-			CLTANode* pOrNode = pCurrChild->GetElement(5);
-			if(pOrNode->GetNumElements() == 4)
-			{
-				LTVector vOr;
-				vOr.x = (float)atof(pOrNode->GetElement(1)->GetValue());
-				vOr.y = (float)atof(pOrNode->GetElement(2)->GetValue());
-				vOr.z = (float)atof(pOrNode->GetElement(3)->GetValue());
-				pChild->SetOr(vOr);
-			}
-			
-			if (!pChild)
-			{
-				m_LoadErrorCode = 6;
-				return FALSE;
-			}
 		}
 		else
 		{
@@ -1459,509 +816,143 @@ BOOL CEditRegion::RecurseAndLoadNodeLTA( CLTANode* pParseNode, CWorldNode *pNode
 }
 
 
-
-void CEditRegion::RecurseAndSaveNodeLTA( CLTAFile* pFile, CWorldNode *pNode, uint32 level )
+// 0x4110a0 (the name ours).
+void CEditRegion::RecurseAndSaveNode( CAbstractIO &OutFile, CWorldNode *pNode )
 {
+	GPOS		pos;
 	CWorldNode	*pChild;
-	GPOS pos;
 
-	PrependTabs(pFile, level );
-	pFile->WriteStr("( worldnode ");
-
-		PrependTabs(pFile, level+1);
-
-		pFile->WriteStr("( type");
-		if( pNode->m_Type == Node_Null )
-			pFile->WriteStr(" null ");
-		else if(pNode->m_Type == Node_Brush)
-			pFile->WriteStr(" brush ");
-		else if(pNode->m_Type == Node_Object)
-			pFile->WriteStr(" object ");
-		else if(pNode->m_Type == Node_PrefabRef)
-			pFile->WriteStrF(" prefabref ");
-		else
-			pFile->WriteStr(" invalid ");
-		pFile->WriteStr(")");
-			
-		if( pNode->m_Type == Node_Brush )
-		{
-			PrependTabs(pFile, level+1);
-			pFile->WriteStrF("( brushindex %d )", pNode->AsBrush()->m_RegionBrushIndex);
-		}
-		else if( pNode->m_Type == Node_PrefabRef )
-		{
-			CPrefabRef *pPrefab = (CPrefabRef*)pNode;
-			PrependTabs(pFile, level+1);
-			pFile->WriteStrF("( prefabfile \"%s\" )", pPrefab->GetPrefabFilename());
-			PrependTabs(pFile, level+1);
-			pFile->WriteStrF("( prefabname \"%s\" )", pPrefab->GetName());
-			PrependTabs(pFile, level+1);
-			pFile->WriteStrF("( position %f %f %f )", pPrefab->GetPos().x, pPrefab->GetPos().y, pPrefab->GetPos().z);
-			PrependTabs(pFile, level+1);
-			pFile->WriteStrF("( orientation %f %f %f )", pPrefab->GetOr().x, pPrefab->GetOr().y, pPrefab->GetOr().z);
-		}
-
-		const char *lpszLabel=pNode->GetNodeLabel();
-		if( lpszLabel && strlen(lpszLabel) )
-		{
-			PrependTabs( pFile, level + 1 );
-			pFile->WriteStrF("( label \"%s\" ) ", (char *)lpszLabel );
-		}
-
-		PrependTabs(pFile, level + 1);
-		pFile->WriteStrF("( nodeid %d ) ", pNode->GetUniqueID() );
-		PrependTabs(pFile, level + 1);
-		pFile->WriteStr("( flags ( " );
-		if( pNode->IsFlagSet(NODEFLAG_SELECTED) )
-			pFile->WriteStr("selected " );
-		if( pNode->IsFlagSet(NODEFLAG_HIDDEN) )
-			pFile->WriteStr("hidden " );
-		if( pNode->IsFlagSet(NODEFLAG_SHOWMODEL) )
-			pFile->WriteStr("showmodel ");
-		if( pNode->IsFlagSet(NODEFLAG_FROZEN) )
-			pFile->WriteStr("frozen " );
-		if( pNode->IsFlagSet(NODEFLAG_PATH) )
-			pFile->WriteStr("path " );
-		if( pNode->IsFlagSet(NODEFLAG_WORLDROOT) )
-			pFile->WriteStr("worldroot " );
-		if( pNode->IsFlagSet(NODEFLAG_EXPANDED) )
-			pFile->WriteStr("expanded " );
-		pFile->WriteStr(") ) ");
-		
-		SaveNodePropertiesLTA(pFile, pNode, level+1);
-
-		if( pNode->m_Children.GetSize() )
-		{
-			PrependTabs(pFile, level + 1);
-			pFile->WriteStr("( childlist ( " );
-				for(pos=pNode->m_Children; pos; )
-				{
-					pChild = pNode->m_Children.GetNext(pos);
-					RecurseAndSaveNodeLTA(pFile, pChild, level+2);
-				}
-			PrependTabs(pFile, level + 1);
-			pFile->WriteStr(") )" );
-		}
-	PrependTabs(pFile, level);
-	pFile->WriteStr(")");
-}
-
-
-bool LoadNodePropertiesTBW(CAbstractIO& InFile,	CWorldNode *pNode, CPropListContainer& container, CEditProjectMgr* pProject)
-{
-	//read in the class name
-	char pszClassName[512];
-	InFile.ReadString(pszClassName, sizeof(pszClassName));
-	pNode->SetClassName(pszClassName);
-
-	//read in the prop list identifier
-	uint32 nPropID;
-	InFile >> nPropID;
-
-	CPropList* propList = container.GetElem(nPropID);
-
-	for( uint32 i = 0; i < propList->m_Props.GetSize(); i++ )
+	OutFile << (WORD)pNode->m_Children.GetSize();
+	for( pos=pNode->m_Children; pos; )
 	{
-		CBaseProp *pProp = CreatePropFromCode(propList->m_Props[i]->m_Type, propList->m_Props[i]->m_Name);
-		if( pProp )
-		{
-			pProp->m_PropFlags = propList->m_Props[i]->m_PropFlags;
-			pProp->Copy(propList->m_Props[i]);
-			
-			#ifdef DIRECTEDITOR_BUILD
-				if ( pProject )
-				{
-					// Associate the PropDef
+		pChild = pNode->m_Children.GetNext(pos);
 
-					ClassDef* pClassDef = pProject->FindClassDef(pNode->GetClassName());
-					if ( pClassDef )
-					{
-						CMoArray<PropDef*> *pPropList;
-						if(pPropList = pProject->GetClassDefProps(pClassDef))
-						{
-							pProp->m_pPropDef = pProject->FindPropInList(*pPropList, pProp->m_Name);
-						}
-					}
-				}
-			#endif
-				pNode->m_PropList.m_Props.Append( pProp );	
-			
-			#ifdef DIRECTEDITOR_BUILD
-				//we need to give the object a chance to react to the change but don't send the chage to the game code...
-				pNode->OnPropertyChanged(pProp, false, NULL);
-			#endif
-		}
-		
+		OutFile << (DWORD)pChild->m_Type;
+		if( pChild->m_Type == Node_Brush )
+			OutFile << pChild->AsBrush()->m_RegionBrushIndex;
 
+		RecurseAndSaveNode(OutFile, pChild);
 	}
 
-	//and now load our filtered properties on top of the other properties
-	static const char* pszFilters[] = { "Name", "Pos", "Or" };
-	static const uint32 knNumFilters = sizeof(pszFilters) / sizeof(pszFilters[0]);
+	SaveNodeProperties(OutFile, pNode);
 
-	//and now write out our actual property data
-	for(uint32 nCurrProp = 0; nCurrProp < knNumFilters; nCurrProp++)
-	{
-		CBaseProp* pProp = pNode->GetPropertyList()->GetProp(pszFilters[nCurrProp]);
-
-		//read in the success
-		uint8 nSuccess;
-		InFile >> nSuccess;
-
-		if(nSuccess)
-		{
-			pProp->LoadData(InFile);
-		}
-	}
-
-	return true;
-}
-
-
-bool CEditRegion::RecurseAndLoadNodeTBW( CAbstractIO& InFile, CWorldNode *pNode, CEditProjectMgr* pProject )
-{
-	//load in the data for the node
-	if(pNode->GetType() == Node_Null)
-	{
-		char pszLabel[512];
-		InFile.ReadString(pszLabel, sizeof(pszLabel));
-
-		pNode->SetNodeLabel(pszLabel);
-	}
-
-	//read in the node flags
-	InFile >> pNode->m_Flags;
-
-	//read in the property list
-	//LoadNodeProperties(InFile, pNode, pProject);
-
-	if(!LoadNodePropertiesTBW(InFile, pNode, g_loadPropListContainer, pProject ))
-	{
-		m_LoadErrorCode = 5;
-		return false;
-	}
-	
-	//now if this is an object, we need to add this object (it needs to wait until down
-	//here because it uses the class name)
-	if(pNode->GetType() == Node_Object)
-	{
-		AddObject(pNode->AsObject());
-	}
-
-	//perform some setup on this node	
-	if(pNode->IsFlagSet(NODEFLAG_SELECTED))
-		SelectNode( pNode );
- 
-	if(pNode->IsFlagSet(NODEFLAG_PATH))
-		AddNodeToPath(pNode);
-
-	//recurse into the children
-	uint32 nNumChildren;
-	InFile >> nNumChildren;
-
-	for(uint32 nCurrChild = 0; nCurrChild < nNumChildren; nCurrChild++)
-	{
-		//get the type and allocate this node
-		uint32 nChildType;
-		InFile >> nChildType;
-
-		//the child that we will be allocating
-		CWorldNode* pChild = NULL;
-
-		//create the node
-		if(nChildType == Node_Brush)
-		{
-			//read in the brush index
-			uint32 nBrushIndex;
-			InFile >> nBrushIndex;
-
-			if(nBrushIndex >= m_Brushes.GetSize())
-			{
-				m_LoadErrorCode = 3;
-				return FALSE;
-			}
-			pChild = m_QuickBrushIndexer[nBrushIndex];
-		}
-		else if(nChildType == Node_PrefabRef)
-		{
-			//for a prefab, write out the file
-			char pszFileBuff[_MAX_PATH];
-			InFile.ReadString(pszFileBuff, sizeof(pszFileBuff));
-
-			//the name
-			char pszNameBuff[512];
-			InFile.ReadString(pszNameBuff, sizeof(pszNameBuff));
-
-			pChild = GetPrefabMgr()->CreateUnboundRef(this, pNode, pszFileBuff, pszNameBuff);
-
-			//now the position
-			LTVector vPos;
-			InFile >> vPos.x >> vPos.y >> vPos.z;
-
-			LTVector vOr;
-			InFile >> vOr.x >> vOr.y >> vOr.z;
-
-			pChild->SetPos(vPos);
-			pChild->SetOr(vOr);
-		}
-		else if(nChildType == Node_Object)
-		{
-			pChild = new CBaseEditObj;
-		}
-		else if(nChildType == Node_Null)
-		{
-			pChild = new CWorldNode;
-		}
-		else
-		{
-			m_LoadErrorCode = 4;
-			return false;
-		}
-		
-		// Note : PrefabRef objects are created pre-attached
-		if( pChild->GetType() != Node_PrefabRef)
-		{
-			pNode->m_Children.Append( pChild );
-			pChild->SetParent( pNode );
-		}
-
-		//and recurse to load the children
-		RecurseAndLoadNodeTBW(InFile, pChild, pProject);
-		
-	}
-
-	return true;		
-}
-
-
-void SaveNodePropertiesTBW(CAbstractIO& OutFile, CWorldNode *pObj)
-{
-	//write out the class name
-	OutFile.WriteString((char*)pObj->GetClassName());
-
-	static const char* pszFilters[] = { "Name", "Pos", "Or" };
-	static const uint32 knNumFilters = sizeof(pszFilters) / sizeof(pszFilters[0]);
-
-	//save the ID of the property list
-	uint32 nPropID = g_propListContainer.AddPropList(&(pObj->m_PropList), knNumFilters, pszFilters);
-
-	OutFile << nPropID;
-
-	//and now write out our actual property data
-	for(uint32 nCurrProp = 0; nCurrProp < knNumFilters; nCurrProp++)
-	{
-		CBaseProp* pProp = pObj->GetPropertyList()->GetProp(pszFilters[nCurrProp]);
-
-		if(pProp)
-		{
-			//we have a property, save it out
-			OutFile << (uint8)1;
-			pProp->SaveData(OutFile);
-		}
-		else
-		{
-			//failed to find the prop, indicate this
-			OutFile << (uint8)0;
-		}
-	}
-}
-
-
-void CEditRegion::RecurseAndSaveNodeTBW( CAbstractIO& OutFile, CWorldNode *pNode)
-{
-	//write out the type....unless this is the root node, of which we always assume is there
-	//and we don't need to write the type, we just assume it is a null node
-	if(!(pNode->GetFlags() & NODEFLAG_WORLDROOT))
-	{
-		OutFile << pNode->m_Type;
-	}
-			
-	if( pNode->m_Type == Node_Brush )
-	{
-		//for brushes write out the index
-		uint32 nBrushIndex = pNode->AsBrush()->m_RegionBrushIndex;
-		OutFile << nBrushIndex;
-	}
-	else if( pNode->m_Type == Node_PrefabRef )
-	{
-		CPrefabRef* pPrefab = (CPrefabRef*)pNode;
-
-		//for a prefab, write out the file
-		OutFile.WriteString((char*)pPrefab->GetPrefabFilename());
-
-		//the name
-		OutFile.WriteString((char*)pPrefab->GetName());
-
-		//the position
-		LTVector vPos = pPrefab->GetPos();
-		OutFile << vPos.x << vPos.y << vPos.z;
-
-		//the orientation
-		LTVector vOr = pPrefab->GetOr();
-		OutFile << vOr.x << vOr.y << vOr.z;
-	}
-	else if(pNode->m_Type == Node_Null)
-	{
-		//write out the label
+	OutFile << pNode->GetUniqueID();
+	OutFile << pNode->m_Flags;
+	if( pNode->GetNodeLabel() )
 		OutFile.WriteString((char*)pNode->GetNodeLabel());
-	}
-
-	//the flags
-	uint32 nFlags = pNode->GetFlags();
-	OutFile << nFlags;
-	
-	//SaveNodeProperties(OutFile, pNode);
-	SaveNodePropertiesTBW(OutFile, pNode);
-
-	//write out the number of children
-	uint32 nNumChildren = pNode->m_Children.GetSize();
-	OutFile << nNumChildren;
-
-	for(GPOS pos=pNode->m_Children; pos; )
-	{
-		CWorldNode	*pChild = pNode->m_Children.GetNext(pos);
-		RecurseAndSaveNodeTBW(OutFile, pChild);
-	}
-}
-
-
-
-#ifdef DIRECTEDITOR_BUILD
-
-static bool GetTextureDims(const char* pszFilename, uint32& nWidth, uint32& nHeight)
-{
-	DFileIdent* pFile;
-
-	//get the file identifier
-	dfm_GetFileIdentifier( GetFileMgr(), pszFilename, &pFile );
-
-	//get the dimensions of the texture
-	CTexture* pTexture = dib_GetDibTexture(pFile);
-
-	if(pTexture)
-	{
-		nWidth	= pTexture->m_pDib->GetWidth();
-		nHeight = pTexture->m_pDib->GetHeight();
-		return true;
-	}
-
-	return false;
-}
-
-
-uint32 CEditRegion::RenameTexture(const char *pSrcTextureName, const char *pDestTextureName, bool bScaleOPQs)
-{
-	//we need to determine scales for the P and Q vectors
-	float fPScale = 1.0f;
-	float fQScale = 1.0f;
-
-	if(bScaleOPQs)
-	{
-		uint32 nSrcWidth, nSrcHeight, nDestWidth, nDestHeight;
-		if(	GetTextureDims(pSrcTextureName, nSrcWidth, nSrcHeight) &&
-			GetTextureDims(pDestTextureName, nDestWidth, nDestHeight))
-		{
-			//we can calculate the scale
-			fPScale = (float)nDestWidth / (float)nSrcWidth;
-			fQScale = (float)nDestHeight / (float)nSrcHeight;
-		}
-	}
-
-	//count of how many polygons changed
-	uint32 nOccurences = 0;
-
-	for(LPOS lPos=m_Brushes; lPos; )
-	{
-		CEditBrush *pBrush = m_Brushes.GetNext(lPos);
-	
-		for(uint32 i=0; i < pBrush->m_Polies; i++)
-		{
-			CEditPoly *pPoly = pBrush->m_Polies[i];
-
-			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
-			{
-				CTexturedPlane& Texture = pPoly->GetTexture(nCurrTex);
-
-				if(Texture.m_pTextureName)
-				{
-					if(CHelpers::UpperStrcmp(pPoly->GetTexture(nCurrTex).m_pTextureName, pSrcTextureName))
-					{
-						//we just need to change over the texture
-						Texture.m_pTextureName = m_pStringHolder->AddString(pDestTextureName);
-						Texture.UpdateTextureID();
-
-						//scale the PQ vectors
-						Texture.SetP(pPoly->GetTexture(nCurrTex).GetP() * fPScale);
-						Texture.SetQ(pPoly->GetTexture(nCurrTex).GetQ() * fQScale);
-
-						++nOccurences;
-					}
-				}
-			}
-		}
-	}
-
-	return nOccurences;
-}
-
-#endif
-
-
-CWorldNode* CEditRegion::CheckNodes(CWorldNode *pRoot)
-{
-	GPOS pos;
-	int nChildrenIterated;
-	CWorldNode *pNode;
-	CBaseProp *pProp;
-	uint32 i;
-
-	if(!pRoot)
-	{
-		// This is just a little test to make sure the brushes point to valid data.
-		CMatrix transform;
-		LPOS lPos;
-		CEditBrush *pBrush;
-		uint32 k;
-
-		transform.Identity();
-		for(lPos=m_Brushes; lPos; )
-		{
-			pBrush = m_Brushes.GetNext(lPos);
-
-			for( k=0; k < pBrush->m_Points; k++ )
-			{
-				CEditVert	&vert = pBrush->m_Points[k];
-
-				transform.Apply4x4( vert, vert.m_Transformed );
-			}
-		}
-
-		pRoot = GetRootNode();
-	}
-
-	// Check the props.
-	for(i=0; i < pRoot->m_PropList.m_Props; i++)
-	{
-		pProp = pRoot->m_PropList.m_Props[i];
-
-		if(pProp->m_Type < 0 || pProp->m_Type >= LT_NUM_PROPERTYTYPES)
-			return pRoot;
-	}
-
-	nChildrenIterated = 0;
-	for(pos=pRoot->m_Children; pos; )
-	{
-		pNode = CheckNodes(pRoot->m_Children.GetNext(pos));
-		if(pNode)
-			return pNode;
-
-		++nChildrenIterated;
-	}
-
-	if(nChildrenIterated == (int)pRoot->m_Children.GetSize())
-		return NULL;
 	else
-		return pRoot;
+		OutFile.WriteString("");
+}
+
+
+// 0x427fad (the name ours): a line of a Quake .map file.
+void CEditRegion::MapPrintf(CAbstractIO &file, const char *pFormat, ...)
+{
+	char str[1000];
+	va_list marker;
+
+	va_start(marker, pFormat);
+	vsprintf(str, pFormat, marker);
+	va_end(marker);
+
+	file.Write(str, strlen(str));
+}
+
+
+// 0x427ff0 (the name ours; called from 0x458f4a, RegionView's ".map"
+// export): the world as a Quake .map file: each brush's polies as planes
+// through their first three points (y and z swapped) with the texture's
+// name, then a player start for each StartPoint and a light for each
+// object with an m_Radius.
+void CEditRegion::ExportMapFile(CAbstractIO &file)
+{
+	LPOS pos;
+	uint32 i;
+	CEditBrush *pBrush;
+	CEditPoly *pPoly;
+	CBaseEditObj *pObj;
+	CRealProp *pRadius;
+	char szTexName[256], szExt[256];
+
+	MapPrintf(file, "{\n");
+	MapPrintf(file, "\"classname\" \"worldspawn\"\n");
+	MapPrintf(file, "\"wad\" \"medieval.wad\"\n");
+
+	for(pos=m_Brushes; pos; )
+	{
+		pBrush = m_Brushes.GetNext(pos);
+
+		MapPrintf(file, "{\n");
+
+		for(i=0; i < pBrush->m_Polies; i++)
+		{
+			pPoly = pBrush->m_Polies[i];
+
+			CHelpers::ExtractFileNameAndExtension(pPoly->m_pTextureName, szTexName, szExt);
+			strupr(szTexName);
+
+			MapPrintf(file, "( %d %d %d )  ( %d %d %d )  ( %d %d %d )  %s 0 0 0 1.0 1.0\n",
+				(int)pPoly->Pt(0).x, (int)pPoly->Pt(0).z, (int)pPoly->Pt(0).y,
+				(int)pPoly->Pt(1).x, (int)pPoly->Pt(1).z, (int)pPoly->Pt(1).y,
+				(int)pPoly->Pt(2).x, (int)pPoly->Pt(2).z, (int)pPoly->Pt(2).y,
+				szTexName);
+		}
+
+		MapPrintf(file, "}\n");
+	}
+
+	MapPrintf(file, "}\n");
+
+	for(uint32 nObj=0; nObj < m_Objects; nObj++)
+	{
+		pObj = m_Objects[nObj];
+
+		if(strcmp(pObj->GetClassName(), "StartPoint") == 0)
+		{
+			MapPrintf(file, "{\n");
+			MapPrintf(file, "\"classname\" \"info_player_start\"\n");
+			MapPrintf(file, "\"origin\" \"%d %d %d\"\n", (int)pObj->GetPos().x, (int)pObj->GetPos().z, (int)pObj->GetPos().y);
+			MapPrintf(file, "}\n");
+		}
+		else if(pObj->m_PropList.GetProp("m_Radius"))
+		{
+			MapPrintf(file, "{\n");
+			MapPrintf(file, "\"classname\" \"light\"\n");
+
+			if(pRadius = (CRealProp*)pObj->m_PropList.GetProp("m_Radius"))
+				MapPrintf(file, "\"light\" \"%d\"\n", (int)pRadius->m_Value);
+
+			MapPrintf(file, "\"style\" \"0\"\n");
+			MapPrintf(file, "\"origin\" \"%d %d %d\"\n", (int)pObj->GetPos().x, (int)pObj->GetPos().z, (int)pObj->GetPos().y);
+			MapPrintf(file, "}\n");
+		}
+	}
+}
+
+
+// 0x411190.
+uint32 CEditRegion::GetTotalNumPolies()
+{
+	uint32 ret=0;
+	LPOS pos;
+
+	for(pos=m_Brushes; pos; )
+		ret += m_Brushes.GetNext(pos)->m_Polies.GetSize();
+
+	return ret;
+}
+
+
+// 0x4111c0.
+uint32 CEditRegion::GetTotalNumPoints()
+{
+	uint32 ret=0;
+	LPOS pos;
+
+	for(pos=m_Brushes; pos; )
+		ret += m_Brushes.GetNext(pos)->m_Points.GetSize();
+
+	return ret;
 }
 
 
@@ -1980,11 +971,13 @@ uint32 CEditRegion::NumBrushSelections()
 
 
 
+// 0x428440.
 void CEditRegion::CleanupGeometry(CLinkedList<CEditBrush*> *pBrushes)
 {
 	FixInvalidBrushes(pBrushes);
 	RemoveCollinearVertices(pBrushes);
 	RemoveDuplicatePoints(pBrushes);
+	RemoveDuplicatePolies(pBrushes);
 	FixInaccurateGeometry(pBrushes);
 	UpdatePlanes(pBrushes);
 }
@@ -2110,6 +1103,67 @@ void CEditRegion::RemoveDuplicatePoints(CLinkedList<CEditBrush*> *pBrushes)
 }
 
 
+// 0x4286d5 (the name ours): removes each poly that repeats another of its
+// brush (the same plane, texture space, texture and indices).
+void CEditRegion::RemoveDuplicatePolies(CLinkedList<CEditBrush*> *pBrushes)
+{
+	LPOS pos;
+	CEditBrush *pBrush;
+	CEditPoly *pPoly1, *pPoly2;
+	uint32 i, j, k;
+
+	if(!pBrushes)
+		pBrushes = &m_Brushes;
+
+	UpdatePlanes(pBrushes);
+
+	for(pos=pBrushes->GetHeadPosition(); pos; )
+	{
+		pBrush = pBrushes->GetNext(pos);
+
+		if(pBrush->m_Polies.GetSize() == 0 || pBrush->m_Polies.GetSize() == 1)
+			continue;
+
+		for(i=0; i < pBrush->m_Polies.GetSize()-1; i++)
+		{
+			pPoly1 = pBrush->m_Polies[i];
+
+			for(j=i+1; j < pBrush->m_Polies.GetSize(); j++)
+			{
+				pPoly2 = pBrush->m_Polies[j];
+
+				if(pPoly1->Normal().x == pPoly2->Normal().x &&
+					pPoly1->Normal().y == pPoly2->Normal().y &&
+					pPoly1->Normal().z == pPoly2->Normal().z &&
+					pPoly1->Dist() == pPoly2->Dist() &&
+					pPoly1->O.x == pPoly2->O.x && pPoly1->O.y == pPoly2->O.y && pPoly1->O.z == pPoly2->O.z &&
+					pPoly1->P.x == pPoly2->P.x && pPoly1->P.y == pPoly2->P.y && pPoly1->P.z == pPoly2->P.z &&
+					pPoly1->Q.x == pPoly2->Q.x && pPoly1->Q.y == pPoly2->Q.y && pPoly1->Q.z == pPoly2->Q.z &&
+					pPoly1->m_Unknown_70 == pPoly2->m_Unknown_70)
+				{
+					if((pPoly1->m_pTextureName == pPoly2->m_pTextureName || stricmp(pPoly1->m_pTextureName, pPoly2->m_pTextureName) == 0) &&
+						pPoly1->NumVerts() == pPoly2->NumVerts())
+					{
+						for(k=0; k < pPoly1->NumVerts(); k++)
+						{
+							if(pPoly1->Index(k) != pPoly2->Index(k))
+								break;
+						}
+
+						if(k == pPoly1->NumVerts())
+						{
+							delete pPoly2;
+							pBrush->m_Polies.Remove(j);
+							j--;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+
 static float SnapFloat(float fValue, float fThreshold)
 {
 	int iSnapInt = (int)(fValue + ((fValue < 0.0f) ? -fThreshold : fThreshold));
@@ -2149,29 +1203,6 @@ void CEditRegion::FixInaccurateGeometry(CLinkedList<CEditBrush*> *pBrushes, floa
 }
 
 
-// ----------------------------------------------------------------------- //
-//      ROUTINE:        CEditRegion::CopyRegion
-//      PURPOSE:        Makes a copy of the input region.
-// ----------------------------------------------------------------------- //
-
-void CEditRegion::CopyRegion( CEditRegion *pOther )
-{
-	CEditBrush *pBrush, *pOtherBrush;
-	LPOS pos;
-
-	m_pStringHolder = pOther->m_pStringHolder;
-	
-	for(pos=pOther->m_Brushes; pos; )
-	{
-		pOtherBrush = pOther->m_Brushes.GetNext(pos);
-
-		pBrush = new CEditBrush;
-		m_Brushes.AddTail(pBrush);
-		pBrush->CopyEditBrush(pOtherBrush);
-	}
-}
-
-
 
 void CEditRegion::RemoveUnusedBrushes()
 {
@@ -2193,6 +1224,7 @@ void CEditRegion::RemoveUnusedBrushes()
 
 
 #ifdef DIRECTEDITOR_BUILD
+	// 0x428ac4: the project is not used.
 	void CEditRegion::UpdateTextureIDs( CEditProjectMgr *pProj )
 	{
 		LPOS pos;
@@ -2203,15 +1235,12 @@ void CEditRegion::RemoveUnusedBrushes()
 			pBrush = m_Brushes.GetNext(pos);
 
 			for( uint32 k=0; k < pBrush->m_Polies; k++ )
-				for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
-					pBrush->m_Polies[k]->GetTexture(nCurrTex).UpdateTextureID();
+				pBrush->m_Polies[k]->UpdateTextureID();
 		}
 	}
-
-
 #endif
 
-// eliminates duplicate strings within the poly soup
+// 0x428b0b: eliminates duplicate strings within the poly soup
 void CEditRegion::UpdateTextureStrings()
 {
 	LPOS pos;
@@ -2227,11 +1256,8 @@ void CEditRegion::UpdateTextureStrings()
 		{
 			pPoly = pBrush->m_Polies[i];
 		
-			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
-			{
-				if(pPoly->GetTexture(nCurrTex).m_pTextureName)
-					pPoly->GetTexture(nCurrTex).m_pTextureName = m_pStringHolder->AddString(pPoly->GetTexture(nCurrTex).m_pTextureName);
-			}
+			if(pPoly->m_pTextureName)
+				pPoly->m_pTextureName = m_pStringHolder->AddString(pPoly->m_pTextureName);
 		}
 	}
 }
@@ -2255,6 +1281,24 @@ void CEditRegion::UpdatePlanes(CLinkedList<CEditBrush*> *pBrushes)
 		{
 			pBrush->UpdatePlanes();
 		}
+	}
+}
+
+
+// 0x4111f0 (the name ours): remakes every poly's triangles (LoadFile's last
+// step).
+void CEditRegion::UpdatePolyTriangles()
+{
+	LPOS pos;
+	CEditBrush *pBrush;
+	uint32 i;
+
+	for(pos=m_Brushes; pos; )
+	{
+		pBrush = m_Brushes.GetNext(pos);
+
+		for(i=0; i < pBrush->m_Polies; i++)
+			pBrush->m_Polies[i]->UpdateTriangles();
 	}
 }
 
@@ -2412,20 +1456,6 @@ void CEditRegion::ScaleBy(float fScaleFactor)
 }
 
 
-CBaseEditObj* CEditRegion::GetFirstSelectedObject()
-{
-	for( uint32 i=0; i < m_Selections; i++ )
-	{
-		if(m_Selections[i]->GetType() == Node_Object)
-		{
-			return m_Selections[i]->AsObject();
-		}
-	}
-
-	return NULL;
-}
-
-
 
 void CEditRegion::DoSelectionOperation( CWorldNode *pNode, BOOL bMultiSelect, BOOL bDoSubtree )
 {
@@ -2536,30 +1566,58 @@ void CEditRegion::RecurseAndInverseUnhide( CWorldNode *pNode )
 }
 
 
-void CEditRegion::FreezeNode( CWorldNode *pNode, bool bFreeze, bool bDeselect, bool bRecurse )
+// 0x411240: Build 69's without the frozen test.
+void CEditRegion::SelectNode( CWorldNode *pNode, BOOL bUpdateSelectionArray )
 {
-	if(!pNode)
-		return;
-
-	//we can't freeze selected nodes, so unselect
-	if(bFreeze && bDeselect && pNode->IsFlagSet(NODEFLAG_SELECTED))
+	// Determine if the selection array should be used
+	if (bUpdateSelectionArray)
 	{
-		UnselectNode(pNode);
+		// Find the selection
+		if( m_Selections.FindElement( pNode ) != BAD_INDEX )
+			return;
+
+		// Update the node flag
+		pNode->m_Flags |= NODEFLAG_SELECTED;
+
+		// Add the selection to the selection array
+		m_Selections.Append( pNode );
+	}
+	else
+	{
+		// Just update the node flag
+		pNode->m_Flags |= NODEFLAG_SELECTED;
 	}
 
-	//we can now unfreeze this node
-	pNode->SetFlag(NODEFLAG_FROZEN, bFreeze);
+	// talon: 2001 (0x4291c2): the node view's image of the node
+	GetNodeView()->UpdateNodeImage( pNode, FALSE );
+}
 
-	//see if we need to recurse
-	if(bRecurse)
+
+// 0x411390: Build 69's without the early return for an unselected node.
+void CEditRegion::UnselectNode( CWorldNode *pNode, BOOL bUpdateSelectionArray )
+{
+	// Determine if the selection array should be used
+	if (bUpdateSelectionArray)
 	{
-		GPOS ChildPos = pNode->m_Children;
+		// Find the selection
+		uint32	index = m_Selections.FindElement( pNode );
+		if( index == BAD_INDEX )
+			return;
 
-		while(ChildPos)
-		{
-			FreezeNode(pNode->m_Children.GetNext(ChildPos), bFreeze, bDeselect, bRecurse);
-		}
+		// Update the node flag
+		pNode->m_Flags &= ~NODEFLAG_SELECTED;
+
+		// Add the selection to the selection array
+		m_Selections.Remove( index );
 	}
+	else
+	{
+		// Just update the node flag
+		pNode->m_Flags &= ~NODEFLAG_SELECTED;
+	}
+
+	// talon: 2001 (0x42922a)
+	GetNodeView()->UpdateNodeImage( pNode, FALSE );
 }
 
 
@@ -2913,24 +1971,62 @@ void CEditRegion::AttachNode( CWorldNode *pChild, CWorldNode *pParent )
 }
 
 
-void CEditRegion::ClearPathNodes()
+// 0x411520.
+void CEditRegion::ClearSelections()
 {
-	for( uint32 i=0; i < m_PathNodes.GetSize(); i++ )
-		m_PathNodes[i]->ClearFlag(NODEFLAG_PATH);
+	for( uint32 i=0; i < m_Selections; i++ )
+		m_Selections[i]->ClearFlag(NODEFLAG_SELECTED);
 
-	m_PathNodes.SetSize(0);
+	m_Selections.SetSize(0);
 
-#ifdef DIRECTEDITOR_BUILD
-	if( this == GetNodeView( )->GetDoc( )->GetRegion( ))
-		GetNodeView( )->UpdateNodeImage( GetRootNode( ));
-#endif
+	// talon: 2001 (0x429715): the node view's images, when it shows this
+	// region
+	if( this == &GetNodeView()->GetDoc()->m_Region )
+		GetNodeView()->UpdateNodeImage( &m_RootNode, TRUE );
 }
 
 
 
+// 0x50a6f0: the ID FindNodeByID looks for (the name ours).
+static uint32 g_FindNodeID;
+
+static CWorldNode* RecurseAndFindNodeByID(CWorldNode *pRoot);
+
+// 0x42976d.
 CWorldNode* CEditRegion::FindNodeByID(uint32 id)
 {
-	return RecurseAndFindNodeByID(GetRootNode(), id);
+	g_FindNodeID = id;
+	return RecurseAndFindNodeByID(GetRootNode());
+}
+
+
+
+// 0x429783.
+static CWorldNode* RecurseAndFindNodeByID(CWorldNode *pRoot)
+{
+	CWorldNode *pRet;
+	GPOS pos;
+
+	if(pRoot->GetUniqueID() == g_FindNodeID)
+		return pRoot;
+
+	for(pos=pRoot->m_Children; pos; )
+	{
+		if(pRet = RecurseAndFindNodeByID(pRoot->m_Children.GetNext(pos)))
+			return pRet;
+	}
+
+	return NULL;
+}
+
+
+
+static CWorldNode* RecurseAndFindNodeByName(CWorldNode *pRoot, char *pName);
+
+// 0x4297bf.
+CWorldNode* CEditRegion::FindNodeByName(char *pName)
+{
+	return RecurseAndFindNodeByName(GetRootNode(), pName);
 }
 
 
@@ -2956,12 +2052,6 @@ static CWorldNode* RecurseAndFindNodeByName(CWorldNode *pRoot, char *pName)
 	}
 
 	return NULL;
-}
-
-
-CWorldNode* CEditRegion::FindNodeByName(char *pName)
-{
-	return RecurseAndFindNodeByName(GetRootNode(), pName);
 }
 
 
@@ -3047,6 +2137,820 @@ CWorldNode *CEditRegion::GetActiveParentNode(CWorldNode *pStartNode)
 void CEditRegion::SetActiveParentNode(CWorldNode *pNode)
 {
 	m_pActiveParentNode=pNode;	
+}
+
+
+
+// talon: Build 69's, not in the image: for the rest of DEdit until it is
+// brought back to 2001.
+
+CPropListContainer g_propListContainer;
+
+
+
+// 0x411500.
+void CEditRegion::DetachNode( CWorldNode *pNode, BOOL bAttachToRoot )
+{
+	no_DetachNode((CEditRegion*)this, pNode, bAttachToRoot);
+}
+
+
+
+// ------------------------------------------------------------------ //
+// Helper functions.
+// ------------------------------------------------------------------ //
+
+//file marker utilities
+static uint32 PlaceMarker(CAbstractIO& Stream)
+{
+	uint32 nPos = Stream.GetCurPos();
+
+	//just write out a dummy 4 bytes for now
+	Stream << nPos;
+
+	return nPos;
+}
+
+
+static void UpdateMarker(CAbstractIO& Stream, uint32 nMarker)
+{
+	uint32 nPos = Stream.GetCurPos();
+	Stream.SeekTo(nMarker);
+
+	Stream << nPos;
+
+	Stream.SeekTo(nPos);
+}
+
+
+void LoadPropListTBW(CAbstractIO& InFile, CPropListContainer& container )
+{
+	static char	propName[256];
+	CPropList*	pDestPropList = new CPropList;
+
+	//read in the number of properties
+	uint32 nNumProps;
+	InFile >> nNumProps;
+
+	for(uint32 k=0; k < nNumProps; k++ )
+	{
+		uint8 nPropCode;
+		InFile >> nPropCode;
+
+		InFile.ReadString(propName, sizeof(propName));
+
+		CBaseProp* pProp = CreatePropFromCode(nPropCode, propName);
+
+		if( pProp )
+		{
+			uint32 nPropFlags;
+			InFile >> nPropFlags;
+			pProp->m_PropFlags = nPropFlags;
+			
+			pProp->LoadData( InFile );
+
+			pDestPropList->m_Props.Append(pProp);
+		}
+	}
+	container.AddPropList( pDestPropList, true );
+}
+
+
+static void UpdatePrefabLocationsV1ToV2(CWorldNode* pNode)
+{
+	//bail if not a valid node
+	if(!pNode)
+		return;
+
+	//update if it is a prefab
+	if(pNode->GetType() == Node_PrefabRef)
+	{
+		//we need to get the orientation to rotate the offset by
+		LTMatrix mObjTrans;
+		gr_SetupMatrixEuler(pNode->GetOr(), mObjTrans.m);
+
+		CPrefabRef* pRef = (CPrefabRef*)pNode;
+		pNode->SetPos(pNode->GetPos() - mObjTrans * pRef->GetPrefabCenter());
+	}
+
+	//recurse on the children
+	GPOS ChildPos = pNode->m_Children;
+	while(ChildPos)
+	{
+		CWorldNode* pChild = pNode->m_Children.GetNext(ChildPos);
+		UpdatePrefabLocationsV1ToV2(pChild);
+	}
+}
+
+
+//called after a level is loaded and set up to update any version incompatibilities.
+bool CEditRegion::PostLoadUpdateVersion(uint32 nVersion, bool& bModified)
+{
+	uint32 nFinalVersion = nVersion;
+
+	if(nFinalVersion == 1)
+	{
+		//the difference between 1 and 2 is the prefab locations were offset
+		UpdatePrefabLocationsV1ToV2(GetRootNode());
+		nFinalVersion = 2;
+	}
+
+	bModified = (nFinalVersion != nVersion);
+	return (nFinalVersion == REGION_LTA_VERSION) ? TRUE : FALSE;
+}
+
+
+// talon: Build 69's (the 2001 LoadFile, above, reads a stream)
+RegionLoadStatus CEditRegion::LoadFile( const char* filename, CEditProjectMgr* pProject, uint32& nVersion, bool& bBinary)
+{
+	//get the extension from the filename
+	const char* pszExtension = filename;
+
+	const char* pszCurr = filename;
+
+	while(*pszCurr)
+	{
+		if(*pszCurr == '.')
+			pszExtension = pszCurr;
+
+		pszCurr++;
+	}
+
+	//alright, now classify the file
+	if(stricmp(pszExtension, ".tbw") == 0)
+	{
+		bBinary = true;
+		return LoadTBW(filename, pProject, nVersion);
+	}
+	else
+	{
+		bBinary = false;
+		nVersion = 1;
+		return LoadLTA(filename, pProject);
+	}
+}
+
+
+
+void CEditRegion::SaveTBW( CAbstractIO& OutFile )
+{
+	//give brushes indices
+	uint32 i=0;
+	for(LPOS pos=m_Brushes; pos; )
+	{
+		m_Brushes.GetNext(pos)->m_RegionBrushIndex = i++;
+	}
+
+
+	//------------------------------
+	// let's start with the header
+	//write the version
+	uint32 nVersion = CURRENT_TBW_VERSION;
+	OutFile << nVersion;
+
+	//setup markers for the different sections
+	uint32 nPolyhedronMarker	= PlaceMarker(OutFile);
+	uint32 nPropertyMarker		= PlaceMarker(OutFile);
+	uint32 nNodeMarker			= PlaceMarker(OutFile);
+	uint32 nNavigatorMarker		= PlaceMarker(OutFile);
+
+	//now write out the info string
+	OutFile.WriteString(m_pInfoString);
+
+	//--------------------------------
+	//Load in the polyhedron list
+
+	{
+		UpdateMarker(OutFile, nPolyhedronMarker);
+
+		g_propListContainer.Init();
+
+		//write the number of brushes that we have
+		uint32 nNumBrushes = m_Brushes.GetSize();
+		OutFile << nNumBrushes;
+
+		for(LPOS pos = m_Brushes; pos; )
+			m_Brushes.GetNext(pos)->SaveTBW(OutFile, FALSE);	// talon: 2001's second argument
+	}
+
+	//-------------------------------
+	// let's do the nodehierarchy
+	{
+		UpdateMarker(OutFile, nNodeMarker);
+
+		RecurseAndSaveNodeTBW(OutFile, &m_RootNode);
+	}
+
+	//-------------------------------
+	// the property lists
+	{
+		UpdateMarker(OutFile, nPropertyMarker);
+
+		// talon: stand-in: 2001's CPropListContainer has no SaveTBW (Build 69's
+		// TBW world, not in the image); the property lists are not saved.
+	}
+
+	//----------------------------------
+	// Save the navigator positions
+	{
+		UpdateMarker(OutFile, nNavigatorMarker);
+		m_NavigatorPosArray.SaveTBW( OutFile );
+	}
+}
+		
+
+
+RegionLoadStatus CEditRegion::LoadTBW(const char* filename, CEditProjectMgr* pProject, uint32& nFileVersion )
+{
+	RegionLoadStatus	status = REGIONLOAD_INVALIDFILE;
+	Term();
+
+	m_LoadErrorCode = -1;
+
+	//default the version to version 1
+	nFileVersion = 1;
+
+	//open up the file for reading
+	CMoFileIO InFile;
+	if(!InFile.Open(filename, "rb"))
+	{
+		return REGIONLOAD_INVALIDFILEVERSION;
+	}
+
+	//------------------------------
+	// let's start with the header
+	//read in the version
+	InFile >> nFileVersion;
+
+	//verify that the version matches
+	if(nFileVersion != CURRENT_TBW_VERSION)
+	{
+		InFile.Close();
+		return REGIONLOAD_INVALIDFILEVERSION;
+	}
+
+	//read in marker positions
+	uint32 nPolyhedronMarker;
+	uint32 nPropertyMarker;
+	uint32 nNodeMarker;
+	uint32 nNavigatorMarker;
+
+	InFile >> nPolyhedronMarker;
+	InFile >> nPropertyMarker;
+	InFile >> nNodeMarker;
+	InFile >> nNavigatorMarker;
+
+	//now read in the info string
+	char pszTempInfoString[512];
+	InFile.ReadString(pszTempInfoString, sizeof(pszTempInfoString));
+	m_pInfoString = m_pStringHolder->AddString(pszTempInfoString);
+
+	//--------------------------------
+	//Load in the polyhedron list
+
+	InFile.SeekTo(nPolyhedronMarker);
+	{
+		//read in the number of brushes that we have
+		uint32 nNumBrushes = 0;
+		InFile >> nNumBrushes;
+
+		//start out at 1 to skip over the name element
+		for(uint32 nCurrPoly = 0; nCurrPoly < nNumBrushes; nCurrPoly++)
+		{
+			CEditBrush *pBrush = new CEditBrush;
+			m_QuickBrushIndexer.Push(pBrush);
+			AddBrush(pBrush);
+			
+			if( !pBrush->LoadTBW(InFile, m_pStringHolder, 0) )	// talon: 2001's third argument
+			{
+				m_LoadErrorCode = 1;
+				break;
+			}
+		}
+	}
+
+	//--------------------------------
+	// let's do the globablproplist
+
+	InFile.SeekTo(nPropertyMarker);
+	{
+		g_loadPropListContainer.Init();
+
+		uint32 nNumProperties;
+		InFile >> nNumProperties;
+
+		//now run through and load in every property
+		for(uint32 nCurrProp = 0; nCurrProp < nNumProperties; nCurrProp++)
+		{		
+			LoadPropListTBW(InFile, g_loadPropListContainer );
+		}
+	}
+
+	//-------------------------------
+	// let's do the nodehierarchy
+	InFile.SeekTo(nNodeMarker);
+	{
+		if( !RecurseAndLoadNodeTBW(	InFile, &m_RootNode, pProject) )
+		{
+			Term();
+			return REGIONLOAD_INVALIDFILE;
+		}
+	}
+
+	g_loadPropListContainer.UnloadFromMemory();
+
+	//----------------------------------
+	// Load the navigator positions
+	InFile.SeekTo(nNavigatorMarker);
+	{
+		m_NavigatorPosArray.LoadTBW(InFile);
+	}
+
+	//setup the root node so it can't be removed
+	m_RootNode.m_Flags |= NODEFLAG_WORLDROOT;
+
+	// Update stuff.
+	status = REGIONLOAD_OK;
+	
+	m_QuickBrushIndexer.Term();	
+
+	return status;
+}
+
+
+
+bool LoadNodePropertiesTBW(CAbstractIO& InFile,	CWorldNode *pNode, CPropListContainer& container, CEditProjectMgr* pProject)
+{
+	//read in the class name
+	char pszClassName[512];
+	InFile.ReadString(pszClassName, sizeof(pszClassName));
+	pNode->SetClassName(pszClassName);
+
+	//read in the prop list identifier
+	uint32 nPropID;
+	InFile >> nPropID;
+
+	CPropList* propList = container.GetElem(nPropID);
+
+	for( uint32 i = 0; i < propList->m_Props.GetSize(); i++ )
+	{
+		CBaseProp *pProp = CreatePropFromCode(propList->m_Props[i]->m_Type, propList->m_Props[i]->m_Name);
+		if( pProp )
+		{
+			pProp->m_PropFlags = propList->m_Props[i]->m_PropFlags;
+			pProp->Copy(propList->m_Props[i]);
+			
+			#ifdef DIRECTEDITOR_BUILD
+				if ( pProject )
+				{
+					// Associate the PropDef
+
+					ClassDef* pClassDef = pProject->FindClassDef(pNode->GetClassName());
+					if ( pClassDef )
+					{
+						CMoArray<PropDef*> *pPropList;
+						if(pPropList = pProject->GetClassDefProps(pClassDef))
+						{
+							pProp->m_pPropDef = pProject->FindPropInList(*pPropList, pProp->m_Name);
+						}
+					}
+				}
+			#endif
+				pNode->m_PropList.m_Props.Append( pProp );	
+			
+			#ifdef DIRECTEDITOR_BUILD
+				//we need to give the object a chance to react to the change but don't send the chage to the game code...
+				pNode->OnPropertyChanged(pProp, false, NULL);
+			#endif
+		}
+		
+
+	}
+
+	//and now load our filtered properties on top of the other properties
+	static const char* pszFilters[] = { "Name", "Pos", "Or" };
+	static const uint32 knNumFilters = sizeof(pszFilters) / sizeof(pszFilters[0]);
+
+	//and now write out our actual property data
+	for(uint32 nCurrProp = 0; nCurrProp < knNumFilters; nCurrProp++)
+	{
+		CBaseProp* pProp = pNode->GetPropertyList()->GetProp(pszFilters[nCurrProp]);
+
+		//read in the success
+		uint8 nSuccess;
+		InFile >> nSuccess;
+
+		if(nSuccess)
+		{
+			pProp->LoadData(InFile);
+		}
+	}
+
+	return true;
+}
+
+
+bool CEditRegion::RecurseAndLoadNodeTBW( CAbstractIO& InFile, CWorldNode *pNode, CEditProjectMgr* pProject )
+{
+	//load in the data for the node
+	if(pNode->GetType() == Node_Null)
+	{
+		char pszLabel[512];
+		InFile.ReadString(pszLabel, sizeof(pszLabel));
+
+		pNode->SetNodeLabel(pszLabel);
+	}
+
+	//read in the node flags
+	InFile >> pNode->m_Flags;
+
+	//read in the property list
+	//LoadNodeProperties(InFile, pNode, pProject);
+
+	if(!LoadNodePropertiesTBW(InFile, pNode, g_loadPropListContainer, pProject ))
+	{
+		m_LoadErrorCode = 5;
+		return false;
+	}
+	
+	//now if this is an object, we need to add this object (it needs to wait until down
+	//here because it uses the class name)
+	if(pNode->GetType() == Node_Object)
+	{
+		AddObject(pNode->AsObject());
+	}
+
+	//perform some setup on this node	
+	if(pNode->IsFlagSet(NODEFLAG_SELECTED))
+		SelectNode( pNode );
+ 
+	if(pNode->IsFlagSet(NODEFLAG_PATH))
+		AddNodeToPath(pNode);
+
+	//recurse into the children
+	uint32 nNumChildren;
+	InFile >> nNumChildren;
+
+	for(uint32 nCurrChild = 0; nCurrChild < nNumChildren; nCurrChild++)
+	{
+		//get the type and allocate this node
+		uint32 nChildType;
+		InFile >> nChildType;
+
+		//the child that we will be allocating
+		CWorldNode* pChild = NULL;
+
+		//create the node
+		if(nChildType == Node_Brush)
+		{
+			//read in the brush index
+			uint32 nBrushIndex;
+			InFile >> nBrushIndex;
+
+			if(nBrushIndex >= m_Brushes.GetSize())
+			{
+				m_LoadErrorCode = 3;
+				return FALSE;
+			}
+			pChild = m_QuickBrushIndexer[nBrushIndex];
+		}
+		else if(nChildType == Node_Object)
+		{
+			pChild = new CBaseEditObj;
+		}
+		else if(nChildType == Node_Null)
+		{
+			pChild = new CWorldNode;
+		}
+		else
+		{
+			m_LoadErrorCode = 4;
+			return false;
+		}
+		
+		// Note : PrefabRef objects are created pre-attached
+		if( pChild->GetType() != Node_PrefabRef)
+		{
+			pNode->m_Children.Append( pChild );
+			pChild->SetParent( pNode );
+		}
+
+		//and recurse to load the children
+		RecurseAndLoadNodeTBW(InFile, pChild, pProject);
+		
+	}
+
+	return true;		
+}
+
+
+void SaveNodePropertiesTBW(CAbstractIO& OutFile, CWorldNode *pObj)
+{
+	//write out the class name
+	OutFile.WriteString((char*)pObj->GetClassName());
+
+	static const char* pszFilters[] = { "Name", "Pos", "Or" };
+	static const uint32 knNumFilters = sizeof(pszFilters) / sizeof(pszFilters[0]);
+
+	//save the ID of the property list
+	// talon: 2001's AddPropList has no filters.
+	uint32 nPropID = g_propListContainer.AddPropList(&(pObj->m_PropList));
+
+	OutFile << nPropID;
+
+	//and now write out our actual property data
+	for(uint32 nCurrProp = 0; nCurrProp < knNumFilters; nCurrProp++)
+	{
+		CBaseProp* pProp = pObj->GetPropertyList()->GetProp(pszFilters[nCurrProp]);
+
+		if(pProp)
+		{
+			//we have a property, save it out
+			OutFile << (uint8)1;
+			pProp->SaveData(OutFile);
+		}
+		else
+		{
+			//failed to find the prop, indicate this
+			OutFile << (uint8)0;
+		}
+	}
+}
+
+
+void CEditRegion::RecurseAndSaveNodeTBW( CAbstractIO& OutFile, CWorldNode *pNode)
+{
+	//write out the type....unless this is the root node, of which we always assume is there
+	//and we don't need to write the type, we just assume it is a null node
+	if(!(pNode->GetFlags() & NODEFLAG_WORLDROOT))
+	{
+		OutFile << pNode->m_Type;
+	}
+			
+	if( pNode->m_Type == Node_Brush )
+	{
+		//for brushes write out the index
+		uint32 nBrushIndex = pNode->AsBrush()->m_RegionBrushIndex;
+		OutFile << nBrushIndex;
+	}
+	else if( pNode->m_Type == Node_PrefabRef )
+	{
+		CPrefabRef* pPrefab = (CPrefabRef*)pNode;
+
+		//for a prefab, write out the file
+		OutFile.WriteString((char*)pPrefab->GetPrefabFilename());
+
+		//the name
+		OutFile.WriteString((char*)pPrefab->GetName());
+
+		//the position
+		LTVector vPos = pPrefab->GetPos();
+		OutFile << vPos.x << vPos.y << vPos.z;
+
+		//the orientation
+		LTVector vOr = pPrefab->GetOr();
+		OutFile << vOr.x << vOr.y << vOr.z;
+	}
+	else if(pNode->m_Type == Node_Null)
+	{
+		//write out the label
+		OutFile.WriteString((char*)pNode->GetNodeLabel());
+	}
+
+	//the flags
+	uint32 nFlags = pNode->GetFlags();
+	OutFile << nFlags;
+	
+	//SaveNodeProperties(OutFile, pNode);
+	SaveNodePropertiesTBW(OutFile, pNode);
+
+	//write out the number of children
+	uint32 nNumChildren = pNode->m_Children.GetSize();
+	OutFile << nNumChildren;
+
+	for(GPOS pos=pNode->m_Children; pos; )
+	{
+		CWorldNode	*pChild = pNode->m_Children.GetNext(pos);
+		RecurseAndSaveNodeTBW(OutFile, pChild);
+	}
+}
+
+
+
+#ifdef DIRECTEDITOR_BUILD
+
+static bool GetTextureDims(const char* pszFilename, uint32& nWidth, uint32& nHeight)
+{
+	DFileIdent* pFile;
+
+	//get the file identifier
+	dfm_GetFileIdentifier( GetFileMgr(), pszFilename, &pFile );
+
+	//get the dimensions of the texture
+	CTexture* pTexture = dib_GetDibTexture(pFile);
+
+	if(pTexture)
+	{
+		nWidth	= pTexture->m_pDib->GetWidth();
+		nHeight = pTexture->m_pDib->GetHeight();
+		return true;
+	}
+
+	return false;
+}
+
+
+uint32 CEditRegion::RenameTexture(const char *pSrcTextureName, const char *pDestTextureName, bool bScaleOPQs)
+{
+	//we need to determine scales for the P and Q vectors
+	float fPScale = 1.0f;
+	float fQScale = 1.0f;
+
+	if(bScaleOPQs)
+	{
+		uint32 nSrcWidth, nSrcHeight, nDestWidth, nDestHeight;
+		if(	GetTextureDims(pSrcTextureName, nSrcWidth, nSrcHeight) &&
+			GetTextureDims(pDestTextureName, nDestWidth, nDestHeight))
+		{
+			//we can calculate the scale
+			fPScale = (float)nDestWidth / (float)nSrcWidth;
+			fQScale = (float)nDestHeight / (float)nSrcHeight;
+		}
+	}
+
+	//count of how many polygons changed
+	uint32 nOccurences = 0;
+
+	for(LPOS lPos=m_Brushes; lPos; )
+	{
+		CEditBrush *pBrush = m_Brushes.GetNext(lPos);
+	
+		for(uint32 i=0; i < pBrush->m_Polies; i++)
+		{
+			CEditPoly *pPoly = pBrush->m_Polies[i];
+
+			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
+			{
+				CTexturedPlane& Texture = pPoly->GetTexture(nCurrTex);
+
+				if(Texture.m_pTextureName)
+				{
+					if(CHelpers::UpperStrcmp(pPoly->GetTexture(nCurrTex).m_pTextureName, pSrcTextureName))
+					{
+						//we just need to change over the texture
+						Texture.m_pTextureName = m_pStringHolder->AddString(pDestTextureName);
+						Texture.UpdateTextureID();
+
+						//scale the PQ vectors
+						Texture.SetP(pPoly->GetTexture(nCurrTex).GetP() * fPScale);
+						Texture.SetQ(pPoly->GetTexture(nCurrTex).GetQ() * fQScale);
+
+						++nOccurences;
+					}
+				}
+			}
+		}
+	}
+
+	return nOccurences;
+}
+
+#endif
+
+
+CWorldNode* CEditRegion::CheckNodes(CWorldNode *pRoot)
+{
+	GPOS pos;
+	int nChildrenIterated;
+	CWorldNode *pNode;
+	CBaseProp *pProp;
+	uint32 i;
+
+	if(!pRoot)
+	{
+		// This is just a little test to make sure the brushes point to valid data.
+		CMatrix transform;
+		LPOS lPos;
+		CEditBrush *pBrush;
+		uint32 k;
+
+		transform.Identity();
+		for(lPos=m_Brushes; lPos; )
+		{
+			pBrush = m_Brushes.GetNext(lPos);
+
+			for( k=0; k < pBrush->m_Points; k++ )
+			{
+				CEditVert	&vert = pBrush->m_Points[k];
+
+				transform.Apply4x4( vert, vert.m_Transformed );
+			}
+		}
+
+		pRoot = GetRootNode();
+	}
+
+	// Check the props.
+	for(i=0; i < pRoot->m_PropList.m_Props; i++)
+	{
+		pProp = pRoot->m_PropList.m_Props[i];
+
+		if(pProp->m_Type < 0 || pProp->m_Type >= LT_NUM_PROPERTYTYPES)
+			return pRoot;
+	}
+
+	nChildrenIterated = 0;
+	for(pos=pRoot->m_Children; pos; )
+	{
+		pNode = CheckNodes(pRoot->m_Children.GetNext(pos));
+		if(pNode)
+			return pNode;
+
+		++nChildrenIterated;
+	}
+
+	if(nChildrenIterated == (int)pRoot->m_Children.GetSize())
+		return NULL;
+	else
+		return pRoot;
+}
+
+
+// ----------------------------------------------------------------------- //
+//      ROUTINE:        CEditRegion::CopyRegion
+//      PURPOSE:        Makes a copy of the input region.
+// ----------------------------------------------------------------------- //
+
+void CEditRegion::CopyRegion( CEditRegion *pOther )
+{
+	CEditBrush *pBrush, *pOtherBrush;
+	LPOS pos;
+
+	m_pStringHolder = pOther->m_pStringHolder;
+	
+	for(pos=pOther->m_Brushes; pos; )
+	{
+		pOtherBrush = pOther->m_Brushes.GetNext(pos);
+
+		pBrush = new CEditBrush;
+		m_Brushes.AddTail(pBrush);
+		pBrush->CopyEditBrush(pOtherBrush);
+	}
+}
+
+
+CBaseEditObj* CEditRegion::GetFirstSelectedObject()
+{
+	for( uint32 i=0; i < m_Selections; i++ )
+	{
+		if(m_Selections[i]->GetType() == Node_Object)
+		{
+			return m_Selections[i]->AsObject();
+		}
+	}
+
+	return NULL;
+}
+
+
+void CEditRegion::FreezeNode( CWorldNode *pNode, bool bFreeze, bool bDeselect, bool bRecurse )
+{
+	if(!pNode)
+		return;
+
+	//we can't freeze selected nodes, so unselect
+	if(bFreeze && bDeselect && pNode->IsFlagSet(NODEFLAG_SELECTED))
+	{
+		UnselectNode(pNode);
+	}
+
+	//we can now unfreeze this node
+	pNode->SetFlag(NODEFLAG_FROZEN, bFreeze);
+
+	//see if we need to recurse
+	if(bRecurse)
+	{
+		GPOS ChildPos = pNode->m_Children;
+
+		while(ChildPos)
+		{
+			FreezeNode(pNode->m_Children.GetNext(ChildPos), bFreeze, bDeselect, bRecurse);
+		}
+	}
+}
+
+
+void CEditRegion::ClearPathNodes()
+{
+	for( uint32 i=0; i < m_PathNodes.GetSize(); i++ )
+		m_PathNodes[i]->ClearFlag(NODEFLAG_PATH);
+
+	m_PathNodes.SetSize(0);
+
+#ifdef DIRECTEDITOR_BUILD
+	if( this == GetNodeView( )->GetDoc( )->GetRegion( ))
+		GetNodeView( )->UpdateNodeImage( GetRootNode( ));
+#endif
 }
 
 

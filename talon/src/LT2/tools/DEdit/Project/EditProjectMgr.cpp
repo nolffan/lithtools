@@ -24,7 +24,6 @@
 #include "edithelpers.h"
 #include "iobjectplugin.h"
 #include "deditinternal.h"
-#include "objectselfilterdlg.h"
 
 #define TEXTURE_TYPECODE		1
 
@@ -141,9 +140,6 @@ void CEditProjectMgr::OnOpenProject(const char *pBaseDir)
 	m_hFileMgr = dfm_Open((char*)pBaseDir);
 
 	UpdateClasses();
-
-	//update the filter dialog to reflect the new classes
-	GetObjectSelFilterDlg()->UpdateClassListing();
 }
 
 
@@ -159,34 +155,6 @@ void CEditProjectMgr::Term()
 	UnloadBinaries();
 	m_DibMgr.Term( );
 	m_bProjectDirectorySet = FALSE;
-
-	//update the filter dialog to reflect no classes
-	GetObjectSelFilterDlg()->ClearClassListing();
-}
-
-void CEditProjectMgr::UpdateBUTFile()
-{
-	//get the resource directory for the currently open project, and add on
-	//our filename to get the BUT file
-	CString sBUTFile = m_BaseProjectDir + "\\ClassHlp.but";
-
-	//now create a but manager to load this
-	CButeMgr* pNewMgr = new CButeMgr;
-
-	//bail if memory failed
-	if(pNewMgr == NULL)
-		return;
-
-	if (!pNewMgr->Parse(sBUTFile))
-	{
-		//failed to find a new but file, no worries, just bail
-		delete pNewMgr;
-		return;
-	}
-
-	//this worked, we want to override the old but file with this one
-	GetApp()->SetClassHelpButeAgg(pNewMgr);
-	
 }
 
 void CEditProjectMgr::UpdateClasses()
@@ -198,9 +166,6 @@ void CEditProjectMgr::UpdateClasses()
 
 	// Make the class tree.
 	MakeClassTree();
-
-	// Update the BUT file if necessary
-	UpdateBUTFile();
 }
 
 
