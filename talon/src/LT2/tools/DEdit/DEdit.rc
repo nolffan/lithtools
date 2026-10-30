@@ -1,0 +1,2357 @@
+// Microsoft Visual C++ generated resource script.
+//
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+30977                   CURSOR DISCARDABLE     "res\\DEdit.cur"
+
+30980                   CURSOR DISCARDABLE     "res\\DEdit3.cur"
+
+30988                   CURSOR DISCARDABLE     "res\\DEdit11.cur"
+
+30982                   CURSOR DISCARDABLE     "res\\DEdit5.cur"
+
+30979                   CURSOR DISCARDABLE     "res\\DEdit2.cur"
+
+30987                   CURSOR DISCARDABLE     "res\\DEdit10.cur"
+
+30984                   CURSOR DISCARDABLE     "res\\DEdit7.cur"
+
+30985                   CURSOR DISCARDABLE     "res\\DEdit8.cur"
+
+30983                   CURSOR DISCARDABLE     "res\\DEdit6.cur"
+
+30986                   CURSOR DISCARDABLE     "res\\DEdit9.cur"
+
+30981                   CURSOR DISCARDABLE     "res\\DEdit4.cur"
+
+4                       ICON DISCARDABLE     "res\\DEdit10.ico"
+
+154                     ICON DISCARDABLE     "res\\DEdit6.ico"
+
+144                     ICON DISCARDABLE     "res\\DEdit5.ico"
+
+142                     ICON DISCARDABLE     "res\\DEdit4.ico"
+
+133                     ICON DISCARDABLE     "res\\DEdit3.ico"
+
+190                     ICON DISCARDABLE     "res\\DEdit8.ico"
+
+189                     ICON DISCARDABLE     "res\\DEdit7.ico"
+
+132                     ICON DISCARDABLE     "res\\DEdit2.ico"
+
+128                     ICON DISCARDABLE     "res\\DEdit.ico"
+
+221                     ICON DISCARDABLE     "res\\DEdit9.ico"
+
+121                     BITMAP  DISCARDABLE     "res\\DEdit_121.bmp"
+
+128                     BITMAP  DISCARDABLE     "res\\DEdit_128.bmp"
+
+156                     BITMAP  DISCARDABLE     "res\\DEdit_156.bmp"
+
+164                     BITMAP  DISCARDABLE     "res\\DEdit_164.bmp"
+
+170                     BITMAP  DISCARDABLE     "res\\DEdit_170.bmp"
+
+171                     BITMAP  DISCARDABLE     "res\\DEdit_171.bmp"
+
+172                     BITMAP  DISCARDABLE     "res\\DEdit_172.bmp"
+
+187                     BITMAP  DISCARDABLE     "res\\DEdit_187.bmp"
+
+204                     BITMAP  DISCARDABLE     "res\\DEdit_204.bmp"
+
+212                     BITMAP  DISCARDABLE     "res\\DEdit_212.bmp"
+
+26567                   BITMAP  DISCARDABLE     "res\\DEdit_26567.bmp"
+
+30994                   BITMAP  DISCARDABLE     "res\\DEdit_30994.bmp"
+
+30995                   BITMAP  DISCARDABLE     "res\\DEdit_30995.bmp"
+
+30996                   BITMAP  DISCARDABLE     "res\\DEdit_30996.bmp"
+
+109 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Open", 32900
+        MENUITEM SEPARATOR
+        MENUITEM "Create New World...", 32886
+        MENUITEM SEPARATOR
+        MENUITEM "Delete", 32901
+    END
+END
+
+113 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Import PCX Files...", 32850
+        MENUITEM "Import MIP TGA Files...", 32918
+        MENUITEM "Import &TGA Files...", 40070
+        MENUITEM "Import Textures...", 32772
+        MENUITEM "Import Alpha Mask...", 32951
+        MENUITEM "Import 8-Bit Alpha Mask", 40071
+        MENUITEM "Create Alpha From Color", 32952
+        MENUITEM "Create Solid Alpha", 32953
+        MENUITEM SEPARATOR
+        MENUITEM "Export TGA File(s)...", 32915
+        MENUITEM "Texture Properties...", 32920
+        MENUITEM "View Texture Palette...", 32932
+        MENUITEM "Add To Palette", 40098
+        MENUITEM "Export as 8-bit DTX File(s)...", 40002
+        MENUITEM "Export All as BPP_32P...", 40003
+        MENUITEM "&Find Texture In World", 40006
+    END
+END
+
+114 MENU DISCARDABLE
+BEGIN
+    POPUP "&Brush"
+    BEGIN
+        POPUP "&Add Primitive"
+        BEGIN
+            MENUITEM "&Box\tCtrl+Alt+1", 32927
+            MENUITEM "&Cylinder\tCtrl+Alt+2", 32928
+            MENUITEM "&Pyramid\tCtrl+Alt+3", 32943
+            MENUITEM "&Sphere\tCtrl+Alt+4", 40050
+            MENUITEM "&Dome\tCtrl+Alt+5", 40051
+        END
+        MENUITEM "&Import Terrain", 32877
+        MENUITEM "&Split\tShift+S", 40039
+        MENUITEM "&Carve\tH", 40041
+        MENUITEM "Hollow", 32840
+    END
+END
+
+120 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        POPUP "Direct3D Options"
+        BEGIN
+            MENUITEM "Use Direct3D", 32905
+            MENUITEM SEPARATOR
+            MENUITEM "Device 1", 32906
+            MENUITEM "Device 2", 32907
+            MENUITEM "Device 3", 32908
+            MENUITEM "Device 4", 32909
+            MENUITEM SEPARATOR
+            MENUITEM "Use Hardware Acceleration", 32910
+            MENUITEM "Use Software MMX", 32911
+            MENUITEM "Use Software 8-bit Emulation", 32912
+            MENUITEM "Use Software RGB Emulation", 32913
+        END
+        POPUP "Shade Mode"
+        BEGIN
+            MENUITEM "Wireframe Polies", 32784
+            MENUITEM "Flat Polies", 32785
+            MENUITEM "Textured Polies", 32786
+            MENUITEM "Lightmaps Only", 40089
+        END
+        POPUP "View Mode"
+        BEGIN
+            MENUITEM "Perspective View", 32787
+            MENUITEM "Top View", 32788
+            MENUITEM "Bottom View", 32789
+            MENUITEM "Front View", 32790
+            MENUITEM "Back View", 32791
+            MENUITEM "Left View", 32792
+            MENUITEM "Right View", 32793
+            MENUITEM SEPARATOR
+            MENUITEM "4-View Configuration", 32816
+        END
+        POPUP "Move Mode"
+        BEGIN
+            MENUITEM "Walkthru Movement", 32794
+            MENUITEM "Orbit Movement", 32795
+        END
+        MENUITEM SEPARATOR
+        POPUP "Options"
+        BEGIN
+            MENUITEM "Backfacing Polies", 32798
+            MENUITEM "Show Wireframe", 32799
+            MENUITEM "Show Normals", 32800
+            MENUITEM "Show Objects", 32801
+            MENUITEM "Show Edit Grid", 32814
+            MENUITEM "Show Marker", 32922
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "Map Texture Coordinates", 32871
+        POPUP "Copy Polygon Normal"
+        BEGIN
+            MENUITEM "As Forward Vector Rotation", 40007
+            MENUITEM "As Up Vector Rotation", 40008
+            MENUITEM "As Right Vector Rotation", 40009
+        END
+        MENUITEM "Rotate Selection", 32876
+        MENUITEM "Select Texture", 32944
+        MENUITEM "Edit Surface Flags...", 32942
+        MENUITEM "Edit Surface Color", 32946
+        MENUITEM "Map Texture to View", 40038
+        MENUITEM "Reset Texture Coordinates", 41000
+        MENUITEM "Match Texture Coordinates", 40010
+        MENUITEM "Replace All Textures", 32941
+        MENUITEM SEPARATOR
+        MENUITEM "Add Object...", 32781
+        MENUITEM "Bind to Object...", 32933
+    END
+END
+
+122 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Zoom 50%", 40091
+        MENUITEM "Zoom 100%", 40092
+        MENUITEM "Zoom 200%", 40093
+        MENUITEM "Zoom 400%", 40094
+    END
+END
+
+123 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Compress Project File", 32807
+    END
+END
+
+124 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Import Sounds...", 32808
+    END
+END
+
+125 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Import Models...", 32809
+    END
+END
+
+127 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "View All Textures", 40096
+        MENUITEM "New Palette..", 40099
+        MENUITEM "Load Palette..", 40095
+        MENUITEM "Save Palette As..", 40097
+        MENUITEM SEPARATOR
+        MENUITEM "Remove Texture", 40100
+        MENUITEM "Import Textures", 40101
+        MENUITEM "Sort Textures", 40102
+        MENUITEM SEPARATOR
+        MENUITEM "Zoom 50%", 40091
+        MENUITEM "Zoom 100%", 40092
+        MENUITEM "Zoom 200%", 40093
+        MENUITEM "Zoom 400%", 40094
+    END
+END
+
+128 MENU DISCARDABLE
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New Project...", 32884
+        MENUITEM "&Open Project...\tCtrl+O", 57601
+        MENUITEM "&Save Project\tCtrl+S", 57603
+        MENUITEM "&Close Project", 32885
+        MENUITEM SEPARATOR
+        MENUITEM "New &World...\tCtrl+N", 32886
+        MENUITEM "Save World As...", 32930
+        MENUITEM "C&lose World", 32887
+        MENUITEM "&Import World...", 40079
+        MENUITEM SEPARATOR
+        MENUITEM "Create Rez File", 32859
+        MENUITEM SEPARATOR
+        MENUITEM "Recent File", 57616, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit", 57665
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Copy\tCtrl+C", 57634
+        MENUITEM "&Paste\tCtrl+V", 57637
+        MENUITEM "Paste A&lternate\tCtrl+Alt+V", 40013
+        MENUITEM "&Stamp\tCtrl+M", 32854
+        MENUITEM SEPARATOR
+        MENUITEM "&Undo\tCtrl+Z", 57643
+        MENUITEM "&Redo\tCtrl+Y", 57644
+        MENUITEM SEPARATOR
+        MENUITEM "&Options...", 32898
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Color Selection", 32813
+        MENUITEM "&Project Window", 32771
+        MENUITEM SEPARATOR
+        MENUITEM "&Main Toolbar", 59392
+        MENUITEM "&NodeView Toolbar", 32865
+        MENUITEM "&WorldEdit Toolbar", 32866
+        MENUITEM "&Debug Window", 32904
+        MENUITEM SEPARATOR
+        MENUITEM "&Status Bar", 59393
+        MENUITEM "&ToolTips", 32867
+        MENUITEM SEPARATOR
+        MENUITEM "Toggle &Floating Toolbars\tCtrl+Space", 40078
+    END
+    POPUP "&Mode"
+    BEGIN
+        MENUITEM "&Single Node Selection", 32848
+        MENUITEM "&Multiple Node Selection", 32849
+        MENUITEM SEPARATOR
+        MENUITEM "&Brush Editing Mode\tCtrl+B", 32832
+        MENUITEM "&Geometry Editing Mode\tCtrl+G", 32836
+        MENUITEM "&Object Editing Mode\tCtrl+H", 32837
+        MENUITEM "&Light Editing Mode\tCtrl+L", 40087
+    END
+    POPUP "Wo&rld"
+    BEGIN
+        MENUITEM "&Process...\tCtrl+P", 32806
+        MENUITEM "Ru&n...\tCtrl+Alt+R", 32926
+        POPUP "&Debug"
+        BEGIN
+            MENUITEM "&Find Concave Brushes", 32862
+            MENUITEM "Find &Object Naming Conflicts", 40069
+            MENUITEM "S&how World Textures", 32923
+            MENUITEM "Show &World Classes", 40005
+            MENUITEM "&Group World Textures", 32954
+            MENUITEM SEPARATOR
+            MENUITEM "&Load Leak File...", 40065
+            MENUITEM "&Clear Leak Finder", 40066
+            MENUITEM "Go to &Next Leak Vertice\tShift+]", 40082
+            MENUITEM "Go to &Previous Leak Vertice\tShift+[", 40083
+        END
+        POPUP "&Special"
+        BEGIN
+            MENUITEM "Reset Detail Levels (to 0)", 32956
+            MENUITEM "Remove &Extra Edges", 32802
+            MENUITEM "Re&set All Texture Coordinates", 32803
+            MENUITEM "&Update Zones", 0
+            MENUITEM "Cleanup &Geometry", 32812
+            MENUITEM "Update &Planes", 32858
+            MENUITEM "P&lace objects at specified height...", 32873
+            MENUITEM "&Align Poly Textures", 40084
+            MENUITEM "S&cale Geometry", 40090
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "Add &Object...\tAlt+O", 32781
+        MENUITEM "&Import Object(s)...", 40031
+        MENUITEM "Object &Browser...\tCtrl+Alt+O", 40064
+        MENUITEM SEPARATOR
+        MENUITEM "&World Info...\tCtrl+W", 32783
+        MENUITEM SEPARATOR
+        MENUITEM "&Load Light Data\tCtrl+I", 40085
+        MENUITEM "&Unload Light Data\tCtrl+Shift+I", 40086
+        MENUITEM "&Save Light Data", 40088
+    END
+    POPUP "&Selection"
+    BEGIN
+        MENUITEM "&All", 40020
+        MENUITEM "&None\tU", 40021
+        MENUITEM "&Inverse", 40022
+        MENUITEM "&Container", 40052
+        MENUITEM "A&dvanced...\tAlt+A", 40023
+        MENUITEM SEPARATOR
+        MENUITEM "Select Detail Brushes", 32839
+        MENUITEM SEPARATOR
+        MENUITEM "&Hide Selected", 40024
+        MENUITEM "Unhide &Selected", 40025
+        MENUITEM "Hid&e Inverse", 40075
+        MENUITEM "Unhide In&verse", 40076
+        MENUITEM SEPARATOR
+        POPUP "&Mirror"
+        BEGIN
+            MENUITEM "&Up/Down", 40072
+            MENUITEM "&Left/Right", 40073
+            MENUITEM "&Front/Back", 40074
+        END
+        MENUITEM "Save as &Prefab...", 40080
+        MENUITEM "Generate Uni&que Names...", 40063
+        MENUITEM "&Group Selection\tCtrl+Alt+G", 40027
+    END
+    POPUP "&Navigator"
+    BEGIN
+        MENUITEM "Store Position...", 40015
+        MENUITEM "Organize Positions...", 40018
+        MENUITEM SEPARATOR
+        MENUITEM "Go To Next\tCtrl+]", 40016
+        MENUITEM "Go To Previous\tCtrl+[", 40017
+    END
+    POPUP "&Brush"
+    BEGIN
+        POPUP "&Add Primitive"
+        BEGIN
+            MENUITEM "&Box\tCtrl+Alt+1", 32927
+            MENUITEM "&Cylinder\tCtrl+Alt+2", 32928
+            MENUITEM "&Pyramid\tCtrl+Alt+3", 32943
+            MENUITEM "&Sphere\tCtrl+Alt+4", 40050
+            MENUITEM "&Dome\tCtrl+Alt+5", 40051
+        END
+        MENUITEM "&Import Terrain", 32877
+        MENUITEM "&Split\tShift+S", 40039
+        MENUITEM "&Carve\tH", 40041
+        MENUITEM "Hollow", 32840
+        MENUITEM "&Flip", 40004
+    END
+    POPUP "&Window"
+    BEGIN
+        MENUITEM "Ne&xt", 32934
+        MENUITEM SEPARATOR
+        MENUITEM "Arrange Icons", 57649
+        MENUITEM "C&ascade", 57650
+        MENUITEM "Tile &Horizontally", 57651
+        MENUITEM "&Tile Vertically", 57652
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Quick Help...", 32924
+        MENUITEM "&Key Mapping...", 32925
+        MENUITEM SEPARATOR
+        MENUITEM "&About DEdit for Talon...", 57664
+        MENUITEM SEPARATOR
+        MENUITEM "&LithTech Web Page", 32888
+    END
+END
+
+152 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Create New Sprite", 32810
+    END
+END
+
+161 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "New Class", 32822
+        MENUITEM SEPARATOR
+        MENUITEM "Compile", 32821
+        MENUITEM "Compile All", 32819
+        MENUITEM "Update", 32820
+        MENUITEM SEPARATOR
+        MENUITEM "Import Code Files", 32817
+        MENUITEM "Import Binary Files", 32818
+    END
+END
+
+175 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Float Node View", 32825
+    END
+END
+
+178 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Add &Container Node", 32838
+        MENUITEM "Set Active &Parent\tF3", 40014
+        MENUITEM SEPARATOR
+        MENUITEM "&Hide Node", 32878
+        MENUITEM "Hid&e Node and Children", 40030
+        MENUITEM "Unh&ide Node and Children", 40029
+        MENUITEM SEPARATOR
+        MENUITEM "Hide &All Nodes", 40011
+        MENUITEM "U&nhide All Nodes", 32931
+        MENUITEM SEPARATOR
+        MENUITEM "Se&t Path", 32949
+        MENUITEM "Un&set Path", 32950
+        MENUITEM SEPARATOR
+        MENUITEM "&Move Tagged Nodes Here", 40032
+        MENUITEM "&Go to Next Tagged Node\tF4", 61450
+        MENUITEM "&Rename\tF2", 40019
+        MENUITEM SEPARATOR
+        MENUITEM "C&ollapse Children\tF6", 40077
+        MENUITEM "Re&fresh\tF5", 40048
+    END
+END
+
+189 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&Add Directory", 32903
+    END
+END
+
+221 MENU DISCARDABLE
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&New Project...\tCtrl+N", 32884
+        MENUITEM "&Open Project...\tCtrl+O", 57601
+        MENUITEM "&Save Project\tCtrl+S", 57603
+        MENUITEM "&Close Project", 32885
+        MENUITEM SEPARATOR
+        MENUITEM "New &World...", 32886
+        MENUITEM "C&lose World", 32887
+        MENUITEM SEPARATOR
+        MENUITEM "Create Rez File", 32859
+        MENUITEM "Reload Palettes", 32872
+        MENUITEM SEPARATOR
+        MENUITEM "Recent File", 57616, GRAYED
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit", 57665
+    END
+    POPUP "&Edit"
+    BEGIN
+        MENUITEM "&Copy\tCtrl+C", 57634
+        MENUITEM "&Paste\tCtrl+V", 57637
+        MENUITEM SEPARATOR
+        MENUITEM "&Undo\tCtrl+Z", 57643
+        MENUITEM "&Redo\tCtrl+Y", 57644
+        MENUITEM SEPARATOR
+        MENUITEM "&Palette Edit...", 32921
+        MENUITEM SEPARATOR
+        MENUITEM "&Options...", 32898
+    END
+    POPUP "&View"
+    BEGIN
+        MENUITEM "&Color Selection", 32813
+        MENUITEM "&Project Window\tAlt+0", 32771
+        MENUITEM SEPARATOR
+        MENUITEM "&Main Toolbar", 59392
+        MENUITEM "&NodeView Toolbar", 32865
+        MENUITEM "&WorldEdit Toolbar", 32866
+        MENUITEM SEPARATOR
+        MENUITEM "&Status Bar", 59393
+        MENUITEM "&ToolTips", 32867
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&Quick Help...", 32924
+        MENUITEM "&Key Mapping...", 32925
+        MENUITEM SEPARATOR
+        MENUITEM "&About DEdit for Talon...", 57664
+        MENUITEM SEPARATOR
+        MENUITEM "&LithTech Web Page", 32888
+    END
+END
+
+222 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "&What's This?", 40057
+    END
+END
+
+223 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Open", 40081
+    END
+END
+
+100 DIALOG 0, 0, 271, 120
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "About DEdit for Talon"
+FONT 8, "MS Sans Serif"
+BEGIN
+    ICON            128, IDC_STATIC, 5, 5, 20, 20
+    LTEXT           "DEdit For Talon", IDC_STATIC, 40, 7, 86, 8, SS_NOPREFIX
+    DEFPUSHBUTTON   "OK", IDOK, 232, 7, 32, 14, WS_GROUP
+    LTEXT           "Copyright© 1998-2002 LithTech, Inc.\r\nPortions Copyright© Micro Focus Inc.", IDC_STATIC, 40, 22, 143, 19
+    GROUPBOX        "", IDC_STATIC, 7, 45, 257, 67
+    EDITTEXT        1093, 13, 55, 245, 51, ES_MULTILINE | ES_READONLY | NOT WS_BORDER
+    LTEXT           "<BUILD STRING>", 1025, 129, 7, 90, 8
+END
+
+103 DIALOG 0, 0, 330, 67
+STYLE WS_CHILD | DS_SETFONT
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+104 DIALOG 0, 0, 159, 98
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Undo Preferences"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1001, 54, 8, 33, 13, ES_AUTOHSCROLL
+    EDITTEXT        1003, 54, 29, 33, 14, ES_AUTOHSCROLL
+    EDITTEXT        1005, 54, 51, 33, 14, ES_AUTOHSCROLL
+    EDITTEXT        1007, 54, 73, 33, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 96, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 96, 29, 50, 14
+    PUSHBUTTON      "Default", 1062, 96, 51, 50, 14
+    PUSHBUTTON      "Coarse", 1063, 96, 73, 50, 14
+    LTEXT           "Geometry", 1000, 10, 7, 38, 14, SS_CENTERIMAGE
+    LTEXT           "Textures", 1002, 10, 29, 38, 14, SS_CENTERIMAGE
+    LTEXT           "Properties", 1004, 10, 51, 38, 14, SS_CENTERIMAGE
+    LTEXT           "General", 1006, 10, 73, 38, 14, SS_CENTERIMAGE
+END
+
+105 DIALOG 0, 0, 225, 116
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Advanced Select"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Name", IDC_STATIC, 7, 7, 211, 45
+    AUTOCHECKBOX    "Objects with &Name:", 1013, 13, 21, 74, 11
+    EDITTEXT        1014, 95, 19, 115, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Match whole word only", 1035, 13, 36, 87, 10
+    AUTOCHECKBOX    "Nodes of &Class:", 1012, 13, 57, 65, 12, WS_GROUP
+    COMBOBOX        1095, 95, 57, 115, 129, WS_VSCROLL | CBS_DROPDOWN | CBS_SORT | WS_TABSTOP
+    GROUPBOX        "Operation", 1078, 7, 72, 83, 37
+    AUTORADIOBUTTON "&Select", 1033, 13, 82, 41, 10, WS_GROUP
+    AUTORADIOBUTTON "&Deselect", 1034, 13, 95, 45, 10
+    AUTOCHECKBOX    "Show &Results", 1015, 101, 76, 65, 12, WS_GROUP
+    DEFPUSHBUTTON   "Select", IDOK, 100, 95, 52, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 166, 95, 52, 14
+END
+
+106 DIALOG 0, 0, 210, 27
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | DS_SETFONT
+CAPTION "General"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1097, 7, 7, 18, 12, ES_RIGHT | ES_AUTOHSCROLL | ES_NUMBER
+    LTEXT           "Minutes between Auto-Save (1 - 60)", IDC_STATIC, 30, 9, 175, 8
+END
+
+107 DIALOG 0, 0, 182, 51
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "New Project"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1019, 65, 7, 110, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 34, 30, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 99, 30, 50, 14
+    LTEXT           "Project Directory:", IDC_STATIC, 5, 10, 56, 8
+END
+
+108 DIALOG 0, 0, 215, 111
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Building Rez File"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 82, 95, 50, 14
+    EDITTEXT        1023, 5, 15, 201, 75, WS_VSCROLL | ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Current File:", IDC_STATIC, 5, 5, 40, 10
+    LTEXT           "", 1024, 45, 5, 155, 10
+END
+
+109 DIALOG 0, 0, 181, 113
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Organize Positions"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "&Go To", 1028, 7, 92, 50, 14
+    PUSHBUTTON      "&Close", IDCANCEL, 67, 92, 50, 14
+    PUSHBUTTON      "Move &Up", 1026, 124, 7, 50, 14
+    PUSHBUTTON      "Move &Down", 1027, 124, 24, 50, 14
+    PUSHBUTTON      "&Rename", 1030, 124, 50, 50, 14
+    PUSHBUTTON      "&Delete", 1029, 124, 68, 50, 14
+    LISTBOX         1031, 7, 7, 109, 76, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT
+END
+
+110 DIALOG 0, 0, 139, 50
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Store Position"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Name:", IDC_STATIC, 7, 9, 27, 8
+    EDITTEXT        1032, 36, 7, 96, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 11, 29, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 78, 29, 50, 14
+END
+
+111 DIALOG 0, 0, 172, 158
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Class"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 26, 137, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 95, 137, 50, 14
+    LISTBOX         1037, 7, 18, 158, 110, WS_VSCROLL | WS_TABSTOP | LBS_SORT | LBS_NOINTEGRALHEIGHT
+    LTEXT           "Classes:", IDC_STATIC, 7, 7, 27, 8
+END
+
+112 DIALOG 0, 0, 214, 68
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Import Objects"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 48, 47, 50, 14, WS_GROUP
+    PUSHBUTTON      "Cancel", IDCANCEL, 115, 47, 50, 14
+    LTEXT           "One or more imported object(s) already exist in the world.", IDC_STATIC, 7, 7, 200, 12
+    AUTORADIOBUTTON "&Update properties of existing objects.", 1067, 7, 19, 200, 10, WS_GROUP
+    AUTORADIOBUTTON "&Create new objects.", 1068, 7, 30, 194, 10
+END
+
+113 DIALOG 0, 0, 186, 84
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Dialog"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 129, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 129, 24, 50, 14
+    GROUPBOX        "Importing From", IDC_STATIC, 7, 7, 118, 53
+    AUTOCHECKBOX    "Reverse Normals", 1008, 15, 61, 110, 9
+    AUTOCHECKBOX    "3DSMax", 1011, 16, 22, 43, 10
+    AUTOCHECKBOX    "Maya", 1012, 16, 33, 33, 10
+    AUTOCHECKBOX    "SoftImage", 1013, 16, 45, 48, 10
+END
+
+114 DIALOG 0, 0, 284, 58
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Dialog"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Progress1", 1005, "msctls_progress32", WS_BORDER, 17, 22, 248, 14
+END
+
+115 DIALOG 0, 0, 180, 64
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Sphere Primitive"
+FONT 8, "MS Sans Serif"
+BEGIN
+    RTEXT           "&Sides:", IDC_STATIC, 7, 10, 72, 8
+    EDITTEXT        1075, 85, 7, 29, 14, ES_AUTOHSCROLL
+    RTEXT           "&Vertical Subdivisions:", IDC_STATIC, 7, 28, 72, 8
+    EDITTEXT        1076, 85, 25, 29, 14, ES_AUTOHSCROLL
+    RTEXT           "&Radius:", IDC_STATIC, 28, 46, 51, 8
+    EDITTEXT        1077, 85, 43, 29, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 123, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 123, 27, 50, 14
+END
+
+116 DIALOG 0, 0, 143, 109
+STYLE WS_POPUP | DS_SETFONT | DS_MODALFRAME
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+117 DIALOG 0, 0, 183, 86
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Generate Unique Names"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 34, 64, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 98, 64, 50, 14
+    GROUPBOX        "Referencing properties", IDC_STATIC, 7, 7, 169, 40
+    AUTOCHECKBOX    "&Update referencing properties", 1083, 16, 19, 113, 10
+    AUTOCHECKBOX    "Update &properties for selected objects only", 1085, 16, 31, 152, 10
+    AUTOCHECKBOX    "&Display report of name changes", 1077, 16, 49, 120, 10
+END
+
+118 DIALOG 0, 0, 218, 183
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Object Browser"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 161, 24, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 161, 44, 50, 14
+    LTEXT           "&Objects:", IDC_STATIC, 7, 7, 46, 8
+    LISTBOX         1088, 7, 18, 145, 144, WS_VSCROLL | WS_TABSTOP | LBS_SORT | LBS_NOINTEGRALHEIGHT
+    PUSHBUTTON      "&Locate", 1089, 161, 64, 50, 14
+    PUSHBUTTON      "&Select", 1090, 161, 84, 50, 14
+    AUTOCHECKBOX    "&Group by type", 1077, 7, 166, 69, 10
+    LTEXT           "*There is a list box and a tree control*", IDC_STATIC, 56, 7, 111, 8, NOT WS_VISIBLE
+    CONTROL         "Tree1", 1091, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 18, 145, 144
+END
+
+119 DIALOG 0, 0, 187, 90
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Warning"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 68, 69, 50, 14
+    LTEXT           "Warning text goes here.", 1092, 7, 7, 173, 39
+    AUTOCHECKBOX    "&Display this message again", 1077, 7, 51, 99, 10
+END
+
+120 DIALOG 0, 0, 229, 202
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Name Change Report"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "Close", IDOK, 89, 181, 50, 14
+    LTEXT           "&Object name changes:", IDC_STATIC, 7, 7, 68, 8
+    CONTROL         "List1", 1095, "SysListView32", WS_BORDER | WS_TABSTOP | 0x8001, 7, 17, 215, 92
+    LTEXT           "&Referencing property changes:", IDC_STATIC, 7, 113, 93, 8
+    CONTROL         "List1", 1084, "SysListView32", WS_BORDER | WS_TABSTOP | 0x8001, 7, 123, 215, 52
+END
+
+121 DIALOG 0, 0, 136, 127
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Export as an OBJ file"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 34, 99, 50, 14
+    AUTOCHECKBOX    "Export Hidden Brushes", 1014, 13, 71, 88, 10
+    GROUPBOX        "Export Obj For", 1015, 7, 7, 114, 62
+    AUTOCHECKBOX    "3DSMax", 1016, 13, 23, 43, 10
+    AUTOCHECKBOX    "Maya", 1017, 13, 37, 33, 10
+    AUTOCHECKBOX    "Softimage", 1018, 13, 52, 47, 10
+    AUTOCHECKBOX    "Reverse the Normals", 1019, 13, 83, 84, 10
+END
+
+123 DIALOG 0, 0, 137, 92
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Auto-Texture Options"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 80, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 80, 24, 50, 14
+    AUTORADIOBUTTON "&Linear", 1020, 13, 13, 35, 10, WS_GROUP | WS_TABSTOP
+    AUTORADIOBUTTON "&Follow Path", 1021, 13, 23, 53, 10
+    GROUPBOX        "Style", IDC_STATIC, 7, 3, 66, 34
+    GROUPBOX        "Options", IDC_STATIC, 7, 39, 79, 46
+    AUTOCHECKBOX    "&Stretch to fit", 1108, 13, 50, 54, 10, WS_GROUP
+    AUTOCHECKBOX    "&Adjust Top/Left", 1110, 13, 61, 65, 10
+    AUTOCHECKBOX    "&Restrict Direction", 1111, 13, 72, 70, 10
+END
+
+131 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1037, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 86
+    CONTROL         "List1", 4005, "SysListView32", WS_BORDER | WS_TABSTOP | 0x151, 7, 119, 188, 50
+END
+
+139 DIALOG 0, 0, 272, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION ""
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1009, 30, 35, 210, 15, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 7, 74, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 215, 74, 50, 14
+    LTEXT           "", 1010, 30, 20, 210, 10
+END
+
+141 DIALOG 0, 0, 270, 222
+STYLE WS_CHILD | DS_SETFONT
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "List1", 1011, "SysListView32", WS_BORDER | WS_TABSTOP | 0x112, 7, 7, 160, 201
+END
+
+143 DIALOG 0, 0, 227, 292
+STYLE WS_CHILD | DS_SETFONT
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "List1", 1013, "SysListView32", WS_BORDER | WS_TABSTOP | 0x112, 7, 7, 160, 201
+END
+
+145 DIALOG 0, 0, 336, 234
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Model Editor"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 279, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 279, 24, 50, 14
+    CONTROL         "", 1014, "Static", SS_BLACKFRAME | SS_SUNKEN, 5, 5, 255, 185
+    CONTROL         "Spin1", 1015, "msctls_updown32", UDS_ARROWKEYS | UDS_HORZ, 7, 202, 60, 10
+    LTEXT           "Rotation Speed", IDC_STATIC, 72, 202, 85, 10
+    CONTROL         "Spin1", 1016, "msctls_updown32", UDS_ARROWKEYS | UDS_HORZ, 7, 217, 60, 10
+    LTEXT           "Levels Of Detail", 1017, 72, 217, 85, 10
+END
+
+146 DIALOGEX 0, 0, 376, 150
+STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | DS_SETFONT
+CAPTION "Sprite Editor"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LISTBOX         1106, 5, 90, 210, 55, WS_VSCROLL | WS_HSCROLL | WS_TABSTOP | LBS_SORT | LBS_NOINTEGRALHEIGHT
+    CONTROL         "Spin2", 1027, "msctls_updown32", UDS_SETBUDDYINT | UDS_AUTOBUDDY | UDS_ARROWKEYS, 284, 130, 11, 15
+    DEFPUSHBUTTON   "OK", IDOK, 320, 85, 50, 14
+    PUSHBUTTON      "&Save", IDABORT, 320, 105, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 320, 125, 50, 14
+    CONTROL         "", 1020, "Static", SS_BLACKFRAME | NOT WS_VISIBLE, 8, 8, 361, 62
+    LTEXT           "Frame Rate:", 1024, 225, 132, 39, 8
+    LTEXT           "", 1025, 268, 132, 16, 8, 0, WS_EX_RIGHT
+    LTEXT           "Textures", 1097, 5, 80, 75, 8
+END
+
+148 DIALOG 0, 0, 317, 165
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "PreProcessor Parameters"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 260, 5, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 260, 22, 50, 14
+    AUTOCHECKBOX    "Generate Bsp", 1030, 5, 20, 110, 10
+    AUTOCHECKBOX    "Perform Full Optimization", 1034, 5, 50, 110, 10
+    AUTOCHECKBOX    "Process Lighting", 1035, 5, 35, 110, 10
+    RTEXT           "Command Line", IDC_STATIC, 10, 130, 50, 10
+    EDITTEXT        1033, 65, 125, 250, 15, WS_DISABLED | ES_AUTOHSCROLL
+    RTEXT           "Extra Parameters", IDC_STATIC, 5, 150, 55, 10
+    EDITTEXT        1037, 65, 145, 250, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Seal World", 1031, 5, 80, 110, 10
+    AUTOCHECKBOX    "Add Sky", 1038, 5, 95, 110, 10
+    AUTOCHECKBOX    "Fast Approximation", 1036, 5, 65, 110, 10
+END
+
+150 DIALOG 0, 0, 118, 121
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | DS_SETFONT
+CAPTION ""
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+151 DIALOG 0, 0, 186, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "DEdit for Talon Preferences"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 129, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 129, 24, 50, 14
+    AUTOCHECKBOX    "Full Region View Updating", 1038, 5, 5, 120, 10
+    LTEXT           "Texture Display Size", 1045, 5, 65, 115, 10
+    CONTROL         "Slider1", 1047, "msctls_trackbar32", WS_TABSTOP | TBS_BOTH | TBS_NOTICKS, 0, 75, 110, 15
+END
+
+152 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1030, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 239
+END
+
+154 DIALOG 0, 0, 312, 146
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Add Object"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 255, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 255, 24, 50, 14
+    CONTROL         "Tree1", 1043, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x7, 5, 10, 240, 130
+END
+
+155 DIALOG 0, 0, 284, 192
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION ""
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1030, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 19, 165, 144
+    LISTBOX         1037, 7, 19, 165, 144, WS_VSCROLL | WS_TABSTOP | LBS_SORT | LBS_NOINTEGRALHEIGHT
+    AUTOCHECKBOX    "&Show class hierarchy", 1042, 187, 26, 79, 10
+    AUTOCHECKBOX    "&Bind individually", 1076, 187, 39, 81, 10
+    LISTBOX         1043, 183, 70, 87, 68, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT
+    PUSHBUTTON      "&Remove", 1045, 201, 143, 50, 14
+    DEFPUSHBUTTON   "OK", IDOK, 7, 171, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 72, 171, 50, 14
+    LTEXT           "&Class Types:", IDC_STATIC, 7, 7, 41, 8
+    LTEXT           "***There is a list box and a tree control on top of each other***", IDC_STATIC, 51, 7, 181, 8, NOT WS_VISIBLE
+    GROUPBOX        "Options", IDC_STATIC, 177, 15, 100, 39
+    GROUPBOX        "R&ecent", IDC_STATIC, 177, 58, 100, 105
+END
+
+157 DIALOG 0, 0, 148, 230
+STYLE WS_CHILD | WS_BORDER | DS_SETFONT
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "", 1052, 7, 7, 92, 14, WS_BORDER
+    PUSHBUTTON      "Change...", 1036, 100, 7, 41, 14, WS_DISABLED
+END
+
+160 DIALOG 0, 0, 301, 119
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "World Info"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1105, 7, 79, 287, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 93, 98, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 157, 98, 50, 14
+    CTEXT           "d", 1056, 7, 21, 287, 10
+    CTEXT           "d", 1057, 7, 36, 287, 10
+    CTEXT           "d", 1058, 7, 51, 287, 10
+    LTEXT           "Info String (MasterPalette, WorldName, etc.)", IDC_STATIC, 7, 68, 287, 8
+    CTEXT           "d", 1055, 7, 7, 287, 10
+END
+
+177 DIALOGEX 0, 0, 186, 228
+STYLE WS_CHILD | DS_3DLOOK | DS_SETFONT
+EXSTYLE WS_EX_TOOLWINDOW
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+END
+
+178 DIALOGEX 0, 0, 187, 125
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Resource Directories"
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 130, 7, 50, 14
+    CONTROL         "Tree1", 1039, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x7, 7, 7, 115, 111, WS_EX_CLIENTEDGE
+END
+
+179 DIALOG 0, 0, 166, 50
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Create Directory"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1009, 34, 7, 125, 13, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 24, 29, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 92, 29, 50, 14
+    LTEXT           "Name:", 1010, 7, 8, 26, 9, SS_CENTERIMAGE
+END
+
+180 DIALOG 0, 0, 225, 106
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Map Texture Coordinates"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1047, 20, 21, 54, 14, ES_AUTOHSCROLL
+    EDITTEXT        1048, 20, 49, 54, 14, ES_AUTOHSCROLL
+    EDITTEXT        1052, 20, 77, 54, 14, ES_AUTOHSCROLL
+    EDITTEXT        1064, 94, 21, 54, 14, ES_AUTOHSCROLL
+    EDITTEXT        1065, 94, 49, 54, 14, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Stick", 1066, 94, 67, 54, 14
+    AUTOCHECKBOX    "XZ Only", 1067, 94, 81, 54, 14
+    DEFPUSHBUTTON   "&OK", IDOK, 165, 10, 50, 14
+    PUSHBUTTON      "&Apply", 1098, 165, 26, 50, 14
+    PUSHBUTTON      "Flip &X", 1101, 165, 42, 50, 14
+    PUSHBUTTON      "Flip &Y", 1102, 165, 58, 50, 14
+    PUSHBUTTON      "&Cancel", IDCANCEL, 165, 74, 50, 14
+    LTEXT           "U Offset:", IDC_STATIC, 20, 7, 54, 15, SS_CENTERIMAGE
+    LTEXT           "V Offset:", IDC_STATIC, 20, 35, 54, 14, SS_CENTERIMAGE
+    LTEXT           "Rotation (°):", IDC_STATIC, 20, 63, 54, 14, SS_CENTERIMAGE
+    LTEXT           "U Scale:", IDC_STATIC, 94, 7, 54, 14, SS_CENTERIMAGE
+    LTEXT           "V Scale:", IDC_STATIC, 94, 35, 54, 14, SS_CENTERIMAGE
+END
+
+181 DIALOGEX 0, 0, 186, 186
+STYLE WS_CHILD | DS_SETFONT
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    GROUPBOX        "View", IDC_STATIC, 6, 2, 145, 23
+    AUTORADIOBUTTON "&Node name", 1039, 12, 12, 51, 10, WS_GROUP
+    AUTORADIOBUTTON "C&lass type", 1038, 67, 12, 45, 10
+    AUTORADIOBUTTON "&Both", 1040, 117, 12, 27, 10
+    CONTROL         "Tree1", 1051, "SysTreeView32", WS_BORDER | WS_GROUP | WS_TABSTOP | 0x2f, 0, 28, 186, 151, WS_EX_CLIENTEDGE
+END
+
+182 DIALOG 0, 0, 154, 46
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Vector Edit"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Vector:", IDC_STATIC, 7, 7, 40, 8
+    EDITTEXT        1056, 7, 16, 80, 13, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 97, 7, 50, 13
+    PUSHBUTTON      "Cancel", IDCANCEL, 97, 24, 50, 14
+END
+
+183 DIALOG 0, 0, 186, 58
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Script Editor Preference"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1053, 15, 7, 98, 14, ES_AUTOHSCROLL
+    PUSHBUTTON      "Browse...", IDABORT, 124, 7, 50, 14
+    DEFPUSHBUTTON   "OK", IDOK, 15, 32, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 124, 32, 50, 14
+END
+
+185 DIALOG 0, 0, 168, 88
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Rotate Selection"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1055, 100, 19, 61, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 105, 43, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 105, 62, 50, 14
+    LTEXT           "Rotation (°):", IDC_STATIC, 100, 7, 48, 8
+    PUSHBUTTON      "+90°", 1096, 50, 40, 31, 14
+    PUSHBUTTON      "+45°", 1097, 50, 20, 31, 14
+    PUSHBUTTON      "+180°", 1098, 15, 60, 66, 14
+    PUSHBUTTON      "-90°", 1099, 15, 40, 31, 14
+    PUSHBUTTON      "-45°", 1100, 15, 20, 31, 14
+    GROUPBOX        "Presets", IDC_STATIC, 7, 7, 82, 74
+END
+
+188 DIALOG 0, 0, 292, 94
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Build Rez File"
+FONT 8, "MS Sans Serif"
+BEGIN
+    RTEXT           "Bytes Written:", IDC_STATIC, 5, 30, 55, 10
+    RTEXT           "Status:", IDC_STATIC, 5, 55, 55, 10
+    CONTROL         "Progress1", 1060, "msctls_progress32", WS_BORDER, 65, 55, 220, 10
+    LTEXT           "", 1061, 65, 30, 85, 10
+END
+
+189 DIALOG 0, 0, 236, 153
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Rotation"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 179, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 179, 24, 50, 14
+    CONTROL         "", 1008, "Static", SS_BLACKFRAME, 16, 50, 40, 35
+    CONTROL         "", 1009, "Static", SS_BLACKFRAME, 80, 50, 40, 35
+    LTEXT           "Yaw (left-right)", IDC_STATIC, 16, 40, 60, 10
+    LTEXT           "Pitch (up-down)", IDC_STATIC, 80, 40, 55, 10
+    RTEXT           "Yaw", 1011, 8, 92, 40, 10
+    RTEXT           "Pitch", 1012, 8, 112, 40, 10
+    RTEXT           "Roll", 1016, 8, 132, 40, 10
+    SCROLLBAR       1013, 52, 92, 172, 10
+    SCROLLBAR       1017, 52, 112, 172, 10
+    SCROLLBAR       1018, 52, 132, 172, 10
+    EDITTEXT        1020, 72, 16, 76, 12, ES_AUTOHSCROLL
+    LTEXT           "Rotation (y/p/r):", IDC_STATIC, 16, 16, 52, 12, SS_CENTERIMAGE
+END
+
+190 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1037, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 86
+    CONTROL         "List1", 4005, "SysListView32", WS_BORDER | WS_TABSTOP | 0x119, 7, 101, 188, 50
+END
+
+191 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1037, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 86
+    CONTROL         "List1", 4005, "SysListView32", WS_BORDER | WS_TABSTOP | 0x151, 7, 119, 188, 50
+END
+
+192 DIALOGEX 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+EXSTYLE WS_EX_TOOLWINDOW
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    CONTROL         "Tree1", 1037, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 86
+    CONTROL         "List1", 4005, "SysListView32", WS_BORDER | WS_TABSTOP | 0x151, 7, 119, 188, 50
+END
+
+193 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1037, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 86
+    CONTROL         "List1", 4005, "SysListView32", WS_BORDER | WS_TABSTOP | 0x151, 7, 119, 188, 50
+END
+
+194 DIALOG 0, 0, 250, 231
+STYLE WS_POPUP | WS_CAPTION | DS_SETFONT | DS_MODALFRAME
+CAPTION "DEdit Message Window"
+FONT 8, "MS Sans Serif"
+BEGIN
+    PUSHBUTTON      "Hide", 1018, 99, 210, 50, 14
+    EDITTEXT        1015, 7, 7, 236, 176, WS_VSCROLL | ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        1016, 65, 190, 180, 15, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "Run Command", 1017, 5, 190, 55, 15
+END
+
+195 DIALOG 0, 0, 282, 279
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Texture Properites"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1085, 102, 19, 164, 12, ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        1086, 102, 35, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1087, 102, 51, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1088, 102, 67, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1090, 102, 83, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1091, 102, 99, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1089, 102, 115, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1093, 102, 131, 164, 12, ES_AUTOHSCROLL
+    EDITTEXT        1094, 102, 147, 164, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "32-Bit", 1077, 11, 184, 93, 10
+    AUTOCHECKBOX    "S3TC DXT1 (8x compression)", 1078, 11, 202, 107, 10
+    AUTOCHECKBOX    "S3TC DXT3 (4x compression)", 1079, 11, 220, 107, 10
+    AUTOCHECKBOX    "S3TC DXT5 (4x compression)", 1080, 11, 238, 107, 10
+    AUTOCHECKBOX    "Use 4444 in 16-bit mode", 1075, 155, 184, 93, 10, BS_LEFT
+    AUTOCHECKBOX    "Use 5551 in 16-bit mode", 1076, 155, 197, 104, 10, BS_LEFT
+    AUTOCHECKBOX    "Prefer 16-Bit", 1074, 155, 225, 84, 10, BS_LEFT
+    AUTOCHECKBOX    "Full Brights (in alpha mask)", 1072, 155, 238, 100, 10, BS_LEFT
+    DEFPUSHBUTTON   "OK", IDOK, 83, 258, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 149, 258, 50, 14
+    EDITTEXT        1092, 111, 7, 164, 12, ES_AUTOHSCROLL | NOT WS_VISIBLE
+    RTEXT           "Flags", 1111, 26, 21, 69, 8, SS_CENTERIMAGE
+    RTEXT           "Lights", 1112, 26, 37, 69, 8, SS_CENTERIMAGE
+    RTEXT           "Group", 1113, 26, 53, 69, 8, SS_CENTERIMAGE
+    RTEXT           "Number of Mipmaps", 1116, 26, 69, 69, 8, SS_CENTERIMAGE
+    RTEXT           "UI Mipmap Offset", 1117, 26, 117, 69, 8, SS_CENTERIMAGE
+    GROUPBOX        "Compression", 1096, 7, 172, 127, 80
+    RTEXT           "Non-S3TC Mipmap Offset", 1118, 14, 85, 81, 8, SS_CENTERIMAGE
+    RTEXT           "Command String", 1119, 26, 101, 69, 8, SS_CENTERIMAGE
+    RTEXT           "Priority", 1120, 35, 9, 69, 8, SS_CENTERIMAGE | NOT WS_VISIBLE
+    RTEXT           "Detail Texture Scale", 1121, 26, 133, 69, 8, SS_CENTERIMAGE
+    RTEXT           "Detail Texture Angle", 1122, 26, 149, 69, 8, SS_CENTERIMAGE
+    GROUPBOX        "Texture Format", 1097, 148, 172, 127, 38
+    GROUPBOX        "Info", 1098, 7, 7, 268, 160
+    GROUPBOX        "Miscellaneous", 1099, 148, 214, 127, 38
+END
+
+196 DIALOG 0, 0, 267, 231
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Palette Edit"
+FONT 8, "MS Sans Serif"
+BEGIN
+    COMBOBOX        1157, 67, 7, 48, 147, WS_VSCROLL | CBS_DROPDOWNLIST | CBS_SORT | WS_TABSTOP
+    DEFPUSHBUTTON   "OK", IDOK, 210, 27, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 210, 44, 50, 14
+    PUSHBUTTON      "&Add...", IDABORT, 210, 62, 50, 14
+    PUSHBUTTON      "&Remove", 57670, 210, 80, 50, 14
+    LTEXT           "&Palette Number:", IDC_STATIC, 7, 7, 58, 12, SS_CENTERIMAGE
+    CONTROL         "", 1154, "Static", SS_BLACKFRAME, 7, 27, 196, 183
+    LTEXT           "Palette index:", IDC_STATIC, 7, 216, 46, 8
+    LTEXT           "", 1155, 54, 216, 26, 8
+    LTEXT           "Color:", IDC_STATIC, 88, 216, 23, 8
+    LTEXT           "", 1032, 109, 216, 93, 8
+END
+
+198 DIALOG 0, 0, 337, 122
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Quick Help"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 280, 7, 50, 14
+    EDITTEXT        1087, 7, 7, 266, 108, WS_VSCROLL | ES_MULTILINE | ES_READONLY
+END
+
+199 DIALOG 0, 0, 356, 141
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Key Mappings"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 299, 7, 50, 14
+    CONTROL         "List1", 1088, "SysListView32", WS_BORDER | WS_TABSTOP | 0x8001, 7, 7, 285, 127
+END
+
+200 DIALOG 0, 0, 186, 52
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION ""
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 35, 31, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 101, 31, 50, 14
+    RTEXT           "Extra Parameters:", IDC_STATIC, 5, 10, 70, 8
+    EDITTEXT        1089, 80, 7, 99, 14, ES_AUTOHSCROLL
+END
+
+201 DIALOG 0, 0, 166, 66
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Cylinder Primitive"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 109, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 109, 24, 50, 14
+    LTEXT           "Sides:", IDC_STATIC, 7, 7, 34, 14, SS_CENTERIMAGE
+    LTEXT           "Height:", IDC_STATIC, 7, 24, 34, 14, SS_CENTERIMAGE
+    LTEXT           "Radius:", IDC_STATIC, 7, 41, 34, 14, SS_CENTERIMAGE
+    EDITTEXT        1090, 56, 7, 44, 14, ES_AUTOHSCROLL
+    EDITTEXT        1091, 56, 24, 44, 14, ES_AUTOHSCROLL
+    EDITTEXT        1092, 56, 41, 44, 14, ES_AUTOHSCROLL
+END
+
+202 DIALOG 0, 0, 232, 193
+STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_THICKFRAME | WS_MINIMIZEBOX | DS_SETFONT
+CAPTION "Textures"
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "", 1094, "Static", SS_BLACKFRAME | NOT WS_VISIBLE, 7, 7, 218, 179
+END
+
+203 DIALOG 0, 0, 214, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Multiline Edit"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 157, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 157, 24, 50, 14
+    EDITTEXT        1096, 7, 7, 143, 81, WS_VSCROLL | ES_MULTILINE | ES_WANTRETURN
+END
+
+204 DIALOG 0, 0, 254, 229
+STYLE WS_CHILD | WS_VSCROLL | DS_SETFONT
+FONT 8, "MS Sans Serif"
+BEGIN
+END
+
+205 DIALOG 0, 0, 254, 229
+STYLE WS_POPUP | WS_CAPTION | WS_VSCROLL | DS_SETFONT | DS_MODALFRAME | DS_CENTER
+CAPTION "Properties"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 94, 208, 54, 14
+END
+
+210 DIALOG 0, 0, 220, 81
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Group World Textures"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1104, 66, 7, 147, 14, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Include Textures With Alpha", 1107, 7, 29, 140, 10
+    AUTOCHECKBOX    "Include Textures With Fullbrites", 1108, 7, 44, 140, 10
+    DEFPUSHBUTTON   "OK", IDOK, 52, 60, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 118, 60, 50, 14
+    LTEXT           "Target Directory:", IDC_STATIC, 9, 10, 53, 8
+END
+
+211 DIALOG 0, 0, 183, 73
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Alpha Info"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1108, 95, 11, 40, 14, ES_AUTOHSCROLL
+    CONTROL         "Spin1", 1109, "msctls_updown32", UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS, 134, 11, 11, 14
+    EDITTEXT        1110, 95, 29, 40, 14, ES_AUTOHSCROLL
+    CONTROL         "Spin1", 1111, "msctls_updown32", UDS_WRAP | UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS, 134, 29, 11, 14
+    DEFPUSHBUTTON   "OK", IDOK, 26, 52, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 108, 52, 50, 14
+    RTEXT           "Scale Percentage", IDC_STATIC, 7, 14, 83, 8
+    RTEXT           "Offset (-15-15)", IDC_STATIC, 7, 32, 83, 8
+END
+
+212 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "List1", 1117, "SysListView32", WS_BORDER | WS_TABSTOP | 0x111, 7, 7, 188, 239
+END
+
+213 DIALOG 0, 0, 261, 133
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | DS_SETFONT
+CAPTION "Display"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Color", IDC_STATIC, 7, 7, 156, 92
+    LISTBOX         1046, 16, 20, 92, 73, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT
+    CONTROL         "", 1048, "Static", SS_BLACKFRAME, 117, 21, 37, 15
+    DEFPUSHBUTTON   "&Change...", 1047, 117, 40, 37, 14
+    AUTOCHECKBOX    "Shade &polygons in texture view", 1050, 7, 104, 112, 10
+    AUTOCHECKBOX    "Sh&ow surface color", 1051, 7, 116, 73, 10
+    GROUPBOX        "Show Vertices", IDC_STATIC, 171, 7, 83, 39
+    AUTORADIOBUTTON "&All brushes", 1058, 178, 19, 49, 10, WS_GROUP
+    AUTORADIOBUTTON "&Selected brushes", 1059, 178, 32, 69, 10
+    LTEXT           "&Handle:", IDC_STATIC, 178, 63, 33, 8
+    EDITTEXT        1063, 217, 60, 24, 14, ES_AUTOHSCROLL
+    CONTROL         "Spin1", 1062, "msctls_updown32", UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS, 238, 60, 8, 14
+    LTEXT           "&Vertex:", IDC_STATIC, 178, 82, 32, 8
+    EDITTEXT        1064, 217, 79, 24, 14, ES_AUTOHSCROLL
+    CONTROL         "Spin1", 1065, "msctls_updown32", UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS, 238, 79, 8, 14
+    GROUPBOX        "Sizes", IDC_STATIC, 171, 49, 83, 50
+    PUSHBUTTON      "&Reset", 1066, 117, 79, 37, 14
+END
+
+214 DIALOG 0, 0, 210, 114
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | DS_SETFONT
+CAPTION "Direct3D"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Renderer", IDC_STATIC, 7, 7, 135, 62
+    AUTOCHECKBOX    "&Use D3D as the default renderer", 1069, 15, 18, 122, 10
+    LTEXT           "&Device:", 1072, 15, 32, 24, 8
+    COMBOBOX        1070, 44, 30, 87, 46, WS_VSCROLL | CBS_DROPDOWN | WS_TABSTOP
+    AUTOCHECKBOX    "&Blurry textures (faster)", 1085, 15, 88, 88, 10, NOT WS_VISIBLE
+    AUTOCHECKBOX    "&Z-Buffer lines and vertices", 1049, 15, 75, 98, 10
+    LTEXT           "&Mode:", 1073, 19, 48, 20, 8
+    COMBOBOX        1071, 44, 47, 87, 60, WS_VSCROLL | CBS_DROPDOWN | WS_TABSTOP
+END
+
+215 DIALOG 0, 0, 261, 133
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | DS_SETFONT
+CAPTION "Run"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Executable:", IDC_STATIC, 33, 21, 53, 8
+    LTEXT           "&Working directory:", IDC_STATIC, 33, 52, 81, 8
+    LTEXT           "&Program arguments:", IDC_STATIC, 33, 85, 88, 8
+    EDITTEXT        1079, 33, 31, 148, 14, ES_AUTOHSCROLL
+    EDITTEXT        1080, 33, 62, 195, 14, ES_AUTOHSCROLL
+    EDITTEXT        1081, 33, 96, 195, 14, ES_AUTOHSCROLL
+    PUSHBUTTON      "&Browse...", 1082, 187, 31, 41, 14
+END
+
+216 DIALOG 0, 0, 181, 67
+STYLE WS_CHILD | WS_DISABLED | WS_CAPTION | DS_SETFONT
+CAPTION "Clipboard"
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Object name conflicts", IDC_STATIC, 7, 7, 167, 53
+    AUTOCHECKBOX    "&Generate unique names for pasted objects", 1077, 15, 19, 151, 10
+    AUTOCHECKBOX    "&Update referencing properties", 1083, 15, 31, 113, 10
+    AUTOCHECKBOX    "&Display report of name changes", 1078, 15, 43, 120, 10
+END
+
+217 DIALOG 0, 0, 202, 253
+STYLE WS_CHILD | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    CONTROL         "Tree1", 1037, "SysTreeView32", WS_BORDER | WS_TABSTOP | 0x27, 7, 7, 188, 86
+    CONTROL         "List1", 4005, "SysListView32", WS_BORDER | WS_TABSTOP | 0x151, 7, 119, 188, 50
+END
+
+30721 DIALOG 9, 26, 183, 70
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_3DLOOK | DS_SETFONT | DS_MODALFRAME
+CAPTION "New"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "&New ", IDC_STATIC, 6, 5, 123, 8, NOT WS_GROUP
+    LISTBOX         100, 6, 15, 125, 49, WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK", IDOK, 137, 6, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 137, 23, 40, 14
+    PUSHBUTTON      "&Help", 57670, 137, 43, 40, 14
+END
+
+5 DIALOG 0, 0, 220, 190
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME | DS_CENTER
+CAPTION "LithTech v1.0 (alpha)"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        IDYES, 68, 139, 120, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 52, 169, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 118, 169, 50, 14
+    EDITTEXT        IDNO, 68, 58, 120, 12, ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        8, 68, 73, 120, 12, ES_AUTOHSCROLL | ES_READONLY
+    EDITTEXT        9, 68, 88, 120, 12, ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "To obtain your unlock key, please visit the LithTech website at http://www.lithtech.com.  The website contains instructions on how to register your demo.", IDC_STATIC, 15, 19, 190, 36
+    RTEXT           "Username:", IDC_STATIC, 16, 60, 50, 8
+    RTEXT           "Access Code:", IDC_STATIC, 16, 75, 50, 8
+    RTEXT           "Key:", IDC_STATIC, 16, 142, 50, 8
+    GROUPBOX        "Unlock", IDC_STATIC, 7, 112, 206, 48
+    LTEXT           "Enter your key below to unlock LithTech:", IDC_STATIC, 15, 124, 182, 8
+    GROUPBOX        "Info", IDC_STATIC, 7, 7, 206, 100
+    RTEXT           "Expiration:", IDC_STATIC, 16, 90, 50, 8
+END
+
+128 ACCELERATORS DISCARDABLE
+BEGIN
+    49, 33001, VIRTKEY, NOINVERT, CONTROL
+    49, 32927, VIRTKEY, NOINVERT, CONTROL, ALT
+    50, 33002, VIRTKEY, NOINVERT, CONTROL
+    50, 32928, VIRTKEY, NOINVERT, CONTROL, ALT
+    219, 40017, VIRTKEY, NOINVERT, CONTROL
+    219, 40083, VIRTKEY, NOINVERT, SHIFT
+    221, 40016, VIRTKEY, NOINVERT, CONTROL
+    221, 40082, VIRTKEY, NOINVERT, SHIFT
+    51, 33003, VIRTKEY, NOINVERT, CONTROL
+    51, 32943, VIRTKEY, NOINVERT, CONTROL, ALT
+    52, 33004, VIRTKEY, NOINVERT, CONTROL
+    52, 40050, VIRTKEY, NOINVERT, CONTROL, ALT
+    53, 33005, VIRTKEY, NOINVERT, CONTROL
+    53, 40051, VIRTKEY, NOINVERT, CONTROL, ALT
+    54, 33006, VIRTKEY, NOINVERT, CONTROL
+    55, 33007, VIRTKEY, NOINVERT, CONTROL
+    56, 33008, VIRTKEY, NOINVERT, CONTROL
+    65, 32845, VIRTKEY, NOINVERT, CONTROL
+    65, 40023, VIRTKEY, NOINVERT, ALT
+    66, 32832, VIRTKEY, NOINVERT, CONTROL
+    67, 57634, VIRTKEY, NOINVERT, CONTROL
+    71, 32836, VIRTKEY, NOINVERT, CONTROL
+    71, 40027, VIRTKEY, NOINVERT, CONTROL, ALT
+    72, 32837, VIRTKEY, NOINVERT, CONTROL
+    73, 40085, VIRTKEY, NOINVERT, CONTROL
+    73, 40086, VIRTKEY, NOINVERT, SHIFT, CONTROL
+    76, 40087, VIRTKEY, NOINVERT, CONTROL
+    77, 32854, VIRTKEY, NOINVERT, CONTROL
+    77, 40010, VIRTKEY, NOINVERT, CONTROL, ALT
+    78, 32886, VIRTKEY, NOINVERT, CONTROL
+    79, 57601, VIRTKEY, NOINVERT, CONTROL
+    79, 32781, VIRTKEY, NOINVERT, ALT
+    79, 40064, VIRTKEY, NOINVERT, CONTROL, ALT
+    80, 32806, VIRTKEY, NOINVERT, CONTROL
+    82, 32804, VIRTKEY, NOINVERT, CONTROL
+    82, 32926, VIRTKEY, NOINVERT, CONTROL, ALT
+    83, 57603, VIRTKEY, NOINVERT, CONTROL
+    84, 32846, VIRTKEY, NOINVERT, CONTROL
+    84, 32945, VIRTKEY, NOINVERT, ALT
+    86, 57637, VIRTKEY, NOINVERT, CONTROL
+    86, 40013, VIRTKEY, NOINVERT, CONTROL, ALT
+    107, 32842, VIRTKEY, NOINVERT
+    46, 57635, VIRTKEY, NOINVERT, SHIFT
+    112, 32929, VIRTKEY, NOINVERT
+    113, 40019, VIRTKEY, NOINVERT
+    114, 40014, VIRTKEY, NOINVERT
+    115, 61450, VIRTKEY, NOINVERT
+    116, 40048, VIRTKEY, NOINVERT
+    117, 40077, VIRTKEY, NOINVERT
+    117, 57681, VIRTKEY, NOINVERT, SHIFT
+    32, 40078, VIRTKEY, NOINVERT, CONTROL
+    109, 32841, VIRTKEY, NOINVERT
+    9, 32934, VIRTKEY, NOINVERT, CONTROL
+    87, 32783, VIRTKEY, NOINVERT, CONTROL
+    88, 57635, VIRTKEY, NOINVERT, CONTROL
+    89, 57644, VIRTKEY, NOINVERT, CONTROL
+    90, 57643, VIRTKEY, NOINVERT, CONTROL
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,97,9,400
+ PRODUCTVERSION 1,97,9,400
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x40004L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "Comments", ""
+            VALUE "CompanyName", "LithTech, Inc.\0"
+            VALUE "FileDescription", "DEdit for Talon\0"
+            VALUE "FileVersion", "12.29.97.001\0"
+            VALUE "InternalName", "DEdit for Talon\0"
+            VALUE "LegalCopyright", "Copyright © 1998-2002 LithTech, Inc.\0"
+            VALUE "LegalTrademarks", ""
+            VALUE "OriginalFilename", "DEdit.exe\0"
+            VALUE "PrivateBuild", ""
+            VALUE "ProductName", "DEdit for Talon\0"
+            VALUE "ProductVersion", "12.29.97.001\0"
+            VALUE "SpecialBuild", ""
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 0x4b0
+    END
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    144                             "ed"
+    145                             "Error opening one or more files to compress the project."
+    146                             "rez"
+    147                             "An error occured on file %1!s!."
+    148                             ".wav"
+    149                             "WAV Files (*.wav)|*.wav||"
+    150                             "wav"
+    151                             "ABC Files (*.abc)|*.abc||"
+    152                             ".spr"
+    153                             "New Sprite"
+    154                             "Please enter a name for the new sprite"
+    155                             "Sprite Editor - %1!s!"
+    156                             "Error saving sprite file!"
+    157                             "Frame Rate: %1!s!"
+    158                             "Error opening Quake map file: %1!s!."
+    159                             "Couldn't load binary code file %1!s!."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    160                             "Error loading palette.dat."
+    161                             "A binary file named %1!s! already exists.  Overwrite?"
+    162                             "A code file named %1!s! already exists.  Overwrite?"
+    163                             "Import Texture"
+    164                             "DSC Files (*.dsc)|*.dsc||"
+    165                             "notepad"
+    166                             "You only have the binary data file for %1!s!."
+    167                             "Are sure sure you want to delete the selected code file(s)?"
+    168                             "Please enter a name for the new class"
+    169                             "Error creating code file %1!s!."
+    170                             "Select Object Type"
+    171                             "Select World Type"
+    172                             "Brush Node View"
+    173                             "Select child node"
+    174                             "Select parent node"
+    175                             "Project"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    176                             "DEP Files (*.dep)|*.dep||"
+    177                             "World Editing"
+    178                             "New Brush"
+    179                             "Enter Brush Thickness"
+    180                             "Hollow Brush"
+    181                             "One brush must be selected in order to hollow."
+    182                             "No project is open."
+    183                             "Must have one brush selected to carve."
+    184                             ".pcx"
+    185                             "Unable to load PCX file %1!s!."
+    186                             "%1!s! has an invalid texture size (%2!d!, %3!d!)."
+    187                             "This level has out of date objects.  Update?"
+    188                             ".dsb"
+    189                             "Please enter a palette number for the textures."
+    190                             "Object Height"
+    191                             "scr"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    192                             "Are you sure you want to delete the selected file(s)?"
+    193                             "Please enter the height above ground."
+    194                             "World"
+    195                             "Sprite"
+    196                             "Model"
+    197                             "Texture"
+    198                             "Sound"
+    199                             "Ok"
+    200                             "(Compiling %1!s!)  %2!s!"
+    201                             "(Loading %1!s!'s Binary)  %2!s!"
+    202                             "Note:  You are VERY low on memory.  Please save your work!."
+    203                             "Persp. (x/y/z)"
+    204                             "Top (x/z)"
+    205                             "Bottom (x/z)"
+    206                             "Left (y/z)"
+    207                             "Right (y/z)"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    208                             "Front (x/y)"
+    209                             "Back (x/y)"
+    210                             "Took %1!f! seconds to draw 25 frames at %2!d! x %3!d!"
+    211                             "Must have one brush selected for this operation."
+    212                             "Cannot open file."
+    213                             "Terrain map has invalid dimensions."
+    214                             "Terrain map is invalid."
+    215                             "Grid:"
+    216                             "Brush thickness must be greater than 0."
+    217                             ".dsc"
+    218                             "%1!s! has an invalid bit depth (%2!d!)."
+    219                             "Error writing to file %1!s!.  Check if it is read-only."
+    220                             "Must have at least one brush select for this operation."
+    221                             "\nWorld\nWorld\nWorld Files (*.ed)\n.ED\nDEdit.Document\nDEdit Document"
+    222                             "%1!s! is an invalid class module."
+    223                             "Object DLL %1!s! has an invalid verison (%2!d!).  DEdit is using version %3!d!."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    224                             "Create REZ file?"
+    225                             "Create a new world?"
+    226                             "Please select a world directory."
+    227                             "Yaw: %1!d!"
+    228                             "Pitch: %1!d!"
+    229                             "Roll: %1!d!"
+    230                             "Worlds"
+    231                             "Textures"
+    232                             "Nodes"
+    233                             "Properties"
+    234                             "Models"
+    235                             "Sounds"
+    236                             "Sprites"
+    237                             "Open MIP PCX File %1!d! of 4..."
+    238                             "Number of Brushes  -  %1!d!"
+    239                             "Save DTX file as..."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    240                             "Error saving DTX file %1!s!."
+    241                             "Error saving PCX file %1!s!."
+    242                             "Error creating project %1!s!."
+    243                             "Error creating world %1!s!."
+    244                             "Error creating sprite %1!s!."
+    245                             "Perspective view:  To move along the XZ plane, press and hold the I key while moving the mouse.  To move along the Y axis, press and hold the I key and the RMB while moving the mouse.  To change orientation, press and hold the O key and move the mouse.\r\n\r\nParallel view:  To move along the plane, press and hold the I key while moving the mouse.  To zoom in and out, press and hold the O key while moving the mouse.\r\n\r\nTo find the cursor's current position, watch the status bar.\r\n\r\nTo change the green marker's position, press and hold the X key while moving the mouse in the parallel views.  The green marker is used to define positions for new objects and the origin for new brushes.\r\n\r\n"
+    246                             "To define a brush, first move the green marker to where the top polygon of the brush is to be.  You must do this in a view perpendicular to the top polygon.  Then define the vertices of the top polygon by moving the cursor and pressing the space bar.  Once the polygon is closed, define the height of the brush.  The other polygons will be extruded from the top polygon.\r\n\r\nTo place a new object, first move the green marker to the object's position.  Then select World|Add Object...  Select the object from the class heirarchy.\r\n\r\nTo select a brush, move the cursor over the brush, press and hold the T key, then click the LMB.  Clicking the LMB repeatedly cycles to the next brush under the cursor.\r\n\r\nTo select an object, first select Object Edit mode from the toolbar.  Then move the cursor over the object.  Then press and hold the T key.  Finally, click the LMB.\r\n\r\n"
+    247                             "To move a brush or an object, first select it.  Then press and hold the M key and LMB, while moving the mouse.\r\n\r\nTo texture a brush, first select it.  Then select the texture from the Textures tab.  Finally, click Apply Texture button on the toolbar."
+    248                             "View"
+    249                             "Description"
+    250                             "All"
+    251                             "Geometry"
+    252                             "Brush"
+    253                             "Spacebar"
+    254                             "Ctrl+"
+    255                             "Shift+"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    256                             "+Mouse"
+    257                             "+LMB"
+    258                             "+RMB"
+    259                             "Perspective"
+    260                             "Parallel"
+    261                             "Brush, Object"
+    262                             "Brush, Geometry"
+    263                             "Use the spacebar to create a vertex on the grid.  This will start a new polygon if you're not already drawing one."
+    264                             "If you hold down CTRL while pressing the spacebar, it'll snap to the green vertex.  You can split polygons by using this on two points on polygon."
+    265                             "Walkthru Move Mode:  Move along XZ plane.  Orbit Move Mode: Dolly to/away from focus."
+    266                             "Walkthru Move Mode:  Move along the Y axis."
+    267                             "Walkthru Move Mode:  Change orientation.  Orbit Move Mode:  Orbit around focus."
+    268                             "Move along plane of grid."
+    269                             "Zoom in and out."
+    270                             "Press this to set the focus point to the green point."
+    271                             "Hold down T and click LMB over brush.  Each LMB click cycles to next brush under mouse."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    272                             "Un-tags all selections."
+    273                             "Pressing G places the grid along the red polygon."
+    274                             "(8,9,0)"
+    275                             "Pressing these keys places the grid along a principle axis (x, y, z)."
+    276                             "Select vertices, brushes or objects from a rectangle. Hold B and left-click and drag rectangle."
+    277                             "Hold down E and right-click drag to extrude the red poly."
+    278                             "Hold down Q and right-click drag to scale the red poly."
+    279                             "Hold down R and right-click drag to extrude the red poly.  This will delete the original polygon.  This is useful for bringing out tunnels or doorways."
+    280                             "This is the same as R, but it scales the polygon. This is useful for creating doorways."
+    281                             "Inserts a vertex at the center of the green edge."
+    282                             "Deletes the green vertex."
+    283                             "Deletes the selected poly.  Remember that Delete only deletes the vertex, which is most likely NOT WHAT YOU WANT TO DO.  Deleting a vertex will most likely screw up your geometry (which is BAD)."
+    284                             "+/-"
+    285                             "DELETE"
+    286                             "INSERT"
+    287                             "END"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    288                             "Modifies grid spacing.  First click in the view to change the spacing.  Then press the  + and - keys on the keypad.  You can do this at any time, giving you more or less detail to the grid."
+    289                             "Hold down Z and right-click drag to resize the grid."
+    290                             "Hit F to flip the selected poly.  If the poly isn't textured, it's a good idea to have normals on."
+    291                             "Hold C and move mouse to move the far clipping plane closer or farther.  This is used cut down the number of polygons displayed.  This is especially useful if the level you are working on is HUGE."
+    292                             "Select and move a brush so it intersects other brushes and press H.  This will carve the selected brush's shape out of the intersecting brushes."
+    293                             "Enter brush mode."
+    294                             "Enter geometry mode."
+    295                             "Enter object mode."
+    296                             "Apply texture to selected brushes."
+    297                             "Apply color to gridlines of selected brush."
+    298                             "Undo."
+    299                             "Redo."
+    300                             "Next pane/Previous pane."
+    301                             "F6/SHIFT+F6"
+    302                             "Move the green marker."
+    303                             "Move selected brushes and objects."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    304                             "Move the green vertex."
+    305                             "Move all tagged vertices."
+    306                             "Reinitialize texture on selected brush or red polygon."
+    307                             "Tag the vertices of the red polygon."
+    308                             "Can't find client.exe."
+    309                             "World file %1!s! doesn't exist."
+    310                             "Run %1!s!"
+    311                             "Warning:  this computer program is protected by copyright law and international treaties.\r\n\r\nUnauthorized reproduction or distribution of this program, or any portion of it, may result in severe civil and criminal penalties, and will be prosecuted to the maximum extent possible under the law."
+    312                             "DEdit for Talon\nCopyright (c) 1998-2002 LithTech, Inc.\nAll rights reserved"
+    313                             "ED Files (*.ed)|*.ed|OBJ Files (*.obj)|*.obj|"
+    314                             "No texture selected"
+    315                             "Rez Files (*.rez)|*.rez||"
+    316                             "Couldn't open output rez file %1!s!."
+    317                             "%1!d!"
+    318                             "Surface Flags"
+    319                             "Enter Surface Flags"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32771                           "Toggle Project Window\nToggle Project Window"
+    32772                           "Import DTX files into the project\nImport DTX files"
+    32773                           "PCX Files (*.pcx)|*.pcx||"
+    32774                           ".dep"
+    32775                           "Please select a project directory and name"
+    32776                           "A project or directory with that name already exists.  Please select another name."
+    32777                           "Unable to create directory, %1!s!."
+    32778                           "\\"
+    32779                           "DSB Files (*.dsb)|*.dsb||"
+    32780                           "DTX Files (*.dtx)|*.dtx||"
+    32781                           "Adds an object\nAdd object"
+    32782                           "Shows objects properties\nObject properties"
+    32783                           "Shows world information\nWorld info"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32784                           "Sets shade mode to Wireframe polygons\nWireframe"
+    32785                           "Sets shade mode Flat\nFlat shade"
+    32786                           "Sets shade mode to Textured\nTexture shade"
+    32787                           "Sets view to Perspective\nPerspective view"
+    32788                           "Sets view to Top\nTop view"
+    32789                           "Sets view to Bottom\nBottom view"
+    32790                           "Sets view to Front\nFront view"
+    32791                           "Sets view to Back\nBack view"
+    32792                           "Sets view to Left\nLeft view"
+    32793                           "Sets view to Right\nRight view"
+    32794                           "Sets movement mode to Walkthru\nWalkthru movement"
+    32795                           "Sets movement mode to Orbit\nOrbit movement"
+    32798                           "Shows backfacing polygongs\nBackfacing polies"
+    32799                           "Shows wireframe\nWireframe"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32800                           "Shows normals\nNormals"
+    32801                           "Shows objects\nObjects"
+    32802                           "Removes extra edges\nRemove extra edges"
+    32803                           "Resets all texture coordinates\nReset Texture coords."
+    32804                           "Resets all textures\nReset all textures"
+    32805                           "Joins tagged vertices\nJoin vertices"
+    32806                           "Processes world\nProcess world"
+    32807                           "Compress project file\nCompress"
+    32808                           "Imports a sound\nImport sound"
+    32809                           "Import models\nImport models"
+    32810                           "Creates a new sprite\nNew Sprite"
+    32811                           "File preferences"
+    32812                           "Cleans up geometry\nCleanup geometry"
+    32813                           "Select color from palette\nSelect color"
+    32814                           "Shows edit grid\nEdit grid"
+    32815                           "Exports Quake MAP\nQuake Map"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32816                           "Sets view to 4-View Configuration\n4-View"
+    32817                           "Import code files\nImport code"
+    32818                           "Import binary files\nImport binary"
+    32819                           "Compile all scripts\\Compile all scripts"
+    32820                           "Update script\nUpdate script"
+    32821                           "Compile script\nCompile script"
+    32822                           "Create a new class\nCreate new class"
+    32823                           "Selects world class\nWorld class"
+    32825                           "Changes node view to floating tool\nFloat node view"
+    32827                           "Selection Mode"
+    32829                           "Move Mode\nMove Mode"
+    32830                           "Attachment/Detachment Mode"
+    32831                           "Attach Mode\nAttach Mode"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32832                           "Brush editing mode\nBrush Edit"
+    32836                           "Geometry editing mode\nGeometry Edit"
+    32837                           "Object editing mode\nObject Edit"
+    32838                           "Add a container node\nContainer node"
+    32840                           "Hollow the current brush\nHollow"
+    32841                           "Shrink grid spacing\nShrink Grid"
+    32842                           "Expand grid spacing\nExpand Grid"
+    32843                           "Shrink pixel scale\nShrink Pixel"
+    32844                           "Grow pixel scale\nGrow Pixel"
+    32845                           "Apply color\nApply Color"
+    32846                           "Apply texture\nApply Texture"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32848                           "Single node selection\nSingle Node"
+    32849                           "Multiple node selection\nMulti-Node"
+    32850                           "Imports PCX files\nImports PCX files"
+    32854                           "Stamp the current selection (instant copy and paste)\nStamp"
+    32857                           "Randomize textures\nRandomize textures"
+    32858                           "Update planes\nUpdate planes"
+    32859                           "Create REZ file\nCreate REZ file"
+    32861                           "Center views on selection\nCenter View"
+    32862                           "Finds concave brushes\nFind concave brushes"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32865                           "Shows or hides nodeview toolbar\nToggle NodeView ToolBar"
+    32866                           "Shows or hides worldedit toolbar\nToggle WorldEdit ToolBar"
+    32867                           "Shows or hides tooltips\nToggle ToolTips"
+    32869                           "Add directory at selected item.\nAdd Directory"
+    32870                           "Delete this directory.\nDelete Directory"
+    32871                           "Map texture coordinates to selected polygon\nMap Texture"
+    32872                           "Reload palettes"
+    32873                           "Place objects at a user-defined height"
+    32876                           "Rotate Selection\nRotate"
+    32877                           "Import Terrain Map\nImport Terrain"
+    32878                           "Toggles node Hiding\nHide Node"
+    32879                           "Toggles children node hiding\nHide Children"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32882                           "Undo preferences.\nUndo Pref"
+    32883                           "Group selection\nGroup Selection"
+    32884                           "Create a new DEdit project\nNew Project"
+    32885                           "Close the active project\nClose Project"
+    32886                           "Create a new DEdit world\nNew World"
+    32887                           "Close the active world\nClose World"
+    32888                           "Launch browser to LithTech web page\nDE HomePage"
+    32889                           "Display the Advanced Select options"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32897                           "Open up Options for DEdit\nOptions"
+    32898                           "Display the Options dialog"
+    32899                           "Delete world"
+    32900                           "Open selected world"
+    32901                           "Delete selected world"
+    32903                           "Add directory at selected item.\nAdd Directory"
+    32904                           "Display debug window"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32915                           "Exports DTX to PCX file\nExport PCX file"
+    32917                           "Imports mipmapped PCX files into DTX\nImport MIPs files"
+    32919                           "Texture properties\nTexture Properties"
+    32920                           "Texture properties\nTexture Properties"
+    32921                           "Edit palette.\nPalette"
+    32922                           "Shows marker\nShow Marker"
+    32923                           "Create list of textures used in world within the Debug Window"
+    32924                           "Quick help.\nQuick Help"
+    32925                           "Key mapping.\nKey Map"
+    32926                           "Run the current world\nRun World"
+    32927                           "Add box primitive.\nBox Primitive"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32928                           "Add cylinder primitive.\nCylinder"
+    32929                           "Open the DEdit online documentation"
+    32930                           "Save the world with a new name\nSave As..."
+    32931                           "Unhide all hidden nodes\nUnhide All Nodes"
+    32932                           "Show the Texture Palette dialog"
+    32933                           "Bind a selected object to current selected brush(es)"
+    32934                           "Activates the next undocked window"
+    32935                           "Activates the previous undocked window"
+    32937                           "Arranges the windows as horizontal, nonoverlapping tiles"
+    32938                           "Arranges the windows as vertical nonoverlapping tiles"
+    32941                           "Replace all copies of selected texture with new texture"
+    32943                           "Add pyramid primitive.\nPyramid"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32944                           "Use the currently selected texture"
+    32946                           "Edit the surface color.\nSurface Color"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    320                             "Error writing to texture file.  Is it read only?"
+    321                             "Error loading DTX file %1!s!."
+    322                             "Image sizes don't match."
+    323                             "Please enter texture flags for the new textures."
+    324                             "Please enter a mipmap count between 1 and 4."
+    325                             "Directory doesn't exist.  Create it?"
+    326                             "Unable to create directory."
+    327                             "Multiple textures selected.  Convert each one to a PCX file?"
+    328                             "Alpha set successfully."
+    329                             "Classes"
+    330                             "Hold down A and click LMB over brush to apply the currently selected texture to that brush."
+    331                             "Cycle the current editing mode to the next mode."
+    332                             "Ctrl+Alt+"
+    333                             "Build 109.21"
+    334                             "Error converting pixel format for %1!s!."
+    335                             "TGA file %1!d! is not half the size of %2!d!."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    336                             ".tga"
+    337                             "TGA Files (*.tga)|*.tga||"
+    338                             "Unable to load TGA file %1!s!."
+    339                             "Prefabs"
+    340                             "Error opening DAT file %1!s!."
+    341                             "Error loading DAT file %1!s!."
+    342                             "Error saving DAT file %1!s!."
+    343                             "Scale Geometry"
+    344                             "Enter a non-zero scaling factor"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    40001                           "Shrink grid size\nShrink Grid Size"
+    40002                           "Exports as 8-bit DTX file"
+    40004                           "Flip the polygon order of the selected brushes"
+    40005                           "Display a list of currently used classes in the world"
+    40006                           "Copy the polygon's normal to the clipboard (y/p/r)"
+    40007                           "Copies the polygon's normal as a Forward Vector Rotation\nNormal to Forward"
+    40008                           "Copies the polygon's normal as a Up Vector Rotation\nNormal to Up"
+    40009                           "Copies the polygon's normal as a Right Vector Rotation\nNormal to Right"
+    40013                           "Insert Clipboard contents at their original location\nPaste"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    40058                           "Center views on the marker\nCenter View On Marker"
+    40059                           "Center Marker on Selection(s)\nMarker to Selection"
+    40062                           "Place the Marker at the Camera position\nMarker to Camera"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    40067                           "Allows the marker to be placed at a specific coordinate.\nMarker to Location"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    40091                           "Zoom 50%\nZoom 50%"
+    40092                           "Zoom 100%\nZoom 100%"
+    40093                           "Zoom 200%\nZoom200%"
+    40094                           "Zoom 400%\nZoom 400%"
+    40095                           "Load a texture palette"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    40096                           "View all textures in selected directory"
+    40097                           "Save texture palette file"
+    40098                           "Select all brushes using the selected texture"
+    40099                           "Create a new texture palette"
+    40100                           "Remove the selected texture from the palette"
+    40101                           "Import textures from currently active world"
+    40102                           "Sort the textures in the current palette by filename"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    57600                           "Create a new document\nNew"
+    57601                           "Open an existing project\nOpen Project"
+    57602                           "Close the active project\nClose Project"
+    57603                           "Save the active project\nSave Project"
+    57604                           "Save the active document with a new name\nSave As"
+    57605                           "Change the printing options\nPage Setup"
+    57606                           "Change the printer and printing options\nPrint Setup"
+    57607                           "Print the active document\nPrint"
+    57609                           "Display full pages\nPrint Preview"
+    57612                           "Send the active document through electronic mail\nSend Mail"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    57616                           "Open this document"
+    57617                           "Open this document"
+    57618                           "Open this document"
+    57619                           "Open this document"
+    57620                           "Open this document"
+    57621                           "Open this document"
+    57622                           "Open this document"
+    57623                           "Open this document"
+    57624                           "Open this document"
+    57625                           "Open this document"
+    57626                           "Open this document"
+    57627                           "Open this document"
+    57628                           "Open this document"
+    57629                           "Open this document"
+    57630                           "Open this document"
+    57631                           "Open this document"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    57632                           "Erase the selection\nErase"
+    57633                           "Erase everything\nErase All"
+    57634                           "Copy the selection and put it on the Clipboard\nCopy"
+    57635                           "Cut the selection and put it on the Clipboard\nCut"
+    57636                           "Find the specified text\nFind"
+    57637                           "Insert Clipboard contents at the marker\nPaste"
+    57640                           "Repeat the last action\nRepeat"
+    57641                           "Replace specific text with different text\nReplace"
+    57642                           "Select the entire document\nSelect All"
+    57643                           "Undo the last action\nUndo"
+    57644                           "Redo the previously undone action\nRedo"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    57648                           "Open another window for the active document\nNew Window"
+    57649                           "Arrange icons at the bottom of the window\nArrange Icons"
+    57650                           "Arranges the windows as overlapping tiles"
+    57651                           "Arrange windows as non-overlapping tiles\nTile Windows"
+    57652                           "Arrange windows as non-overlapping tiles\nTile Windows"
+    57653                           "Split the active window into panes\nSplit"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    57664                           "Display program information, version number and copyright\nAbout"
+    57665                           "Quit the application; prompts to save documents\nExit"
+    57666                           "Must have at least one worlds directory to create a world."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    57680                           "Switch to the next window pane\nNext Pane"
+    57681                           "Switch back to the previous window pane\nPrevious Pane"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    59136                           "EXT"
+    59137                           "CAP"
+    59138                           "NUM"
+    59139                           "SCRL"
+    59140                           "OVR"
+    59141                           "REC"
+    59142                           "No world directory selected.  Use '%1!s!'?"
+    59143                           " "
+    59144                           " "
+    59145                           " "
+    59146                           " "
+    59147                           " "
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    59392                           "Shows or hides the main toolbar\nToggle Main ToolBar"
+    59393                           "Shows or hides the status bar\nToggle StatusBar"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61184                           "Change the window size"
+    61185                           "Change the window position"
+    61186                           "Reduce the window to an icon"
+    61187                           "Enlarge the window to full size"
+    61188                           "Switch to the next document window"
+    61189                           "Switch to the previous document window"
+    61190                           "Close the active window and prompts to save the documents"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61202                           "Restore the window to normal size"
+    61203                           "Activate Task List"
+    61215                           "Activate this window"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61440                           "Open"
+    61441                           "Save As"
+    61442                           "All Files (*.*)"
+    61443                           "Untitled"
+    61445                           "Close print preview mode\nCancel Preview"
+    61446                           "an unnamed file"
+    61447                           "Node View"
+    61448                           "Standard"
+    61449                           "Non-object nodes are selected.  Do you want to deselect these nodes and continue?"
+    61450                           "DEdit Texture Palette File"
+    61451                           "New Texture Palette"
+    61452                           "Select a new texture palette name"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61457                           "&Hide"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61472                           "No error message is available."
+    61473                           "An unsupported operation was attempted."
+    61474                           "A required resource was unavailable."
+    61475                           "Out of memory."
+    61476                           "An unknown error has occurred."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61588                           "Linked %s"
+    61589                           "Unknown Type"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61696                           "Invalid filename."
+    61697                           "Failed to open document."
+    61698                           "Failed to save document."
+    61699                           "Save changes to %1?"
+    61700                           "Failed to create empty document."
+    61701                           "The file is too large to open."
+    61702                           "Could not start print job."
+    61703                           "Failed to launch help."
+    61704                           "Internal application error."
+    61705                           "Command failed."
+    61706                           "Insufficient memory to perform operation."
+    61707                           "System registry entries have been removed and the INI file (if any) was deleted."
+    61708                           "Not all of the system registry entries (or INI file) were removed."
+    61709                           "This program requires the file %s, which was not found on this system."
+    61710                           "This program is linked to the missing export %s in the file %s. This machine may have an incompatible version of %s."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61712                           "Please enter an integer."
+    61713                           "Please enter a number."
+    61714                           "Please enter an integer between %1 and %2."
+    61715                           "Please enter a number between %1 and %2."
+    61716                           "Please enter no more than %1 characters."
+    61717                           "Please select a button."
+    61718                           "Please enter an integer between 0 and 255."
+    61719                           "Please enter a positive integer."
+    61720                           "Please enter a date and/or time."
+    61721                           "Please enter a currency."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61728                           "Unexpected file format."
+    61729                           "%1\nCannot find this file.\nPlease verify that the correct path and file name are given."
+    61730                           "Destination disk drive is full."
+    61731                           "Unable to read from %1, it is opened by someone else."
+    61732                           "Unable to write to %1, it is read-only or opened by someone else."
+    61733                           "An unexpected error occurred while reading %1."
+    61734                           "An unexpected error occurred while writing %1."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61828                           "The file is not supported by a Document Object server."
+    61829                           "%1\nUnable to register document.\nThe document may already be open."
+    61836                           "Unable to read write-only property."
+    61837                           "Unable to write read-only property."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61840                           "Unable to load mail system support."
+    61841                           "Mail system DLL is invalid."
+    61842                           "Send Mail failed to send message."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61856                           "No error occurred."
+    61857                           "An unknown error occurred while accessing %1."
+    61858                           "%1 was not found."
+    61859                           "%1 contains an invalid path."
+    61860                           "%1 could not be opened because there are too many open files."
+    61861                           "Access to %1 was denied."
+    61862                           "An invalid file handle was associated with %1."
+    61863                           "%1 could not be removed because it is the current directory."
+    61864                           "%1 could not be created because the directory is full."
+    61865                           "Seek failed on %1"
+    61866                           "A hardware I/O error was reported while accessing %1."
+    61867                           "A sharing violation occurred while accessing %1."
+    61868                           "A locking violation occurred while accessing %1."
+    61869                           "Disk full while accessing %1."
+    61870                           "An attempt was made to access %1 past its end."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61872                           "No error occurred."
+    61873                           "An unknown error occurred while accessing %1."
+    61874                           "An attempt was made to write to the reading %1."
+    61875                           "An attempt was made to access %1 past its end."
+    61876                           "An attempt was made to read from the writing %1."
+    61877                           "%1 has a bad format."
+    61878                           "%1 contained an unexpected object."
+    61879                           "%1 contains an incorrect schema."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61888                           "pixels"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    103                             "Show or hide CRezBar\nToggle CRezBar"
+    104                             "Windows sockets initialization failed."
+    105                             "A texture named %1!s! already exists.  Overwrite?"
+    106                             "Show or hide Project Bar\nToggle Project Bar"
+    107                             "PCX file %1!d! is not half the size of %2!d!."
+    108                             "Show or hide My Dialog Bar\nToggle My Dialog Bar"
+    109                             "A world named %1!s! already exists.  Overwrite?"
+    110                             "A sprite named %1!s! already exists.  Overwrite?"
+    111                             "Keys"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    12772                           "Ready"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    112                             "Edit Mode"
+    113                             "A sound named %1!s! already exists.  Overwrite?"
+    114                             "%lu KB"
+    115                             "%lu KB Free on %c:"
+    116                             "Unavailable"
+    117                             "."
+    118                             ".lyt"
+    119                             ".ed"
+    120                             "dat"
+    121                             "dtx"
+    122                             ".dtx"
+    123                             "abc"
+    124                             ".abc"
+    125                             "A model named %1!s! already exists.  Overwrite?"
+    126                             "Error opening model file %1!s!."
+    127                             "Levels Of Detail: %1!d!"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    128                             "DEdit For Talon"
+    129                             "\nProject\nDEdit\nDEdit Project (*.dep)\n.dep\nDEdit.Document\nDEdit Document"
+    130                             "Please enter a name for the new world"
+    131                             "New World"
+    132                             "Error running PreProcessor.exe!"
+    133                             "Can't find class module object.dll."
+    134                             "World File  -  %1!s!"
+    135                             "Number of Brushes  -  %1!d!"
+    136                             "Number of Polies  -  %1!d!"
+    137                             "Number of Points  -  %1!d!"
+    138                             "Error opening world: %1!s!."
+    139                             "%1!s! appears to have a corrupted file.  Please make sure that your .ed file is the correct version."
+    140                             "Are you sure you want to delete the selected world(s)?"
+    141                             ".dat"
+    142                             "spr"
+    143                             "Ran out of memory saving the processor file!"
+END
+
+128 TOOLBAR DISCARDABLE  16, 15
+BEGIN
+    BUTTON      32884
+    BUTTON      57601
+    BUTTON      57603
+    SEPARATOR
+    BUTTON      32886
+    SEPARATOR
+    BUTTON      57634
+    BUTTON      57637
+    BUTTON      32854
+    SEPARATOR
+    BUTTON      57643
+    BUTTON      57644
+END
+
+164 TOOLBAR DISCARDABLE  16, 16
+BEGIN
+    BUTTON      32832
+    BUTTON      32836
+    BUTTON      32837
+    SEPARATOR
+    BUTTON      32840
+    SEPARATOR
+    BUTTON      32841
+    BUTTON      32842
+    BUTTON      32843
+    BUTTON      32844
+    BUTTON      32845
+    BUTTON      32846
+    SEPARATOR
+    BUTTON      32861
+    BUTTON      40058
+    SEPARATOR
+    BUTTON      40059
+    BUTTON      40062
+    BUTTON      40067
+    SEPARATOR
+    BUTTON      32926
+END
+
+170 TOOLBAR DISCARDABLE  16, 15
+BEGIN
+    BUTTON      32848
+    BUTTON      32849
+END
+
+#endif
