@@ -35,11 +35,6 @@ AdvancedSelectDlg::AdvancedSelectDlg(CWnd* pParent /*=NULL*/)
 	m_nSelect = 0;
 	m_bMatchWholeWord = false;
 	m_bShowResults = false;
-	m_bNodesWithProperty = false;
-	m_sPropName = _T("Property Name");
-	m_nPropType = 0;
-	m_sPropValue = _T("true/false");
-	m_bMatchValue = false;
 	//}}AFX_DATA_INIT
 }
 
@@ -61,12 +56,6 @@ void AdvancedSelectDlg::LoadRegistrySettings()
 	m_bObjectsWithName=pOptions->GetUseNameField();
 	m_ObjectName=pOptions->GetNameField();	
 
-	m_bNodesWithProperty=pOptions->GetUsePropertyField();
-	m_bMatchValue=pOptions->GetMatchValue();
-	m_nPropType=pOptions->GetPropType();
-	m_sPropName=pOptions->GetPropName();
-	m_sPropValue=pOptions->GetPropValue();
-	
 	m_nSelect=pOptions->GetSelectionOperation();	
 
 	m_bShowResults=pOptions->GetShowResults();
@@ -90,12 +79,6 @@ void AdvancedSelectDlg::SaveRegistrySettings()
 	pOptions->SetUseNameField(m_bObjectsWithName);
 	pOptions->SetNameField(m_ObjectName);	
 
-	pOptions->SetUsePropertyField(m_bNodesWithProperty);
-	pOptions->SetMatchValue(m_bMatchValue);
-	pOptions->SetPropType(m_nPropType);
-	pOptions->SetPropName(m_sPropName);
-	pOptions->SetPropValue(m_sPropValue);
-	
 	pOptions->SetSelectionOperation(m_nSelect);	
 
 	pOptions->SetShowResults(m_bShowResults);
@@ -117,19 +100,8 @@ void AdvancedSelectDlg::UpdateEnabledStatus()
 	// Update the class controls	
 	GetDlgItem(IDC_CLASSCOMBO)->EnableWindow(m_bNodesOfClass);
 
-	// Update the property controls
-
-	bEnable=m_bNodesWithProperty;
-	GetDlgItem(IDC_PROPNAME)->EnableWindow(bEnable);
-	GetDlgItem(IDC_MATCH_VALUE)->EnableWindow(bEnable);
-
-	bEnable = (m_bNodesWithProperty && m_bMatchValue);
-	GetDlgItem(IDC_PROPTYPECOMBO)->EnableWindow(bEnable);
-	GetDlgItem(IDC_PROPVALUE)->EnableWindow(bEnable);
-	
 	// Update the select button and the operation options
-	if ((m_bObjectsWithName || m_bNodesOfClass || m_bNodesWithProperty) &&
-		!(m_bNodesWithProperty && m_bMatchValue && !IsValueStringValid()))
+	if (m_bObjectsWithName || m_bNodesOfClass)
 	{
 		bEnable=true;		
 	}
@@ -156,12 +128,6 @@ void AdvancedSelectDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Radio(pDX, IDC_RADIO_SELECT, m_nSelect);
 	DDX_Check(pDX, IDC_CHECK_MATCH_WHOLE_WORD, m_bMatchWholeWord);
 	DDX_Check(pDX, IDC_SHOWRESULTS, m_bShowResults);
-	DDX_Check(pDX, IDC_NODESWITHPROPERTY, m_bNodesWithProperty);
-	DDX_Check(pDX, IDC_MATCH_VALUE, m_bMatchValue);
-	DDX_Text(pDX, IDC_PROPNAME, m_sPropName);
-	DDX_Control(pDX, IDC_PROPTYPECOMBO, m_comboPropType);
-	DDX_CBIndex(pDX, IDC_PROPTYPECOMBO, m_nPropType);
-	DDX_Text(pDX, IDC_PROPVALUE, m_sPropValue);
 	//}}AFX_DATA_MAP
 }
 
@@ -170,10 +136,6 @@ BEGIN_MESSAGE_MAP(AdvancedSelectDlg, CDialog)
 	//{{AFX_MSG_MAP(AdvancedSelectDlg)
 	ON_BN_CLICKED(IDC_NODESOFCLASS, OnNodesOfClass)
 	ON_BN_CLICKED(IDC_OBJECTSWITHNAME, OnObjectsWithName)
-	ON_BN_CLICKED(IDC_NODESWITHPROPERTY, OnObjectsWithName) // does the same thing
-	ON_BN_CLICKED(IDC_MATCH_VALUE, OnObjectsWithName) // does the same thing too
-	ON_EN_CHANGE(IDC_PROPVALUE, OnObjectsWithName) // does the same thing too
-	ON_CBN_SELCHANGE(IDC_PROPTYPECOMBO, OnChangePropType)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -201,27 +163,8 @@ BOOL AdvancedSelectDlg::OnInitDialog()
 		}
 	}
 
-	//in addition we need to add artificial classes for prefab refs since they
-	//don't really belong to any classes
-	pBox->AddString("PrefabRef");
-
-
-	pBox = (CComboBox*)GetDlgItem(IDC_PROPTYPECOMBO);
-	
-	pBox->AddString("Bool");
-	pBox->AddString("Color");
-	pBox->AddString("Flags");
-	pBox->AddString("Long Int");
-	pBox->AddString("Real");
-	pBox->AddString("Rotation");
-	pBox->AddString("String");
-	pBox->AddString("Vector");
-	
-
 	// Select the proper string in the combobox
 	m_comboClass.SelectString(-1, m_ClassName);
-
-	m_comboPropType.SetCurSel(m_nPropType);
 
 	// Update the enabled status
 	UpdateEnabledStatus();
@@ -269,314 +212,3 @@ void AdvancedSelectDlg::OnObjectsWithName()
 	UpdateEnabledStatus();		
 }
 
-// A new property type was selected, so we must update the helper text
-//
-void AdvancedSelectDlg::OnChangePropType() 
-{
-	UpdateData();
-
-	// Update the formatting text
-	GetDlgItem(IDC_PROPVALUE)->SetWindowText(GetFormattingText());
-
-	// Clear the Value string
-	//m_sPropValue="";
-	//UpdateData(FALSE);
-
-	// Update the enabled status of the controls
-	UpdateEnabledStatus();
-}
-
-/************************************************************************/
-// Returns the formatting text for the selected property type
-CString	AdvancedSelectDlg::GetFormattingText()
-{
-	// Determine the formatting text
-	switch (GetPropertyTypeFromIndex(m_nPropType))
-	{
-	case PT_STRING:
-		{
-			return "";
-		}
-	case PT_REAL:
-		{
-			return "";
-		}
-	case PT_LONGINT:
-		{
-			return "";
-		}
-	case PT_FLAGS:
-		{
-			return "";
-		}
-	case PT_VECTOR:
-		{
-			return "x y z";
-		}
-	case PT_ROTATION:
-		{
-			return "yaw pitch roll";
-		}
-	case PT_COLOR:
-		{
-			return "red green blue";
-		}
-	case PT_BOOL:
-		{
-			return "true/false";
-		}
-	default:
-		{
-			ASSERT(FALSE);
-			return "";
-		}
-	}
-}
-
-
-/************************************************************************/
-// Returns the property type for a specific index in the combo box
-int	AdvancedSelectDlg::GetPropertyTypeFromIndex(int nIndex)
-{
-	switch (nIndex)
-	{
-	case 0:
-		{
-			return PT_BOOL;
-		}
-	case 1:
-		{
-			return PT_COLOR;
-		}
-	case 2:
-		{
-			return PT_FLAGS;
-		}
-	case 3:
-		{
-			return PT_LONGINT;
-		}
-	case 4:
-		{
-			return PT_REAL;
-		}
-	case 5:
-		{
-			return PT_ROTATION;
-		}
-	case 6:
-		{
-			return PT_STRING;
-		}
-	case 7:
-		{
-			return PT_VECTOR;
-		}
-	default:
-		{
-			ASSERT(FALSE);
-			return -1;
-		}
-	}
-}
-
-
-/************************************************************************/
-// This returns TRUE if the value text is valid with the
-// selected property type.
-bool AdvancedSelectDlg::IsValueStringValid()
-{
-	// Determine the formatting text
-	switch (GetPropertyTypeFromIndex(m_nPropType))
-	{
-	case PT_STRING:
-		{
-			// Any string is always valid
-			return TRUE;
-			break;
-		}		
-	case PT_REAL:
-	case PT_LONGINT:
-	case PT_FLAGS:
-		{			
-			// Check to see if we can get a number from the string
-			float fNumber=0;
-			if (sscanf(m_sPropValue, "%f", &fNumber) > 0)
-			{
-				return TRUE;
-			}
-			else
-			{
-				return FALSE;
-			}
-			break;
-		}
-	case PT_VECTOR:
-	case PT_ROTATION:
-	case PT_COLOR:
-		{
-			// Make sure that the vector/rotation/color is in the correct format
-			float fX, fY, fZ;
-			if (sscanf(m_sPropValue, "%f %f %f", &fX, &fY, &fZ) >= 3)
-			{
-				return TRUE;
-			}
-			else
-			{
-				return FALSE;
-			}
-			break;
-		}
-	case PT_BOOL:
-		{
-			// Convert the string to uppercase for comparison reasons
-			CString sUpperValue=m_sPropValue;
-			sUpperValue.MakeUpper();
-
-			if (sUpperValue == "TRUE" || sUpperValue == "FALSE")
-			{
-				return TRUE;
-			}
-			else
-			{
-				return FALSE;
-			}
-			break;
-		}
-	default:
-		{
-			ASSERT(FALSE);
-			return FALSE;
-		}
-	}
-}
-
-
-
-/************************************************************************/
-// This allocates a property object and fills it in with the
-// data from the dialog box.  The function returns NULL if
-// a valid property cannot be made.
-CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
-{
-	// Check if we're not specifying value
-	if (!m_bMatchValue)
-	{
-		return new CBaseProp(m_sPropName);
-	}
-
-	// Make sure that the value string is valid
-	if (!IsValueStringValid())
-	{
-		return NULL;
-	}
-
-	// Build the property 
-	CBaseProp *pProperty=NULL;
-
-	switch (GetPropertyTypeFromIndex(m_nPropType))
-	{
-	case PT_STRING:
-		{
-			// Allocate the property
-			pProperty=new CStringProp(m_sPropName);
-
-			// Set the property data
-			((CStringProp *)pProperty)->SetString(m_sPropValue);
-			break;
-		}
-	case PT_REAL:
-		{
-			// Allocate the property
-			pProperty=new CRealProp(m_sPropName);
-
-			// Set the property data						
-			((CRealProp *)pProperty)->SetValue(atof(m_sPropValue));
-			break;
-		}
-	case PT_LONGINT:
-		{
-			// Allocate the property			
-			pProperty=new CRealProp(m_sPropName);
-
-			// Set the property data						
-			((CRealProp *)pProperty)->SetValue(atof(m_sPropValue));
-
-			// Set the property type
-			pProperty->m_Type=PT_LONGINT;
-			break;
-		}
-	case PT_FLAGS:
-		{
-			// Allocate the property			
-			pProperty=new CRealProp(m_sPropName);
-
-			// Set the property data						
-			((CRealProp *)pProperty)->SetValue(atof(m_sPropValue));
-
-			// Set the property type
-			pProperty->m_Type=PT_FLAGS;
-			break;
-		}
-	case PT_VECTOR:
-		{
-			// Allocate the property
-			pProperty=new CVectorProp(m_sPropName);
-
-			// Set the property data
-			CVector v;
-			sscanf(m_sPropValue, "%f %f %f", &v.x, &v.y, &v.z);
-			((CVectorProp *)pProperty)->SetVector(v);
-			break;
-		}
-	case PT_ROTATION:
-		{
-			// Allocate the property
-			pProperty=new CRotationProp(m_sPropName);
-
-			// Set the property data
-			LTVector rotation;
-			sscanf(m_sPropValue, "%f %f %f", &rotation.y, &rotation.x, &rotation.z);
-
-			// Convert from degrees to radians...
-			VEC_MULSCALAR(rotation, rotation, MATH_CIRCLE / 360.0f);
-
-			((CRotationProp *)pProperty)->SetEulerAngles(rotation);
-			break;
-		}
-	case PT_COLOR:
-		{
-			// Allocate the property
-			pProperty=new CColorProp(m_sPropName);
-
-			// Set the property data
-			CVector vColor;
-			sscanf(m_sPropValue, "%f %f %f", &vColor.x, &vColor.y, &vColor.z);
-			((CVectorProp *)pProperty)->SetVector(vColor);
-			break;
-		}
-	case PT_BOOL:
-		{
-			// Allocate the property
-			pProperty=new CBoolProp(m_sPropName);
-
-			// Set the property data
-			CString sUpperValue=m_sPropValue;
-			sUpperValue.MakeUpper();
-			if (sUpperValue == "TRUE")
-			{
-				((CBoolProp *)pProperty)->SetValue(TRUE);
-			}
-			else
-			{
-				((CBoolProp *)pProperty)->SetValue(FALSE);
-			}			
-			break;
-		}
-	default:
-		{
-			ASSERT(FALSE);			
-		}
-	}
-	return pProperty;
-}

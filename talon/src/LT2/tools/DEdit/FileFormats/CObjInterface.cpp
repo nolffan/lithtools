@@ -7,7 +7,6 @@
 #include "regiondoc.h"
 #include "regionview.h"
 #include "regionframe.h"
-#include "usefuldc.h"
 #include "editpoly.h"
 #include "stringdlg.h"
 #include "edithelpers.h"
@@ -120,7 +119,7 @@ void CObjInterface::ImportObj(FILE* file, int flag, int from)
  		// read in all the texture coords	token(vt)
 		ImportObjTexCoords( file );
 		// read in all the normals			token(vn)
-//		ImportObjNormals( file );
+		ImportObjNormals( file );
 		// read in all the objects			token(g,f)
 		ImportObjObjects( file );
 	}
@@ -210,8 +209,8 @@ void CObjInterface::ImportObjTexCoords( FILE* file )
 							v[i++] = atof(token);
 							token = strtok( NULL, seps ); // Get next token	
 						}
-						LTVector vert(v[0],v[1],v[2]); 
-						m_texCoordList.Append(vert);
+						// talon: 2001 reads the coordinates and keeps none
+						// of them (0x412916), as ImportObjNormals does.
 					}
 				}
 			}

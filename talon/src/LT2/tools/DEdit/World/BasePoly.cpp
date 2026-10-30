@@ -62,6 +62,48 @@ CBasePoly::CBasePoly( CEditBrush *pBrush, WORD i0, WORD i1, WORD i2, BOOL bUpdat
 }
 
 
+// talon: DEdit's LTA loader (0x40f830), first after the constructors in
+// 2001; DEdit 2001 has no LTA writer here (none of Build 69's
+// SaveBasePolyLTA strings is in the image).
+BOOL CBasePoly::LoadBasePolyLTA( CLTANode* pNode )
+{
+	// CLTANode* pIndicesNode = pNode->getElem(0); // shallow_find_list(pNode, "indices");
+	CLTANode* pIndex = pNode->GetElement(1); //PairCdrNode(pIndicesNode);
+	uint32 listSize = pIndex->GetNumElements();
+
+	assert(listSize > 0);
+	m_Indices.SetSize( listSize - 1 );
+	
+	for( uint32 i = 1; i < listSize; i++ )
+	{
+		Index(i-1) = GetUint32(pIndex->GetElement(i));
+		if( Index(i-1) >= m_pBrush->m_Points )
+		{
+			Index(i-1) = 0;
+			return FALSE;
+		}
+	}	
+	
+
+	CLTANode* pNormalNode = pNode->GetElement(2); //shallow_find_list(pNode, "normal");
+	if( pNormalNode )
+	{
+		Normal().x = GetFloat(pNormalNode->GetElement(1));
+		Normal().y = GetFloat(pNormalNode->GetElement(2));
+		Normal().z = GetFloat(pNormalNode->GetElement(3));
+	}
+	
+	CLTANode* pDistNode = pNode->GetElement(3); //shallow_find_list(pNode, "dist");
+	if( pDistNode )
+	{
+		Dist() = GetFloat(PairCdrNode(pDistNode));
+	}
+	
+	return TRUE;
+}
+
+
+
 // talon: the polygon in a binary .ed file (Build 69 has these as the .tbw
 // ones): its index count, its indices as WORDs, its plane. 0x4012c0 reads
 // each index straight into the array and rejects one past the brush's
@@ -125,8 +167,8 @@ BOOL CBasePoly::IsValid()
 
 void CBasePoly::DecrementPoints( uint32 index )
 {
-	for( uint32 i=0; i < m_Indices; i++ )
-		if( m_Indices[i] >= index )
+	for( WORD i=0; i < NumVerts(); i++ )
+		if( m_Indices[i] >= (WORD)index )
 			--m_Indices[i];
 }
 
@@ -143,7 +185,7 @@ BOOL CBasePoly::PointInPoly( const LTVector &point )
 {
 	CReal		area;
 
-	for(uint32 i=0; i < NumVerts(); i++ )
+	for(WORD i=0; i < NumVerts(); i++ )
 	{
 		area = g_TriArea2( Normal(), Pt(i), NextPt(i), point );
 		if( area > 0 )
@@ -156,7 +198,7 @@ BOOL CBasePoly::PointInPoly( const LTVector &point )
 
 void CBasePoly::RemoveCollinearVertices()
 {
-	int32			i;
+	int16			i;
 	CVector			v1, v2;
 
 	for( i=0; i < (int32)m_Indices; i++ )
@@ -218,30 +260,63 @@ BOOL CBasePoly::IsConvex()
 void CBasePoly::GetCenterPoint( CVector &centerPt )
 {
 	centerPt.Init( 0.0f, 0.0f, 0.0f );
-	for(uint32 i=0; i < NumVerts(); i++ )
+	for(WORD i=0; i < NumVerts(); i++ )
 		centerPt += Pt(i);
 
 	centerPt /= (CReal)NumVerts();
 }
 
 
-void CBasePoly::Flip()
-{
-	for(uint32 i=0; i < m_Indices/2; i++ )
-	{
-		uint32 temp = m_Indices[i];
-		m_Indices[i] = m_Indices[m_Indices-i-1];
-		m_Indices[m_Indices-i-1] = temp;
-	}
-
-	Normal() = -Normal();
-	Dist() = -Dist();
-}
-
-
 void CBasePoly::UpdatePlane()
 {
 	g_GenerateNormal( this );
+}
+
+
+// talon: 2001's (0x40fcda): Build 69's CEditPoly::IntersectRay up to the
+// intersection point, then PointInPoly on it (CEditPoly::IntersectRay,
+// 0x4253e3, runs it on each of its triangles).
+BOOL CBasePoly::IntersectRay( CEditRay &ray, CReal &t, BOOL bBackface )
+{
+	CReal dot1, dot2, div;
+	LTVector testPt;
+
+	// Trivial reject.
+	if( (Normal().Dot(ray.m_Pos) - Dist()) >= 0.0f )
+	{
+		// It's pointing away from (or is perpendicular to) the polygon.
+		if( Normal().Dot(ray.m_Dir) >= -0.001f )
+			return FALSE;
+	}
+	else
+	{
+		// Backfacing.  (talon: 2001 rejects it when bBackface is set,
+		// 0x40fdd9; Build 69 when it isn't.)
+		if( bBackface )
+		{
+			return FALSE;
+		}
+		else
+		{
+			// It's pointing away from (or is perpendicular to) the polygon.
+			if( Normal().Dot(ray.m_Dir) <= 0.001f )
+				return FALSE;
+		}
+	}
+
+	dot1 = Normal().Dot( ray.m_Pos ) - Dist();
+	dot2 = Normal().Dot( ray.m_Pos + ray.m_Dir ) - Dist();
+
+	div = dot2 - dot1;
+	if(fabs(div) < 0.00001f)
+		t = 0.0f;
+	else
+		t = -dot1 / div;
+	
+	testPt = ray.m_Pos + (ray.m_Dir * t);
+	
+	// See if the intersection point lies inside the poly.
+	return PointInPoly( testPt );
 }
 
 
@@ -415,76 +490,3 @@ BOOL CBasePoly::ValidTriangle( WORD a, WORD b, WORD c )
 	else
 		return FALSE;
 }
-
-
-// talon: Build 69's, which the processors' copy of this file has no
-// use for: DEdit's.
-
-
-
-/*
-( basepoly  
-	( indices ( 6 0 3 7 ) )
-	( normal ( 1.000000 0.000000 0.000000 ) )
-	( dist 292.000000 )
-)
-*/
-
-bool CBasePoly::LoadBasePolyLTA( CLTANode* pNode )
-{
-	// CLTANode* pIndicesNode = pNode->getElem(0); // shallow_find_list(pNode, "indices");
-	CLTANode* pIndex = pNode->GetElement(1); //PairCdrNode(pIndicesNode);
-	uint32 listSize = pIndex->GetNumElements();
-
-	assert(listSize > 0);
-	m_Indices.SetSize( listSize - 1 );
-	
-	for( uint32 i = 1; i < listSize; i++ )
-	{
-		Index(i-1) = GetUint32(pIndex->GetElement(i));
-		if( Index(i-1) >= m_pBrush->m_Points )
-		{
-			Index(i-1) = 0;
-			return false;
-		}
-	}	
-	
-
-	CLTANode* pNormalNode = pNode->GetElement(2); //shallow_find_list(pNode, "normal");
-	if( pNormalNode )
-	{
-		Normal().x = GetFloat(pNormalNode->GetElement(1));
-		Normal().y = GetFloat(pNormalNode->GetElement(2));
-		Normal().z = GetFloat(pNormalNode->GetElement(3));
-	}
-	
-	CLTANode* pDistNode = pNode->GetElement(3); //shallow_find_list(pNode, "dist");
-	if( pDistNode )
-	{
-		Dist() = GetFloat(PairCdrNode(pDistNode));
-	}
-	
-	return true;
-}
-
-
-
-void CBasePoly::SaveBasePolyLTA( CLTAFile* pFile, uint32 level )
-{
-	uint32		i;
-
-	//write out the list of face indices
-	PrependTabs(pFile, level);
-	pFile->WriteStr("( f ");
-	for( i=0; i < m_Indices; i++ ){
-		pFile->WriteStrF("%i ", m_Indices[i] );
-	}
-	pFile->WriteStr(")");
-	
-	//write out the surface normal
-	PrependTabs(pFile, level);
-	pFile->WriteStrF("( n %f %f %f )", Normal().x, Normal().y, Normal().z );
-	PrependTabs(pFile, level);
-	pFile->WriteStrF("( dist %f )", Dist() );
-}
-

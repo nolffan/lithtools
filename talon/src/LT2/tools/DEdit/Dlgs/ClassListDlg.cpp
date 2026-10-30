@@ -74,10 +74,7 @@ void ClassListDlg::Update()
 	m_ClassList.DeleteAllItems();
 	for(i=0; i < pProject->m_nClassDefs; i++)
 	{
-		if(!(pProject->m_ClassDefs[i].m_ClassFlags & CF_HIDDEN))
-		{
-			nIndex = m_ClassList.InsertItem(0, pProject->m_ClassDefs[i].m_ClassName, 0);
-		}
+		nIndex = m_ClassList.InsertItem(0, pProject->m_ClassDefs[i].m_ClassName, 0);
 	}
 
 	for(i=0; i < pProject->m_TemplateClasses; i++)

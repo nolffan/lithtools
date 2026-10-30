@@ -153,7 +153,7 @@ int CBaseRezDlg::AddFileToList(CString relativeFilename)
 {
 	DFileIdent *pFileIdent;
 	int nIndex;
-	char fileTitle[MAX_PATH];
+	char fileTitle[256];
 
 
 	CHelpers::ExtractNames(relativeFilename, NULL, NULL, fileTitle, NULL);
@@ -181,7 +181,7 @@ int CBaseRezDlg::FindFileInList( DFileIdent *pFileIdent )
 {
 	DFileIdent *pIterator;
 	int nIndex, nNext;
-	char fileTitle[MAX_PATH];
+	char fileTitle[256];
 
 	if(!pFileIdent)
 	{
@@ -223,56 +223,13 @@ BOOL CBaseRezDlg::SelectFileInList( DFileIdent *pFileIdent, BOOL bSelect )
 	return FALSE;
 }
 
-#define MAX_EXTENSIONS			16
-#define EXTENSION_SEPARATOR		';'
-
 void CBaseRezDlg::PopulateList()
 {
 	CFileIterator iterator;
 	CString searchSpec, relativeFilename;
-	HANDLE hFile;
 	char fileName[MAX_PATH];
 	char ext[32];
 
-	ListView_SetExtendedListViewStyle(m_pList->m_hWnd, LVS_EX_FULLROWSELECT);
-
-	//build up the list of possible extensions
-	CString sExtensions[MAX_EXTENSIONS];
-	uint32 nNumExtensions = 0;
-
-	//preserve the original
-	CString sOrigExt = m_Extension;
-
-	//split the string apart based upon the separator
-	while(!sOrigExt.IsEmpty())
-	{
-		int32 nSeparatorPos = sOrigExt.Find(EXTENSION_SEPARATOR);
-
-		//sanity check, so if we ever go past the limit, we will know to change the
-		//code to reflect it
-		if(nNumExtensions >= MAX_EXTENSIONS)
-		{
-			//too many extensions, increase MAX_EXTENSIONS
-			ASSERT(false);
-		}
-
-		if(nSeparatorPos >= 0)
-		{
-			//we hav a separator, break that chunk off
-			sExtensions[nNumExtensions] = sOrigExt.Left(nSeparatorPos);
-			nNumExtensions++;			
-			sOrigExt = sOrigExt.Mid(nSeparatorPos + 1);
-		}
-		else
-		{
-			//no more separators, the rest of the string is the extension
-			sExtensions[nNumExtensions] = sOrigExt;
-			nNumExtensions++;
-			sOrigExt = "";
-		}
-	}
-
-	
 	if(!m_pTree || !m_pList)
 		return;
 
@@ -285,22 +242,13 @@ void CBaseRezDlg::PopulateList()
 		if(!(iterator.m_Data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY))
 		{
 			CHelpers::ExtractFileNameAndExtension(iterator.GetFilename(), fileName, ext);
-
-			//now run through all the possible file extensions
-			for(uint32 nCurrExt = 0; nCurrExt < nNumExtensions; nCurrExt++)
+			if(stricmp(ext, m_Extension) == 0)
 			{
-				if(stricmp(ext, (LPCTSTR)sExtensions[nCurrExt]) == 0)
-				{
-					//found a matching extension, add it to the tree
-					relativeFilename = dfm_BuildName(m_csCurrentDir, iterator.GetFilename());
-					AddFileToList(relativeFilename);
-					break;
-				}
+				relativeFilename = dfm_BuildName(m_csCurrentDir, iterator.GetFilename());
+				AddFileToList(relativeFilename);
 			}
 		}
 	}
-
-	RepositionControls(); // Make sure columns in the list view align properly
 
 	EndWaitCursor();
 }
@@ -402,18 +350,6 @@ void CBaseRezDlg::RepositionControls()
 		if (pList)
 		{
 			pList->MoveWindow( 0, rect.Height()/2, rect.Width(), rect.Height() / 2);
-		}	
-		
-		// Adjust columns in list control
-		if (m_pList && m_pList->m_hWnd)
-		{
-			m_pList->GetClientRect( &rect );
-			CHeaderCtrl* pHeader = m_pList->GetHeaderCtrl();
-			int32 tabCount = pHeader->GetItemCount();
-			ASSERT(tabCount >= 1);
-
-			for (uint32 i=0; i < tabCount; i++)
-				m_pList->SetColumnWidth(i, rect.Width()/tabCount);
 		}
 	}		
 }

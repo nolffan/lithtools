@@ -45,7 +45,6 @@ CColorSelectDlg::CColorSelectDlg(CWnd* pParent /*=NULL*/)
 	m_pDib			= NULL;
 	m_bLButtonDown	= FALSE;
 	m_SelBoxRadius	= 10;
-	m_bInitialized	= FALSE;
 }
 
 
@@ -405,8 +404,6 @@ BOOL CColorSelectDlg::OnInitDialog()
 	m_CurSelPt.y = (CReal)m_DrawRect.Height() / 2.0f;
 	m_CurColor = GetColorFromPoint( m_CurSelPt );
 
-	m_bInitialized = TRUE;
-
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
 }
@@ -455,16 +452,12 @@ void CColorSelectDlg::OnPaint()
 
 void CColorSelectDlg::OnSize(UINT nType, int cx, int cy) 
 {
-	//only let windows resize it if it is a valid size, otherwise don't let it
-	if((cx <= 10) || (cy <= 10))
-		return;
-	
 	CReal		scaleX, scaleY;
 	int			width;
 
 	CDialog::OnSize(nType, cx, cy);
 	
-	if(m_bInitialized)
+	if(m_pDib)
 	{
 		scaleX = (CReal)cx / m_DrawRect.Width();
 		scaleY = (CReal)cy / m_DrawRect.Height();
@@ -477,11 +470,7 @@ void CColorSelectDlg::OnSize(UINT nType, int cx, int cy)
 
 		width = m_DrawRect.Width() + (4 - (m_DrawRect.Width() % 4));
 
-		if(m_pDib)
-		{
-			m_DibMgr.RemoveDib( m_pDib );
-		}
-
+		m_DibMgr.RemoveDib( m_pDib );
 		m_pDib = m_DibMgr.AddDib( width, m_DrawRect.Height(), 16 );
 		InvalidateRect( NULL, FALSE );
 	}

@@ -45,9 +45,6 @@ public:
 
 // Members
 protected:
-	// Status Bar
-	CStatusBar m_wndStatusBar;
-
 	// Palette members
 	CFilePalette m_cPalette;
 	CString m_csPaletteFileName;
@@ -69,8 +66,6 @@ public:
 
 	CFrameList	m_TextureList;
 
-	int32		m_nTotalTextureSize; // Size of all textures together
-
 	// Palette access
 	void	AddTextureToPalette(LPCTSTR pTexture);
 	LPCTSTR GetPaletteName() const { return m_cPalette.GetName(); };
@@ -89,12 +84,11 @@ public:
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CAllTextureDlg)
 	public:
-	virtual BOOL DestroyWindow(bool bAcceptCancel=true);
+	virtual BOOL DestroyWindow();
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
 	//}}AFX_VIRTUAL
 
-	void	NotifySelChange( CFrameList *pList, int curSel );
 	void	NotifyDblClk( CFrameList *pList, int curSel );
 	void	NotifyReCreate( CFrameList *pList );
 
@@ -102,9 +96,6 @@ public:
 protected:
 
 	CDlgResizer m_cResizer;
-
-	//adds all the textures in the specified world, will recurse into prefabs if specified
-	void	AddWorldTextures(const CWorldNode* pRegion, bool bAddPrefabs, bool& bChanged);
 
 	void	DeleteSelectedTexture();
 
@@ -119,10 +110,8 @@ protected:
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnPopupTexturePaletteNew();
 	afx_msg void OnPopupTexturePaletteDelete();
-	afx_msg void OnPopupTexturePaletteRemove();
 	afx_msg void OnPopupTexturePaletteImport();
 	afx_msg void OnPopupTexturePaletteSort();
-	afx_msg void OnPopupTexturePaletteRenameTextures();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 

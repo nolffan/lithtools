@@ -49,11 +49,10 @@ public:
 
 	void	AddClassCriteria(CString sClassType);
 	void	AddNameCriteria(CString sName, BOOL bPartialString=FALSE);	
-	void	AddPropertyCriteria(CBaseProp* pProp, bool matchValue);
 	
 protected:
 	// Recurses and selects nodes based on the criteria.  Returns the number it found
-	int		RecurseAndSelect(CWorldNode *pParentNode, bool bSelect, bool bIncludeChildren);
+	int		RecurseAndSelect(CWorldNode *pParentNode, BOOL bSelect, BOOL bIncludeChildren);
 
 	// Returns true if the node passes the class criteria.  True is also
 	// returned if there isn't any class criteria.
@@ -63,10 +62,6 @@ protected:
 	// returned if there isn't any naming criteria.
 	BOOL	IsPassNameCriteria(CWorldNode *pNode);
 
-	// Returns true if the node passes the property criteria.  True is also
-	// returned if there isn't any naming criteria.
-	BOOL	IsPassPropertyCriteria(CWorldNode *pNode);
-	
 protected:
 	///////////////////////////////////////////
 	// Advanced select criteria options
@@ -97,27 +92,6 @@ protected:
 		BOOL		m_bPartialString;
 	};
 
-	// The name criteria class
-	class CPropertyCriteria
-	{
-	public:
-		void		SetProp(CBaseProp* prop)		{ m_Prop = prop; }
-		CBaseProp*	GetProp()						{ return m_Prop; }
-
-		void		SetMatchValue(bool matchValue)  { m_bMatchValue = matchValue; }
-		const bool	GetMatchValue()					{ return m_bMatchValue; }
-
-
-		 CPropertyCriteria() { m_Prop = NULL;  m_bMatchValue = false; }
-
-		 // manual deletion is better for our purposes
-		 void Cleanup() { if (m_Prop != NULL)  delete m_Prop; }
-
-	protected:
-		CBaseProp *m_Prop;
-		bool m_bMatchValue;
-	};
-
 protected:
 	// The document to operate on
 	CRegionDoc								*m_pRegionDoc;
@@ -125,7 +99,6 @@ protected:
 	// The current class criteria
 	CArray<CClassCriteria,CClassCriteria>		m_classCriteria;
 	CArray<CNameCriteria,CNameCriteria>			m_nameCriteria;
-	CArray<CPropertyCriteria,CPropertyCriteria>	m_propertyCriteria;
 };
 
 #endif // !defined(AFX_ADVANCEDSELECT_H__0F99AA03_F1C5_11D2_BE13_0060971BDC6D__INCLUDED_)

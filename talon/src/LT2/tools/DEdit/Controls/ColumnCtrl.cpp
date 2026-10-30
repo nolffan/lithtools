@@ -349,3 +349,53 @@ void CColumnCtrl::OnColumnclick(NMHDR* pNMHDR, LRESULT* pResult)
 	Sort ( nIndex, dwSortArray.GetAt(nIndex) /* type of sort */ );
 	*pResult = 0;
 }
+
+
+// talon: stand-in: 2001 code of a module the image has between ColumnCtrl and
+// concommand (0x414546..0x4145a8), whose name and class are not known: a
+// dialog (CDialog's message map, 0x4d6d80, entries 0x4d6d38) that ends
+// itself on a timer it sets at its first paint. Nothing in the image
+// references its constructor, vtable or GetMessageMap, so only the two
+// handlers its message map names survive the link. The class name and its
+// two members (0x5c, 0x60) are ours; it is here, at its address, until its
+// module is known.
+class CTimedCloseDlg : public CDialog
+{
+protected:
+	BOOL	m_bFirstPaint;		// 0x5c
+	UINT	m_nTimerID;			// 0x60
+
+	afx_msg void OnPaint();
+	afx_msg void OnTimer(UINT nIDEvent);
+	DECLARE_MESSAGE_MAP()
+};
+
+BEGIN_MESSAGE_MAP(CTimedCloseDlg, CDialog)
+	ON_WM_PAINT()
+	ON_WM_TIMER()
+END_MESSAGE_MAP()
+
+// 0x414546
+void CTimedCloseDlg::OnPaint() 
+{
+	CPaintDC dc(this);
+
+	if (m_bFirstPaint)
+	{
+		m_bFirstPaint = FALSE;
+
+		m_nTimerID = 0;
+		while (!SetTimer(m_nTimerID, 0, NULL))
+		{
+		}
+	}
+}
+
+// 0x414585
+void CTimedCloseDlg::OnTimer(UINT nIDEvent) 
+{
+	KillTimer(m_nTimerID);
+	EndDialog(0);
+
+	CDialog::OnTimer(nIDEvent);
+}

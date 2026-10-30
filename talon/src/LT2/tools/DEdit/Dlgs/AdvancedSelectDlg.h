@@ -35,21 +35,9 @@ public:
 	int		m_nSelect;
 	BOOL	m_bMatchWholeWord;
 	BOOL	m_bShowResults;
-	CComboBox	m_comboPropType;
-	CString m_sPropName;
-	int		m_nPropType;
-	CString m_sPropValue;
-	BOOL	m_bNodesWithProperty;
-	BOOL	m_bMatchValue;
 	//}}AFX_DATA
 
 	void	AddItemsToBox( CMoArray<CProjectClass*> &classes );
-
-	void	OnChangePropType();
-	CString	GetFormattingText();
-	int		GetPropertyTypeFromIndex(int nIndex);
-	bool	IsValueStringValid();
-	CBaseProp*	AllocPropertyFromData();
 
 	// Loads/Saves the settings from the registry
 	void	LoadRegistrySettings();

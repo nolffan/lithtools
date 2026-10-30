@@ -59,7 +59,9 @@
 #ifdef DIRECTEDITOR_BUILD
 			// talon: Build 69's LTA loading and saving, for DEdit (the 2001
 			// one has an LTA world: progress/DEdit-map.md).
-			bool				LoadBasePolyLTA( CLTANode* pNode );
+			// talon: BOOL in 2001: 0x40f8f8 returns `xor eax; inc eax`, its
+			// callers test %eax (0x424e93)
+			BOOL				LoadBasePolyLTA( CLTANode* pNode );
 			void				SaveBasePolyLTA( CLTAFile* pFile, uint32 level );
 #endif
 
@@ -87,6 +89,12 @@
 			void				UpdatePlane();
 
 			BOOL				GetTriangles( CMoArray<CBasePoly*> &polies );
+
+#ifdef DIRECTEDITOR_BUILD
+			// talon: DEdit's (2001, 0x40fcda): Build 69's CEditPoly::IntersectRay
+			// on a CBasePoly; CEditPoly's runs it over its triangles (0x4253e3).
+			BOOL				IntersectRay( CEditRay &ray, CReal &t, BOOL bBackface );
+#endif
 
 
 		// Useful little helper geometry functions.

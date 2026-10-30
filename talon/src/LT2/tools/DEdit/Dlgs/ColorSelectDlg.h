@@ -64,7 +64,6 @@
 		DWORD				m_SelBoxRadius;
 
 		//determines if this dialog has been initialized yet
-		BOOL				m_bInitialized;
 
 
 		COLORREF			m_CurColor;

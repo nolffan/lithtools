@@ -54,8 +54,7 @@ BOOL CAdvancedSelect::Init(CRegionDoc *pRegionDoc)
 void CAdvancedSelect::Select(BOOL bIncludeChildren, BOOL bShowResults)
 {
 	// Return if there isn't any selection criteria
-	if (m_classCriteria.GetSize() == 0 && m_nameCriteria.GetSize()		== 0
-									   && m_propertyCriteria.GetSize()	== 0)
+	if (m_classCriteria.GetSize() == 0 && m_nameCriteria.GetSize() == 0)
 	{
 		return;
 	}
@@ -71,7 +70,7 @@ void CAdvancedSelect::Select(BOOL bIncludeChildren, BOOL bShowResults)
 	{
 		char sResult[255];
 		sprintf(sResult, "Selected %d objects", nNumFound);
-		MessageBox(NULL, sResult, "Done", MB_OK | MB_TASKMODAL);
+		MessageBox(NULL, sResult, "Done", MB_OK);
 	}
 }
 
@@ -80,8 +79,7 @@ void CAdvancedSelect::Select(BOOL bIncludeChildren, BOOL bShowResults)
 void CAdvancedSelect::Unselect(BOOL bIncludeChildren, BOOL bShowResults)
 {
 	// Return if there isn't any selection criteria
-	if (m_classCriteria.GetSize() == 0 && m_nameCriteria.GetSize()		== 0
-									   && m_propertyCriteria.GetSize()	== 0)
+	if (m_classCriteria.GetSize() == 0 && m_nameCriteria.GetSize() == 0)
 	{
 		return;
 	}
@@ -94,19 +92,18 @@ void CAdvancedSelect::Unselect(BOOL bIncludeChildren, BOOL bShowResults)
 	{
 		char sResult[255];
 		sprintf(sResult, "Un-Selected %d objects", nNumFound);
-		MessageBox(NULL, sResult, "Done", MB_OK | MB_TASKMODAL);
+		MessageBox(NULL, sResult, "Done", MB_OK);
 	}
 }
 
 /************************************************************************/
 // Recurses and selects nodes based on the criteria.
-int CAdvancedSelect::RecurseAndSelect(CWorldNode *pParentNode, bool bSelect, bool bIncludeChildren)
+int CAdvancedSelect::RecurseAndSelect(CWorldNode *pParentNode, BOOL bSelect, BOOL bIncludeChildren)
 {
 	int nResult = 0;
 
 	// Select the node if it meets the criteria
-	if (IsPassClassCriteria(pParentNode) && IsPassNameCriteria(pParentNode) &&
-		IsPassPropertyCriteria(pParentNode))
+	if (IsPassClassCriteria(pParentNode) && IsPassNameCriteria(pParentNode))
 	{
 		++nResult;
 
@@ -169,15 +166,6 @@ BOOL CAdvancedSelect::IsPassClassCriteria(CWorldNode *pNode)
 			if (stricmp(m_classCriteria[i].GetClass(), pNode->GetClassName()) == 0)
 			{
 				return TRUE;				
-			}
-
-			//This is not the best approach, but since the prefab references 
-			//don't actually have corresponding classes, we need to look for the automatically
-			//added in class PrefabRef for selection
-			if(	(pNode->GetType() == Node_PrefabRef) && 
-				(stricmp(m_classCriteria[i].GetClass(), "PrefabRef") == 0))
-			{
-				return TRUE;
 			}
 		}
 	}
@@ -260,103 +248,6 @@ BOOL CAdvancedSelect::IsPassNameCriteria(CWorldNode *pNode)
 }
 
 /************************************************************************/
-// Returns true if the node passes the property criteria.  True is also
-// returned if there isn't any naming criteria.
-BOOL CAdvancedSelect::IsPassPropertyCriteria(CWorldNode *pNode)
-{
-	// Storage for the property description
-	CBaseProp* pProp;
-
-
-	if (pNode == NULL)  return false;
-
-	// Special case container nodes have no properties
-
-	if (pNode->m_Type == Node_Null)  return false;
-
-
-	// Determine if the node meets the name criteria
-	if (m_propertyCriteria.GetSize() > 0)
-	{		
-		int i, j;
-		for (i=0; i < m_propertyCriteria.GetSize(); i++)
-		{
-			pProp = m_propertyCriteria[i].GetProp();
-
-			if (pProp != NULL)
-			for (j=0; j < pNode->GetPropertyList()->GetSize(); j++) 
-			{
-				// check if the prop in the node is the same as the one in the criteria
-				//
-				// note: casting doesn't work right so we do a dumb switch - David C.
-
-				if (m_propertyCriteria[i].GetMatchValue())
-				{
-				switch (pProp->GetType()) 
-				{				
-				case PT_STRING:
-					{
-					if (((CStringProp*)pProp)->SameAs((CStringProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_REAL:
-					{
-					if (((CRealProp*)pProp)->SameAs((CRealProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_LONGINT:
-					{
-					if (((CRealProp*)pProp)->SameAs((CRealProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_FLAGS:
-					{
-					if (((CRealProp*)pProp)->SameAs((CRealProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_VECTOR:
-					{
-					if (((CVectorProp*)pProp)->SameAs((CVectorProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_ROTATION:
-					{
-					if (((CRotationProp*)pProp)->SameAs((CRotationProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_COLOR:
-					{
-					if (((CColorProp*)pProp)->SameAs((CColorProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				case PT_BOOL:
-					{
-					if (((CBoolProp*)pProp)->SameAs((CBoolProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
-					break;
-					}
-				default:
-					{
-					ASSERT(FALSE);			
-					}
-				}
-				}
-				else
-				{
-					if (_stricmp(pNode->GetPropertyList()->GetAt(j)->GetName(), pProp->GetName()) == 0)  return true;
-				}
-			}
-		}
-	}
-	else
-	{
-		return true;
-	}
-
-	// The name was not found
-	return false;
-}
-
-/************************************************************************/
 // Adds a class type selection criteria
 void CAdvancedSelect::AddClassCriteria(CString sClassType)
 {
@@ -382,31 +273,10 @@ void CAdvancedSelect::AddNameCriteria(CString sName, BOOL bPartialString)
 }
 
 /************************************************************************/
-// Adds a class name criteria
-void CAdvancedSelect::AddPropertyCriteria(CBaseProp* pProp, bool matchValue)
-{
-	// Setup the criteria data
-	CPropertyCriteria criteria;
-	criteria.SetProp(pProp);
-	criteria.SetMatchValue(matchValue);
-
-	// Add the criteria
-	m_propertyCriteria.Add(criteria);
-}
-
-/************************************************************************/
 // Clears the current selection criteria
 void CAdvancedSelect::ClearCriteria()
 {
 	m_classCriteria.RemoveAll();
 	m_nameCriteria.RemoveAll();
-
-	// Clean up dynamic data
-	for (int i=0; i < m_propertyCriteria.GetSize(); i++) 
-	{
-		m_propertyCriteria[i].Cleanup();
-	}
-
-	m_propertyCriteria.RemoveAll();
 }
 
