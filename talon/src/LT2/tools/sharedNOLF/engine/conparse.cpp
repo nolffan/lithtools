@@ -17,13 +17,11 @@ enum GNTResult
 };
 
 
-// talon: the 2001 tokenizer (0x40a2b0..), written from the shipped code:
-// a parenthesized or quoted token is read by its own routine, parentheses
-// nest, and an empty one is a single space.
+// talon: NOLF's tokenizer (0x40dd60) is the older one Build 69's engine
+// still has (nolf2src's runtime conparse.cpp): one loop with a paren count,
+// '(' and '"' opening a group and ')' or '"' closing it. AvP2's, with a
+// routine for each group, is later.
 static GNTResult cp_GetNextToken(char* &pCurPos, char* &pTokenPos);
-static void cp_AddChar(char* &pTokenPos, char *pToken, char theChar);
-static LTBOOL cp_ParseParens(char* &pCurPos, char* &pTokenPos, char *pToken);
-static LTBOOL cp_ParseQuotes(char* &pCurPos, char* &pTokenPos, char *pToken);
 
 
 
@@ -69,10 +67,10 @@ LTBOOL ConParse::ParseFind(char *pLookFor, LTBOOL bCaseSensitive, uint32 minToke
 }
 
 
-// 0x40a230. talon: the 2001 loop is a while(1) with the status scoped in it
-// and both ends a break to the one return 0 (one call site, not peeled).
+// 0x40dee0
 int cp_Parse(char *pCommand, char **pNewCommandPos, char *argBuffer, char **argPointers, int *nArgs)
 {
+	GNTResult status;
 	char *pCurArgBufferPos, *pToken;
 	char *pCurPos;
 
@@ -82,15 +80,15 @@ int cp_Parse(char *pCommand, char **pNewCommandPos, char *argBuffer, char **argP
 	pCurArgBufferPos = argBuffer;
 	*nArgs = 0;
 	
-	while(1)
+	for(;;)
 	{
 		pToken = pCurArgBufferPos;
-		GNTResult status = cp_GetNextToken(pCurPos, pCurArgBufferPos);
+		status = cp_GetNextToken(pCurPos, pCurArgBufferPos);
 
 		if(status == GNT_NoToken)
 		{
 			// All done..
-			break;
+			return 0;
 		}
 		else if(status == GNT_GotToken)
 		{
@@ -122,8 +120,10 @@ static GNTResult cp_GetNextToken(char* &pCurPos, char* &pTokenPos)
 {
 	char *pToken;
 	char curChar;
-	LTBOOL bEnd = LTFALSE;
+	LTBOOL parenCount, bEnd = LTFALSE;
 
+
+	parenCount = 0;
 
 	// Skip spaces.
 	while(pCurPos[0] == ' ')
@@ -155,7 +155,7 @@ static GNTResult cp_GetNextToken(char* &pCurPos, char* &pTokenPos)
 			}
 			else
 			{
-				cp_AddChar(pTokenPos, pToken, curChar);
+				goto ADD_TO_OUTPUT_STRING;
 			}
 		}
 		else if(cp_IsCmdSeparator(curChar))
@@ -177,33 +177,62 @@ static GNTResult cp_GetNextToken(char* &pCurPos, char* &pTokenPos)
 		}
 		else if(curChar == '(')
 		{
-			// A whole token in parentheses.
-			if(pTokenPos == pToken)
-			{
-				++pCurPos;
-				cp_ParseParens(pCurPos, pTokenPos, pToken);
-			}
+			parenCount++;
 
-			bEnd = LTTRUE;
+			if(parenCount == 1)
+			{
+				// If this was the first one, skip this character.
+			}
+			else
+			{
+				// Treat it like a normal character.
+				goto ADD_TO_OUTPUT_STRING;
+			}
+		}
+		else if(curChar == ')')
+		{
+			--parenCount;
+			if(parenCount == 0)
+			{
+				// Ignore this character and end the current token.
+				++pCurPos;
+				bEnd = LTTRUE;
+			}
+			else
+			{
+				// Treat it like a normal character.
+				goto ADD_TO_OUTPUT_STRING;
+			}
 		}
 		else if(curChar == QUOTE_CHAR)
 		{
-			// A whole token in quotes.
-			if(pTokenPos == pToken)
+			// Either starts a parenthesis or ends them all.
+			if(parenCount)
 			{
 				++pCurPos;
-				cp_ParseQuotes(pCurPos, pTokenPos, pToken);
+				bEnd = LTTRUE;
 			}
-
-			bEnd = LTTRUE;
+			else
+			{
+				parenCount = 1;
+			}
 		}
-		else if(curChar == ' ')
+		else if(curChar == ' ' && parenCount == 0)
 		{
 			bEnd = LTTRUE;
 		}
 		else
 		{
-			cp_AddChar(pTokenPos, pToken, curChar);
+			ADD_TO_OUTPUT_STRING:;
+
+			*pTokenPos = curChar;
+			if((pTokenPos - pToken) >= PARSE_MAXARGLEN)
+			{
+				*pTokenPos = 0; // Just truncate it.
+				--pTokenPos; // Decrement it so it doesn't overflow but it eats up the rest of the token.
+			}
+
+			++pTokenPos;
 		}
 
 		// Are we done?
@@ -223,86 +252,4 @@ static GNTResult cp_GetNextToken(char* &pCurPos, char* &pTokenPos)
 
 		++pCurPos;
 	}
-}
-
-
-static void cp_AddChar(char* &pTokenPos, char *pToken, char theChar)
-{
-	*pTokenPos = theChar;
-	if((pTokenPos - pToken) >= PARSE_MAXARGLEN)
-	{
-		*pTokenPos = 0; // Just truncate it.
-		--pTokenPos; // Decrement it so it doesn't overflow but it eats up the rest of the token.
-	}
-
-	++pTokenPos;
-}
-
-
-// Reads up to the matching ')'.
-static LTBOOL cp_ParseParens(char* &pCurPos, char* &pTokenPos, char *pToken)
-{
-	while(*pCurPos != 0 && *pCurPos != ')')
-	{
-		if(*pCurPos == SPECIAL_CHAR)
-		{
-			pCurPos++;
-			cp_AddChar(pTokenPos, pToken, SPECIAL_CHAR);
-			if(*pCurPos != 0)
-				cp_AddChar(pTokenPos, pToken, *pCurPos++);
-		}
-		else if(*pCurPos == '(')
-		{
-			pCurPos++;
-			cp_AddChar(pTokenPos, pToken, '(');
-			cp_ParseParens(pCurPos, pTokenPos, pToken);
-			cp_AddChar(pTokenPos, pToken, ')');
-		}
-		else
-		{
-			cp_AddChar(pTokenPos, pToken, *pCurPos++);
-		}
-	}
-
-	if(*pCurPos == ')')
-	{
-		pCurPos++;
-		if(pTokenPos == pToken)
-			cp_AddChar(pTokenPos, pToken, ' ');
-
-		return LTTRUE;
-	}
-
-	return LTFALSE;
-}
-
-
-// Reads up to the closing quote.
-static LTBOOL cp_ParseQuotes(char* &pCurPos, char* &pTokenPos, char *pToken)
-{
-	while(*pCurPos != 0 && *pCurPos != QUOTE_CHAR)
-	{
-		if(*pCurPos == SPECIAL_CHAR)
-		{
-			pCurPos++;
-			cp_AddChar(pTokenPos, pToken, SPECIAL_CHAR);
-			if(*pCurPos != 0)
-				cp_AddChar(pTokenPos, pToken, *pCurPos++);
-		}
-		else
-		{
-			cp_AddChar(pTokenPos, pToken, *pCurPos++);
-		}
-	}
-
-	if(*pCurPos == QUOTE_CHAR)
-	{
-		pCurPos++;
-		if(pTokenPos == pToken)
-			cp_AddChar(pTokenPos, pToken, ' ');
-
-		return LTTRUE;
-	}
-
-	return LTFALSE;
 }
