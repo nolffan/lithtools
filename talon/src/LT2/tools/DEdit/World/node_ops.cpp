@@ -148,31 +148,6 @@ void no_DestroyNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bDeleteChildre
 
 
 
-void no_DetachNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bAttachToRoot)
-{
-	if(pNode->GetParent())
-	{
-		pNode->GetParent()->m_Children.RemoveAt(pNode);
-	}
-
-	if(bAttachToRoot)
-	{
-		pNode->SetParent(&pRegion->m_RootNode);
-		
-		#ifdef DIRECTEDITOR_BUILD
-			GetNodeView()->SetNode(pNode);
-		#endif
-		
-		pRegion->m_RootNode.m_Children.Append(pNode);
-	}
-	else
-	{
-		pNode->SetParent(NULL);
-	}
-}
-
-
-
 void no_InitializeNewNode(CEditRegion *pRegion, CWorldNode *pNode, CWorldNode *pParent)
 {
 	if(pNode->GetType() == Node_Brush)

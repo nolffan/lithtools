@@ -255,17 +255,6 @@ BOOL CEditPoly::CopyEditPoly( CEditPoly *pPoly, BOOL bCopyIndices, CStringHolder
 
 #define NUM_TEXTURE_PLANES	(sizeof(g_TexturePlanes) / sizeof(CVector))
 
-inline void CEditPoly::CommonConstructor( )
-{
-#ifndef DIRECTEDITOR_BUILD
-	m_pUser1				= NULL;
-#endif
-
-	m_pBrush				= NULL;
-}
-
-
-
 BOOL CEditPoly::LoadEditPolyLTA( CLTANode* pNode, CStringHolder *pStringHolder )
 {
 	BOOL retval = FALSE;

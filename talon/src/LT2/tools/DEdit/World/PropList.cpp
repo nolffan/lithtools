@@ -783,8 +783,19 @@ void CPropListContainer::SaveLTA( CLTAFile* pFile, uint32 level )
 							pFile->WriteStr("localdims " );
 						if( pProp->m_PropFlags & PF_GROUPOWNER )
 							pFile->WriteStr("groupowner " );
-						if( pProp->m_PropFlags & PF_GROUPMASK )
-							pFile->WriteStrF("group%d ", GET_PF_GROUP(pProp->m_PropFlags));
+						// talon: the LT2 SDK has no GET_PF_GROUP: each of its six group flags
+						if( pProp->m_PropFlags & PF_GROUP1 )
+							pFile->WriteStr("group1 " );
+						if( pProp->m_PropFlags & PF_GROUP2 )
+							pFile->WriteStr("group2 " );
+						if( pProp->m_PropFlags & PF_GROUP3 )
+							pFile->WriteStr("group3 " );
+						if( pProp->m_PropFlags & PF_GROUP4 )
+							pFile->WriteStr("group4 " );
+						if( pProp->m_PropFlags & PF_GROUP5 )
+							pFile->WriteStr("group5 " );
+						if( pProp->m_PropFlags & PF_GROUP6 )
+							pFile->WriteStr("group6 " );
 						if( pProp->m_PropFlags & PF_FOVRADIUS )
 							pFile->WriteStr("fovradius " );
 						if( pProp->m_PropFlags & PF_OBJECTLINK )

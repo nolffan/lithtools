@@ -647,7 +647,7 @@ BOOL CEditBrush::FindPoliesWithEdge( uint32 v1, uint32 v2, CEditPoly*&pPoly1, CE
 	pPoly1 = pPoly2 = NULL;
 	for( i=0; i < m_Polies; i++ )
 	{
-		CMoDWordArray	&indices = m_Polies[i]->m_Indices;
+		CMoWordArray	&indices = m_Polies[i]->m_Indices;	// talon: WORDs in 2001
 		
 		if( (index = indices.FindElement(v1)) != BAD_INDEX )
 		{
@@ -802,8 +802,8 @@ CEditPoly* CEditBrush::JoinPolygons( CEditPoly *pPoly1, CEditPoly *pPoly2, uint3
 	uint32			i, temp, i1, i2;
 	uint32			iPoly1, iPoly2;
 	uint32			nPtsAdded;
-	CMoDWordArray	&indices1 = pPoly1->m_Indices;
-	CMoDWordArray	&indices2 = pPoly2->m_Indices;
+	CMoWordArray	&indices1 = pPoly1->m_Indices;	// talon: WORDs in 2001
+	CMoWordArray	&indices2 = pPoly2->m_Indices;
 
 
 	iPoly1 = m_Polies.FindElement( pPoly1 );
