@@ -1,0 +1,922 @@
+// Microsoft Visual C++ generated resource script.
+//
+
+#define APSTUDIO_READONLY_SYMBOLS
+#include "afxres.h"
+#undef APSTUDIO_READONLY_SYMBOLS
+
+#if !defined(AFX_RESOURCE_DLL) || defined(AFX_TARG_ENU)
+#ifdef _WIN32
+LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
+#pragma code_page(1252)
+#endif //_WIN32
+
+128                     ICON DISCARDABLE     "res\\ModelEdit.ico"
+
+30977                   CURSOR DISCARDABLE     "res\\ModelEdit.cur"
+
+150                     BITMAP  DISCARDABLE     "res\\ModelEdit_150.bmp"
+
+151                     BITMAP  DISCARDABLE     "res\\ModelEdit_151.bmp"
+
+163                     BITMAP  DISCARDABLE     "res\\ModelEdit_163.bmp"
+
+164                     BITMAP  DISCARDABLE     "res\\ModelEdit_164.bmp"
+
+168                     BITMAP  DISCARDABLE     "res\\ModelEdit_168.bmp"
+
+178                     BITMAP  DISCARDABLE     "res\\ModelEdit_178.bmp"
+
+26567                   BITMAP  DISCARDABLE     "res\\ModelEdit_26567.bmp"
+
+30994                   BITMAP  DISCARDABLE     "res\\ModelEdit_30994.bmp"
+
+30995                   BITMAP  DISCARDABLE     "res\\ModelEdit_30995.bmp"
+
+30996                   BITMAP  DISCARDABLE     "res\\ModelEdit_30996.bmp"
+
+DELETED                 BITMAP  DISCARDABLE     "res\\ModelEdit_DELETED.bmp"
+
+DELETEU                 BITMAP  DISCARDABLE     "res\\ModelEdit_DELETEU.bmp"
+
+FPLAYD                  BITMAP  DISCARDABLE     "res\\ModelEdit_FPLAYD.bmp"
+
+FPLAYU                  BITMAP  DISCARDABLE     "res\\ModelEdit_FPLAYU.bmp"
+
+MOVEDOWND               BITMAP  DISCARDABLE     "res\\ModelEdit_MOVEDOWND.bmp"
+
+MOVEDOWNU               BITMAP  DISCARDABLE     "res\\ModelEdit_MOVEDOWNU.bmp"
+
+MOVEUPD                 BITMAP  DISCARDABLE     "res\\ModelEdit_MOVEUPD.bmp"
+
+MOVEUPU                 BITMAP  DISCARDABLE     "res\\ModelEdit_MOVEUPU.bmp"
+
+NEXTKEYD                BITMAP  DISCARDABLE     "res\\ModelEdit_NEXTKEYD.bmp"
+
+NEXTKEYU                BITMAP  DISCARDABLE     "res\\ModelEdit_NEXTKEYU.bmp"
+
+NUMBERD                 BITMAP  DISCARDABLE     "res\\ModelEdit_NUMBERD.bmp"
+
+NUMBERU                 BITMAP  DISCARDABLE     "res\\ModelEdit_NUMBERU.bmp"
+
+PREVKEYD                BITMAP  DISCARDABLE     "res\\ModelEdit_PREVKEYD.bmp"
+
+PREVKEYU                BITMAP  DISCARDABLE     "res\\ModelEdit_PREVKEYU.bmp"
+
+RPLAYD                  BITMAP  DISCARDABLE     "res\\ModelEdit_RPLAYD.bmp"
+
+RPLAYU                  BITMAP  DISCARDABLE     "res\\ModelEdit_RPLAYU.bmp"
+
+STOPD                   BITMAP  DISCARDABLE     "res\\ModelEdit_STOPD.bmp"
+
+STOPU                   BITMAP  DISCARDABLE     "res\\ModelEdit_STOPU.bmp"
+
+149 MENU DISCARDABLE
+BEGIN
+    POPUP "Keyframe Menu"
+    BEGIN
+        MENUITEM "Tag &All", 32781
+        MENUITEM "Untag &All", 32782
+        MENUITEM "Edit Tagged Keyframe &Strings", 32779
+        MENUITEM "&Create Keyframe", 32827
+        MENUITEM "&Delete Keyframe", 32774
+        MENUITEM "Delete Tagged &Keyframes", 32778
+        MENUITEM "Clip &After Keyframe", 32772
+        MENUITEM "Clip &Before Keyframe", 32773
+        MENUITEM "&Insert Time Delay...", 32814
+    END
+END
+
+170 MENU DISCARDABLE
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open...\tCtrl+O", 1023
+        MENUITEM "&Import", 1025
+        MENUITEM SEPARATOR
+        MENUITEM "&Save...\tCtrl+S", 1024
+        MENUITEM "Save &As", 1026
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit...\tCtrl+X", 2
+    END
+    POPUP "&Model"
+    BEGIN
+        MENUITEM "Model &Info", 1041
+        MENUITEM "&Command String...", 1042
+        MENUITEM "&Unrotate Top Node", 32785
+        MENUITEM "&Build LODs...", 1035
+        MENUITEM "&Rename Node...", 1050
+        MENUITEM "&Generate Vertex Normals", 32788
+        MENUITEM "Remove Node", 32792
+        MENUITEM "Select Null Nodes", 32793
+        MENUITEM "&Set Texture...", 32794
+        MENUITEM "Mood...", 32808
+        MENUITEM "Set &Internal Radius...", 32809
+        MENUITEM "Edit &Weights", 32810
+        MENUITEM "C&alc Internal Radius", 32824
+    END
+    POPUP "&Animation"
+    BEGIN
+        MENUITEM "&Rename...", 1022
+        MENUITEM "&Duplicate", 1049
+        MENUITEM "&Dimensions...", 1044
+        MENUITEM "&Reverse", 32789
+        MENUITEM "&Make Continuous", 1027
+        MENUITEM "&Set Animation Rate...", 1045
+        MENUITEM "&Set Animation Length", 1106
+        MENUITEM "&Set Animation Interpolation", 32822
+        MENUITEM "&Create Single Frame", 1021
+        MENUITEM "Animation Merge...", 32806
+        MENUITEM "&Translation...", 1047
+        MENUITEM "R&otate...", 32790
+        MENUITEM "Remove &extra frames", 32826
+    END
+    POPUP "&Child Model"
+    BEGIN
+        MENUITEM "&Add Child Model...", 32795
+        MENUITEM "&Remove Child Model", 32796
+        MENUITEM "Re&build Tree", 32797
+    END
+    POPUP "&Sockets"
+    BEGIN
+        MENUITEM "&Add Socket...", 32801
+        MENUITEM "&Remove Socket", 32802
+        MENUITEM "Re&name Socket...", 32805
+    END
+    POPUP "&Piece"
+    BEGIN
+        MENUITEM "Piece &Info", 32813
+        MENUITEM "&Merge Pieces", 32825
+    END
+    POPUP "&Options"
+    BEGIN
+        MENUITEM "&Lights Follow Camera", 1036
+        MENUITEM "&Wireframe", 1034
+        MENUITEM "Show &User Dimensions", 1043
+        MENUITEM "Show &Internal Dimensions", 1038
+        MENUITEM "Show &Skeleton", 1081
+        MENUITEM "Show Original Model", 32821
+        MENUITEM "Show S&ockets", 32803
+        MENUITEM "Show &Attachments", 32804
+        MENUITEM "Solid A&ttachments", 32815
+        MENUITEM "Show &Normals", 32807
+        MENUITEM "Show Normal&Ref", 32811
+        MENUITEM "&Profile", 32812
+        MENUITEM "New Background Color", 32820
+    END
+    POPUP "&Help"
+    BEGIN
+        MENUITEM "&About ModelEdit for Talon...", 32791
+    END
+END
+
+183 MENU DISCARDABLE
+BEGIN
+    POPUP "_POPUP_"
+    BEGIN
+        MENUITEM "Rename...", 1022
+        MENUITEM "Duplicate...", 1049
+        MENUITEM "Delete", 32817
+        MENUITEM SEPARATOR
+        MENUITEM "Sort by name", 32818
+        MENUITEM "Sort by child", 32819
+    END
+END
+
+102 DIALOGEX 0, 0, 502, 358
+STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | DS_SETFONT | DS_MODALFRAME | DS_CENTER
+EXSTYLE WS_EX_APPWINDOW
+CAPTION "ModelEdit for Talon"
+MENU 170
+FONT 8, "MS Sans Serif", 0, 0, 0x1
+BEGIN
+    LISTBOX         1041, 411, 20, 87, 61, WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL
+    LISTBOX         1042, 412, 95, 87, 87, WS_VSCROLL | LBS_NOINTEGRALHEIGHT | LBS_DISABLENOSCROLL
+    CONTROL         "MOVEUP", 1030, "Button", BS_OWNERDRAW, 359, 232, 13, 11
+    CONTROL         "MOVEDOWN", 1031, "Button", BS_OWNERDRAW, 359, 221, 13, 11
+    CONTROL         "NUMBER", 1048, "Button", BS_OWNERDRAW, 359, 210, 13, 11
+    CONTROL         "DELETE", 1032, "Button", BS_OWNERDRAW, 359, 199, 13, 11
+    CONTROL         "PREVKEY", 1015, "Button", BS_OWNERDRAW, 7, 238, 30, 14
+    CONTROL         "STOP", 1017, "Button", BS_OWNERDRAW, 67, 238, 30, 14
+    CONTROL         "FPLAY", 1018, "Button", BS_OWNERDRAW, 127, 239, 30, 14
+    CONTROL         "NEXTKEY", 1019, "Button", BS_OWNERDRAW, 187, 238, 30, 14
+    EDITTEXT        1055, 51, 340, 37, 13, ES_AUTOHSCROLL
+    EDITTEXT        1056, 148, 340, 347, 13, ES_AUTOHSCROLL
+    PUSHBUTTON      "+", 1066, 300, 237, 14, 6
+    PUSHBUTTON      "-", 1061, 272, 243, 14, 6
+    PUSHBUTTON      "-", 1063, 286, 243, 14, 6
+    PUSHBUTTON      "-", 1065, 300, 243, 14, 6
+    CONTROL         "", 1028, "Static", SS_BLACKRECT | NOT WS_VISIBLE, 7, 7, 209, 226
+    CONTROL         "", 1033, "Static", SS_BLACKRECT | NOT WS_VISIBLE, 73, 261, 422, 15
+    LTEXT           "LOD", 1040, 225, 191, 36, 8
+    LTEXT           "Frame Time:", IDC_STATIC, 7, 338, 44, 15, SS_CENTERIMAGE
+    LTEXT           "Frame String:", IDC_STATIC, 95, 338, 47, 15, SS_CENTERIMAGE
+    PUSHBUTTON      "+", 1062, 272, 237, 14, 6
+    PUSHBUTTON      "+", 1064, 286, 237, 14, 6
+    CTEXT           "Nodes", IDC_STATIC, 223, 9, 77, 8
+    CTEXT           "Animations", IDC_STATIC, 322, 9, 75, 8
+    CTEXT           "Child Models", IDC_STATIC, 413, 9, 75, 8
+    CTEXT           "Sockets", IDC_STATIC, 413, 84, 75, 8
+    CONTROL         "", 1084, "Static", WS_BORDER | SS_BLACKRECT | SS_NOTIFY | NOT WS_VISIBLE, 450, 225, 10, 10, WS_EX_TRANSPARENT
+    CONTROL         "", 1085, "Static", WS_BORDER | SS_BLACKRECT | NOT WS_VISIBLE, 464, 225, 10, 10
+    CONTROL         "", 1086, "Static", WS_BORDER | SS_BLACKRECT | NOT WS_VISIBLE, 477, 225, 10, 10
+    RTEXT           "Rotation", IDC_STATIC, 393, 227, 52, 8
+    CONTROL         "", 1087, "Static", WS_BORDER | SS_BLACKRECT | SS_NOTIFY | NOT WS_VISIBLE, 450, 239, 10, 10, WS_EX_TRANSPARENT
+    CONTROL         "", 1088, "Static", WS_BORDER | SS_BLACKRECT | NOT WS_VISIBLE, 464, 239, 10, 10
+    CONTROL         "", 1089, "Static", WS_BORDER | SS_BLACKRECT | NOT WS_VISIBLE, 477, 239, 10, 10
+    RTEXT           "Translation", IDC_STATIC, 409, 241, 36, 8
+    CTEXT           "Pieces", IDC_STATIC, 224, 105, 77, 8
+    GROUPBOX        "Transform Edit", IDC_STATIC, 383, 188, 112, 66
+    AUTORADIOBUTTON "Socket", 1091, 447, 199, 39, 10, BS_LEFTTEXT | BS_RIGHT
+    AUTORADIOBUTTON "Relation", 1092, 445, 212, 41, 10, BS_LEFTTEXT | BS_RIGHT
+    AUTOCHECKBOX    "&Global", 1093, 390, 199, 36, 10
+    GROUPBOX        "Animation Edit", IDC_STATIC, 266, 188, 112, 66
+    AUTORADIOBUTTON "User Dimensions", 1094, 272, 202, 69, 10, BS_RIGHT
+    AUTORADIOBUTTON "Translation", 1095, 272, 218, 51, 10, BS_RIGHT
+    SCROLLBAR       1039, 237, 202, 10, 50, SBS_VERT
+    CONTROL         "List1", 1035, "SysListView32", WS_BORDER | WS_TABSTOP | 0x4a09, 220, 21, 96, 80, WS_EX_CLIENTEDGE
+    CONTROL         "List1", 1100, "SysListView32", WS_BORDER | WS_TABSTOP | 0x4a09, 220, 116, 96, 65, WS_EX_CLIENTEDGE
+    CONTROL         "List1", 1029, "SysListView32", WS_BORDER | WS_TABSTOP | 0x4a09, 320, 20, 87, 161, WS_EX_CLIENTEDGE
+    CONTROL         "", 1034, "Static", SS_BLACKRECT | NOT WS_VISIBLE, 73, 280, 422, 15
+    CONTROL         "", 1036, "Static", SS_BLACKRECT | NOT WS_VISIBLE, 73, 300, 422, 15
+    CONTROL         "", 1037, "Static", SS_BLACKRECT | NOT WS_VISIBLE, 73, 319, 422, 15
+    PUSHBUTTON      "Animation", 1130, 23, 280, 46, 15
+    PUSHBUTTON      "Animation", 1138, 23, 300, 46, 15
+    PUSHBUTTON      "Animation", 1139, 23, 319, 46, 15
+    PUSHBUTTON      "Animation", 1140, 23, 261, 46, 15
+    CONTROL         "", 1090, "Static", WS_BORDER | SS_BLACKRECT | SS_NOTIFY | NOT WS_VISIBLE, 7, 261, 10, 15, WS_EX_TRANSPARENT
+    CONTROL         "", 1096, "Static", WS_BORDER | SS_BLACKRECT | SS_NOTIFY | NOT WS_VISIBLE, 7, 280, 10, 15, WS_EX_TRANSPARENT
+    CONTROL         "", 1097, "Static", WS_BORDER | SS_BLACKRECT | SS_NOTIFY | NOT WS_VISIBLE, 7, 300, 10, 15, WS_EX_TRANSPARENT
+    CONTROL         "", 1098, "Static", WS_BORDER | SS_BLACKRECT | SS_NOTIFY | NOT WS_VISIBLE, 7, 319, 10, 15, WS_EX_TRANSPARENT
+END
+
+103 DIALOG 0, 0, 243, 102
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Socket Properties"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "&Name", IDC_STATIC, 7, 10, 20, 8
+    EDITTEXT        1126, 31, 7, 150, 14, ES_AUTOHSCROLL
+    LTEXT           "O&rientation", IDC_STATIC, 7, 24, 35, 8
+    EDITTEXT        1120, 27, 34, 40, 14, ES_AUTOHSCROLL
+    EDITTEXT        1121, 83, 34, 40, 14, ES_AUTOHSCROLL
+    EDITTEXT        1122, 141, 34, 40, 14, ES_AUTOHSCROLL
+    LTEXT           "&Position", IDC_STATIC, 7, 51, 26, 8
+    EDITTEXT        1123, 27, 61, 40, 14, ES_AUTOHSCROLL
+    EDITTEXT        1124, 83, 61, 40, 14, ES_AUTOHSCROLL
+    EDITTEXT        1125, 141, 61, 40, 14, ES_AUTOHSCROLL
+    LTEXT           "A&ttachment", IDC_STATIC, 7, 83, 37, 8
+    EDITTEXT        1054, 49, 80, 132, 14, ES_AUTOHSCROLL
+    PUSHBUTTON      "...", 1127, 184, 83, 11, 10
+    PUSHBUTTON      "&Apply", IDABORT, 186, 7, 50, 14
+    DEFPUSHBUTTON   "&OK", IDOK, 186, 24, 50, 14
+    PUSHBUTTON      "&Cancel", IDCANCEL, 186, 41, 50, 14
+    LTEXT           "X", IDC_STATIC, 17, 37, 8, 8
+    LTEXT           "Y", IDC_STATIC, 73, 37, 8, 8
+    LTEXT           "Z", IDC_STATIC, 131, 37, 8, 8
+    LTEXT           "X", IDC_STATIC, 17, 64, 8, 8
+    LTEXT           "Y", IDC_STATIC, 73, 64, 8, 8
+    LTEXT           "Z", IDC_STATIC, 131, 64, 8, 8
+END
+
+139 DIALOG 0, 0, 272, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION ""
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1009, 30, 35, 210, 15, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 7, 74, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 215, 74, 50, 14
+    LTEXT           "", 1010, 30, 20, 210, 10
+END
+
+148 DIALOG 0, 0, 168, 42
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Rename Animation"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Enter new name for animation:", IDC_STATIC, 5, 7, 96, 8
+    EDITTEXT        1031, 5, 20, 96, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 111, 3, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 111, 20, 50, 14
+END
+
+153 DIALOG 0, 0, 156, 46
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION ""
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Current Time:", IDC_STATIC, 7, 7, 43, 12, SS_CENTERIMAGE
+    EDITTEXT        1035, 56, 7, 22, 12, WS_DISABLED | ES_AUTOHSCROLL
+    LTEXT           "ms", IDC_STATIC, 81, 7, 10, 12, SS_CENTERIMAGE
+    LTEXT           "New Time:", IDC_STATIC, 7, 27, 35, 12, SS_CENTERIMAGE
+    EDITTEXT        1032, 56, 27, 22, 12, ES_AUTOHSCROLL
+    LTEXT           "ms", IDC_STATIC, 81, 27, 10, 12, SS_CENTERIMAGE
+    DEFPUSHBUTTON   "OK", IDOK, 99, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 99, 25, 50, 14
+END
+
+154 DIALOG 0, 0, 175, 46
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Make Animation Continuous"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LTEXT           "Enter delay from last frame to first frame:", IDC_STATIC, 6, 10, 126, 8
+    EDITTEXT        1036, 133, 8, 23, 12, ES_AUTOHSCROLL
+    LTEXT           "ms", IDC_STATIC, 158, 10, 10, 8
+    DEFPUSHBUTTON   "OK", IDOK, 60, 27, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 117, 27, 50, 14
+END
+
+155 DIALOG 0, 0, 242, 214
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Model Info"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 95, 195, 50, 14
+    EDITTEXT        1041, 5, 10, 230, 180, WS_VSCROLL | ES_MULTILINE | ES_AUTOHSCROLL | ES_READONLY
+END
+
+156 DIALOG 0, 0, 336, 247
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Level of Detail Generation"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1047, 103, 22, 65, 15, ES_AUTOHSCROLL
+    EDITTEXT        1045, 103, 42, 65, 15, ES_AUTOHSCROLL
+    LISTBOX         1100, 7, 82, 156, 113, WS_VSCROLL | WS_TABSTOP | LBS_SORT | LBS_NOINTEGRALHEIGHT
+    LISTBOX         1106, 177, 82, 152, 113, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT
+    PUSHBUTTON      "&Add LOD", 1101, 7, 202, 50, 14
+    PUSHBUTTON      "&Edit LOD", 1102, 60, 202, 50, 14
+    PUSHBUTTON      "&Remove LOD", 1103, 113, 202, 50, 14
+    EDITTEXT        1107, 225, 202, 40, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 104, 226, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 180, 226, 50, 14
+    RTEXT           "Maximum Edge Length:", IDC_STATIC, 23, 47, 75, 10
+    RTEXT           "Minimum Node Tris:", IDC_STATIC, 23, 28, 75, 10
+    GROUPBOX        "LOD Generation", IDC_STATIC, 7, 7, 322, 58
+    RTEXT           "Piece Weight:", IDC_STATIC, 173, 205, 48, 8
+    LTEXT           "LODs", IDC_STATIC, 7, 70, 74, 8
+    LTEXT           "Piece Weights", IDC_STATIC, 177, 71, 74, 8
+END
+
+157 DIALOG 0, 0, 365, 234
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Model Command String"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1105, 7, 197, 351, 12, ES_AUTOHSCROLL
+    EDITTEXT        1138, 150, 25, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1032, 150, 40, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1033, 150, 55, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1044, 102, 70, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1043, 150, 70, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1036, 85, 85, 90, 12, ES_AUTOHSCROLL
+    EDITTEXT        1038, 102, 100, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1037, 149, 100, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1042, 102, 115, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1041, 149, 115, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1034, 150, 130, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1035, 150, 145, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1039, 150, 160, 25, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Check2", 1135, 346, 25, 12, 12
+    EDITTEXT        1046, 268, 40, 43, 12, ES_AUTOHSCROLL
+    EDITTEXT        1045, 315, 40, 43, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Check2", 1136, 346, 55, 12, 12
+    EDITTEXT        1040, 333, 70, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1047, 333, 85, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1049, 285, 100, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1048, 333, 100, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1051, 276, 115, 20, 12, ES_AUTOHSCROLL
+    EDITTEXT        1052, 308, 115, 20, 12, ES_AUTOHSCROLL
+    EDITTEXT        1050, 338, 115, 20, 12, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "Check2", 1137, 346, 130, 12, 12
+    EDITTEXT        1053, 333, 145, 25, 12, ES_AUTOHSCROLL
+    EDITTEXT        1054, 268, 160, 90, 12, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 130, 213, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 184, 213, 50, 14
+    LTEXT           "Ambient Light % (0.0 - 1.0)", IDC_STATIC, 7, 25, 87, 12, SS_CENTERIMAGE
+    CTEXT           "Final Command String", IDC_STATIC, 7, 182, 351, 12, SS_CENTERIMAGE | SS_SUNKEN
+    CTEXT           "Command Helper Controls", IDC_STATIC, 7, 7, 351, 12, SS_CENTERIMAGE | SS_SUNKEN
+    CONTROL         "", IDC_STATIC, "Static", SS_SIMPLE | SS_SUNKEN, 179, 22, 8, 155
+    LTEXT           "Directional Light % (0.0 - 1.0)", IDC_STATIC, 7, 40, 96, 12, SS_CENTERIMAGE
+    LTEXT           "Draw Indexed Distance (Default 200)", IDC_STATIC, 7, 55, 120, 12, SS_CENTERIMAGE
+    LTEXT           "Fade Range", IDC_STATIC, 7, 70, 44, 12, SS_CENTERIMAGE
+    LTEXT           "Fade Sprite Texture", IDC_STATIC, 7, 85, 65, 12, SS_CENTERIMAGE
+    LTEXT           "Fade Sprite Size", IDC_STATIC, 7, 100, 65, 12, SS_CENTERIMAGE
+    LTEXT           "Y", IDC_STATIC, 132, 100, 8, 12, SS_CENTERIMAGE
+    LTEXT           "X", IDC_STATIC, 85, 100, 8, 12, SS_CENTERIMAGE
+    LTEXT           "FOV Offset", IDC_STATIC, 7, 115, 41, 12, SS_CENTERIMAGE
+    LTEXT           "Y", IDC_STATIC, 132, 115, 8, 12, SS_CENTERIMAGE
+    LTEXT           "X", IDC_STATIC, 85, 115, 8, 12, SS_CENTERIMAGE
+    LTEXT           "Max", IDC_STATIC, 132, 70, 15, 12, SS_CENTERIMAGE
+    LTEXT           "Min", IDC_STATIC, 86, 70, 15, 12, SS_CENTERIMAGE
+    LTEXT           "LOD Increment (Default 7)", IDC_STATIC, 7, 130, 87, 12, SS_CENTERIMAGE
+    LTEXT           "LOD Max Distance (Default 200000)", IDC_STATIC, 7, 145, 119, 12, SS_CENTERIMAGE
+    LTEXT           "LOD Start Distance (Default 200)", IDC_STATIC, 7, 160, 119, 12, SS_CENTERIMAGE
+    LTEXT           "No Animation", IDC_STATIC, 190, 25, 87, 12, SS_CENTERIMAGE
+    LTEXT           "Normal Reference", IDC_STATIC, 190, 40, 65, 12, SS_CENTERIMAGE
+    LTEXT           "Shadow Enable", IDC_STATIC, 190, 55, 87, 12, SS_CENTERIMAGE
+    LTEXT           "Shadow Project Length (Default 200)", IDC_STATIC, 190, 70, 120, 12, SS_CENTERIMAGE
+    LTEXT           "Shadow Light Distance (Default 200)", IDC_STATIC, 190, 85, 120, 12, SS_CENTERIMAGE
+    LTEXT           "Shadow Size", IDC_STATIC, 190, 100, 65, 12, SS_CENTERIMAGE
+    LTEXT           "Y", IDC_STATIC, 316, 100, 8, 12, SS_CENTERIMAGE
+    LTEXT           "X", IDC_STATIC, 268, 100, 8, 12, SS_CENTERIMAGE
+    LTEXT           "Shadow Center Offset", IDC_STATIC, 189, 115, 73, 12, SS_CENTERIMAGE
+    LTEXT           "Z", IDC_STATIC, 330, 115, 8, 12, SS_CENTERIMAGE
+    LTEXT           "X", IDC_STATIC, 267, 115, 8, 12, SS_CENTERIMAGE
+    LTEXT           "Y", IDC_STATIC, 299, 115, 8, 12, SS_CENTERIMAGE
+    LTEXT           "Specular Enable", IDC_STATIC, 190, 130, 87, 12, SS_CENTERIMAGE
+    LTEXT           "Visibility Radius", IDC_STATIC, 189, 145, 120, 12, SS_CENTERIMAGE
+    LTEXT           "Extra Parameters", IDC_STATIC, 189, 160, 58, 12, SS_CENTERIMAGE
+END
+
+158 DIALOG 0, 0, 217, 45
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Keyframe String"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1047, 5, 5, 205, 15, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 55, 25, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 115, 25, 50, 14
+END
+
+160 DIALOG 0, 0, 136, 70
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Dimensions"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 79, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 79, 24, 50, 14
+    LTEXT           "X:", IDC_STATIC, 7, 7, 9, 14, SS_CENTERIMAGE
+    EDITTEXT        1048, 26, 7, 43, 14, ES_AUTOHSCROLL
+    LTEXT           "Y:", IDC_STATIC, 7, 26, 9, 14, SS_CENTERIMAGE
+    EDITTEXT        1049, 26, 25, 43, 14, ES_AUTOHSCROLL
+    EDITTEXT        1050, 26, 43, 43, 14, ES_AUTOHSCROLL
+    LTEXT           "Z:", IDC_STATIC, 7, 43, 9, 14, SS_CENTERIMAGE
+END
+
+161 DIALOG 0, 0, 236, 48
+STYLE WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | DS_3DLOOK | DS_SETFONT | DS_CONTROL
+FONT 8, "MS Sans Serif"
+BEGIN
+    AUTOCHECKBOX    "&Animations", 1050, 4, 20, 48, 9
+    AUTOCHECKBOX    "&UV Coords", 1049, 60, 20, 51, 9
+    AUTOCHECKBOX    "User &Dims", 1051, 120, 20, 48, 9
+    AUTOCHECKBOX    "&Translations", 1052, 180, 20, 48, 9
+    LTEXT           "Import:", IDC_STATIC, 7, 7, 44, 9
+    AUTOCHECKBOX    "&Sockets", 1117, 4, 32, 42, 10
+    AUTOCHECKBOX    "&Weight Sets", 1053, 60, 32, 51, 9
+    AUTOCHECKBOX    "&LODs", 1054, 120, 32, 51, 9
+    AUTOCHECKBOX    "&Keystrings", 1055, 180, 32, 48, 9
+END
+
+162 DIALOG 0, 0, 186, 61
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Animation Framerate"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1053, 45, 7, 110, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "All Animations", 1052, 5, 30, 110, 10
+    DEFPUSHBUTTON   "OK", IDOK, 35, 45, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 101, 45, 50, 14
+    RTEXT           "Framerate", IDC_STATIC, 5, 10, 35, 8
+END
+
+165 DIALOG 0, 0, 186, 63
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Translation"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1057, 15, 5, 40, 14, ES_AUTOHSCROLL
+    EDITTEXT        1058, 15, 24, 40, 14, ES_AUTOHSCROLL
+    EDITTEXT        1059, 15, 43, 40, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 129, 5, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 129, 24, 50, 14
+    LTEXT           "X:", IDC_STATIC, 5, 8, 8, 8
+    LTEXT           "Y:", IDC_STATIC, 5, 27, 8, 8
+    LTEXT           "Z:", IDC_STATIC, 5, 46, 8, 8
+END
+
+166 DIALOG 0, 0, 325, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Import UV Coordinates"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1074, 145, 44, 95, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 101, 74, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 174, 74, 50, 14
+    LTEXT           "This model has different geometry.  Animations cannot be imported.  The only way to import UV coordinates is to match vertex positions on an animation.  If this is what you want to do, please enter the animation name to try to match and click OK.", IDC_STATIC, 7, 7, 311, 26
+    RTEXT           "Animation Name:", IDC_STATIC, 86, 47, 55, 8
+END
+
+167 DIALOG 0, 0, 240, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Animation Move"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1075, 89, 38, 46, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 42, 74, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 148, 74, 50, 14
+    LTEXT           "Please enter the index to move the selected animation(s) to:", IDC_STATIC, 27, 25, 188, 8
+END
+
+169 DIALOG 0, 0, 186, 76
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Rename Node"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1076, 5, 29, 58, 14, ES_AUTOHSCROLL
+    EDITTEXT        1077, 121, 28, 58, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 39, 55, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 97, 55, 50, 14
+    LTEXT           "Old Node Name", IDC_STATIC, 7, 16, 52, 8
+    LTEXT           "New Node Name", IDC_STATIC, 123, 16, 56, 8
+END
+
+170 DIALOG 0, 0, 147, 70
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Rotate"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 90, 7, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 90, 24, 50, 14
+    LTEXT           "X:", IDC_STATIC, 7, 10, 8, 8
+    EDITTEXT        1078, 17, 7, 40, 14, ES_AUTOHSCROLL
+    LTEXT           "Y:", IDC_STATIC, 7, 29, 8, 8
+    EDITTEXT        1079, 17, 26, 40, 14, ES_AUTOHSCROLL
+    LTEXT           "Z:", IDC_STATIC, 7, 48, 8, 8
+    EDITTEXT        1080, 17, 45, 40, 14, ES_AUTOHSCROLL
+END
+
+172 DIALOG 0, 0, 236, 97
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "About ModelEdit for Talon"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 186, 7, 43, 14
+    LTEXT           "Model Edit For the LithTech Talon System\r\nCopyright © LithTech, Inc. 1998-2002", IDC_STATIC, 7, 7, 168, 19
+    LTEXT           "Warning:  this computer program is protected by copyright law and international treaties.", IDC_STATIC, 14, 39, 210, 17
+    LTEXT           "Unauthorized reproduction or distribution of this program, or any portion of it, may result in severe civil and criminal penalties, and will be prosecuted to the maximum extent possible under the law.", IDC_STATIC, 14, 60, 210, 27
+    CONTROL         "", IDC_STATIC, "Static", SS_BLACKFRAME | SS_SUNKEN, 7, 34, 222, 56
+END
+
+174 DIALOG 0, 0, 186, 69
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Add Socket"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1083, 37, 7, 142, 14, ES_AUTOHSCROLL
+    EDITTEXT        1084, 37, 24, 142, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 35, 48, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 101, 48, 50, 14
+    LTEXT           "Name:", IDC_STATIC, 12, 10, 21, 8
+    LTEXT           "Node:", IDC_STATIC, 13, 27, 21, 8
+END
+
+176 DIALOG 0, 0, 186, 68
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Mood"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1085, 75, 7, 110, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 41, 47, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 95, 47, 50, 14
+    RTEXT           "New Animation", IDC_STATIC, 7, 12, 61, 8
+    AUTOCHECKBOX    "Single Frame Difference", 1096, 7, 29, 172, 10
+END
+
+177 DIALOG 0, 0, 206, 167
+STYLE WS_POPUP | WS_VISIBLE | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Weight Edit"
+FONT 8, "MS Sans Serif"
+BEGIN
+    LISTBOX         1097, 7, 18, 92, 120, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT
+    LISTBOX         1101, 105, 18, 92, 92, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT | LBS_EXTENDEDSEL
+    EDITTEXT        1098, 105, 124, 48, 14, ES_AUTOHSCROLL
+    PUSHBUTTON      "&Add Set", 1099, 20, 146, 50, 14
+    PUSHBUTTON      "&Remove Set", 1100, 77, 146, 50, 14
+    DEFPUSHBUTTON   "Close", IDOK, 134, 146, 50, 14
+    LTEXT           "Weight Sets", IDC_STATIC, 7, 7, 92, 8
+    LTEXT           "Weight", IDC_STATIC, 105, 113, 43, 8
+    LTEXT           "Nodes", IDC_STATIC, 107, 7, 92, 8
+END
+
+179 DIALOG 0, 0, 186, 71
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "LOD Edit"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1102, 53, 8, 126, 14, ES_AUTOHSCROLL
+    EDITTEXT        1103, 53, 29, 126, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 36, 50, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 100, 50, 50, 14
+    RTEXT           "Distance:", IDC_STATIC, 2, 11, 48, 8
+    RTEXT           "% Triangles:", IDC_STATIC, 1, 32, 49, 8
+END
+
+180 DIALOG 0, 0, 186, 95
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Piece Info"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1108, 80, 7, 50, 14, ES_AUTOHSCROLL
+    EDITTEXT        1032, 80, 26, 50, 14, ES_AUTOHSCROLL
+    EDITTEXT        1033, 80, 45, 50, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 38, 74, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 98, 74, 50, 14
+    RTEXT           "Specular Power:", 1109, 9, 10, 67, 8
+    RTEXT           "Specular Scale:", 1110, 7, 29, 69, 8
+    RTEXT           "Texture Index:", 1111, 7, 48, 69, 8
+END
+
+181 DIALOG 0, 0, 272, 86
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Select child model(s)"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1009, 7, 29, 194, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "&Scale Skeleton", 1112, 21, 49, 69, 10
+    DEFPUSHBUTTON   "OK", IDOK, 80, 65, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 144, 65, 50, 14
+    PUSHBUTTON      "Browse...", 1141, 203, 29, 62, 15
+    CTEXT           "", 1010, 7, 6, 258, 17
+END
+
+182 DIALOG 0, 0, 177, 52
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Time Offset"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1113, 95, 8, 61, 14, ES_AUTOHSCROLL
+    DEFPUSHBUTTON   "OK", IDOK, 26, 31, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 101, 31, 50, 14
+    LTEXT           "Time Offset in Milliseconds:", IDC_STATIC, 7, 11, 87, 8
+END
+
+184 DIALOG 0, 0, 186, 202
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Weight Set"
+FONT 8, "MS Sans Serif"
+BEGIN
+    DEFPUSHBUTTON   "OK", IDOK, 38, 181, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 97, 181, 50, 14
+    LISTBOX         1097, 7, 7, 172, 168, WS_VSCROLL | WS_TABSTOP | LBS_NOINTEGRALHEIGHT
+END
+
+198 DIALOG 0, 0, 186, 61
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_SETFONT | DS_MODALFRAME
+CAPTION "Animation Cleanup"
+FONT 8, "MS Sans Serif"
+BEGIN
+    EDITTEXT        1134, 81, 7, 85, 15, ES_AUTOHSCROLL
+    AUTOCHECKBOX    "&Preserve Rotations", 1133, 16, 28, 110, 10
+    DEFPUSHBUTTON   "OK", IDOK, 35, 45, 50, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 101, 45, 50, 14
+    RTEXT           "Minimum Variance", IDC_STATIC, 5, 10, 69, 8
+END
+
+199 DIALOG 0, 0, 244, 212
+STYLE WS_POPUP | WS_CAPTION | DS_SETFONT | DS_MODALFRAME
+CAPTION "Please Wait..."
+FONT 8, "MS Sans Serif"
+BEGIN
+    GROUPBOX        "Loading <filename goes here>", 1143, 7, 7, 230, 178
+    EDITTEXT        1144, 12, 18, 220, 161, WS_VSCROLL | WS_HSCROLL | ES_MULTILINE | ES_AUTOVSCROLL | ES_AUTOHSCROLL | ES_READONLY
+    PUSHBUTTON      "&Save Log...", 1141, 7, 191, 50, 14
+    DEFPUSHBUTTON   "OK", IDOK, 187, 191, 50, 14
+END
+
+30721 DIALOG 9, 26, 183, 70
+STYLE WS_POPUP | WS_CAPTION | WS_SYSMENU | DS_3DLOOK | DS_SETFONT | DS_MODALFRAME
+CAPTION "New"
+FONT 8, "MS Shell Dlg"
+BEGIN
+    LTEXT           "&New ", IDC_STATIC, 6, 5, 123, 8, NOT WS_GROUP
+    LISTBOX         100, 6, 15, 125, 49, WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK", IDOK, 137, 6, 40, 14
+    PUSHBUTTON      "Cancel", IDCANCEL, 137, 23, 40, 14
+    PUSHBUTTON      "&Help", 57670, 137, 43, 40, 14
+END
+
+171 ACCELERATORS DISCARDABLE
+BEGIN
+    79, 1023, VIRTKEY, NOINVERT, CONTROL
+END
+
+VS_VERSION_INFO VERSIONINFO
+ FILEVERSION 1,0,0,1
+ PRODUCTVERSION 1,0,0,1
+ FILEFLAGSMASK 0x3fL
+ FILEFLAGS 0x0L
+ FILEOS 0x4L
+ FILETYPE 0x1L
+ FILESUBTYPE 0x0L
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName", ""
+            VALUE "FileDescription", "ModelEdit MFC Application\0"
+            VALUE "FileVersion", "1, 0, 0, 1\0"
+            VALUE "InternalName", "ModelEdit\0"
+            VALUE "LegalCopyright", "Copyright (C) 1997-2002\0"
+            VALUE "LegalTrademarks", ""
+            VALUE "OriginalFilename", "ModelEdit.EXE\0"
+            VALUE "ProductName", "ModelEdit for Talon\0"
+            VALUE "ProductVersion", "1, 0, 0, 1\0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 0x4b0
+    END
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    1                               "LOD %1!d! / %2!d!"
+    2                               "Unable to generate LODs.  This model has an edge attached to more than two triangles (on node '%1!s!')."
+    3                               "%1!d!"
+    4                               "ModelEdit for Talon - %1!s!"
+    5                               "Please enter a unique socket name."
+    6                               "Please enter a valid node name."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32779                           "Edit tagged keyframe strings\nKeyframe String"
+    32780                           "Select all\nSelect All"
+    32781                           "Tag all\nTag All"
+    32782                           "Untag all\nUntag All"
+    32783                           "Duplicate child model names not allowed."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32784                           "Internal error: invalid anim index."
+    32785                           "Animation '%1!s!' is from a base model and cannot be edited from the parent model."
+    32790                           "Rotate around origin.\nRotate"
+    32791                           "Please enter the child models you would like add.  Seperate the names by semi-colons if there is more than one."
+    32792                           "ModelEdit for Talon"
+    32793                           "ERROR: %1!s!."
+    32794                           "In order for the changes to take effect, the model must be saved and reloaded.  Continue?"
+    32795                           "Unable to load child model '%1!s!'.  If you save this model, animation dimensions will be lost."
+    32796                           "Recalculate bounding boxes for '%1!s!'?"
+    32797                           "Unable to load '%1!s!'."
+    32798                           "Added child '%1!s!' successfully."
+    32799                           "This operation only works on skeletal-animation models."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32800                           "One or more child model trees are invalid.  Recalculate?"
+    32801                           "Unable to create tree for model '%1!s!'."
+    32802                           "Warning: unable to calculate bounding radii."
+    32803                           "Please enter the new socket name."
+    32804                           "Socket Edit"
+    32805                           "Relation Edit"
+    32806                           "%1!s! is not a unique animation name.  Try again?"
+    32807                           "Please enter a new global radius.  This radius should enclose ALL animations."
+    32808                           "New Weight Set"
+    32809                           "Please enter a name for the new weight set."
+    32815                           "Draw solid attachments"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32816                           "Duplicate animation name: %1!s!. This can cause problems at runtime. Rename?"
+    32824                           "*.txt"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32844                           "*.lta"
+    32845                           "Text Files(*.txt)|*.txt|All Files(*.*)|*.*||"
+    32846                           "Model Files (*.abc)|*.abc|Model Files (*.lta)|*.lta|All Files (*.*)|*.*||"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    32848                           "Model Files (*.abc)|*.abc|Model Files (*.lta)|*.lta|All Files (*.*)|*.*||"
+    32849                           "Model Files (*.abc)|*.abc|Model Files (*.lta)|*.lta|All Files (*.*)|*.*||"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61440                           "Open"
+    61441                           "Save As"
+    61442                           "All Files (*.*)"
+    61443                           "Untitled"
+    61446                           "an unnamed file"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61457                           "&Hide"
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61472                           "No error message is available."
+    61473                           "An unsupported operation was attempted."
+    61474                           "A required resource was unavailable."
+    61475                           "Out of memory."
+    61476                           "An unknown error has occurred."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61696                           "Invalid filename."
+    61697                           "Failed to open document."
+    61698                           "Failed to save document."
+    61699                           "Save changes to %1?"
+    61700                           "Failed to create empty document."
+    61701                           "The file is too large to open."
+    61702                           "Could not start print job."
+    61703                           "Failed to launch help."
+    61704                           "Internal application error."
+    61705                           "Command failed."
+    61706                           "Insufficient memory to perform operation."
+    61707                           "System registry entries have been removed and the INI file (if any) was deleted."
+    61708                           "Not all of the system registry entries (or INI file) were removed."
+    61709                           "This program requires the file %s, which was not found on this system."
+    61710                           "This program is linked to the missing export %s in the file %s. This machine may have an incompatible version of %s."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61712                           "Please enter an integer."
+    61713                           "Please enter a number."
+    61714                           "Please enter an integer between %1 and %2."
+    61715                           "Please enter a number between %1 and %2."
+    61716                           "Please enter no more than %1 characters."
+    61717                           "Please select a button."
+    61718                           "Please enter an integer between 0 and 255."
+    61719                           "Please enter a positive integer."
+    61720                           "Please enter a date and/or time."
+    61721                           "Please enter a currency."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61728                           "Unexpected file format."
+    61729                           "%1\nCannot find this file.\nPlease verify that the correct path and file name are given."
+    61730                           "Destination disk drive is full."
+    61731                           "Unable to read from %1, it is opened by someone else."
+    61732                           "Unable to write to %1, it is read-only or opened by someone else."
+    61733                           "An unexpected error occurred while reading %1."
+    61734                           "An unexpected error occurred while writing %1."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61836                           "Unable to read write-only property."
+    61837                           "Unable to write read-only property."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61840                           "Unable to load mail system support."
+    61841                           "Mail system DLL is invalid."
+    61842                           "Send Mail failed to send message."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61856                           "No error occurred."
+    61857                           "An unknown error occurred while accessing %1."
+    61858                           "%1 was not found."
+    61859                           "%1 contains an invalid path."
+    61860                           "%1 could not be opened because there are too many open files."
+    61861                           "Access to %1 was denied."
+    61862                           "An invalid file handle was associated with %1."
+    61863                           "%1 could not be removed because it is the current directory."
+    61864                           "%1 could not be created because the directory is full."
+    61865                           "Seek failed on %1"
+    61866                           "A hardware I/O error was reported while accessing %1."
+    61867                           "A sharing violation occurred while accessing %1."
+    61868                           "A locking violation occurred while accessing %1."
+    61869                           "Disk full while accessing %1."
+    61870                           "An attempt was made to access %1 past its end."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61872                           "No error occurred."
+    61873                           "An unknown error occurred while accessing %1."
+    61874                           "An attempt was made to write to the reading %1."
+    61875                           "An attempt was made to access %1 past its end."
+    61876                           "An attempt was made to read from the writing %1."
+    61877                           "%1 has a bad format."
+    61878                           "%1 contained an unexpected object."
+    61879                           "%1 contains an incorrect schema."
+END
+
+STRINGTABLE DISCARDABLE
+BEGIN
+    61888                           "pixels"
+END
+
+#endif
