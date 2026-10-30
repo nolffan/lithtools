@@ -210,6 +210,38 @@ file that was never created.
 
 Not fixed yet.
 
+### NOLF's processor reports a DAT file it never wrote after "No"
+
+NOLF's Processor.exe 0x44de92 (SaveDATFile,
+src/LT2/tools/PreProcessorNOLF/Processing.cpp; near). Answering No to
+"Error opening output file.  Try again?" returns TRUE, so DoProcessing
+and ImportGeometry carry on and print the world's statistics as if the
+DAT file had been written. With -skipdialog nobody can answer the
+question, and the run waits for good.
+
+Not fixed yet.
+
+### NOLF's unseen-poly removal tests an unsigned root for "< 0"
+
+NOLF's Processor.exe 0x45ad80 (CUnseenPolyRemover::RemoveUnseenPolies,
+src/LT2/tools/PreProcessorNOLF/VisLeaves.cpp; identical). It returns
+early if the world's root node is less than 0, but the root is unsigned
+(`test; jae`), so the test never fires. Harmless; AvP2's version
+(0x4498d0) has no test.
+
+Not fixed yet.
+
+### NOLF's processor never exits with -skipdialog
+
+NOLF's Processor.exe (CProcessingDlg, the progress dialog,
+src/LT2/tools/PreProcessorNOLF/ProcessorApp.cpp). With -skipdialog in
+processor.opt the options dialog is skipped, but the progress dialog stays
+up when processing is done, or has failed, until someone presses OK, so a
+batch run of several worlds can't follow one with the next. AvP2's
+processor closes it.
+
+Not fixed yet.
+
 ### SaveDATFile's rename error messages are garbled
 
 AvP2's Processor.exe 0x4415a0 and 0x4417c5 (SaveDATFile, Processing.cpp;
