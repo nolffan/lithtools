@@ -7,9 +7,6 @@
 
 
 
-	// Removes duplicate vertices and bad triangles.
-	void gn_CleanupGeometry(Model *pModel);
-
 	// Functions to setup the vertex and poly normals.
 	BOOL gn_BuildModelVertexNormals(Model *pModel);
 

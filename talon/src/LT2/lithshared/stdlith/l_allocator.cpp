@@ -5,6 +5,30 @@
 LAlloc g_DefAlloc;
 
 
+#ifdef STDLITH_ALLOC_OVERRIDE
+// talon: ModelEdit's build (Lib_StdLith_alloc.dsp) has the default allocator
+// functions too, here, ahead of LAllocCount: 0x436c30 and 0x436c50 in the
+// image, between g_DefAlloc's initializer (0x436bf0) and LAllocCount's
+// constructor (0x436c70); LAlloc::Alloc and Free (0x416755, 0x416762)
+// call them, and they are the only callers of malloc and free in
+// Monolith's code besides dalloc and dfree.  The non-override block below
+// is the processors' (after ClearCounts).
+void* DefStdlithAlloc(DWORD size)
+{
+	if(size == 0)
+		return NULL;
+
+	return malloc(size);
+}
+
+void DefStdlithFree(void *ptr)
+{
+	if(ptr)
+		free(ptr);
+}
+#endif
+
+
 
 // -------------------------------------------------------------------------------- //
 // LAllocCount implementation.

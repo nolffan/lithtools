@@ -1,6 +1,10 @@
 
 #include "bdefs.h"
 #include "model.h"
+
+// talon: the module opens with std::ctype<unsigned short>::id's 21-byte
+// initializer (0x42f746), which only <xlocale> (via <string>) gives it.
+#include <string>
 #include "model_ops.h"
 #include "model_cleanup.h"
 
@@ -12,82 +16,11 @@ typedef struct VertPolyAdjacency_t
 
 
 
-// Finds duplicate vertices and removes them.  Note: this routine has potential for error
-// if the tolerance is too large because vertices could 'slide' around and move really far.
-// The preprocessor does it correctly, but it was a total puff.
-static void gn_RemoveDuplicateVertices(
-	Model *pModel,
-	float fMagScale)
-{
-		// T.F ModelPiece 
-	ASSERT(FALSE && " NO LONGER VALID " );
-#if(0)
-	DWORD i, j, iNode;
-	float dist;
-	LTVector vTemp;
-	ModelPiece *pPiece;
-
-
-	for(iNode=0; iNode < pModel->NumPieces(); iNode++)
-	{
-		pPiece = pModel->GetPiece(iNode);
-
-		// For each vertex, find any other ones close enough.
-		for(i=0; i < pPiece->m_Verts; i++)
-		{
-			for(j=0; j < pPiece->m_Verts; j++)
-			{
-				if(i == j)
-					continue;
-
-				// Only vertices from the same node can be joined!
-				VEC_SUB(vTemp, pPiece->m_Verts[i].m_Vec, pPiece->m_Verts[j].m_Vec);
-				dist = vTemp.Mag() * fMagScale;
-
-				if(dist < 0.1f)
-				{
-					// Replace i with j.
-					pPiece->ReplaceVertex(i, j);
-					--i;
-					break;
-				}
-			}
-		}
-	}
-#endif
-}
-
-
-static void gn_RemoveedUpTriangles(Model *pModel)
-{
-	// T.F ModelPiece 
-	ASSERT(FALSE);
-
-#if(0)
-	CMoArray<ModelTri> newTris;
-	DWORD i, j;
-	ModelTri *pTri;
-	ModelPiece *pPiece;
-
-
-	for(i=0; i < pModel->NumPieces(); i++)
-	{
-		pPiece = pModel->GetPiece(i);
-		
-		for(j=0; j < pPiece->m_Tris; j++)
-		{
-			pTri = &pPiece->m_Tris[j];
-		
-			if(pTri->m_Indices[0] == pTri->m_Indices[1] || pTri->m_Indices[0] == pTri->m_Indices[2] ||
-				pTri->m_Indices[1] == pTri->m_Indices[2])
-			{
-				pPiece->m_Tris.Remove(j);
-				--j;
-			}
-		}
-	}
-#endif
-}
+// talon: 2001's model_cleanup (0x42f746..0x42fd4d) has gn_BuildTriNormals,
+// gn_BuildModelVertexNormals, gn_BuildVertexNormals, gn_IsVertUsed and
+// gn_RemoveUnusedVertices; Build 69's gn_RemoveDuplicateVertices,
+// gn_RemoveedUpTriangles (both stubs there), gn_GetVertRadius and
+// gn_CleanupGeometry aren't in it.
 
 
 static BOOL gn_BuildVertexNormals(PieceLOD *pPiece, CMoArray<LTVector> &triNormals)
@@ -128,36 +61,6 @@ static BOOL gn_BuildVertexNormals(PieceLOD *pPiece, CMoArray<LTVector> &triNorma
 
 	delete [] pAdjacent;
 	return TRUE;
-}
-
-
-// Returns the radius of a sphere enclosing all vertices (using ModelVert::m_Vec).
-// This is a slight overestimation.
-static float gn_GetVertRadius(Model *pModel)
-{
-	uint32 iPiece, iLOD, iVert;
-	ModelPiece *pPiece;
-	PieceLOD   *pLOD ;
-	LTVector vMin, vMax;
-
-
-	vMin.Init((float)MAX_CREAL, (float)MAX_CREAL, (float)MAX_CREAL);
-	vMax.Init((float)-MAX_CREAL, (float)-MAX_CREAL, (float)-MAX_CREAL);
-
-	for(iPiece=0; iPiece < pModel->NumPieces(); iPiece++)
-	{
-		pPiece = pModel->GetPiece(iPiece);
-		for( iLOD = 0 ;iLOD < pModel->GetPiece(iPiece)->NumLODs() ; iLOD++)
-		{
-			pLOD = pModel->GetPiece(iPiece)->GetLOD(iLOD);
-			for(iVert=0; iVert < pLOD->NumVerts(); iVert++)
-			{
-				VEC_MIN(vMin, vMin, pLOD->m_Verts[iVert].m_Vec);
-				VEC_MAX(vMax, vMax, pLOD->m_Verts[iVert].m_Vec);
-			}
-		}
-	}
-	return (vMax - vMin).Mag() * 0.5f;
 }
 
 
@@ -234,90 +137,25 @@ BOOL gn_IsVertUsed(PieceLOD *pPiece, DWORD iTest)
 
 
 // Removes all unused vertices.
+// talon: 2001's walks each piece's own vertices (the piece is its LOD 0),
+// not its LODs' (0x42fce9).
 void gn_RemoveUnusedVertices(Model *pModel)
 {
-	uint32 iPiece,iLOD, iVert;
+	uint32 iPiece, iVert;
 	ModelPiece *pPiece;
 
 	for(iPiece=0; iPiece < pModel->NumPieces(); iPiece++)
 	{
 		pPiece = pModel->GetPiece(iPiece);
-		for(iLOD = 0 ; iLOD < pPiece->NumLODs() ; ++iLOD )
-		{
-			PieceLOD *pLOD = pPiece->GetLOD(iLOD);
 
-			for(iVert=0; iVert < pLOD->NumVerts(); iVert++)
+		for(iVert=0; iVert < pPiece->NumVerts(); iVert++)
+		{
+			if(!gn_IsVertUsed(pPiece, iVert))
 			{
-				if(!gn_IsVertUsed(pLOD, iVert))
-				{
-					// (Doesn't matter what we replace it with, it's not referenced anywhere).
-					pLOD->ReplaceVertex(iVert, 0);
-					--iVert;
-				}
+				// (Doesn't matter what we replace it with, it's not referenced anywhere).
+				pPiece->ReplaceVertex(iVert, 0);
+				--iVert;
 			}
 		}
 	}
 }
-
-
-void gn_CleanupGeometry(Model *pModel)
-{
-	float fMagScale, fVertRadius;
-	char *pToken, *pLookFor;
-	char tempNum[16];
-	uint32 nDigits, i;
-	BOOL bValid;
-
-	
-	// Get the magnitude scale from the top null's name.
-	// This is used for really small models so the engine doesn't collapse all their
-	// vertices together.
-	// If they didn't specify it, then we auto-scale everything to be 256 units large
-	// (which should work in 99% of the cases)..
-	fVertRadius = gn_GetVertRadius(pModel);
-	if(fVertRadius < 0.001f)
-	{
-		fMagScale = 1.0f;
-	}
-	else
-	{
-		fMagScale = 256.0f / fVertRadius;
-	}
-
-	// Look for _zMagScaleNNN in the root node's name.
-	pLookFor = "MagScale";	
-	nDigits = 3;
-
-	if(pToken = model_FindExporterToken(pModel->GetRootNode()->GetName(), pLookFor))
-	{
-		pToken += strlen(pLookFor);
-
-		// Make sure we have enough numeric digits.
-		bValid = TRUE;
-		for(i=0; i < nDigits; i++)
-		{
-			if(pToken[i] < '0' || pToken[i] > '9')
-			{
-				bValid = FALSE;
-				break;
-			}
-
-			tempNum[i] = pToken[i];
-		}
-
-		if(bValid)
-		{
-			// Null terminate it.
-			tempNum[nDigits] = 0;
-			fMagScale = (float)atoi(tempNum);
-		}
-	}
-
-	gn_RemoveDuplicateVertices(pModel, fMagScale);
-
-	gn_RemoveedUpTriangles(pModel);
-	gn_RemoveUnusedVertices(pModel);
-}
-
-
-

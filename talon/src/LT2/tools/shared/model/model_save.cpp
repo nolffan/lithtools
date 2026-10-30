@@ -2,10 +2,18 @@
 // model_save.cpp
 // tools
 // create binary data from lta.
+// talon: 2001's .abc writer, written from the image (0x43208c..0x432cbb):
+// the same chunks model_load reads, file version 12.  Build 69's
+// model_save.cpp (an LTB-era writer with compressed animation) kept only
+// the shape of the Save members; their bodies here are the image's.
 // ------------------------------------------------------------------------
 #include <windows.h>
 #include "stdlith.h"
 #include "model.h"
+
+// talon: the module opens with std::ctype<unsigned short>::id's 21-byte
+// initializer (0x43208c), which only <xlocale> (via <string>) gives it.
+#include <string>
 #include "sysstreamsim.h"
 #include "modelallocations.h"
 
@@ -13,486 +21,73 @@
 
 using namespace std ;
 
-// talon: the LT2 SDK's ltrotation.h has no stream operators for a rotation
-// (Build 69's has these, the same four floats).
-inline void LTStream_Write(ILTStream *pStream, LTRotation &quat)
-{
-	STREAM_WRITE(quat.m_Quat[0]);
-	STREAM_WRITE(quat.m_Quat[1]);
-	STREAM_WRITE(quat.m_Quat[2]);
-	STREAM_WRITE(quat.m_Quat[3]);
-}
-
-//------------------------------------------------------------------ //
-
-//writes out a unique marker that can be used to help insure that the file isn't getting off
-//when loaded
-static void WriteFileMarker(ILTStream& file)
-{
-	uint32 nMarker = 0xFEEEFEEE;
-	file << nMarker;
-}
+// talon: the LT2 SDK's ltrotation.h has no stream operators for a rotation;
+// the image's are out of line (0x435b08, 0x435b46, after pixelformat), so
+// simple_dalloc.cpp defines them.
+void LTStream_Write(ILTStream *pStream, LTRotation &quat);
 
 
 // ------------------------------------------------------------------------
-// WriteOutDefVertexLst ( ILTStream , DefVertexLst )
-// Format :
-// [uint32 size  float data ]
+// mod_StartChunk (0x43236e)
+// Ends the previous chunk (writes the new chunk's offset into its "next"
+// slot) and starts a new one: its name and a -1 "next" slot.  Returns
+// where that slot is.
 // ------------------------------------------------------------------------
-static void WriteOutDefVertexLst( ILTStream &file, CDefVertexLst *pDefVertexLst  )
+static uint32 mod_StartChunk(ILTStream *pStream, const char *pName, uint32 prevChunk)
 {
-	uint32 frameSize = pDefVertexLst->size() ;
-	float *data = pDefVertexLst->getArray() ;
-	file.Write( &frameSize, sizeof(uint32) );
-	file.Write( data, sizeof(float) * 3 * frameSize ) ;
-}
+	uint32 nextPos;
 
-// ------------------------------------------------------------------------
-// Stuff used by the data compression schemes
-// ------------------------------------------------------------------------
-struct KeyPos {
-	uint32 time ;
-	LTVector pos ;
-};
-
-struct KeyQuat {
-	uint32 time ;
-	LTRotation rot ;
-};
-
-
-// ------------------------------------------------------------------------
-// CheapCompressRotation( in_rotation, out_compressed_rotation )
-//
-// Converts the quat's floats to int16's. As long as the number is between
-// -1 and 1 the values will work since it converts that range to a
-// number between -32767 and 32767. 
-// ------------------------------------------------------------------------
-static inline 
-void CheapCompressRotation( const LTRotation & in_rot, int16 out_compressed[4] )
-{
-	out_compressed[0] = (int16)(in_rot.m_Quat[0] * 0x7FFF) ;
-	out_compressed[1] = (int16)(in_rot.m_Quat[1] * 0x7FFF) ;
-	out_compressed[2] = (int16)(in_rot.m_Quat[2] * 0x7FFF) ;
-	out_compressed[3] = (int16)(in_rot.m_Quat[3] * 0x7FFF) ;
-}
-
-// positional rotation 
-// scheme precision loss scheme. 
-#define NKF_TRANS_SCALE_1_11_4		(16.0f)		// 2^4
-#define NKF_TRANS_OOSCALE_1_11_4		(1.0f/NKF_TRANS_SCALE_1_11_4)
-
-// to pack multiply by the scale (number of decimal precision bit you want, in this case 4 bits)
-inline int16 PackFloat16( float floatval ) { return (int16)(floatval * NKF_TRANS_SCALE_1_11_4);}
-
-
-inline void Pack16LTVector( LTVector & in, int16 out[3] )
-{
-	out[0] = PackFloat16(in.x);
-	out[1] = PackFloat16(in.y);
-	out[2] = PackFloat16(in.z);
-}
-
-static inline 
-float UnpackFromInt16( int16 intval ) {
-	return (float)(intval) * NKF_TRANS_OOSCALE_1_11_4;
-}
-
-static inline 
-void UnpackLTVectorFromInt16Vec( int16 vec[3], LTVector &out_vec )
-{
-	out_vec.x = UnpackFromInt16( vec[0]);
-	out_vec.y = UnpackFromInt16( vec[1]);
-	out_vec.z = UnpackFromInt16( vec[2]);
-}
-
-
-struct ProcessingInfo {
-	ProcessingInfo()
+	if(prevChunk != (uint32)-1)
 	{
-		num_nodes  =  0;
-		num_single_nodes[0]= num_single_nodes[1]= 0;
-		quat_size = 0; pos_size = 0 ;
-		default_size = 0;
+		uint32 curPos;
+
+		pStream->GetPos(&curPos);
+		pStream->SeekTo(prevChunk);
+		pStream->WriteVal(curPos);
+		pStream->SeekTo(curPos);
 	}
 
-	void Report( ostream & tmp ) 
-	{
-		tmp << " animation info : " << endl;
-		tmp << " num anim nodes  " << num_nodes << endl;
-		tmp << " default size : " << default_size << " compression % : " ;
-		tmp << 1.0f - ((quat_size+pos_size)/(float)default_size) << endl;
-		
-		tmp << " single node pos " << num_single_nodes[0]<<" percent : "<< num_single_nodes[0] / (float)num_nodes << endl;
-		tmp << " single node rot " << num_single_nodes[1]<<" percent : "<< num_single_nodes[1] / (float)num_nodes << endl;
+	pStream->WriteString((char*)pName);
+	pStream->GetPos(&nextPos);
+	pStream->WriteVal((uint32)-1);
 
-		tmp << " total exported anim size : " << quat_size + pos_size << endl;
-		tmp << " quat size : " << quat_size << endl;
-		tmp << " pos  size : " << pos_size << endl;
-	}
-
-	uint32 num_nodes ;
-	uint32 num_rle_nodes[2] ;
-	uint32 num_single_nodes[2];
-	uint32 quat_size ;
-	uint32 pos_size ;
-	uint32 default_size ;
-
-} Pinfo;
-
-
-void GetAnimOutputReport( ostream &os )
-{
-	Pinfo.Report(os) ;
+	return nextPos;
 }
 
-//bool do_it = false ;
-//ofstream ftest("c:/foo.txt");
 
-
-// ------------------------------------------------------------------------
-// KillKFToDataLUT
-// Create the map between key times and key values. If there are more key times
-// than key values then more than one key time shares a key value. This creates a map
-// where given a key-time we get a key-value.
-// ------------------------------------------------------------------------
-template<class KeyType> 
-void FillKFToDataLUT( const vector<KeyType> & in_keys, 
-					  const CMoArray<AnimKeyFrame, NoCache> & KeyTimes, 
-					  uint16 *out_lut )
-{
-	uint32 ii ;
-	uint32 kfcnt = 0 ;
-		// fill in the map.
-	for(  ii = 0; ii < in_keys.size()  ; ii ++ )
-	{
-		uint32 start =
-		out_lut[ii] = kfcnt;
-		if( KeyTimes[ii].m_Time >= in_keys[ kfcnt ].time )
-				kfcnt++;
-	}
-} 
-
-
-// ------------------------------------------------------------------------
-// AnimNode::Save
-// write out keyframe data potentially compression some stuff... 
-/* notes on compression 
-
-node channels that only have one value are saved as such.
-All other channels as saved as is. Even though some channels may have redundant
-data, we still save that out. The two ways of getting rid of redundant data, one getting
-rid of obvious interpolatants and creating a look up table of missing datum isn't worth it. 
-
-In addition to channel data reduction there is the 16bit compression of the position and rotation datum.
-This is a really naive method but it works. Positional data gets its precision cut off, and the 
-quaternions get the float value stuffed into int16 range. Both work well, both can get decompressed 
-rather quickly. 
-  
-  */
-// ------------------------------------------------------------------------
-bool AnimNode::Save(ILTStream &file, uint32 compression_type, uint32& nAnimDataSize )
+// 0x4320ad
+LTBOOL AnimNode::Save(ILTStream &file)
 {
 	uint32 i;
-	
-	uint32 nPosDataSize = 0;
-	uint32 nQuatDataSize = 0;
 
-	// Validate.
 	if(m_Children.GetSize() != m_pNode->m_Children.GetSize())
-		return false;
+		return LTFALSE;
 
-	Pinfo.num_nodes++;
-	Pinfo.default_size += (sizeof(LTVector)+ sizeof(LTRotation))* m_pAnim->m_KeyFrames  ;
-
-	if( compression_type == ModelAnim::NONE ) 
+	for(i=0; i < m_pAnim->m_KeyFrames.GetSize(); i++)
 	{
-		// save the reference piece 
-		uint8 bIsVertexAnim = isVertexAnim(); 
-
-		file.WriteVal( bIsVertexAnim );
-
-		if( bIsVertexAnim )
-		{
-			for( i = 0 ;i < m_pAnim->m_KeyFrames ; i++ )
-			if( m_KeyFrames[i].m_pDefVertexLst != NULL )
-			{
-				WriteOutDefVertexLst( file, m_KeyFrames[i].m_pDefVertexLst );
-			}
-		}
-		else    
-		{
-			struct out_data_t { LTVector pos ; LTRotation rot ; } out_data ;
-			
-			nQuatDataSize += sizeof(LTRotation)* m_pAnim->m_KeyFrames ;
-			nPosDataSize  += sizeof(LTVector)* m_pAnim->m_KeyFrames ;
-
-			for( i = 0 ;i < m_pAnim->m_KeyFrames ; i++ )
-			{
-				file.Write(&m_KeyFrames[i].m_Translation, sizeof(m_KeyFrames[i].m_Translation));
-			}
-
-			for( i = 0 ;i < m_pAnim->m_KeyFrames ; i++ )
-			{
-				file.Write(&m_KeyFrames[i].m_Quaternion, sizeof(m_KeyFrames[i].m_Quaternion));
-			}
-		}
-	}  
-	else // compress the data.
-	{
-		LTVector   pos,prevpos;
-		LTRotation rot,prevrot;
-		uint32 time ;
-		uint32 num_keyframes = m_pAnim->m_KeyFrames.GetSize();
-
-		vector<KeyPos>  vKeyPos;
-		vector<KeyQuat> vKeyQuat ;
-
-		// starting data is obviously invalid.
-		prevpos.Init(9999999999.0f,9999999999.0f,999999999.0f);
-		prevrot.Init(99.0f,99.0f,99.0f,99.0f); 
-		
-		// first pass : get rid of blatant key value copies.
-		for( i = 0 ; i < m_pAnim->m_KeyFrames ; i++ )
-		{
-			time = (uint16)m_pAnim->m_KeyFrames[i].m_Time ;
-			pos = m_KeyFrames[i].m_Translation;
-			
-			// if this and the pervious data is not the same, keep it.
-			if( pos.Dist( prevpos ) != 0.0f )
-			{
-				KeyPos kp ;
-				kp.pos   = pos ;
-				vKeyPos.push_back( kp );
-				prevpos = pos ;
-			}
-		
-			rot = m_KeyFrames[i].m_Quaternion;			
-			// get rid of blatant copies.
-			if( rot != prevrot )
-			{
-				KeyQuat kq ;
-				kq.rot   = rot;
-				vKeyQuat.push_back( kq );
-				prevrot = rot;
-			}	
-		}
-	
-		int16 compressed_pos[3];
-		int16 compressed_rot[4];
-		
-		// output info.
-		if( vKeyPos.size() == 1 )				  {	Pinfo.num_single_nodes[0] ++; 		}
-		if( vKeyQuat.size() == 1 )				  { Pinfo.num_single_nodes[1] ++;	}
-		
-			
-
-		// if we are further compressing the data do it here
-		if( compression_type == ModelAnim::RELEVANT_16)
-		{	
-			// ------------------------------------------------------------------------
-			// pos output 
-		
-			// undo lut stuff.
-			if( vKeyPos.size() > 1 && (vKeyPos.size() != num_keyframes ) ) 
-			{
-				file.WriteVal( num_keyframes );
-
-				// save pos data.
-				for( i = 0 ; i < num_keyframes ; i++ )
-				{
-					nPosDataSize += sizeof(int16) *3 ;
-					Pack16LTVector( m_KeyFrames[i].m_Translation, compressed_pos );
-					file.Write( compressed_pos, sizeof(int16) *3 );
-				}
-			}
-			else
-			{
-				file.WriteVal( vKeyPos.size() );
-
-				for( i = 0 ; i < vKeyPos.size() ; i++ )
-				{
-					nPosDataSize += sizeof(int16) *3 ;
-
-					Pack16LTVector( vKeyPos[i].pos, compressed_pos );
-					file.Write( compressed_pos, sizeof(int16) * 3);
-				}
-			}
-	
-			// ------------------------------------------------------------------------
-			// quat output 
-			
-			if( vKeyQuat.size() > 1 && (vKeyQuat.size() != num_keyframes ) ) 
-			{	
-				file.WriteVal( num_keyframes );
-		
-				// save pos data.
-				for( i = 0 ; i < num_keyframes ; i++ )
-				{
-					nPosDataSize += sizeof(int16) *4 ;
-					CheapCompressRotation( m_KeyFrames[i].m_Quaternion, compressed_rot );
-					file.Write( compressed_rot, sizeof(int16) *4 );
-				}
-			}
-			else
-			{
-				file.WriteVal( vKeyQuat.size() );
-					
-				// here we use a cheapo compression : per-member to 16 bit compression.
-				for( i = 0 ; i < vKeyQuat.size() ; i++ )
-				{
-					nQuatDataSize += sizeof(int16) *4 ; 
-					CheapCompressRotation( vKeyQuat[i].rot, compressed_rot );
-					file.Write( compressed_rot, sizeof(int16)*4 );
-				}
-			}
-		}
-		else if( compression_type == ModelAnim::RELEVANT )// don't 16bit compress data..
-		{
-			// ------------------------------------------------------------------------
-			// pos output 
-			// undo lut stuff.
-			if( vKeyPos.size() > 1 && (vKeyPos.size() != num_keyframes ) ) 
-			{
-				file.WriteVal( num_keyframes );
-			
-				// save pos data.
-				for( i = 0 ; i < num_keyframes ; i++ )
-				{
-					nPosDataSize += sizeof(float) *3 ;
-					file << m_KeyFrames[i].m_Translation;
-				}
-			}
-			else
-			{
-				file.WriteVal( vKeyPos.size() );
-			
-				for( i = 0 ; i < vKeyPos.size() ; i++ )
-				{
-					nPosDataSize += sizeof(float) *3 ;
-					file << vKeyPos[i].pos ;
-				}
-			}
-	
-			// ------------------------------------------------------------------------
-			// quat output 
-			
-			
-			if( vKeyQuat.size() > 1 && (vKeyQuat.size() != num_keyframes ) ) 
-			{
-				file.WriteVal( num_keyframes );
-
-				// save pos data.
-				for( i = 0 ; i < num_keyframes ; i++ )
-				{
-					nPosDataSize += sizeof(float) *4 ;
-					file << m_KeyFrames[i].m_Quaternion;
-				}
-			}
-			else
-			{	
-				file.WriteVal( vKeyQuat.size() );
-
-				// here we use a cheapo compression : per-member to 16 bit compression.
-				for( i = 0 ; i < vKeyQuat.size() ; i++ )
-				{
-					nQuatDataSize += sizeof(float) *4 ;
-					file << vKeyQuat[i].rot ;
-				}
-			}
-		}
-		else if( compression_type == ModelAnim::RELEVANT_ROT16_ONLY )
-		{
-			// ------------------------------------------------------------------------
-			// Player-view models get their rotations but not their positions compressed.
-
-			// pos output 
-			
-			// undo lut stuff.
-			if( vKeyPos.size() > 1 && (vKeyPos.size() != num_keyframes ) ) 
-			{
-				file.WriteVal( num_keyframes );
-
-				// save pos data.
-				for( i = 0 ; i < num_keyframes ; i++ )
-				{
-					nPosDataSize += sizeof(float) *3 ;
-					file << m_KeyFrames[i].m_Translation;
-				}
-			}
-			else
-			{
-				file.WriteVal( vKeyPos.size() );
-
-				for( i = 0 ; i < vKeyPos.size() ; i++ )
-				{
-					nPosDataSize += sizeof(float) *3 ;
-					file << vKeyPos[i].pos ;
-				}
-			}
-
-			// ------------------------------------------------------------------------
-			// quat output 
-			
-			if( vKeyQuat.size() > 1 && (vKeyQuat.size() != num_keyframes ) ) 
-			{
-				file.WriteVal( num_keyframes );
-
-				// save pos data.
-				for( i = 0 ; i < num_keyframes ; i++ )
-				{
-					nPosDataSize += sizeof(int16) *4 ;
-					CheapCompressRotation( m_KeyFrames[i].m_Quaternion, compressed_rot );
-					file.Write( compressed_rot, sizeof(int16) *4 );
-				}
-			}
-			else
-			{	
-				file.WriteVal( vKeyQuat.size() );
-
-				// here we use a cheapo compression : per-member to 16 bit compression.
-				for( i = 0 ; i < vKeyQuat.size() ; i++ )
-				{
-					nQuatDataSize += sizeof(int16) *4 ;
-					CheapCompressRotation( vKeyQuat[i].rot, compressed_rot );
-					file.Write( compressed_rot, sizeof(int16)*4 );
-				}
-			}
-		}
+		file.Write(&m_KeyFrames[i], sizeof(NodeKeyFrame));
 	}
 
-	//adjust our count
-	nAnimDataSize += nQuatDataSize + nPosDataSize;
-
-	//adjust our totals
-	Pinfo.pos_size += nPosDataSize;
-	Pinfo.quat_size += nQuatDataSize;
-
-	for(i=0; i < m_pNode->m_Children; i++)	
+	for(i=0; i < m_pNode->m_Children.GetSize(); i++)
 	{
-		if(!m_Children[i]->Save(file, compression_type, nAnimDataSize))
-			return false;
+		if(!m_Children[i]->Save(file))
+			return LTFALSE;
 	}
 
-	return true;
+	return LTTRUE;
 }
 
-// ------------------------------------------------------------------------
-// Save if the compression type is set 
-// ------------------------------------------------------------------------
-bool ModelAnim::Save(ILTStream &file, uint32& nAnimDataSize)
+
+// 0x43211e
+LTBOOL ModelAnim::Save(ILTStream &file)
 {
 	uint32 i;
 	AnimKeyFrame *pKeyFrame;
 
-	
-	// Save misc info.
 	file.WriteString(m_pName);
-
-	file << m_CompressionType ;
+	file << m_ModelEditWeightSet;
 	file << m_InterpolationMS;
-	
-	// Write the keyframes out.
+
 	file.WriteVal(m_KeyFrames.GetSize());
 	for(i=0; i < m_KeyFrames; i++)
 	{
@@ -502,74 +97,78 @@ bool ModelAnim::Save(ILTStream &file, uint32& nAnimDataSize)
 		file.WriteString(pKeyFrame->m_pString);
 	}
 
-	m_pLUTWorkBuffer = new uint16 [ m_KeyFrames.GetSize() ];
-	// Write the transform tree.
-	bool ret_val =  GetRootNode()->Save(file, m_CompressionType, nAnimDataSize);	
-
-	delete [] m_pLUTWorkBuffer ;
-
-	return ret_val ;
+	return m_pRootNode->Save(file);
 }
 
 
-bool ModelNode::Save(ILTStream &file)
+// 0x4321a7
+LTBOOL ModelNode::Save(ILTStream &file)
 {
 	uint32 i, j;
-	
-	// Save all the misc. data.
-	file.WriteString(m_pName);
 
+	file.WriteString(m_pName);
 	file << m_NodeIndex;
 	file << m_Flags;
 
 	for(i=0; i < 4; i++)
+	{
 		for(j=0; j < 4; j++)
+		{
 			file << m_mGlobalTransform.m[i][j];
+		}
+	}
 
-	// Save the child nodes.
 	file.WriteVal(m_Children.GetSize());
 	for(i=0; i < m_Children; i++)
 	{
 		if(!m_Children[i]->Save(file))
-			return false;
+			return LTFALSE;
 	}
 
-	return true;
+	return LTTRUE;
 }
 
 
-bool AnimInfo::Save(ILTStream &file, uint32& nAnimDataSize)
+// 0x432242
+LTBOOL AnimInfo::Save(ILTStream &file)
 {
-	file << m_vDims.x << m_vDims.y << m_vDims.z;
+	file << m_vDims.x;
+	file << m_vDims.y;
+	file << m_vDims.z;
 
-	return m_pAnim ? m_pAnim->Save(file, nAnimDataSize) : false;
+	return m_pAnim ? m_pAnim->Save(file) : LTFALSE;
 }
 
 
-bool Model::SaveAnimBindings(ILTStream &file)
+// 0x432286
+// talon: 2001's starts its own chunk (chunkPos is the previous one's).
+LTBOOL Model::SaveAnimBindings(ILTStream &file, uint32 &chunkPos)
 {
-	uint32 i, j, nParentAnims;
+	uint32 i, j, nAnims;
 	ChildInfo *pInfo;
 	AnimInfo *pAnimInfo;
-	
-	for(i=0; i < NumChildModels(); i++)
+
+	chunkPos = mod_StartChunk(&file, "AnimBindings", chunkPos);
+
+	for(i=0; i < m_nChildModels; i++)
 	{
-		pInfo = GetChildModel(i);
+		pInfo = m_ChildModels[i];
 
 		if(pInfo->m_pModel)
 		{
-			nParentAnims = pInfo->m_pModel->CalcNumParentAnims();
-			file << nParentAnims;
-			for(j=0; j < nParentAnims; j++)
+			nAnims = pInfo->m_pModel->CalcNumParentAnims();
+			file << nAnims;
+
+			for(j=0; j < nAnims; j++)
 			{
 				pAnimInfo = &m_Anims[pInfo->m_AnimOffset + j];
 
-				if(pAnimInfo->m_pChildInfo->m_pParentModel != this)
-					continue;
-			
-				file.WriteString(pAnimInfo->m_pAnim->GetName());
-				file << pAnimInfo->m_vDims;
-				file << pAnimInfo->m_vTranslation;
+				if(pAnimInfo->m_pChildInfo->m_pParentModel == this)
+				{
+					file.WriteString(pAnimInfo->m_pAnim->GetName());
+					LTStream_Write(&file, pAnimInfo->m_vDims);
+					LTStream_Write(&file, pAnimInfo->m_vTranslation);
+				}
 			}
 		}
 		else
@@ -578,19 +177,122 @@ bool Model::SaveAnimBindings(ILTStream &file)
 		}
 	}
 
-	return true;
+	return LTTRUE;
 }
 
 
-bool ChildInfo::Save(ILTStream &file)
+// 0x4323da
+LTBOOL ChildInfo::Save(ILTStream &file)
 {
-	if(!m_pParentModel)
-		return false;
+	uint32 i;
+	CIRelation defRelation;
+	LTRotation *pRot;
 
-	return true;
+	if(!m_pParentModel)
+		return LTFALSE;
+
+	file << m_SaveIndex;
+
+	for(i=0; i < m_pParentModel->NumNodes(); i++)
+	{
+		if(i < m_Relation.GetSize())
+		{
+			LTStream_Write(&file, m_Relation[i].m_Pos);
+			pRot = &m_Relation[i].m_Rot;
+		}
+		else
+		{
+			defRelation.m_Pos.Init();
+			defRelation.m_Rot.Init();
+			LTStream_Write(&file, defRelation.m_Pos);
+			pRot = &defRelation.m_Rot;
+		}
+
+		LTStream_Write(&file, *pRot);
+	}
+
+	return LTTRUE;
 }
 
-bool WeightSet::Save(ILTStream &file)
+
+// 0x43247d
+LTBOOL PieceLOD::Save(ILTStream &file)
+{
+	uint32 i, j;
+	ModelVert *pVert;
+
+	file.WriteVal(m_Tris.GetSize());
+	for(i=0; i < m_Tris; i++)
+	{
+		for(j=0; j < 3; j++)
+		{
+			file << m_Tris[i].m_UVs[j].tu;
+			file << m_Tris[i].m_UVs[j].tv;
+			file << m_Tris[i].m_Indices[j];
+		}
+	}
+
+	file.WriteVal(m_Verts.GetSize());
+	for(i=0; i < m_Verts; i++)
+	{
+		pVert = &m_Verts[i];
+
+		file.WriteVal(pVert->m_nWeights);
+		file.WriteVal(pVert->m_iReplacement);
+
+		for(j=0; j < pVert->m_nWeights; j++)
+		{
+			file << pVert->m_Weights[j].m_iNode;
+			file << pVert->m_Weights[j].m_Vec[0];
+			file << pVert->m_Weights[j].m_Vec[1];
+			file << pVert->m_Weights[j].m_Vec[2];
+			file << pVert->m_Weights[j].m_Vec[3];
+		}
+
+		file << pVert->m_Vec.x;
+		file << pVert->m_Vec.y;
+		file << pVert->m_Vec.z;
+		file << pVert->m_Normal.x;
+		file << pVert->m_Normal.y;
+		file << pVert->m_Normal.z;
+	}
+
+	return LTTRUE;
+}
+
+
+// 0x43263f
+LTBOOL ModelPiece::Save(ILTStream &file)
+{
+	uint32 i;
+
+	if(NumLODs() != m_pModel->NumLODs())
+		return LTFALSE;
+
+	file.WriteVal((uint16)m_iTexture);
+	file << m_SpecularPower;
+	file << m_SpecularScale;
+	file << m_LODWeight;
+
+	// No old LOD info.
+	file.WriteVal((uint16)0);
+	file.WriteString(m_Name);
+
+	if(!PieceLOD::Save(file))
+		return LTFALSE;
+
+	for(i=0; i < m_LODs; i++)
+	{
+		if(!m_LODs[i].Save(file))
+			return LTFALSE;
+	}
+
+	return LTTRUE;
+}
+
+
+// 0x4326f5
+LTBOOL WeightSet::Save(ILTStream &file)
 {
 	uint32 i;
 
@@ -601,58 +303,215 @@ bool WeightSet::Save(ILTStream &file)
 	{
 		file << m_Weights[i];
 	}
-	
-	return true;
+
+	return LTTRUE;
 }
 
 
-bool Model::SaveSockets(ILTStream &file)
+// 0x432742
+LTBOOL Model::SaveSockets(ILTStream &file)
 {
 	uint32 i;
 	ModelSocket *pSocket;
 
-	file.WriteVal(NumSockets());
-	for(i=0; i < NumSockets(); i++)
+	file.WriteVal(m_Sockets.GetSize());
+	for(i=0; i < m_Sockets; i++)
 	{
-		pSocket = GetSocket(i);
+		pSocket = m_Sockets[i];
 
 		file << pSocket->m_iNode;
 		file.WriteString(pSocket->m_Name);
-		file << pSocket->m_Rot;
-		file << pSocket->m_Pos;
-		file << pSocket->m_Scale ;
+		LTStream_Write(&file, pSocket->m_Rot);
+		LTStream_Write(&file, pSocket->m_Pos);
 	}
 
-	return true;
+	return LTTRUE;
 }
 
 
-bool Model::SaveWeightSets(ILTStream &file)
+// 0x4327c1
+LTBOOL Model::SaveWeightSets(ILTStream &file)
 {
 	uint32 i;
 
-	// first check if the weight sets are valid.
-	vector<int> valid_ws_index ;
-	for( i = 0 ; i < NumWeightSets() ; i++ )
+	file.WriteVal(m_WeightSets.GetSize());
+	for(i=0; i < m_WeightSets; i++)
 	{
-		if( GetWeightSet(i)->m_Weights.GetSize() == NumNodes() )
-		{
-			valid_ws_index.push_back(i);
-		}
-	} 
-	
-	// write out the valid weightsets.
-	file.WriteVal( uint32( valid_ws_index.size() ) ) ;
-
-	for( i = 0 ; i < valid_ws_index.size() ; i++ )
-	{
-		if(!GetWeightSet( valid_ws_index[i] )->Save(file) )
-			return false ;
+		if(!m_WeightSets[i]->Save(file))
+			return LTFALSE;
 	}
 
-	return true;
-
-	return true;
+	return LTTRUE;
 }
 
 
+// 0x43280b (the name is ours: Save's body)
+LTBOOL Model::SaveToStream(ILTStream &file)
+{
+	uint32 i, chunkPos, nodesPos;
+	ModelAllocations allocs;
+	ChildInfo *pInfo;
+	AnimInfo *pAnimInfo;
+
+	// Our save index changes with each save.
+	m_SelfChildModel.m_SaveIndex++;
+
+	chunkPos = mod_StartChunk(&file, "Header", (uint32)-1);
+	file.WriteVal((uint32)12);
+
+	if(!allocs.InitFromModel(this) || !allocs.Save(file))
+		return LTFALSE;
+
+	file.WriteString(m_CommandString);
+	file << m_GlobalRadius;
+
+	// The LOD distances, after 62 reserved bytes.
+	file.WriteVal((uint16)m_LODs.GetSize());
+	for(i=0; i < 62; i++)
+		file.WriteVal((uint8)0);
+
+	for(i=0; i < m_LODs; i++)
+		file << m_LODs[i].m_Dist;
+
+	// Pieces.
+	chunkPos = mod_StartChunk(&file, "Pieces", chunkPos);
+	file.WriteVal(CalcNumVertexWeights());
+	file.WriteVal(m_Pieces.GetSize());
+	for(i=0; i < m_Pieces; i++)
+	{
+		if(!m_Pieces[i]->Save(file))
+			return LTFALSE;
+	}
+
+	// Nodes.
+	nodesPos = mod_StartChunk(&file, "Nodes", chunkPos);
+	if(!GetRootNode()->Save(file) || !SaveWeightSets(file))
+		return LTFALSE;
+
+	// Child models.
+	chunkPos = mod_StartChunk(&file, "ChildModels", nodesPos);
+	file.WriteVal(m_nChildModels);
+	for(i=0; i < m_nChildModels; i++)
+	{
+		pInfo = m_ChildModels[i];
+
+		if(i != 0)
+			file.WriteString(pInfo->m_pFilename);
+
+		if(!pInfo->Save(file))
+			return LTFALSE;
+	}
+
+	// Animations.
+	chunkPos = mod_StartChunk(&file, "Animation", chunkPos);
+	file.WriteVal(CalcNumParentAnims());
+	for(i=0; i < m_Anims; i++)
+	{
+		pAnimInfo = &m_Anims[i];
+
+		if(pAnimInfo->GetAnimOwner() == this && !pAnimInfo->Save(file))
+			return LTFALSE;
+	}
+
+	// Sockets and animation bindings.
+	chunkPos = mod_StartChunk(&file, "Sockets", chunkPos);
+	if(!SaveSockets(file) || !SaveAnimBindings(file, chunkPos))
+		return LTFALSE;
+
+	return file.ErrorStatus() == LT_OK;
+}
+
+
+// 0x432a9a
+// Fix for a bug in ModelEdit where it sometimes saves animations in an order
+// different from animation bindings.
+LTBOOL Model::ForceAnimOrder()
+{
+	CMoArray<AnimInfo,NoCache> newAnimList;
+	uint32 i, iOut;
+
+	if(!newAnimList.SetSize(m_Anims.GetSize()))
+		return LTFALSE;
+
+	// Make sure our animations are the first in the list.
+	iOut = 0;
+	for(i=0; i < m_Anims; i++)
+	{
+		if(m_Anims[i].IsParentModel())
+		{
+			newAnimList[iOut] = m_Anims[i];
+			iOut++;
+		}
+	}
+
+	for(i=0; i < m_Anims; i++)
+	{
+		if(!m_Anims[i].IsParentModel())
+		{
+			newAnimList[iOut] = m_Anims[i];
+			iOut++;
+		}
+	}
+
+	return m_Anims.CopyArray(newAnimList);
+}
+
+
+// 0x432bb7
+LTBOOL Model::Save(ILTStream &file)
+{
+	ModelLoadRequest request;
+
+	ForceAnimOrder();
+	return SaveToStream(file) != LTFALSE;
+}
+
+
+// 0x432be4 (the name is ours)
+// Copies pSrc into this model by saving it to memory and loading it back.
+LTBOOL Model::CopyModel(Model *pSrc)
+{
+	ModelLoadRequest request;
+	LTBOOL bRet;
+
+	bRet = LTFALSE;
+	request.m_pFile = streamsim_OpenMemStream(0xFFFF);
+	if(request.m_pFile)
+	{
+		if(pSrc->Save(*request.m_pFile))
+		{
+			request.m_pFile->SeekTo(0);
+			if(Load(&request) == LT_OK)
+				bRet = LTTRUE;
+		}
+
+		request.m_pFile->Release();
+	}
+
+	return bRet;
+}
+
+
+// 0x432c40 (the name is ours)
+// Copies pSrc into this animation the same way.
+LTBOOL ModelAnim::CopyAnim(ModelAnim *pSrc)
+{
+	ILTStream *pStream;
+	LTBOOL bRet;
+
+	bRet = LTFALSE;
+	pStream = streamsim_OpenMemStream(0xFFFF);
+	if(pStream)
+	{
+		if(pSrc->Save(*pStream))
+		{
+			pStream->SeekTo(0);
+			if(Load(*pStream))
+				bRet = LTTRUE;
+		}
+
+		pStream->Release();
+	}
+
+	return bRet;
+}

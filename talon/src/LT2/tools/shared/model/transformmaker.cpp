@@ -4,7 +4,9 @@
 #include "bdefs.h"
 #include "transformmaker.h"
 
-#define MAX_MODELPATH_LEN	64
+// talon: 2001's Recurse multiplies through this (0x494910, .data, just
+// ahead of StdLith's g_DefAlloc) rather than assigning the parent first.
+static LTMatrix g_mTemp;
 
 // ------------------------------------------------------------------------
 // SetFromGVPStruct
@@ -25,14 +27,14 @@ void TransformMaker::SetupFromGVPStruct(GVPStruct *pStruct)
 }
 
 
-bool TransformMaker::IsValid()
+LTBOOL TransformMaker::IsValid()
 {
 	uint32 i;
 	Model *pModel;
 	AnimTimeRef *pAnim;
 
 	if(m_nAnims == 0 || m_nAnims > MAX_GVP_ANIMS)
-		return false;
+		return LTFALSE;
 
 	pModel = m_Anims[0].m_pModel;
 	for(i=0; i < m_nAnims; i++)
@@ -40,133 +42,61 @@ bool TransformMaker::IsValid()
 		pAnim = &m_Anims[i];
 
 		if(!pAnim->IsValid() || pAnim->m_pModel != pModel)
-			return false;
+			return LTFALSE;
 
 		// Make sure the weight set is valid.
 		if(i != 0)
 		{
 			if(pAnim->m_Cur.m_iWeightSet >= pModel->NumWeightSets())
-				return false;
+				return LTFALSE;
 		}
 	}
 
-	return true;
+	return LTTRUE;
 }
 
 
-void TransformMaker::CopyTimes(TransformMaker &other)
+LTBOOL TransformMaker::SetupTransforms()
+{
+	if(!SetupCall())
+		return LTFALSE;
+
+	Recurse(m_pModel->GetRootNode()->GetNodeIndex(), m_pStartMat);
+	return LTTRUE;
+}
+
+
+// ------------------------------------------------------------------------
+// SetupCall() (0x43601b)
+// talon: 2001's looks up each time ref's weight sets and animations here,
+// once, for InitTransform and BlendTransform.
+// ------------------------------------------------------------------------
+LTBOOL TransformMaker::SetupCall()
 {
 	uint32 i;
-
-	ASSERT(other.m_nAnims <= MAX_GVP_ANIMS);
-
-	for(i=0; i < other.m_nAnims; i++)
-		m_Anims[i] = other.m_Anims[i];
-
-	m_nAnims = other.m_nAnims;
-}
-
-// ------------------------------------------------------------------------
-//
-// ------------------------------------------------------------------------
-bool TransformMaker::SetupTransforms()
-{
-	if(!SetupCall()) return false;
-
-	Recurse(m_pModel->GetRootNode()->GetNodeIndex(), m_pStartMat);
-	return true;
-}
-
-
-bool TransformMaker::SetupMovementEncoding( void )
-{
-	if( !SetupCall() )
-		return false;
-
-	ModelNode* pMovementNode = m_pModel->GetMovementNode();
-	
-	if( pMovementNode )
-	{
-		uint32 movementNode = pMovementNode->GetNodeIndex();
-
-		LTMatrix baseXForm;
-		baseXForm.Identity();
-
-		InitTransform( 0, movementNode, m_Quat, m_vTrans );
-		for( uint32 i = 1; i < m_nAnims; i++ )
-		{
-			BlendTransform( i, movementNode );
-		}
-
-		m_Quat.ConvertToMatrix( m_mTemp );
-		m_mTemp.SetTranslation( m_vTrans );
-
-		*m_pStartMat = m_mTemp * *m_pStartMat;
-	}
-
-	return true;
-}
-
-
-bool TransformMaker::GetNodeTransform(uint32 iNode)
-{
-	uint32 thePath[MAX_MODELPATH_LEN];
-
-
-	if(!SetupCall())
-		return false;
-
-	if(iNode >= m_pModel->NumNodes())
-		return false;
-
-	// Build the path from this node to the root.
-	m_iCurPath = 0;
-	for(;;)
-	{
-		if(m_iCurPath >= MAX_MODELPATH_LEN)
-		{
-			ASSERT(false);
-			return false;
-		}
-
-		thePath[m_iCurPath] = iNode;
-		m_iCurPath++;
-
-		iNode = m_pModel->GetNode(iNode)->GetParentNodeIndex();
-		if(iNode == NODEPARENT_NONE)
-			break;
-	}
-
-	m_pRecursePath = thePath;
-	m_iCurPath--;
-	ASSERT(m_pRecursePath[m_iCurPath] == m_pModel->GetRootNode()->GetNodeIndex());
-
-	Recurse(m_pModel->GetRootNode()->GetNodeIndex(), m_pStartMat);
-	return true;
-}
-
-// ------------------------------------------------------------------------
-// SetupCall()
-// This sets up the transform maker, fishes out the result transformation
-// array out of the model class and puts it into m_pOutput as a handle that is
-// going to be used further on.
-// the model is there because the transform maker has been initialized with
-// a valid animation before this call.
-// ------------------------------------------------------------------------
-bool TransformMaker::SetupCall()
-{
 	AnimInfo *pAnim;
 
 
 	if(!IsValid())
-		return false;
+		return LTFALSE;
 
 	m_pRecursePath = LTNULL;
 	m_pModel = m_Anims[0].m_pModel;
 
+	for(i=0; i < m_nAnims; i++)
+	{
+		m_pPrevWeightSets[i] = (m_Anims[i].m_Prev.m_iWeightSet >= m_pModel->NumWeightSets()) ?
+			LTNULL : m_pModel->GetWeightSet(m_Anims[i].m_Prev.m_iWeightSet);
+		m_pCurWeightSets[i] = (m_Anims[i].m_Cur.m_iWeightSet >= m_pModel->NumWeightSets()) ?
+			LTNULL : m_pModel->GetWeightSet(m_Anims[i].m_Cur.m_iWeightSet);
+
+		m_pPrevAnims[i] = m_pModel->GetAnim(m_Anims[i].m_Prev.m_iAnim);
+		m_pCurAnims[i] = m_pModel->GetAnim(m_Anims[i].m_Cur.m_iAnim);
+	}
+
 	if(!m_pStartMat)
 	{
-		Mat_Identity(&m_mIdent);
+		m_mIdent.Identity();
 		m_pStartMat = &m_mIdent;
 	}
 
@@ -178,11 +108,11 @@ bool TransformMaker::SetupCall()
 	pAnim = m_pModel->GetAnimInfo(m_Anims[0].m_Prev.m_iAnim);
 	m_pNodeRelation = &pAnim->m_pChildInfo->m_Relation;
 
-	return true;
+	return LTTRUE;
 }
 
 // ------------------------------------------------------------------------
-// InitTransform
+// InitTransform (0x436115)
 //
 // ------------------------------------------------------------------------
 void TransformMaker::InitTransform(	uint32 iAnim,
@@ -191,20 +121,14 @@ void TransformMaker::InitTransform(	uint32 iAnim,
 									LTVector &outVec)
 {
 	AnimTimeRef *pTimeRef;
-	ModelAnim *pAnims[2];
-	AnimNode *pAnimNodes[2];
 	NodeKeyFrame *pKeys[2];
 	LTVector *pTrans1, *pTrans2;
 
 
 	pTimeRef = &m_Anims[iAnim];
 
-	pAnims[0] = m_pModel->GetAnim(pTimeRef->m_Prev.m_iAnim);
-	pAnims[1] = m_pModel->GetAnim(pTimeRef->m_Cur.m_iAnim);
-	pAnimNodes[0] = pAnims[0]->m_AnimNodes[iNode];
-	pAnimNodes[1] = pAnims[1]->m_AnimNodes[iNode];
-	pKeys[0] = &pAnimNodes[0]->m_KeyFrames[pTimeRef->m_Prev.m_iFrame];
-	pKeys[1] = &pAnimNodes[1]->m_KeyFrames[pTimeRef->m_Cur.m_iFrame];
+	pKeys[0] = &m_pPrevAnims[iAnim]->m_AnimNodes[iNode]->m_KeyFrames[pTimeRef->m_Prev.m_iFrame];
+	pKeys[1] = &m_pCurAnims[iAnim]->m_AnimNodes[iNode]->m_KeyFrames[pTimeRef->m_Cur.m_iFrame];
 
 	outQuat.Slerp(pKeys[0]->m_Quaternion, pKeys[1]->m_Quaternion, pTimeRef->m_Percent);
 	outVec = pKeys[0]->m_Translation + (pKeys[1]->m_Translation - pKeys[0]->m_Translation) * pTimeRef->m_Percent;
@@ -219,28 +143,23 @@ void TransformMaker::InitTransform(	uint32 iAnim,
 }
 
 
+// ------------------------------------------------------------------------
+// InitTransformAdditive (0x43627e)
+// ------------------------------------------------------------------------
 void TransformMaker::InitTransformAdditive( uint32 iAnim,
 											uint32 iNode,
 											LTRotation &outQuat,
 											LTVector &outVec)
 {
 	AnimTimeRef *pTimeRef;
-	ModelAnim *pAnims[2];
-	AnimNode *pAnimNodes[2];
 	NodeKeyFrame *pKeys[2], *pBaseKey;
 
 
 	pTimeRef = &m_Anims[iAnim];
 
-	pAnims[0] = m_pModel->GetAnim(pTimeRef->m_Prev.m_iAnim);
-	pAnims[1] = m_pModel->GetAnim(pTimeRef->m_Cur.m_iAnim);
-	pAnimNodes[0] = pAnims[0]->m_AnimNodes[iNode];
-	pAnimNodes[1] = pAnims[1]->m_AnimNodes[iNode];
-
-	pKeys[0] = &pAnimNodes[0]->m_KeyFrames[pTimeRef->m_Prev.m_iFrame];
-	pKeys[1] = &pAnimNodes[1]->m_KeyFrames[pTimeRef->m_Cur.m_iFrame];
-
-	pBaseKey = &pAnimNodes[0]->m_KeyFrames[0];
+	pBaseKey = &m_pPrevAnims[iAnim]->m_AnimNodes[iNode]->m_KeyFrames[0];
+	pKeys[0] = &pBaseKey[pTimeRef->m_Prev.m_iFrame];
+	pKeys[1] = &m_pCurAnims[iAnim]->m_AnimNodes[iNode]->m_KeyFrames[pTimeRef->m_Cur.m_iFrame];
 
 	outQuat.Slerp(pKeys[0]->m_Quaternion, pKeys[1]->m_Quaternion, pTimeRef->m_Percent);
 	outVec = pKeys[0]->m_Translation + (pKeys[1]->m_Translation - pKeys[0]->m_Translation) * pTimeRef->m_Percent;
@@ -251,64 +170,105 @@ void TransformMaker::InitTransformAdditive( uint32 iAnim,
 	outVec = outVec - pBaseKey->m_Translation;
 }
 
-void TransformMaker::BlendTransform(uint32 iAnim, uint32 iNode)
+
+// ------------------------------------------------------------------------
+// BlendTransform (0x43645f)
+// talon: 2001's.  The weight is the time ref's previous and current weight
+// sets' (lerped by its m_Percent), or, with m_bNormalize, what the anims
+// before it leave of 1; it returns the weight it blended with (0 for an
+// additive one).  The constants are 1.0f, 2.0f and 0.0f (.rdata 0x474348,
+// 0x47434c, 0x474350).
+// ------------------------------------------------------------------------
+float TransformMaker::BlendTransform(uint32 iAnim, uint32 iNode, float fTotal, LTBOOL bNormalize)
 {
 	LTRotation qTransform, qTemp;
 	LTVector vTransform;
-	float fPercent;
+	float fPercent, fPrev, fCur;
 
-	// Can we be lazy?
-	fPercent = m_pModel->GetWeightSet(m_Anims[iAnim].m_Cur.m_iWeightSet)->m_Weights[iNode];
-	if(fPercent == 0.0f)
+	fTotal = (fTotal > 1.0f) ? 1.0f : fTotal;
+
+	if(bNormalize)
 	{
-		return;
+		fPercent = 1.0f - fTotal;
 	}
 	else
 	{
-		if(fPercent == 2.0f)
-		{
-			// Add the animation.
-			InitTransformAdditive(iAnim, iNode, qTransform, vTransform);
+		fPrev = m_pPrevWeightSets[iAnim] ? m_pPrevWeightSets[iAnim]->m_Weights[iNode] : 0.0f;
+		fCur = m_pCurWeightSets[iAnim] ? m_pCurWeightSets[iAnim]->m_Weights[iNode] : 0.0f;
 
-			m_Quat = m_Quat * qTransform;
-			m_vTrans = m_vTrans + vTransform;
-		}
+		if(fPrev == 2.0f)
+			fPercent = fCur;
+		else if(fCur == 2.0f)
+			fPercent = 2.0f;
 		else
-		{
-			InitTransform(iAnim, iNode, qTransform, vTransform);
-			qTemp = m_Quat;
-			m_Quat.Slerp(qTemp, qTransform, fPercent);
-			m_vTrans = m_vTrans + (vTransform - m_vTrans) * fPercent;
-		}
+			fPercent = fPrev + (fCur - fPrev) * m_Anims[iAnim].m_Percent;
+	}
+
+	// Can we be lazy?
+	if(fPercent == 0.0f)
+	{
+		return 0.0f;
+	}
+	else if(fPercent == 2.0f)
+	{
+		// Add the animation.
+		InitTransformAdditive(iAnim, iNode, qTransform, vTransform);
+
+		m_Quat = m_Quat * qTransform;
+		m_vTrans = m_vTrans + vTransform;
+		return 0.0f;
+	}
+	else
+	{
+		InitTransform(iAnim, iNode, qTransform, vTransform);
+		qTemp = m_Quat;
+		m_Quat.Slerp(qTemp, qTransform, fPercent);
+		m_vTrans = m_vTrans + (vTransform - m_vTrans) * fPercent;
+		return fPercent;
 	}
 }
 
 
+// ------------------------------------------------------------------------
+// Recurse (0x43661f)
+// talon: 2001's.  The first time ref's weight comes from its weight sets
+// (unless its m_Percent is 2), the rest add theirs as they blend; each
+// node's transform is the parent times the animated one times the child
+// model relation, and the last child is the loop's next node, not a call
+// (the image's `movl $1,0x13c(%ebx)` store is m_iCurPath's, as in the
+// engine's twin, nolfsrc transform.cpp's ProcessNode).
+// ------------------------------------------------------------------------
 void TransformMaker::Recurse(uint32 iNode, LTMatrix *pParentT)
 {
-	uint32 i;
+	uint32 i, nLast;
 	LTMatrix *pMyGlobal;
+	ModelNode *pNode;
+	CIRelation *pRelation;
+	float fTotal, fPrev;
 
-	ModelNode *pNode = m_pModel->GetNode(iNode);
-
-	pMyGlobal = &m_pOutput[iNode];
-	*pMyGlobal = *pParentT;
-
-	// state the evaluation state for this node. If we need to eval do it.
-	// otherwise we're done, just get it from the db.
-	// the other state is one where the node is "clear" meaning don't touch it,
-	// just set the db to the parent's xform.
-	switch( pNode->m_EvalState )
+	for(;;)
 	{
-		
-	case ModelNode::kEval :
-	{
+		pMyGlobal = &m_pOutput[iNode];
+
 		// Apply animation data (first one inits, the rest are blended in).
 		InitTransform(0, iNode, m_Quat, m_vTrans);
+
+		if(m_pPrevWeightSets[0] && m_pCurWeightSets[0] && m_Anims[0].m_Percent != 2.0f)
+		{
+			fPrev = m_pPrevWeightSets[0]->m_Weights[iNode];
+			fTotal = fPrev + (m_pCurWeightSets[0]->m_Weights[iNode] - fPrev) * m_Anims[0].m_Percent;
+		}
+		else
+		{
+			fTotal = 0.0f;
+		}
+
 		for(i=1; i < m_nAnims; i++)
 		{
-			BlendTransform(i, iNode);
+			fTotal += BlendTransform(i, iNode, fTotal, m_Anims[i].m_bNormalize);
 		}
+
+		pNode = m_pModel->GetNode(iNode);
 
 		m_Quat.ConvertToMatrix(m_mTemp);
 
@@ -323,29 +283,45 @@ void TransformMaker::Recurse(uint32 iNode, LTMatrix *pParentT)
 			m_mTemp.SetTranslation(m_vTrans);
 		}
 
-		*pMyGlobal = *pMyGlobal * m_mTemp;
-		pNode->m_EvalState = ModelNode::kDone ;
-	}
-	break ;
-	case ModelNode::kDone :
-		*pMyGlobal = *m_pModel->GetTransform( pNode->m_NodeIndex );
-		break;
-	}
+		MatMul(&g_mTemp, pParentT, &m_mTemp);
 
-	// Do the children..
-	if(m_pRecursePath)
-	{
-		if(m_iCurPath > 0)
+		m_pCurRelation = &(*m_pNodeRelation)[iNode];
+		pRelation = m_pCurRelation;
+		pRelation->m_Rot.ConvertToMatrix(m_mCurRelation);
+		m_mCurRelation.SetTranslation(pRelation->m_Pos);
+
+		MatMul(pMyGlobal, &g_mTemp, &m_mCurRelation);
+
+		if(m_NC)
+			m_NC(m_hNCObject, iNode, pMyGlobal, m_pNCUser);
+
+		// Do the children..
+		if(m_pRecursePath)
 		{
-			m_iCurPath--;
-			Recurse(m_pRecursePath[m_iCurPath], pMyGlobal);
+			if(m_iCurPath > 0)
+			{
+				m_iCurPath--;
+				pParentT = pMyGlobal;
+				iNode = m_pRecursePath[m_iCurPath];
+			}
+			else
+				return;
 		}
-	}
-	else
-	{
-		for(i=0; i < pNode->NumChildren(); i++)
+		else
 		{
-			Recurse(pNode->m_Children[i]->GetNodeIndex(), pMyGlobal);
+			nLast = pNode->NumChildren();
+			if(!nLast)
+				return;
+			nLast--;
+
+			for(i=0; i < nLast; i++)
+			{
+				Recurse(pNode->m_Children[i]->GetNodeIndex(), pMyGlobal);
+			}
+
+			m_iCurPath = 1;
+			iNode = pNode->m_Children[nLast]->GetNodeIndex();
+			pParentT = pMyGlobal;
 		}
 	}
 }

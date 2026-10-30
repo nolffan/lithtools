@@ -8,20 +8,12 @@
 #include <vector>
 
 
-	// Set or offset animation translations.
-	void model_SetAnimTrans(Model *pModel, uint32 iAnim, LTVector *pNewTrans);
-	void model_OffsetAnimTrans(Model *pModel, uint32 iAnim, LTVector *pNewTrans);
-	
+	// talon: 2001's two (0x431f2c, 0x431ff4); no SetAnimTrans/OffsetAnimTrans,
+	// GetDimsFromBounding or default OBBs.
 	void model_RotateAnim(Model *pModel, uint32 iAnim, LTVector *pRot);
 
 	// Set the animation framerate.
-	void model_SetAnimFramerate(Model *pModel, unsigned long iAnim, float framerate, std::vector<bool>* taggedKeys);
-
-	void model_GetDimsFromBounding( LTVector *pvBoundMax, LTVector *pvBoundMin, LTVector *pvDims );
-
-	// Create Default Set Of Oriented Bounding Boxes
-	// creates obb based on the model's hierarchy
-	void model_CreateDefaultOBB( Model *pModel );
+	void model_SetAnimFramerate(Model *pModel, unsigned long iAnim, float framerate);
 
 #endif  // __MODEL_OPS_H__
 

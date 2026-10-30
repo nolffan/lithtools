@@ -24,13 +24,13 @@ class ModelAllocations;
 		void		Clear();
 		
 		// Tally up everything in the model.
-		bool		InitFromModel(Model *pModel);
+		LTBOOL		InitFromModel(Model *pModel);
 		
 		// Load/save.
-		bool		Save(ILTStream &str);
-
-		//Updates a field that had its position saved
-		void		UpdateField(ILTStream& str, uint32 nFieldPos, uint32 nVal);
+		// talon: 2001's (0x432f16, 0x432fcd): thirteen counts, read and
+		// written in order; no vertex animation or animation data sizes.
+		LTBOOL		Load(ILTStream &str);
+		LTBOOL		Save(ILTStream &str);
 
 	public:
 
@@ -48,18 +48,9 @@ class ModelAllocations;
 		uint32		m_nLODs;			// Number of LODs.
 		uint32		m_nSockets;			// Number of sockets.
 		uint32		m_nWeightSets;		// Number of weight sets.
-		uint32		m_nAnimData;		// Amount of animation data
 
 		uint32		m_nStrings;			// How many strings we're allocating.
 		uint32		m_StringLengths;	// Sum of all string lengths (not including null terminator).
-		uint32		m_VertAnimDataSize; // byte size of the vertex animation data.
-
-
-		//file positions for fields that need to be updated after a certain phase has passed
-		uint32		m_nAnimDataPos;		// the position of the animation data size in the file
-		
-	private :
-		uint32		m_FileVersion ; 		
 		
 	};
 

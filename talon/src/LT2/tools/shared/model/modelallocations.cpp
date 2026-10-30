@@ -3,13 +3,9 @@
 #include "bdefs.h"
 #include "modelallocations.h"
 
-//-----------------------------------------------------------------------------
-// util : WordAlign( size ) => new size 
-//-----------------------------------------------------------------------------
-static inline uint32 WordAlign(uint32 total)
-{
-	return (total + 3) & ~3;
-}
+// talon: the module opens with std::ctype<unsigned short>::id's 21-byte
+// initializer (0x432cbb), which only <xlocale> (via <string>) gives it.
+#include <string>
 
 //-----------------------------------------------------------------------------
 //-----------------------------------------------------------------------------
@@ -36,20 +32,17 @@ void ModelAllocations::Clear()
 	m_nWeightSets = 0;
 	m_nStrings = 0;
 	m_StringLengths = 0;
-	m_nAnimData = 0;
-
-	m_VertAnimDataSize = 0 ;
-
-	//holder fields
-	m_nAnimDataPos = 0;
 }
 
 
 //-----------------------------------------------------------------------------
-// InitFromModel 
+// InitFromModel (0x432d11)
 // calculate the size of the model.
+// talon: 2001's.  The LOD count is the model's (it gives up on a model with
+// none, before clearing), and the strings are the animations', their
+// keyframes', the nodes', the command string and the child model file names.
 //-----------------------------------------------------------------------------
-bool ModelAllocations::InitFromModel(Model *pModel)
+LTBOOL ModelAllocations::InitFromModel(Model *pModel)
 {
 	uint32 iAnim, iPiece, iLOD, iKey, iNode, iChild;
 	ModelAnim *pAnim;
@@ -58,32 +51,25 @@ bool ModelAllocations::InitFromModel(Model *pModel)
 	PieceLOD *pLOD;
 	ModelStringList tempStringList;
 	
-	Clear();
+	if(pModel->NumLODs() < 1)
+		return LTFALSE;
 
-	m_nLODs = 0 ;
-	for( iPiece = 0 ; iPiece < pModel->NumPieces() ; iPiece++ )
-		m_nLODs += pModel->GetPiece(iPiece)->NumLODs();
-	
-	m_FileVersion = pModel->GetFileVersion() ;
+	Clear();
 
 	m_nParentAnims = pModel->CalcNumParentAnims();
 	m_nNodes = pModel->NumNodes();
 	m_nPieces = pModel->NumPieces();
 	m_nChildModels = pModel->NumChildModels();
+	m_nLODs = pModel->NumLODs();
 	m_nSockets = pModel->NumSockets();
 	m_nWeightSets = pModel->NumWeightSets();
 	m_nVertexWeights = pModel->CalcNumVertexWeights();
 	
-	// Count keyframes & vertex animation sizes
+	// Count keyframes.
 	for(iAnim=0; iAnim < m_nParentAnims; iAnim++)
 	{
 		pAnim = pModel->GetAnim(iAnim);
-
 		m_nKeyFrames += pAnim->NumKeyFrames();
-		AnimNode *pAN = pAnim->GetRootNode();
-
-		if(pAN != NULL )
-			m_VertAnimDataSize += pAN->GetTotalVertexAnimMemSize();
 	}
 
 	// Count geometry stuff.
@@ -119,15 +105,6 @@ bool ModelAllocations::InitFromModel(Model *pModel)
 	for(iChild=1; iChild < pModel->NumChildModels(); iChild++)
 		tempStringList.AddString(pModel->GetChildModel(iChild)->m_pFilename);
 
-	for(uint32 nSocket = 0; nSocket < pModel->NumSockets(); nSocket++)
-		tempStringList.AddString(pModel->GetSocket(nSocket)->m_Name);
-
-	for(uint32 nPiece = 0; nPiece < pModel->NumPieces(); nPiece++)
-		tempStringList.AddString(pModel->GetPiece(nPiece)->GetName());
-
-	for(uint32 nWeightSet = 0; nWeightSet < pModel->NumWeightSets(); nWeightSet++)
-		tempStringList.AddString(pModel->GetWeightSet(nWeightSet)->m_Name);
-
 	// Tally it up...
 	for(pString=tempStringList.m_StringList; pString; pString=pString->m_pNext)
 	{
@@ -135,26 +112,31 @@ bool ModelAllocations::InitFromModel(Model *pModel)
 		m_StringLengths += strlen(pString->m_String);
 	}
 
-	//this will be filled in later
-	m_nAnimData = 0;
-
-	return true;
+	return LTTRUE;
 }
 
-//Updates a field that had its position saved
-void ModelAllocations::UpdateField(ILTStream& str, uint32 nFieldPos, uint32 nVal)
+
+LTBOOL ModelAllocations::Load(ILTStream &str)
 {
-	//save the current position
-	uint32 nCurrPos = str.GetPos();
+	str >> m_nKeyFrames;
+	str >> m_nParentAnims;
+	str >> m_nNodes;
+	str >> m_nPieces;
+	str >> m_nChildModels;
+	str >> m_nTris;
+	str >> m_nVerts;
+	str >> m_nVertexWeights;
+	str >> m_nLODs;
+	str >> m_nSockets;
+	str >> m_nWeightSets;
+	str >> m_nStrings;
+	str >> m_StringLengths;
 
-	str.SeekTo(nFieldPos);
-
-	str << nVal;
-
-	str.SeekTo(nCurrPos);
+	return str.ErrorStatus() == LT_OK;
 }
 
-bool ModelAllocations::Save(ILTStream &str)
+
+LTBOOL ModelAllocations::Save(ILTStream &str)
 {
 	str << m_nKeyFrames;
 	str << m_nParentAnims;
@@ -169,15 +151,6 @@ bool ModelAllocations::Save(ILTStream &str)
 	str << m_nWeightSets;
 	str << m_nStrings;
 	str << m_StringLengths;
-	str << m_VertAnimDataSize ;
-
-	//save this position
-	m_nAnimDataPos = str.GetPos();
-
-	str << m_nAnimData;
-
 
 	return str.ErrorStatus() == LT_OK;
 }
-
-

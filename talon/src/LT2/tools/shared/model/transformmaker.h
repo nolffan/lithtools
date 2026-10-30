@@ -29,13 +29,13 @@
 		// Copies m_Anims, m_nAnims, and sets m_pStartMat to GVPStruct::m_BaseTransform.
 		void			SetupFromGVPStruct(GVPStruct *pStruct);
 
-		bool			IsValid();
-		void			CopyTimes(TransformMaker &other);
+		// talon: 2001's returns are LTBOOLs (0x435f98, 0x435fea: `xor eax,eax;
+		// inc eax`), and there is no CopyTimes, GetNodeTransform or
+		// SetupMovementEncoding: the module (0x435f3d..0x436849) has only the
+		// functions below.
+		LTBOOL			IsValid();
 
-		bool			SetupTransforms();
-		bool			GetNodeTransform(uint32 iNode);
-
-		bool			SetupMovementEncoding();
+		LTBOOL			SetupTransforms();
 
 
 	// Set all these up before calling SetupTransforms or GetNodeTransform.
@@ -61,12 +61,15 @@
 	// Used internally.
 	protected:
 
-		bool			SetupCall();
+		LTBOOL			SetupCall();
 
 		void			InitTransform(uint32 iAnim, uint32 iNode, LTRotation &outQuat, LTVector &outVec);
 		void			InitTransformAdditive(uint32 iAnim, uint32 iNode, LTRotation &outQuat, LTVector &outVec);
 
-		void			BlendTransform(uint32 iAnim, uint32 iNode);
+		// talon: 2001's takes the weight blended in so far and the time ref's
+		// m_bNormalize, and returns the weight it used (0x43645f, `ret $0x10`,
+		// the result in st(0); Recurse adds it up, 0x4366bb).
+		float			BlendTransform(uint32 iAnim, uint32 iNode, float fTotal, LTBOOL bNormalize);
 
 		void			Recurse(uint32 iNode, LTMatrix *pParentT);
 
@@ -86,6 +89,14 @@
 		Model			*m_pModel;
 
 		LTMatrix		m_mIdent;
+
+		// talon: 2001's SetupCall looks these up once per call (0x43601b):
+		// each time ref's weight sets (NULL when its index is out of range)
+		// and animations, at 0x228, 0x248, 0x268 and 0x288.
+		WeightSet		*m_pPrevWeightSets[MAX_GVP_ANIMS];
+		WeightSet		*m_pCurWeightSets[MAX_GVP_ANIMS];
+		ModelAnim		*m_pPrevAnims[MAX_GVP_ANIMS];
+		ModelAnim		*m_pCurAnims[MAX_GVP_ANIMS];
 
 	};
 
