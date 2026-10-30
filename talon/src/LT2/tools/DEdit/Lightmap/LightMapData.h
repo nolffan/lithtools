@@ -1,7 +1,7 @@
 #ifndef __LIGHTMAPDATA_H__
 #define __LIGHTMAPDATA_H__
 
-#include "ltinteger.h"
+#include "ltbasetypes.h"	// talon: the LT2 SDK has no ltinteger.h: its integer types are here
 
 class CLightMapData
 {

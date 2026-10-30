@@ -779,17 +779,17 @@ void DrawBase::DrawDecal(CWorldNode* pNode)
 		fNearPlane = ((CRealProp*)pProp)->m_Value;
 
 	//far plane
-	Info.m_Frustum[0].Init(-Info.m_vForward, Info.m_vPos + Info.m_vForward * vDims.z);
+	Info.m_Frustum[0].Init(-Info.m_vForward, (-Info.m_vForward).Dot(Info.m_vPos + Info.m_vForward * vDims.z));
 	//near plane
-	Info.m_Frustum[1].Init(Info.m_vForward, Info.m_vPos + Info.m_vForward * fNearPlane);
+	Info.m_Frustum[1].Init(Info.m_vForward, (Info.m_vForward).Dot(Info.m_vPos + Info.m_vForward * fNearPlane));
 	//left
-	Info.m_Frustum[2].Init(Info.m_vRight, Info.m_vPos - Info.m_vRight * vDims.x / 2.0f);
+	Info.m_Frustum[2].Init(Info.m_vRight, (Info.m_vRight).Dot(Info.m_vPos - Info.m_vRight * vDims.x / 2.0f));
 	//right
-	Info.m_Frustum[3].Init(-Info.m_vRight, Info.m_vPos + Info.m_vRight * vDims.x / 2.0f);
+	Info.m_Frustum[3].Init(-Info.m_vRight, (-Info.m_vRight).Dot(Info.m_vPos + Info.m_vRight * vDims.x / 2.0f));
 	//top
-	Info.m_Frustum[4].Init(-Info.m_vUp, Info.m_vPos + Info.m_vUp * vDims.y / 2.0f);
+	Info.m_Frustum[4].Init(-Info.m_vUp, (-Info.m_vUp).Dot(Info.m_vPos + Info.m_vUp * vDims.y / 2.0f));
 	//bottom
-	Info.m_Frustum[5].Init(Info.m_vUp, Info.m_vPos - Info.m_vUp * vDims.y / 2.0f);
+	Info.m_Frustum[5].Init(Info.m_vUp, (Info.m_vUp).Dot(Info.m_vPos - Info.m_vUp * vDims.y / 2.0f));
 
 	//build a quick bounding sphere for the volume
 	LTVector vBSphereCenter = Info.m_vPos + Info.m_vForward * ((vDims.z - fNearPlane) / 2.0f + fNearPlane);
@@ -1439,7 +1439,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 
 		// Handle color...
 		// There can be only one...
-		if( pProp->m_Type == LT_PT_COLOR && !bColorFound )
+		if( pProp->m_Type == PT_COLOR && !bColorFound )
 		{
 			bColorFound = true;
 
@@ -1540,7 +1540,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 				CReal fRadius=0.0f;
 
 				// Get the radius from the string
-				if (pProp->m_Type == LT_PT_STRING)
+				if (pProp->m_Type == PT_STRING)
 				{
 					char *pString=((CStringProp *)pProp)->m_String;
 					if (pString && strlen(pString) > 0)
@@ -1548,7 +1548,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 						fRadius = atof(pString);
 					}
 				}
-				else if (pProp->m_Type == LT_PT_REAL )
+				else if (pProp->m_Type == PT_REAL )
 				{
 					fRadius = (( CRealProp * )pProp )->m_Value;
 				}
@@ -1558,7 +1558,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 			}
 		}
 
-		else if(pProp->m_PropFlags & PF_FIELDOFVIEW && pProp->m_Type == LT_PT_REAL)
+		else if(pProp->m_PropFlags & PF_FIELDOFVIEW && pProp->m_Type == PT_REAL)
 		{
 			pFOVProp = pProp;
 		}
@@ -1570,7 +1570,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 		}
 
 		//handle the rendering of orthographic frustums
-		else if((pProp->m_PropFlags & PF_ORTHOFRUSTUM) && (pProp->m_Type == LT_PT_VECTOR) && bDrawExtra)
+		else if((pProp->m_PropFlags & PF_ORTHOFRUSTUM) && (pProp->m_Type == PT_VECTOR) && bDrawExtra)
 		{
 			//we need to draw this box emitted from the object
 			LTVector vDims = ((CVectorProp*)pProp)->m_Vector / 2.0f;
@@ -2082,13 +2082,13 @@ void DrawBase::DrawPaths()
 				sortedList[count].m_PrevTangent.Init();
 				sortedList[count].m_NextTangent.Init();
 
-				if(pProp = (CVectorProp*)pChild->m_PropList.GetPropByFlagsAndType(PF_BEZIERPREVTANGENT, LT_PT_VECTOR))
+				if(pProp = (CVectorProp*)pChild->m_PropList.GetPropByFlagsAndType(PF_BEZIERPREVTANGENT, PT_VECTOR))
 				{
 					sortedList[count].m_PrevTangent = pProp->m_Vector;
 					bBezier = TRUE;
 				}
 
-				if(pProp = (CVectorProp*)pChild->m_PropList.GetPropByFlagsAndType(PF_BEZIERNEXTTANGENT, LT_PT_VECTOR))
+				if(pProp = (CVectorProp*)pChild->m_PropList.GetPropByFlagsAndType(PF_BEZIERNEXTTANGENT, PT_VECTOR))
 				{
 					sortedList[count].m_NextTangent = pProp->m_Vector;
 					bBezier = TRUE;

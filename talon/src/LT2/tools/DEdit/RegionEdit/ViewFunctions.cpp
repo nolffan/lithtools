@@ -2642,8 +2642,8 @@ BOOL FindJoinEdge(CEditPoly *pPoly1, CEditPoly *pPoly2, DVector edge[2])
 	{
 		for(j=0; j < pPoly2->NumVerts(); j++)
 		{
-			if((pPoly1->Pt(i).NearlyEquals(pPoly2->Pt(j)) && pPoly1->NextPt(i).NearlyEquals(pPoly2->NextPt(j))) ||
-				(pPoly1->Pt(i).NearlyEquals(pPoly2->NextPt(j)) && pPoly1->NextPt(i).NearlyEquals(pPoly2->Pt(j))))
+			if((pPoly1->Pt(i).Equals(pPoly2->Pt(j)) && pPoly1->NextPt(i).Equals(pPoly2->NextPt(j))) ||
+				(pPoly1->Pt(i).Equals(pPoly2->NextPt(j)) && pPoly1->NextPt(i).Equals(pPoly2->Pt(j))))
 			{
 				edge[0] = pPoly1->Pt(i);
 				edge[1] = pPoly1->NextPt(i);

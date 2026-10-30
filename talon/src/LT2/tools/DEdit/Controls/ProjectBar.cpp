@@ -1182,6 +1182,19 @@ void CProjectBar::GetLayoutFilename( const char *pGetFrom, char *pOutput )
 	strcpy( pOutput, layoutFileName );
 }
 
+// talon: stand-in: Build 69's StdLith has CHelpers::IsFileAbsolute, the LT2
+// one hasn't. Its test: a colon before the first slash.
+static BOOL IsFileAbsolute(const char* pFilename)
+{
+	for(uint32 nCurrChar = 0; (pFilename[nCurrChar] != '\0') && (pFilename[nCurrChar] != '\\') && (pFilename[nCurrChar] != '/'); nCurrChar++)
+	{
+		if(pFilename[nCurrChar] == ':')
+			return TRUE;
+	}
+	return FALSE;
+}
+
+
 //------------------------------------------------------------------------------
 //
 //  CProjectBar::LoadLayoutFile()
@@ -1232,7 +1245,7 @@ void CProjectBar::LoadLayoutFile( const char *pPathName )
    			file.ReadString(docName, MAX_PATH);
 
 			//if the file is relative, we need to prepend the directory name onto it
-			if(!CHelpers::IsFileAbsolute(docName))
+			if(!IsFileAbsolute(docName))
 			{
 				strncpy(docName, (const char*)dfm_BuildName(directoryName, docName), MAX_PATH);
 			}

@@ -250,20 +250,20 @@ void CEditProjectMgr::LoadBinaries()
             // Print out to the DEdit debug window.
 			GetDebugDlg()->AddMessage(" Failed to load:\n %s\n"
 									  " System Error Code: %d\n"
-									  " Description: %s\n", dllFilename.GetBuffer(), dwErrorCode, (LPCTSTR)lpMsgBuf);
+									  " Description: %s\n", dllFilename.GetBuffer(0), dwErrorCode, (LPCTSTR)lpMsgBuf);
 
 			// deallocate the string
 			LocalFree( lpMsgBuf );
 
-			str.Format(IDS_CANTFINDCLASSMODULE, dllFilename.GetBuffer());
+			str.Format(IDS_CANTFINDCLASSMODULE, dllFilename.GetBuffer(0));
 		}
 		else if(status == CB_NOTCLASSMODULE)
 		{
-			str.Format(IDS_INVALIDCLASSMODULE, dllFilename.GetBuffer());
+			str.Format(IDS_INVALIDCLASSMODULE, dllFilename.GetBuffer(0));
 		}
 		else if(status == CB_VERSIONMISMATCH)
 		{
-			str.Format(IDS_INVALIDCLASSMODULEVERSION, dllFilename.GetBuffer(), SERVEROBJ_VERSION, version);
+			str.Format(IDS_INVALIDCLASSMODULEVERSION, dllFilename.GetBuffer(0), SERVEROBJ_VERSION, version);
 		}
 
 		AppMessageBox(str, MB_OK);

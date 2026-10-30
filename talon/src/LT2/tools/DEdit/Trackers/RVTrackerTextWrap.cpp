@@ -346,10 +346,10 @@ void CRVTrackerTextureWrap::BuildPolyList(CTWPolyList &aList) const
 
 					CTWEdgeInfo *pSearchEdge = pSearchPoly->m_aEdges[nSearchEdge];
 					// Did we find a matching edge?
-					if ((pEdge->m_aPt[0].NearlyEquals(pSearchEdge->m_aPt[0], 0.01f) &&
-						pEdge->m_aPt[1].NearlyEquals(pSearchEdge->m_aPt[1], 0.01f)) ||
-						(pEdge->m_aPt[0].NearlyEquals(pSearchEdge->m_aPt[1], 0.01f) &&
-						pEdge->m_aPt[1].NearlyEquals(pSearchEdge->m_aPt[0], 0.01f)))
+					if ((pEdge->m_aPt[0].Equals(pSearchEdge->m_aPt[0], 0.01f) &&
+						pEdge->m_aPt[1].Equals(pSearchEdge->m_aPt[1], 0.01f)) ||
+						(pEdge->m_aPt[0].Equals(pSearchEdge->m_aPt[1], 0.01f) &&
+						pEdge->m_aPt[1].Equals(pSearchEdge->m_aPt[0], 0.01f)))
 					{
 						// Join the polys
 						pPolyInfo->m_aNeighbors[nEdgeLoop] = pSearchPoly;

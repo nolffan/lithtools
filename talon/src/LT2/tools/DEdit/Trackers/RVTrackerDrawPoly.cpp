@@ -290,7 +290,7 @@ BOOL CRVTrackerDrawPoly::OnNewVertex()
 			
 			//make sure we didn't just add a redundant vertex
 			uint32 nNumPts = pBrush->m_Points.GetSize();
-			if((nNumPts >= 3) && pBrush->m_Points[nNumPts - 3].NearlyEquals(vVertPos, 0.5f))
+			if((nNumPts >= 3) && pBrush->m_Points[nNumPts - 3].Equals(vVertPos, 0.5f))
 			{
 				//it is redundant, pop off this new vertex
 				pBrush->m_Points.Pop();
@@ -298,7 +298,7 @@ BOOL CRVTrackerDrawPoly::OnNewVertex()
 			else
 			{
 				//now see if we have hit the starting vertex
-				if( pBrush->m_Points[0].NearlyEquals(pBrush->m_Points.Last(), 1.0f) )
+				if( pBrush->m_Points[0].Equals(pBrush->m_Points.Last(), 1.0f) )
 				{
 					//we have hit the beginning, but lets make sure that it is a valid
 					//polygon

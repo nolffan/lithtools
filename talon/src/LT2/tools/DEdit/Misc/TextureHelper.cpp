@@ -558,7 +558,7 @@ void ConvertToBumpMap(uint32 nWidth, uint32 nHeight, uint32 nPitch, uint8* pData
 					LTVector v2((float)nXOff[nNextSample] * nKernel, (float)nYOff[nNextSample] * nKernel, nZOff[nNextSample] * fHeightScale - fCurrHgtScale);
 
 					LTVector vAdded = v2.Cross(v1);
-					vAdded.Normalize();
+					vAdded.Norm();
 
 					//sanity check
 					assert(vAdded.z >= 0.0f);
@@ -569,7 +569,7 @@ void ConvertToBumpMap(uint32 nWidth, uint32 nHeight, uint32 nPitch, uint8* pData
 			}
 
 			//normalize this normal which will effectively average it out
-			vNormal.Normalize();
+			vNormal.Norm();
 			//vNormal /= (float)(knFilterSize * 8);
 
 			//we now need to write out this height, with the X and Y components
@@ -723,7 +723,7 @@ void ConvertToNormalMap(uint32 nWidth, uint32 nHeight, uint32 nPitch, uint8* pDa
 			}
 
 			//normalize this normal which will effectively average it out
-			vNormal.Normalize();
+			vNormal.Norm();
 			
 			//we now need to write out this vector
 			uint32 nR = (uint8)(vNormal.x * 127.0f + 128.0f);

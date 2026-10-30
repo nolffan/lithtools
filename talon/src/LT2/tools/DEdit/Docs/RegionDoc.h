@@ -34,12 +34,14 @@ class VertRefHashHelper : public GenHashHelper<CVertRef>
 {
 public:
 	
-	virtual DWORD	GetHashCode(const CVertRef &theObject)
+	// talon: GenHashHelper's DWORD is unsigned long; oldtypes.h has made
+	// DWORD uint32 by here
+	virtual unsigned long	GetHashCode(const CVertRef &theObject)
 	{
 		return (DWORD)theObject.m_iVert + ((DWORD)theObject.m_pBrush >> 2);
 	}
 
-	virtual LTBOOL	Compare(const CVertRef &object1, const CVertRef &object2)
+	virtual BOOL	Compare(const CVertRef &object1, const CVertRef &object2)
 	{
 		return object1.m_pBrush == object2.m_pBrush &&
 			object1.m_iVert == object2.m_iVert;
