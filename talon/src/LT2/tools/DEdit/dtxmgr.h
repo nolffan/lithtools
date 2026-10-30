@@ -234,28 +234,31 @@
 
 	// Allocates the texture and initializes the mipmap data pointers.
 	TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32 nMipmaps,
-		uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2);	// talon: 2001's seventh argument (0x40d100)
+		uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2=LTFALSE);	// talon: 2001's seventh argument (0x40d100); DEdit's callers pass none (Build 69's)
 
-	// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection or dtx_BuildMipmaps:
-	// none is in ModelEdit's image (nor in the processors', whose copy of
-	// this header is tools/shared/engine's).
+	// talon: DEdit's has Build 69's dtx_Resize, dtx_Save, dtx_RemoveSection and
+	// dtx_BuildMipmaps, which ModelEdit's and the processors' leave out
+	// (dtx_Save's strings are in the image, 0x0041fa96).
+	LTRESULT dtx_Resize( TextureData* data, BPPIdent bpp, uint32 baseWidth, uint32 baseHeight );
 
 	void dtx_Destroy(TextureData *pData);
 
 	// Save it into a file.
 	// Returns LT_UNSUPPORTED if the size is invalid.
-
+	LTRESULT dtx_Save(TextureData *pData, ILTStream *pStream);
 	
 	// Look for a section in the texture (it's case sensitive).
 	DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType);
 
 	// Returns DE_ERROR if the section isn't in the texture.
+	LTRESULT dtx_RemoveSection(TextureData *pData, DtxSection *pSection);
 
 	// Fill in the DTX format.
 	void dtx_SetupDTXFormat(TextureData *pData, PFormat *pFormat);	// talon: ModelEdit's (0x42912f)
 	void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat);
 
 	// Build all the mipmaps.
+	void dtx_BuildMipmaps(TextureData *pData);
 
 
 #endif  // __DTXMGR_H__

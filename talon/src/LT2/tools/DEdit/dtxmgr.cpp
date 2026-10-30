@@ -207,8 +207,75 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 }
 
 
-// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection or dtx_BuildMipmaps
-// (dtxmgr.h).
+
+LTRESULT dtx_Resize( TextureData* data, BPPIdent bpp, uint32 baseWidth, uint32 baseHeight )
+{
+	uint32 i;
+
+	// free the old image data
+	if( data->m_Header.m_IFlags & DTX_MIPSALLOCED )
+	{
+		for( uint32 i = 0; i < data->m_Header.m_nMipmaps; i++ )
+		{
+			if( data->m_Mips[i].m_Data )
+				dfree( data->m_Mips[i].m_Data );
+		}
+	}
+
+	if( data->m_pDataBuffer )
+		delete data->m_pDataBuffer;
+
+	uint32 width = baseWidth;
+	uint32 height = baseHeight;
+	uint32 textureDataSize = 0;
+
+	for( i = 0; i < data->m_Header.m_nMipmaps; i++ )
+	{
+		uint32 size = CalcImageSize( bpp, width, height );
+		textureDataSize += size;
+		width >>= 1;
+		height >>= 1;
+	}
+
+	data->m_pDataBuffer = new uint8[textureDataSize];
+	if( !data->m_pDataBuffer )
+	{
+		return LTFALSE;
+	}
+
+	data->m_Header.m_BaseWidth = (uint16)baseWidth;
+	data->m_Header.m_BaseHeight = (uint16)baseHeight;
+	data->m_AllocSize = sizeof(TextureData) + textureDataSize;
+	data->m_Header.SetBPPIdent( bpp );
+
+	uint8* pOutData = data->m_pDataBuffer;
+	TextureMipData* pMip;
+
+	width = baseWidth;
+	height = baseHeight;
+	for( i = 0; i < data->m_Header.m_nMipmaps; i++ )
+	{
+		pMip = &data->m_Mips[i];
+
+		pMip->m_Width = width;
+		pMip->m_Height = height;
+		pMip->m_Data = pOutData;
+
+		if( bpp == BPP_32 )
+			pMip->m_Pitch = (int32)width * sizeof(uint32);
+		else if( bpp == BPP_32P )
+			pMip->m_Pitch = width;
+		else
+			pMip->m_Pitch = 0;
+
+		pOutData += CalcImageSize( bpp, width, height );
+
+		width >>= 1;
+		height >>= 1;
+	}
+
+	return LTTRUE;
+}
 
 void
 dtx_RevRGBOrder (uint32 *pData, uint32 nElems) {
@@ -347,6 +414,79 @@ void dtx_Destroy(TextureData *pData)
 
 
 
+// Make sure you fill in pData with the relevant data :)
+LTRESULT dtx_Save(TextureData *pData, ILTStream *pStream)
+{
+	DtxSection *pSection;
+	DtxHeader hdr;
+	TextureMipData *pMip;
+	uint32 iMipmap;
+	uint32 y, size;
+	uint8 *pIn;
+
+	if(!dtx_IsTextureSizeValid(pData->m_Header.m_BaseWidth) || 
+		!dtx_IsTextureSizeValid(pData->m_Header.m_BaseHeight))
+	{
+		RETURN_ERROR_PARAM(1, dtx_Save, LT_UNSUPPORTED, "Invalid size");
+	}
+
+	
+	// Count the sections.
+	pData->m_Header.m_nSections = 0;
+	pSection = pData->m_pSections;
+	while(pSection)
+	{
+		++pData->m_Header.m_nSections;
+		pSection = pSection->m_pNext;
+	}
+
+	pData->m_Header.m_ResType = LT_RESTYPE_DTX;
+	
+	// Save out a header with the IFlags masked correctly.
+	memcpy(&hdr, &pData->m_Header, sizeof(hdr));
+	hdr.m_IFlags &= DTX_FLAGSAVEMASK;
+	STREAM_WRITE(hdr);
+
+
+	// Write the color data.
+	for(iMipmap=0; iMipmap < pData->m_Header.m_nMipmaps; iMipmap++)
+	{
+		pMip = &pData->m_Mips[iMipmap];
+
+		if(pData->m_Header.GetBPPIdent() == BPP_32)
+		{
+			for(y=0; y < pMip->m_Height; y++)
+			{
+				pIn = &pMip->m_Data[y * pMip->m_Pitch];
+				pStream->Write(pIn, pMip->m_Width * sizeof(uint32));
+			}
+		}
+		else
+		{
+			// Write it all in one chunk.
+			size = CalcImageSize(pData->m_Header.GetBPPIdent(), pMip->m_Width, pMip->m_Height);
+			pStream->Write(pMip->m_Data, size);
+		}
+	}
+
+	
+	// Write the sections.
+	pSection = pData->m_pSections;
+	while(pSection)
+	{
+		pStream->Write(&pSection->m_Header, sizeof(pSection->m_Header));
+		pStream->Write(pSection->m_Data, pSection->m_Header.m_DataLen);
+		pSection = pSection->m_pNext;
+	}
+
+	// Check the error status.
+	if(pStream->ErrorStatus() != LT_OK)
+		RETURN_ERROR(1, dtx_Save, LT_ERROR);
+
+	return LT_OK;
+}
+
+
 DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType)
 {
 	DtxSection *pCur;
@@ -366,6 +506,28 @@ DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType)
 
 
 
+
+LTRESULT dtx_RemoveSection(TextureData *pData, DtxSection *pSection)
+{
+	DtxSection **ppPrev, *pCur;
+
+	ppPrev = &pData->m_pSections;
+	pCur = pData->m_pSections;
+	while(pCur)
+	{
+		if(pCur == pSection)
+		{
+			*ppPrev = pCur->m_pNext;
+			dfree(pSection);
+			return LT_OK;
+		}
+
+		ppPrev = &pCur->m_pNext;
+		pCur = pCur->m_pNext;
+	}
+
+	return LT_ERROR;
+}
 
 // talon: ModelEdit's (0x42912f), before dtx_SetupDTXFormat2 as in Build 69;
 // gl_modelrender calls it.
@@ -388,6 +550,50 @@ void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat)
 }
 
 
+void dtx_BuildMipmaps(TextureData *pData)
+{
+	uint32 i, x, y, plane, sum;
+	uint8 *pSrcLine1, *pSrcLine2, *pDestLine;
+	uint8 *pSrcPos1, *pSrcPos2, *pDestPos;
+	TextureMipData *pSrcMip, *pDestMip;
 
 
+	for(i=1; i < pData->m_Header.m_nMipmaps; i++)
+	{
+		pSrcMip = &pData->m_Mips[i-1];
+		pDestMip = &pData->m_Mips[i];
 
+		pSrcLine1 = pSrcMip->m_Data;
+		pSrcLine2 = &pSrcMip->m_Data[pSrcMip->m_Pitch];
+		pDestLine = pDestMip->m_Data;
+
+		for(y=0; y < pDestMip->m_Height; y++)
+		{
+			pSrcPos1 = pSrcLine1;
+			pSrcPos2 = pSrcLine2;
+			pDestPos = pDestLine;
+			
+			for(x=0; x < pDestMip->m_Width; x++)
+			{
+				for(plane=0; plane < 4; plane++)
+				{
+					sum = (uint32)pSrcPos1[0] + (uint32)pSrcPos1[sizeof(uint32)] +
+						(uint32)pSrcPos2[0] + (uint32)pSrcPos2[sizeof(uint32)];
+					*pDestPos = (uint8)(sum >> 2);
+					
+					pSrcPos1++;
+					pSrcPos2++;
+					pDestPos++;
+				}
+
+				// Move up 1 more pixel.
+				pSrcPos1 += sizeof(uint32);
+				pSrcPos2 += sizeof(uint32);
+			}
+
+			pSrcLine1 += pSrcMip->m_Pitch * 2;
+			pSrcLine2 += pSrcMip->m_Pitch * 2;
+			pDestLine += pDestMip->m_Pitch;
+		}
+	}
+}
