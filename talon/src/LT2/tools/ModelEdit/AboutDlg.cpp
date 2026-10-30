@@ -1,7 +1,7 @@
 // AboutDlg.cpp : implementation file
 //
 
-#include "precompile.h"
+#include "stdafx.h"		// talon: not precompile.h: the image's AboutDlg has no <xlocale> initializer
 #include "modeledit.h"
 #include "aboutdlg.h"
 

@@ -10,6 +10,7 @@
 
 // Includes....
 
+#include <string>		// talon: ModelEdit's module (0x428866) is <xlocale>'s initializer alone
 #include "bdefs.h"
 
 // talon: Processor's dsi_PrintToConsole and dsi_OnReturnError are these
