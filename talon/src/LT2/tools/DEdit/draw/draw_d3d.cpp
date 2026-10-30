@@ -15,7 +15,6 @@
 #include "meshshape.h"
 #include "geomroutines.h"
 #include "optionsmodels.h"
-#include "tdguard.h"
 
 
 // ------------------------------------------------------------------------ //
@@ -197,13 +196,6 @@ D3DRender::~D3DRender()
 
 BOOL D3DRender::Init(int deviceNum, int renderMode, CRect *pRect)
 {
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		ExitProcess(0);
-		return FALSE;
-	}
-
-
 	HRESULT hResult;
 	DDSURFACEDESC2 ddsd;
 	DWORD memoryTypeFlag;

@@ -30,7 +30,6 @@
 #include "stringdlg.h"
 #include "globalhotkeydb.h"
 #include "dedit_concommand.h"
-#include "tdguard.h"
 
 #include "newprojectdlg.h"
 #include "keyconfigdlg.h"
@@ -169,13 +168,6 @@ CDEditApp theApp;
 
 BOOL CDEditApp::InitInstance()
 {
-
-	if (!TdGuard::Aegis::GetSingleton().Init() ||
-		!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		ExitProcess(0);
-		return FALSE;
-	}
 
 	//initialize the global hotkey database, and then overwrite the configuration with
 	//that found in the registry (this allows new keys to be added to the database

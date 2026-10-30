@@ -3,7 +3,6 @@
 
 #include "stdafx.h"
 #include "resource.h"
-#include "tdguard.h"
 #include "LoadLTADialog.h"
 
 #ifdef _DEBUG
@@ -44,12 +43,6 @@ END_MESSAGE_MAP()
 
 BOOL CLoadLTADialog::OnInitDialog() 
 {
-
-	if (!TdGuard::Aegis::GetSingleton().DoWork())
-	{
-		ExitProcess(0);
-		return FALSE;
-	}
 
 	CDialog::OnInitDialog();
 	
