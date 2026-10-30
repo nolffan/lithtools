@@ -12,6 +12,17 @@
 #include <vector>
 
 using namespace std ;
+
+// talon: the LT2 SDK's ltrotation.h has no stream operators for a rotation
+// (Build 69's has these, the same four floats).
+inline void LTStream_Write(ILTStream *pStream, LTRotation &quat)
+{
+	STREAM_WRITE(quat.m_Quat[0]);
+	STREAM_WRITE(quat.m_Quat[1]);
+	STREAM_WRITE(quat.m_Quat[2]);
+	STREAM_WRITE(quat.m_Quat[3]);
+}
+
 //------------------------------------------------------------------ //
 
 //writes out a unique marker that can be used to help insure that the file isn't getting off

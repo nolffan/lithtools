@@ -9,6 +9,13 @@
 #include "lteulerangles.h"
 #include "EditOBBDlg.h"
 
+// talon: Build 69's SDK has these (sdk/inc/physics/math_phys.h); the LT2 SDK
+// doesn't. This file is Build 69's only, kept for the link.
+template<class T>
+inline	T RadiansToDegrees( T a )	{ return a*(180.0f / MATH_PI); }
+template<class T>
+inline	T DegreesToRadians( T a )	{ return a*(MATH_PI / 180.0f); }
+
 /////////////////////////////////////////////////////////////////////////////
 #ifdef _DEBUG
 #define new DEBUG_NEW

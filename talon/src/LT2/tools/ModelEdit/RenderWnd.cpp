@@ -103,7 +103,7 @@ void CCamera::Update( void )
 
 	m_LookAt += m_Right * m_Offset.x;
 	m_LookAt += m_Up * m_Offset.y;
-	m_Position = m_LookAt - (curDist * m_Direction);
+	m_Position = m_LookAt - (m_Direction * curDist);	// talon: the LT2 LTVector has no float * vector
 
 	m_fYAngle = 0.0f;
 	m_fXZAngle = 0.0f;

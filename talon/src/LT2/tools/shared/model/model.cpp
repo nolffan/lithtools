@@ -2111,7 +2111,7 @@ bool Model::BuildTransformList(bool bRebuild)
 
 
 	nNodes = GetRootNode()->CalcNumNodes();
-	if (!m_Transforms.SetSize2(nNodes, GetAlloc(), true))	// Note: force quad word align so that we can use SimD instructinos...
+	if (!m_Transforms.SetSize2(nNodes, GetAlloc()))
 		return false;
 	
 	return true;

@@ -3528,7 +3528,7 @@ void CModelEditDlg::OnPieceBuildLODs()
 		buildLOD->m_ModelPiece = selection[i].m_ModelPiece;
 		buildLOD->m_LODNum = selection[i].m_LODNum;
 		// the lod pointer may be bogus after adding LODs to a piece, so get a fresh one
-		buildLOD->m_PieceLOD = buildLOD->m_ModelPiece->GetLOD( (unsigned)selection[i].m_LODNum );
+		buildLOD->m_PieceLOD = buildLOD->m_ModelPiece->GetLOD( (uint32)selection[i].m_LODNum );
 
 		// generate new piece LOD from currend piece LOD
 		if( !buildLOD->BuildLOD() )
@@ -6079,7 +6079,7 @@ int CModelEditDlg::GetSelectedPieceLODs( CLTWinTreeMgr* tree, Model* model, vect
 					// add only the first child LOD to selection
 					pieceLOD.m_ModelPiece = mainPiece;
 					pieceLOD.m_LODNum = 0;
-					pieceLOD.m_PieceLOD = mainPiece->GetLOD( (unsigned)0 );
+					pieceLOD.m_PieceLOD = mainPiece->GetLOD( (uint32)0 );
 					ASSERT( pieceLOD.m_PieceLOD );
 					selection.push_back( pieceLOD );
 					numSelected++;
@@ -6974,7 +6974,7 @@ void CModelEditDlg::OnImportModelStringKeys()
 			ModelAnim *pAnim = m_pModel->FindAnim(sAnimName);
 			if (pAnim)
 			{
-				unsigned int dwIndex;
+				uint32 dwIndex;
 				AnimInfo *pInfo = m_pModel->FindAnimInfo(sAnimName, m_pModel, &dwIndex);
 
 				if (pInfo)

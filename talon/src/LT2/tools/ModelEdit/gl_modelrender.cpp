@@ -94,7 +94,7 @@ TVert* UpdateVAModelPiece( Model      *pModel,
                          ModelPiece *pModelPiece,
                          AnimTimeRef*pAnimTimeRef   ,
                          TVert      *pVertexBuffer ,
-                         const LTMatrix   *trans)
+                         LTMatrix   *trans)
 {
 	PieceLOD  *pLOD = pModelPiece->GetLOD(uint32(0));
     ModelAnim *pAnims[2];
@@ -662,7 +662,7 @@ BOOL AlternateGetVertexPositions(	Model *pModel,
 	TransformMaker tMaker;
 	float vTemp[4];
 	ModelVert *pVert;
-	const LTMatrix *pTransforms;
+	LTMatrix *pTransforms;
 	NewVertexWeight *pWeight;
 	PieceLOD *pLOD;
 	float theVec[4];
@@ -1726,7 +1726,8 @@ BOOL SetGLMTexture(GLM_CONTEXT hContext, TextureData *pTexture, DWORD nTextureNu
 	if(!p32BitTexture)
 		return FALSE;
 
-	dtx_SetupDTXFormat(pTexture, &srcFormat);
+	// talon: dtx_SetupDTXFormat, which the shared dtxmgr leaves out (dtxmgr.h)
+	dtx_SetupDTXFormat2(pTexture->m_Header.GetBPPIdent(), &srcFormat);
 	destFormat.Init(BPP_32, 0xFF000000, 0x000000FF, 0x0000FF00, 0x00FF0000);
 
 	request.m_pSrcFormat = &srcFormat;
