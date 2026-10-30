@@ -80,7 +80,10 @@
 
 			void					CopyEditBrush( CEditBrush *pOther, CStringHolder *pStringHolder=NULL );
 			
-			uint32					FindPolyWithPoints( uint32 index1, uint32 index2 );
+			// talon: NOLF's has IsOpen (0x413cd0); declared in place of Build
+			// 69's FindPolyWithPoints (nothing defines it) so that the header's
+			// declaration count, which PreWorld.cpp (VC6) sees, is unchanged.
+			BOOL					IsOpen();
 			BOOL					FindPoliesWithEdge( uint32 v1, uint32 v2, CEditPoly*&pPoly1, CEditPoly*&pPoly2, uint32 &nContaining );
 
 			//this will add a vertex to the list, unless it can find one that is within
@@ -89,7 +92,7 @@
 			uint32					AddVertOrGetClosest(const LTVector& vPos, CReal fThreshold);
 			
 			void					RemovePolyVerts( CMoDWordArray &indices, CMoArray<CEditPoly*> &exclude, CMoArray<CEditPoly*> &changedPolies );
-			void					RemoveVertex( uint32 iVert );
+			void					RemoveVertex( WORD iVert );	// talon: a WORD (0x41407a)
 			void					RemoveExtraEdges( CReal normalThresh, CReal distThresh );
 			void					RemoveDuplicatePoints( CReal distThresh );
 			void					ChangeVertexReferences( uint32 from, uint32 to );

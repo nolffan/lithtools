@@ -82,8 +82,9 @@
 
 			void				CopyAttributes( CBasePoly *pOther, CStringHolder *pStringHolder=NULL );
 			
-			// Decrements all indices >= index.
-			void				DecrementPoints( uint32 index );
+			// Decrements all indices >= index (talon: 2001, 0x41a340: a WORD,
+			// and the triangles' too).
+			void				DecrementPoints( WORD index );
 
 			// Tells if and where the ray intersects the poly.
 			BOOL				IntersectRay( CEditRay &ray, CReal &t, BOOL bBackface );

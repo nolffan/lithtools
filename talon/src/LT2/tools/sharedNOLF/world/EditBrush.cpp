@@ -218,7 +218,8 @@ CVector CEditBrush::GetUpperLeftCornerPos()
 		{
 			vUpperLeft.y=m_Points[i].y;
 		}
-		if (m_Points[i].z > vUpperLeft.z)
+		// talon: this way round (0x415826 loads the point's z first)
+		if (vUpperLeft.z < m_Points[i].z)
 		{
 			vUpperLeft.z=m_Points[i].z;
 		}
@@ -236,5 +237,154 @@ void CEditBrush::UpdateBSphere()
 		m_BoundingBox.Init( m_Points[0] );
 		for( uint32 i=1; i < m_Points; i++ )
 			m_BoundingBox.Extend( m_Points[i] );
+	}
+}
+
+
+// talon: NOLF's (0x413cd0), Build 69's but for the planes: each poly's is
+// updated in the first loop (0x413cfb), there is no UpdatePlanes.
+BOOL CEditBrush::IsOpen()
+{
+	// If it's got less than 4 polies, it's definately open
+	if (m_Polies.GetSize() < 4)
+		return TRUE;
+
+	// Keep track of the normal directions..
+	uint32 nNormalFlags = 0;
+	const uint32 NORMAL_FLAG_XPOS = 1 << 0;
+	const uint32 NORMAL_FLAG_XNEG = 1 << 1;
+	const uint32 NORMAL_FLAG_YPOS = 1 << 2;
+	const uint32 NORMAL_FLAG_YNEG = 1 << 3;
+	const uint32 NORMAL_FLAG_ZPOS = 1 << 4;
+	const uint32 NORMAL_FLAG_ZNEG = 1 << 5;
+	const uint32 NORMAL_FLAG_ALL = (1 << 6) - 1;
+
+	uint32 nPolyLoop;
+
+	for (nPolyLoop = 0; nPolyLoop < m_Polies; ++nPolyLoop)
+	{
+		m_Polies[nPolyLoop]->UpdatePlane();
+
+		CEditPlane *pPlane = &m_Polies[nPolyLoop]->m_Plane;
+
+		// Update the normal directions flags
+		if (pPlane->m_Normal.x > 0)
+			nNormalFlags |= NORMAL_FLAG_XPOS;
+		if (pPlane->m_Normal.x < 0)
+			nNormalFlags |= NORMAL_FLAG_XNEG;
+		if (pPlane->m_Normal.y > 0)
+			nNormalFlags |= NORMAL_FLAG_YPOS;
+		if (pPlane->m_Normal.y < 0)
+			nNormalFlags |= NORMAL_FLAG_YNEG;
+		if (pPlane->m_Normal.z > 0)
+			nNormalFlags |= NORMAL_FLAG_ZPOS;
+		if (pPlane->m_Normal.z < 0)
+			nNormalFlags |= NORMAL_FLAG_ZNEG;
+	}
+
+	// If we didn't find all of the cardinal directions in the brush, it's got an open face
+	// (This is useful for doing a quick-check and detects a sub-divided dual-sided polygon)
+	if (nNormalFlags != NORMAL_FLAG_ALL)
+		return TRUE;
+
+	// We need to be sure there's no duplicate vertices for this to work...
+	RemoveDuplicatePoints(0.01f);
+
+	// Run through the polygons looking for un-shared edges
+	for (nPolyLoop = 0; nPolyLoop < m_Polies.GetSize(); ++nPolyLoop)
+	{
+		CEditPoly *pPoly = m_Polies[nPolyLoop];
+		for (uint32 nEdgeLoop = 0; nEdgeLoop < pPoly->m_Indices.GetSize(); ++nEdgeLoop)
+		{
+			uint32 nPolyEdge[2];
+
+			nPolyEdge[0] = pPoly->m_Indices[nEdgeLoop];
+			nPolyEdge[1] = pPoly->m_Indices.Next(nEdgeLoop);
+
+			bool bFoundEdge = false;
+
+			for (uint32 nOtherPolyLoop = 0; (!bFoundEdge) && (nOtherPolyLoop < m_Polies.GetSize()); ++nOtherPolyLoop)
+			{
+				if (nOtherPolyLoop == nPolyLoop)
+					continue;
+
+				CEditPoly *pOtherPoly = m_Polies[nOtherPolyLoop];
+
+				for (uint32 nOtherEdgeLoop = 0; (!bFoundEdge) && (nOtherEdgeLoop < pOtherPoly->m_Indices.GetSize()); ++nOtherEdgeLoop)
+				{
+					uint32 nOtherEdge[2];
+
+					nOtherEdge[0] = pOtherPoly->m_Indices[nOtherEdgeLoop];
+					nOtherEdge[1] = pOtherPoly->m_Indices.Next(nOtherEdgeLoop);
+
+					// Compare the poly edge and the other edge, in both directions
+					bFoundEdge = ((nPolyEdge[0] == nOtherEdge[0]) && (nPolyEdge[1] == nOtherEdge[1])) ||
+						((nPolyEdge[0] == nOtherEdge[1]) && (nPolyEdge[1] == nOtherEdge[0]));
+				}
+			}
+
+			// Found an un-shared edge..  This brush seems open..
+			if (!bFoundEdge)
+				return TRUE;
+		}
+	}
+
+	return FALSE;
+}
+
+
+// talon: NOLF's (0x414070): Build 69's, with a WORD index.
+void CEditBrush::RemoveVertex( WORD iVert )
+{
+	for( uint32 i=0; i < m_Polies; i++ )
+		m_Polies[i]->DecrementPoints( iVert );
+
+	m_Points.Remove( iVert );
+}
+
+
+// talon: NOLF's (0x4143c0): Build 69's, but the squared threshold is a
+// double (0x4143e2) and the distance is from a copy of the current point
+// (0x414426).
+void CEditBrush::RemoveDuplicatePoints( CReal distThresh )
+{
+	// Jump out on an empty list
+	if (!m_Points.GetSize())
+		return;
+
+	// Square the distance threshold to avoid sqrts
+	double fThreshSqr = distThresh * distThresh;
+
+	uint32 iCurrPoint;
+	for (iCurrPoint = 0; iCurrPoint < m_Points.GetSize() - 1; iCurrPoint++)
+	{
+		uint32 iOtherPoint;
+		for (iOtherPoint = iCurrPoint + 1; iOtherPoint < m_Points.GetSize(); iOtherPoint++)
+		{
+			CVector vCurr = m_Points[iCurrPoint];
+			CVector cDistVect(m_Points[iOtherPoint] - vCurr);
+			// Don't join a vertex if it's further away from the main vertex
+			if (cDistVect.Dot(cDistVect) > fThreshSqr)
+				continue;
+
+			// Scan through the polygons looking for this vertex
+			uint32 iPolyLoop;
+			for (iPolyLoop = 0; iPolyLoop < m_Polies.GetSize(); iPolyLoop++)
+			{
+				CEditPoly *pPoly = m_Polies[iPolyLoop];
+				uint32 iIndexLoop;
+				for (iIndexLoop = 0; iIndexLoop < pPoly->m_Indices.GetSize(); iIndexLoop++)
+				{
+					// Replace duplicate polies with the correct index
+					if (pPoly->m_Indices[iIndexLoop] == iOtherPoint)
+						pPoly->m_Indices[iIndexLoop] = (WORD)iCurrPoint;
+				}
+				pPoly->DecrementPoints((WORD)iOtherPoint);
+			}
+
+			// Remove the point from the list
+			m_Points.Remove(iOtherPoint);
+			iOtherPoint--;
+		}
 	}
 }

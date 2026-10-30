@@ -206,6 +206,19 @@ void CEditPoly::CopyAttributes( CBasePoly *pBase, CStringHolder *pStringHolder )
 }
 
 
+// talon: 0x41a340 (NOLF's; not in the AvP2 image): the poly's indices,
+// then each triangle's (a WORD counter against the WORD-cast count).
+void CEditPoly::DecrementPoints( WORD index )
+{
+	WORD i;
+
+	CBasePoly::DecrementPoints(index);
+
+	for(i=0; i < (WORD)m_Triangles.GetSize(); i++)
+		m_Triangles[i]->DecrementPoints(index);
+}
+
+
 // CEditPoly::UpdateTriangles (0x40fec0, the name ours; called at
 // 0x411225): triangulates a copy of the poly into m_Triangles.
 void CEditPoly::UpdateTriangles()
@@ -233,4 +246,22 @@ BOOL CEditPoly::CopyEditPoly( CEditPoly *pPoly, BOOL bCopyIndices, CStringHolder
 	m_pBrush = pPoly->m_pBrush;
 
 	return TRUE;
+}
+
+
+// talon: 0x41a580 (NOLF's; MakeCap and SimpleSplitBrush call it, 0x412c59,
+// 0x4132f5): CBasePoly::Flip's body. Near: shipped schedules the frame's
+// `add $0x14,%esp` before the last fstps (0x41a5f7); the m_Plane spellings and
+// the two statements' order don't move it.
+void CEditPoly::Flip()
+{
+	for(uint32 i=0; i < m_Indices/2; i++ )
+	{
+		uint32 temp = m_Indices[i];
+		m_Indices[i] = m_Indices[m_Indices-i-1];
+		m_Indices[m_Indices-i-1] = temp;
+	}
+
+	Normal() = -Normal();
+	Dist() = -Dist();
 }
