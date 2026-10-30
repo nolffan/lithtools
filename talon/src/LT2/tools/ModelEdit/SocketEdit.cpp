@@ -30,16 +30,12 @@ CSocketEdit::CSocketEdit(CWnd* pParent /*=NULL*/)
 	//{{AFX_DATA_INIT(CSocketEdit)
 	m_Attachment = _T("");
 	m_Name = _T("");
-	m_NodeName=_T("");
 	m_PosX = 0.0f;
 	m_PosY = 0.0f;
 	m_PosZ = 0.0f;
 	m_RotX = 0.0f;
 	m_RotY = 0.0f;
 	m_RotZ = 0.0f;
-	m_SclX = 100.0f;
-	m_SclY = 100.0f;
-	m_SclZ = 100.0f;
 	//}}AFX_DATA_INIT
 }
 
@@ -51,16 +47,12 @@ void CSocketEdit::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_APPLY, m_cApply);
 	DDX_Text(pDX, IDC_SOCKETEDIT_ATTACHMENT, m_Attachment);
 	DDX_Text(pDX, IDC_SOCKETEDIT_NAME, m_Name);
-	DDX_Text(pDX, IDC_SOCKETEDIT_NODENAME, m_NodeName);
 	DDX_Text(pDX, IDC_SOCKETEDIT_POSX, m_PosX);
 	DDX_Text(pDX, IDC_SOCKETEDIT_POSY, m_PosY);
 	DDX_Text(pDX, IDC_SOCKETEDIT_POSZ, m_PosZ);
 	DDX_Text(pDX, IDC_SOCKETEDIT_ROTX, m_RotX);
 	DDX_Text(pDX, IDC_SOCKETEDIT_ROTY, m_RotY);
 	DDX_Text(pDX, IDC_SOCKETEDIT_ROTZ, m_RotZ);
-	DDX_Text(pDX, IDC_SOCKETEDIT_SCLX, m_SclX);
-	DDX_Text(pDX, IDC_SOCKETEDIT_SCLY, m_SclY);
-	DDX_Text(pDX, IDC_SOCKETEDIT_SCLZ, m_SclZ);
 	//}}AFX_DATA_MAP
 
 		//this just makes sure that if it is close to 0 that it is
@@ -88,33 +80,38 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CSocketEdit message handlers
 
+// 2001's (0x4274f6): starts from the current attachment, falls back on the
+// registry's attachment and model directories, filters for .abc and .lta.
 void CSocketEdit::OnAttachmentLoad() 
 {
 	// Open up a load window for the socket attachment edit
 	// Look up the open directory in the registry
 	CRegMgr regMgr;
-	CString csOpenDir;
+	CString csOpenDir(m_Attachment);
 	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER))
 	{
-		UINT32 dwSize = 256;
-		regMgr.Get("Attachment", csOpenDir.GetBufferSetLength(dwSize), dwSize);
-		csOpenDir.ReleaseBuffer(-1);
-		// Default to the model directory if the attachment directory hasn't been defined
 		if (csOpenDir.IsEmpty())
 		{
-			dwSize = 256;
-			regMgr.Get("Model", csOpenDir.GetBufferSetLength(dwSize), dwSize);
+			UINT32 dwSize = 256;
+			regMgr.Get("Attachment", csOpenDir.GetBufferSetLength(dwSize), dwSize);
 			csOpenDir.ReleaseBuffer(-1);
+			// Default to the model directory if the attachment directory hasn't been defined
+			if (csOpenDir.IsEmpty())
+			{
+				dwSize = 256;
+				regMgr.Get("Model", csOpenDir.GetBufferSetLength(dwSize), dwSize);
+				csOpenDir.ReleaseBuffer(-1);
+			}
 		}
 	}
 
-	csOpenDir += "*.lta;*.ltc";
+	if (csOpenDir.Find('.') == -1)
+		csOpenDir.Empty();
 
 	// get the filename
-	CString sFilter;
-	sFilter.LoadString(IDS_LOADMODELFILTER);
+	char szFilter[] = "Model Files (*.abc)|*.abc|Model Files (*.lta)|*.lta|All Files (*.*)|*.*||";
 
-	CFileDialog dlg (TRUE, "lta", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, sFilter, this);
+	CFileDialog dlg (TRUE, "abc", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
 	if (dlg.DoModal() != IDOK)
 	{
 		return;
@@ -122,7 +119,7 @@ void CSocketEdit::OnAttachmentLoad()
 
 	// Store the open directory in the registry
 	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength());
+	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength()) + "*.abc";
 	regMgr.Set("Attachment", (LPCTSTR)csOpenDir);
 
 	// Update the dialog

@@ -37,28 +37,7 @@ class CLocator
 };
 
 
-class CCamera
-{
-public:
-	CCamera();
-	void Update();
-	void Reset();
-	void LookAtPoint( const LTVector& lookAt );
-
-	float m_fXZAngle;
-	float m_fYAngle;
-	LTVector m_Offset;
-
-	LTVector m_Position;
-	LTVector m_LookAt;
-	LTVector m_Direction;
-	LTVector m_Right;
-	LTVector m_Up;
-};
-
-
 class CModelEditDlg;
-class CSetFOVDlg;   // feild of view dialog
 
 // ------------------------------------------------------------------------
 // CRenderWnd
@@ -81,7 +60,6 @@ public:
 
 	void			Draw();
 	void			SetLOD(DWORD iLOD)		{m_DrawStruct.m_iLOD = iLOD;}
-	void			SetLOD( float flod )    {m_DrawStruct.m_CurrentLODDist = flod ; }
 	Model*			GetModel()				{return m_DrawStruct.GetModel();}
 
 	BOOL			SetupTransformMaker(TransformMaker *pMaker);
@@ -90,15 +68,8 @@ public:
 	void			ResetLights();
 	GLM_CONTEXT		GetContext() {return m_hContext;}
 	
-	CLocator		m_LightLocators[MAX_GLM_LIGHTS];
-	CCamera			m_Camera;
-
-	void		    OpenFOVDlg();
-	
-	void			SetFOV( int val );
-	void			ReleaseAllTextures();
-	BOOL			SetTexture( TextureData *pTexture, DWORD nTextures );
-	void			SetBackgroundColor( COLORREF  ms_color );
+	CLocator		m_LightLocators[MAX_GLM_LIGHTS];	// +0x3c
+	CLocator		m_Locator;							// +0x27c: the camera (2001 has no CCamera)
 
 	void			AllocSelections( uint32 pieces,uint32 nodes ){
 		m_SelectedPieces.SetSizeInit2(pieces, 0);
@@ -142,7 +113,6 @@ protected:
 	DECLARE_MESSAGE_MAP()
 
 	GLM_CONTEXT		m_hContext;
-	CSetFOVDlg     *m_pSetFOVDlg ;  // modeless dialog for dynamically setting the field of view on renderwnd.
 
 public:
 
@@ -159,9 +129,9 @@ public:
 	CPoint			m_ptTrackingScreen;
 
 	// variables used for calculating internal radius by looping through all animation frames
-	bool			m_bCalcRadius;
+	BOOL			m_bCalcRadius;		// +0x47c
 	float			m_fCurRadius;
-	bool			m_bCalcAndDraw;
+	BOOL			m_bCalcAndDraw;
 };
 
 /////////////////////////////////////////////////////////////////////////////

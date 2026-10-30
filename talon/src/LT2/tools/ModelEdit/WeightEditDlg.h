@@ -62,7 +62,6 @@ protected:
 	afx_msg void OnUpdateWeight();
 	virtual BOOL OnInitDialog();
 	afx_msg void OnSelChangeNodes();
-	afx_msg void OnSelchangeWeightsets();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

@@ -29,6 +29,8 @@ public:
 	Model	*m_pModel;
 	void	DrawToTextThing(char *pStr, ...);
 	DWORD	ShowPieceMem(DWORD iLOD);
+	DWORD	CalcMaxWeights();
+	DWORD	CalcNumWeights();
 
 // Overrides
 	// ClassWizard generated virtual function overrides

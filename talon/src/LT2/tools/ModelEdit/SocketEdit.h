@@ -22,16 +22,12 @@ public:
 	CButton	m_cApply;
 	CString	m_Attachment;
 	CString	m_Name;
-	CString m_NodeName;
 	float	m_PosX;
 	float	m_PosY;
 	float	m_PosZ;
 	float	m_RotX;
 	float	m_RotY;
 	float	m_RotZ;
-	float	m_SclX;
-	float	m_SclY;
-	float	m_SclZ;
 	//}}AFX_DATA
 
 

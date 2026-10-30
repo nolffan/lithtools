@@ -67,7 +67,7 @@ void CLocator::UpdateLocation()
 
 void CLocator::Center()
 {
-	m_nDistance = 64.0f;
+	m_nDistance = 0.0f;
 	m_nXZAngle = 0.0f;
 	m_nYAngle = 0.0f;
 	m_Offset.Init(0.0f, 0.0f, 0.0f);
@@ -77,60 +77,6 @@ void CLocator::Center()
 	m_Up.Init(0.0f, 1.0f, 0.0f);
 	m_Right.Init(1.0f, 0.0f, 0.0f);
 }
-
-
-////////////////////////////////////////////////////////////////////////////
-// CCamera
-
-CCamera::CCamera()
-{
-	Reset();
-}
-
-void CCamera::Update( void )
-{
-	float curDist = VEC_DIST( m_Position, m_LookAt );
-//	curDist += m_fDistance;
-
-	LTMatrix mtx, mtx2;
-
-	mtx.SetupRot( m_Right, m_fYAngle * -0.01745329f );
-	mtx2.SetupRot( LTVector(0.0f,1.0f,0.0f), m_fXZAngle * -0.01745329f );
-	mtx2.Apply( mtx );
-	mtx.Apply3x3( m_Direction );
-	mtx.Apply3x3( m_Right );
-	mtx.Apply3x3( m_Up );
-
-	m_LookAt += m_Right * m_Offset.x;
-	m_LookAt += m_Up * m_Offset.y;
-	m_Position = m_LookAt - (m_Direction * curDist);	// talon: the LT2 LTVector has no float * vector
-
-	m_fYAngle = 0.0f;
-	m_fXZAngle = 0.0f;
-	m_Offset.Init( 0.0f, 0.0f, 0.0f );
-}
-
-void CCamera::Reset( void )
-{
-	m_fXZAngle = 0.0f;
-	m_fYAngle = 0.0f;
-	m_Offset.Init( 0.0f, 0.0f, 0.0f );
-
-	m_Position.Init( 0.0f, 0.0f, 64.0f );
-	m_LookAt.Init( 0.0f, 0.0f, 0.0f );
-	m_Direction.Init( 0.0f, 0.0f, 1.0f );
-	m_Right.Init( 1.0f, 0.0f, 0.0f );
-	m_Up.Init( 0.0f, 1.0f, 0.0f );
-
-	Update();
-}
-
-void CCamera::LookAtPoint( const LTVector& lookAt )
-{
-	m_LookAt = lookAt;
-	Update();
-}
-
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -145,7 +91,6 @@ CRenderWnd::CRenderWnd()
 	m_hContext = NULL;
 
 	m_DrawStruct.m_iLOD = PIECELOD_BASE;
-	m_DrawStruct.m_CurrentLODDist = 0.0f ;
 
 	m_DrawStruct.m_bWireframe = FALSE;
 	m_bCameraFollow = TRUE;
@@ -164,13 +109,11 @@ CRenderWnd::CRenderWnd()
 	m_ptTracking.x = m_ptTracking.y = 0;
 	m_ptTrackingScreen.x = m_ptTrackingScreen.y = 0;
 
-	m_bCalcRadius = false;
-	m_bCalcAndDraw = false;
+	m_bCalcRadius = FALSE;
+	m_bCalcAndDraw = FALSE;
 
 	m_Scale = 1.0f;
 	memset(m_pTrackers, 0, sizeof(m_pTrackers));
-
-	m_pSetFOVDlg = NULL ;
 
 	ResetLights();
 }
@@ -210,64 +153,36 @@ void CRenderWnd::InitAnims(LTAnimTracker *pTrackers[NUM_ANIM_INFOS])
 	}
 }
 
-void CRenderWnd::ReleaseAllTextures()
-{
-	::ReleaseAllTextures( GetContext() );
-}
-
-BOOL CRenderWnd::SetTexture( TextureData *pTexture, DWORD nTextures )
-{
-	return  SetGLMTexture(GetContext(), pTexture, nTextures);
-}
-
-void CRenderWnd::SetBackgroundColor( COLORREF  ms_color )
-{
-	SetGLMBackgroundColor(GetContext(),ms_color);
-}
-	
 // ------------------------------------------------------------------------
 // Draw
-// use gl to draw the model
+// use gl to draw the model (0x42542b)
 // ------------------------------------------------------------------------
 void CRenderWnd::Draw()
 {
-	static LTMatrix IdMat;
-	IdMat.Identity();
-
 	DrawStruct *pStruct;
 
 	pStruct = &m_DrawStruct;
-
-	// Setup with 2 lights.
-	pStruct->m_ViewerPos = m_Camera.m_Position;
-	pStruct->m_LookAt = m_Camera.m_LookAt;
-	pStruct->m_LightPositions[0] = m_LightLocators[0].m_Location;
-	pStruct->m_LightPositions[1] = m_LightLocators[1].m_Location;
-	pStruct->m_LightColors[0].Init(255.0f, 255.0f, 255.0f);
-	pStruct->m_LightColors[1].Init(128.0f, 128.0f, 128.0f);
-	pStruct->m_nLights = 2;
-
-	SetupViewingParameters((GLMContext*)m_hContext, pStruct );
-
- 	DrawWorldCoordSys();
-	
-	// if the model exists 
-	if (GetModel()  )
+	if (GetModel())
 	{
+		// Setup with 2 lights.
+		pStruct->m_ViewerPos = m_Locator.m_Location;
+		pStruct->m_LookAt = m_Locator.m_Location + m_Locator.m_Orientation;
+		pStruct->m_LightPositions[0] = m_LightLocators[0].m_Location;
+		pStruct->m_LightPositions[1] = m_LightLocators[1].m_Location;
+		pStruct->m_LightColors[0].Init(255.0f, 255.0f, 255.0f);
+		pStruct->m_LightColors[1].Init(128.0f, 128.0f, 128.0f);
+		pStruct->m_nLights = 2;
+
 		pStruct->m_SelectedPieces = m_SelectedPieces.GetArray();
 		pStruct->m_SelectedNodes = m_SelectedNodes.GetArray();
 
 		pStruct->m_bCalcRadius = m_bCalcRadius;
-		pStruct->m_fModelRadius = 0.0f;
 		pStruct->m_bCalcAndDraw = m_bCalcAndDraw;
 
 		DrawModel (m_hContext, pStruct);
 
 		m_fCurRadius = pStruct->m_fModelRadius;
 	}
-		
-	SwapBuffers( (( GLMContext*)m_hContext)->m_hDC);
-
 }
 
 BOOL CRenderWnd::SetupTransformMaker(TransformMaker *pMaker)
@@ -277,21 +192,22 @@ BOOL CRenderWnd::SetupTransformMaker(TransformMaker *pMaker)
 
 void CRenderWnd::ResetLocator()
 {
-	m_Camera.Reset();
-	m_Camera.Update();
+	m_Locator.Center();
+	m_Locator.m_nDistance = 75.0f * m_Scale;
+	m_Locator.UpdateLocation();
 }
 
 void CRenderWnd::ResetLights()
 {
 	m_LightLocators[0].Center();
-	m_LightLocators[0].m_nDistance = 75.0f * m_Scale * 3.0f;
+	m_LightLocators[0].m_nDistance = 75.0f * 3.0f * m_Scale;
 	m_LightLocators[0].m_nXZAngle = 30.0f;
 	m_LightLocators[0].UpdateLocation();
 	m_LightLocators[0].m_nYAngle = 30.0f;
 	m_LightLocators[0].UpdateLocation();
 
 	m_LightLocators[1].Center();
-	m_LightLocators[1].m_nDistance = 75.0f * m_Scale * 3.0f;
+	m_LightLocators[1].m_nDistance = 75.0f * 3.0f * m_Scale;
 	m_LightLocators[1].m_nXZAngle = -30.0f;
 	m_LightLocators[1].UpdateLocation();
 	m_LightLocators[1].m_nYAngle = -30.0f;
@@ -312,18 +228,6 @@ int CRenderWnd::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	{
 		MessageBox ("Error", "Could not create OpenGL context", MB_OK);
 		return -1;
-	}
-
-	// set the context's permanent attribs.
-	CRegMgr regMgr2;
-	if (regMgr2.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "Render", HKEY_CURRENT_USER))
-	{
-		UINT32 dwSize = sizeof(float)*3;
-		float bgColor[3];
-	
-		regMgr2.Get("bgColor",bgColor , dwSize);
-
-		SetGLMBackgroundColor( GetContext() , bgColor );	
 	}
 
 	return 0;
@@ -434,6 +338,8 @@ void CRenderWnd::OnRButtonUp(UINT nFlags, CPoint point)
 	CWnd::OnRButtonUp(nFlags, point);
 }
 
+// 2001's (0x4257f8): the camera and the lights are CLocators; with
+// "camera follow" on, turning and zooming move the camera and both lights.
 void CRenderWnd::OnMouseMove(UINT nFlags, CPoint point) 
 {
 	float xzAdd, yAdd, distanceAdd;
@@ -443,99 +349,99 @@ void CRenderWnd::OnMouseMove(UINT nFlags, CPoint point)
 	static DWORD lastTick = 0;
 	DWORD holdTime;
 	float timeAdjust;
+	CLocator *pLocator;
 
 	if ((point != m_ptTracking) && (m_bTracking))
 	{
 		if (!lastTick)
 			lastTick = timeGetTime();
 		holdTime = timeGetTime();
-		timeAdjust = ____max((float)(holdTime - lastTick) / 10.0f, 1.0f); // t.f (don'task)
+		timeAdjust = ____max((float)(holdTime - lastTick) * 0.1f, 1.0f);
 		lastTick = holdTime;
 	}
 
-	bool alterCamera = false;
-	bool alterLight[2] = {false,false};
+	if (m_bCameraFollow)
+	{
+		if (m_bTracking && (nFlags & MK_LBUTTON) && (nFlags & MK_RBUTTON) && point != m_ptTracking)
+		{
+			xzAdd = m_Scale * (float)(m_ptTracking.x - point.x) / timeAdjust;
+			yAdd = m_Scale * (float)(m_ptTracking.y - point.y) / timeAdjust;
 
-	if( m_bCameraFollow )
-	{
-		alterCamera = true;
-		alterLight[0] = alterLight[1] = true;
-	}
-	else if( GetAsyncKeyState( VK_CONTROL ) & 0x8000 )
-	{
-		if( GetAsyncKeyState( VK_SHIFT ) & 0x8000 )
-			alterLight[1] = true;
-		else
-			alterLight[0] = true;
+			m_Locator.m_Offset.x += xzAdd;
+			m_Locator.m_Offset.y += yAdd;
+			m_Locator.UpdateLocation();
+			SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
+		}
+		else if (m_bTracking && (nFlags & MK_LBUTTON) && point != m_ptTracking)
+		{
+			xzAdd = (float)(m_ptTracking.x - point.x) * turnSpeed;
+			m_LightLocators[0].m_nXZAngle += xzAdd;
+			m_LightLocators[1].m_nXZAngle += xzAdd;
+			m_Locator.m_nXZAngle += xzAdd;
+
+			yAdd = (float)(point.y - m_ptTracking.y) * turnSpeed;
+			m_LightLocators[0].m_nYAngle += yAdd;
+			m_LightLocators[1].m_nYAngle += yAdd;
+			m_Locator.m_nYAngle += yAdd;
+
+			m_LightLocators[0].UpdateLocation();
+			m_LightLocators[1].UpdateLocation();
+			m_Locator.UpdateLocation();
+			SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
+		}
+		else if (m_bTracking && (nFlags & MK_RBUTTON) && point.y != m_ptTracking.y)
+		{
+			distanceAdd = distanceSpeed * (float)(point.y - m_ptTracking.y) / timeAdjust;
+			distanceAdd *= m_Scale;
+			m_LightLocators[0].m_nDistance += distanceAdd;
+			m_LightLocators[1].m_nDistance += distanceAdd;
+			m_Locator.m_nDistance += distanceAdd;
+
+			m_LightLocators[0].UpdateLocation();
+			m_LightLocators[1].UpdateLocation();
+			m_Locator.UpdateLocation();
+			SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
+		}
 	}
 	else
 	{
-		alterCamera = true;
-	}
-
-	if (m_bTracking && (nFlags & MK_LBUTTON) && (nFlags & MK_RBUTTON) && point != m_ptTracking)
-	{
-		xzAdd = m_Scale * (float)(m_ptTracking.x - point.x) / timeAdjust;
-		yAdd = m_Scale * (float)(m_ptTracking.y - point.y) / timeAdjust;
-
-		m_Camera.m_Offset.x += xzAdd;
-		m_Camera.m_Offset.y += yAdd;
-		m_Camera.Update();
-		
-		SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
-	}
-	else if (m_bTracking && (nFlags & MK_LBUTTON) && point != m_ptTracking)
-	{
-		xzAdd = turnSpeed * (float)(m_ptTracking.x - point.x);
-		yAdd = turnSpeed * (float)(point.y - m_ptTracking.y);
-
-		if( alterCamera )
+		if (GetAsyncKeyState(VK_CONTROL) & 0x8000)
 		{
-			m_Camera.m_fXZAngle += xzAdd;
-			m_Camera.m_fYAngle += yAdd;
-			m_Camera.Update();
+			if (GetAsyncKeyState(VK_SHIFT) & 0x8000)
+				pLocator = &m_LightLocators[1];
+			else
+				pLocator = &m_LightLocators[0];
+		}
+		else
+		{
+			pLocator = &m_Locator;
 		}
 
-		if( alterLight[0] )
+		if (m_bTracking && (nFlags & MK_LBUTTON) && (nFlags & MK_RBUTTON) && point != m_ptTracking)
 		{
-			m_LightLocators[0].m_nXZAngle += xzAdd;
-			m_LightLocators[0].m_nYAngle += yAdd;
-			m_LightLocators[0].UpdateLocation();
-		}
+			xzAdd = m_Scale * (float)(m_ptTracking.x - point.x) / timeAdjust;
+			yAdd = m_Scale * (float)(m_ptTracking.y - point.y) / timeAdjust;
 
-		if( alterLight[1] )
+			m_Locator.m_Offset.x += xzAdd;
+			m_Locator.m_Offset.y += yAdd;
+			m_Locator.UpdateLocation();
+			SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
+		}
+		else if (m_bTracking && (nFlags & MK_LBUTTON) && point != m_ptTracking)
 		{
-			m_LightLocators[1].m_nXZAngle += xzAdd;
-			m_LightLocators[1].m_nYAngle += yAdd;
-			m_LightLocators[1].UpdateLocation();
+			pLocator->m_nXZAngle += (float)(m_ptTracking.x - point.x) * turnSpeed;
+			pLocator->m_nYAngle += (float)(point.y - m_ptTracking.y) * turnSpeed;
+			pLocator->UpdateLocation();
+			SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
 		}
-		
-		SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
-	}
-	else if (m_bTracking && (nFlags & MK_RBUTTON) && point.y != m_ptTracking.y)
-	{
-		distanceAdd = distanceSpeed * (float)(point.y - m_ptTracking.y) / timeAdjust;
-		distanceAdd *= m_Scale;
-
-		if( alterCamera )
+		else if (m_bTracking && (nFlags & MK_RBUTTON) && point.y != m_ptTracking.y)
 		{
-			m_Camera.m_Position.z += distanceAdd;
-			m_Camera.Update();
+			distanceAdd = distanceSpeed * (float)(point.y - m_ptTracking.y) / timeAdjust;
+			distanceAdd *= m_Scale;
+			pLocator->m_nDistance += distanceAdd;
+			pLocator->UpdateLocation();
+			SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
 		}
-
-		if( alterLight[0] )
-		{
-			m_LightLocators[0].m_nDistance += distanceAdd;
-			m_LightLocators[0].UpdateLocation();
-		}
-
-		if( alterLight[1] )
-		{
-			m_LightLocators[1].m_nDistance += distanceAdd;
-			m_LightLocators[1].UpdateLocation();
-		}
-
-		SetCursorPos (m_ptTrackingScreen.x, m_ptTrackingScreen.y);
 	}
 
 	CWnd::OnMouseMove(nFlags, point);
@@ -563,31 +469,4 @@ void CRenderWnd::OnMButtonUp(UINT nFlags, CPoint point)
 void CRenderWnd::OnLButtonDblClk(UINT nFlags, CPoint point) 
 {
 	CWnd::OnLButtonDblClk(nFlags, point);
-}
-
-// ------------------------------------------------------------------------
-// Create/Open the FOV dialog window.
-// ------------------------------------------------------------------------
-void CRenderWnd::OpenFOVDlg()
-{
-	if( m_pSetFOVDlg == NULL )
-	{
-		m_pSetFOVDlg = new CSetFOVDlg( this );
-		m_pSetFOVDlg->Create(CSetFOVDlg::IDD,this);
-		m_pSetFOVDlg->SetBaseFOV((int) CModelEditDlg::CalcFOV() );
-		m_pSetFOVDlg->ShowWindow(SW_SHOW);
-	}else
-	{
-		m_pSetFOVDlg->SetBaseFOV((int) CModelEditDlg::CalcFOV() );
-		m_pSetFOVDlg->ShowWindow(SW_SHOW);
-	}
-}
-
-// ------------------------------------------------------------------------
-// this is called by my SetFOVDlg 
-// ------------------------------------------------------------------------
-void CRenderWnd::SetFOV( int val )
-{
-	CModelEditDlg::SetFOV((float)val);
-	m_DrawStruct.m_FOV = (float)val;
 }

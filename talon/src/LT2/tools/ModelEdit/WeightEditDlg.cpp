@@ -45,7 +45,7 @@ BEGIN_MESSAGE_MAP(WeightEditDlg, CDialog)
 	ON_BN_CLICKED(IDC_REMOVESET, OnRemoveSet)
 	ON_EN_UPDATE(IDC_WEIGHT, OnUpdateWeight)
 	ON_LBN_SELCHANGE(IDC_NODES, OnSelChangeNodes)
-	ON_LBN_SELCHANGE(IDC_WEIGHTSETS, OnSelchangeWeightsets)
+	ON_LBN_SELCHANGE(IDC_WEIGHTSETS, OnSelChangeNodes)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -231,37 +231,3 @@ void WeightEditDlg::OnSelChangeNodes()
 	HandleSelChange();
 }
 
-//------------------------------------------------------------------
-//
-//   FUNCTION : OnSelchangeWeightsets()
-//
-//   PURPOSE  : Handles selection change in IDC_WEIGHTSET
-//
-//------------------------------------------------------------------
-
-void WeightEditDlg::OnSelchangeWeightsets() 
-{
-	HandleSelChange();
-
-	// Clear all selections within the node list listbox
-
-	m_NodeList.SelItemRange(FALSE, 0, m_NodeList.GetCount());
-
-	int nCurSel = m_WeightSets.GetCurSel();
-	if ((nCurSel != LB_ERR) && (nCurSel < (int)m_pModel->NumWeightSets()))
-	{		
-		WeightSet *pSet = m_pModel->GetWeightSet(nCurSel);
-
-		// Select all the weighted nodes in this set.
-		
-		for (int i = 0; i < (int)pSet->m_Weights.GetSize(); i ++)
-		{
-			if (pSet->m_Weights[i] > 0.0f)
-			{
-				// Select the node in the nodes list box
-
-				m_NodeList.SetSel(i, TRUE);
-			}
-		}
-	}	
-}

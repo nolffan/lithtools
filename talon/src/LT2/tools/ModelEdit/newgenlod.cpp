@@ -26,22 +26,16 @@ public:
 	CMoArray<DWORD>		m_OriginalVertIndices;
 };
 
+// 2001's (0x421e28, 0x40 bytes): the piece is its own base LOD.
 class GLPiece
 {
 public:
-	GLPiece()
-		:m_Tris(5000),m_Verts(400) 
-	{
-		
-	}
-
 	~GLPiece() {
 		for (DWORD i = 0; i < m_LODs.GetSize(); i++)
 			delete m_LODs[i];
 		m_LODs.Term();
 	};
-	ModelPiece			*m_pModelPiece; // T.F ModelPiece
-	PieceLOD				*m_pPiece; // first lod
+	ModelPiece			*m_pPiece;
 	CMoArray<GLTri>		m_Tris;
 	CMoArray<ModelVert>	m_Verts;
 	CMoArray<GLPieceLOD*>	m_LODs;    // lods based on first lod.
@@ -75,32 +69,15 @@ public:
 typedef CMoArray<EColInfo> EColInfoArray;
 
 
-//typedef CMoArray<ModelTri*> ModelTriPtrArray;
-
-
-class ModelTriPtrArray {
-public :
-	enum { SIZE = 20 };
-
-	ModelTriPtrArray() :m_MaskedData(SIZE) {}
-
-	int GetSize() { return m_MaskedData.GetSize() ; } 
-
-	void Append( ModelTri * type ) { m_MaskedData.Append( type ); }
-
-	ModelTri *operator []( int val ) { return m_MaskedData[val] ; }
-
-	CMoArray<ModelTri*> m_MaskedData ;
-
-};
+typedef CMoArray<ModelTri*> ModelTriPtrArray;
 
 
 // Sets up the GLModel structure from the Model structure.
 void SetupGLModel(GLModel *pModel, BuildLODRequest *pRequest)
 {
-	PieceLOD *pInPiece;
+	ModelPiece *pInPiece;
 	GLPiece *pPiece;
-	DWORD iPiece, iTri, iVert;
+	DWORD iPiece, iTri, iVert, i;
 	Model *pInModel;
 
 	pInModel = pRequest->m_pModel;
@@ -110,19 +87,19 @@ void SetupGLModel(GLModel *pModel, BuildLODRequest *pRequest)
 	// Copy the pieces.
 	for(iPiece=0; iPiece < pInModel->NumPieces(); iPiece++)
 	{
-		// when generating lods from peices automatically we assume there is only
-		// one starting geometry.
-		pInPiece = pInModel->GetPiece(iPiece)->GetLOD((uint32)0);
+		pInPiece = pInModel->GetPiece(iPiece);
 
 		pPiece = new GLPiece;
 
-		pPiece->m_pModelPiece = pInModel->GetPiece(iPiece);
 		pPiece->m_pPiece = pInPiece;
 		pPiece->m_Tris.SetSize(pInPiece->m_Tris.GetSize());
 		for(iTri=0; iTri < pPiece->m_Tris; iTri++)
 		{
 			pPiece->m_Tris[iTri].m_bActive = TRUE;
-			pPiece->m_Tris[iTri].ModelTri::operator=(pInPiece->m_Tris[iTri]);
+			// talon: the copy is made three times over (0x421d43: a loop of
+			// three around ModelTri's operator=).
+			for(i=0; i < 3; i++)
+				pPiece->m_Tris[iTri].ModelTri::operator=(pInPiece->m_Tris[iTri]);
 		}
 
 		pPiece->m_Verts.SetSize(pInPiece->m_Verts.GetSize());
@@ -410,12 +387,11 @@ void DeleteLOD(Model *pModel)
 {
 	DWORD iPiece;
 
-	//pModel->m_LODs.Term();
+	pModel->m_LODs.Term();
 
 	for(iPiece=0; iPiece < pModel->NumPieces(); iPiece++)
 	{
-		// // only delete the lods after the first. explictly toss out all other lods.
-		pModel->GetPiece(iPiece)->m_LODs.NiceSetSize(1);
+		pModel->GetPiece(iPiece)->m_LODs.Term();
 	}
 }
 
@@ -559,13 +535,13 @@ BOOL AddLODToModel(GLModel *pModel,
 	GLPieceLOD *pGLLOD, *pPrevGLLOD;
 	ModelPiece *pPiece;
 	PieceLOD *pLOD;
-	PieceLOD tempLOD;
 	PieceLOD *pPrevLOD;
 	EColInfo *pECol;
 	ModelTri *pTri;
 	CMoArray<BOOL> usedTris, usedVerts;
 	CMoArray<DWORD> vertIndexRemap;
 	LODInfo lodInfo;
+	PieceLOD tempLOD;
 	BOOL *pUsedVert;
 	
 	ModelVert *pVert;
@@ -583,7 +559,7 @@ BOOL AddLODToModel(GLModel *pModel,
 		else
 			pPrevGLLOD = NULL;
 
-		pPiece->AddLOD(tempLOD,pInfo->m_Dist);
+		pPiece->m_LODs.Append(tempLOD);
 		pLOD = &pPiece->m_LODs.Last();
 		
 		
@@ -693,6 +669,10 @@ BOOL AddLODToModel(GLModel *pModel,
 				return FALSE;
 		}
 	}
+
+	// Add the LOD to the model's list.
+	lodInfo.m_Dist = pInfo->m_Dist;
+	pModel->m_pModel->m_LODs.Append(lodInfo);
 	
 	return TRUE;
 }

@@ -63,6 +63,7 @@ void CModelInfoDlg::DrawToTextThing(char *pStr, ...)
 }
 
 
+// 0x42185c: the geometry memory of one LOD of every piece.
 DWORD CModelInfoDlg::ShowPieceMem(DWORD iLOD)
 {
 	uint32 i, memPieces, memVerts, memTris;
@@ -88,42 +89,57 @@ DWORD CModelInfoDlg::ShowPieceMem(DWORD iLOD)
 	return memPieces+memVerts+memTris;
 }
 
-void DrawToTextThingTabs( CModelInfoDlg *dlg, int depth )
+// 0x4218ec: the most weights any vertex of the base LODs has.
+DWORD CModelInfoDlg::CalcMaxWeights()
 {
-	static char space_buffer[60];
-	CWnd *pWnd = dlg->GetDlgItem(IDC_MODELINFOTEXT);
-	if(!pWnd) return ;
-	for( int i = 0 , cnt=0; i < depth ; i++,cnt+=2 ){
-		space_buffer[cnt] = ' ';
-		space_buffer[cnt+1] = ' ';
-	}
-	space_buffer[cnt] = '\0';
-	int nLen = pWnd->SendMessage(EM_GETLIMITTEXT, 0, 0);
-	pWnd->SendMessage(EM_SETSEL, nLen, nLen);
-	pWnd->SendMessage(EM_REPLACESEL, FALSE, (LPARAM)space_buffer);
-}
+	DWORD i, j, nMax;
+	ModelPiece *pPiece;
 
-void recur_print_nodes( CModelInfoDlg *dlg, ModelNode *root, int depth )
-{
-
-	DrawToTextThingTabs(dlg,depth);
-	dlg->DrawToTextThing("%s", root->GetName());
-	for( uint32 i = 0 ;i < root->NumChildren() ; i++ )
+	nMax = 0;
+	for(i=0; i < m_pModel->NumPieces(); i++)
 	{
-		recur_print_nodes(dlg,root->GetChild(i),depth+1);
+		pPiece = m_pModel->GetPiece(i);
+		for(j=0; j < pPiece->m_Verts; j++)
+		{
+			if(pPiece->m_Verts[j].m_nWeights > nMax)
+				nMax = pPiece->m_Verts[j].m_nWeights;
+		}
 	}
+
+	return nMax;
 }
 
+// 0x421926: the number of vertex weights in the base LODs.
+DWORD CModelInfoDlg::CalcNumWeights()
+{
+	DWORD i, j, total;
+	ModelPiece *pPiece;
+
+	total = 0;
+	for(i=0; i < m_pModel->NumPieces(); i++)
+	{
+		pPiece = m_pModel->GetPiece(i);
+		for(j=0; j < pPiece->m_Verts; j++)
+		{
+			total += pPiece->m_Verts[j].m_nWeights;
+		}
+	}
+
+	return total;
+}
+
+// 2001's (0x42195c).
 BOOL CModelInfoDlg::OnInitDialog() 
 {
 	DWORD i, total;
+	ModelNode *pNode;
 	ModelPiece *pPiece;
-	DWORD totalMem, memWeights;
+	DWORD totalMem;
 
 
 	CDialog::OnInitDialog();
 
-	DrawToTextThing("File Version : %d" , m_pModel->GetFileVersion() );
+	DrawToTextThing("File Version : %d", m_pModel->GetFileVersion());
 	DrawToTextThing(" ");
 	DrawToTextThing("Number of animations: %d", m_pModel->m_Anims.GetSize());
 	DrawToTextThing("------------------------------");
@@ -136,71 +152,44 @@ BOOL CModelInfoDlg::OnInitDialog()
 	DrawToTextThing("------------------------------");
 	DrawToTextThing("Average keyframes per animation: %d", total / m_pModel->m_Anims.GetSize());
 
-	DrawToTextThing("Number of triangles: %d", m_pModel->CalcNumTris());
+	DrawToTextThing("Number of triangles: %d", m_pModel->CalcNumTris(0));
 	DrawToTextThing("Number of vertices: %d", m_pModel->CalcNumVerts());
-	DrawToTextThing("Number of nodes: %d", m_pModel->m_Transforms.GetSize());
-	DrawToTextThing("Number of vertex weights: %d", m_pModel->CalcNumVertexWeights());
-	DrawToTextThing("Average weights per vertex: %.3f", (float)m_pModel->CalcNumVertexWeights() / m_pModel->CalcNumVerts());
+	DrawToTextThing("Number of nodes: %d", m_pModel->NumNodes());
+	DrawToTextThing("Number of vertex weights: %d", CalcNumWeights());
+	DrawToTextThing("Average weights per vertex: %.3f", (float)CalcNumWeights() / m_pModel->CalcNumVerts());
+	DrawToTextThing("Maximum weights per vertex: %d", CalcMaxWeights());
 
 	DrawToTextThing("");
 	DrawToTextThing("Nodes ----------------");
-	
-	DrawToTextThing("Number of Nodes : %d ", m_pModel->m_FlatNodeList.GetSize());
-	DrawToTextThing(" ");
-	if( m_pModel->m_FlatNodeList )
+	for(i=0; i < m_pModel->m_FlatNodeList; i++)
 	{
-		recur_print_nodes(this,m_pModel->m_FlatNodeList[0],0);
+		pNode = m_pModel->m_FlatNodeList[i];
+		DrawToTextThing("%s (%s)", pNode->GetName(), (pNode->m_Flags & MNODE_REMOVABLE) ? "removable" : "normal");
 	}
 
-	
 	DrawToTextThing("");
 	DrawToTextThing("Pieces ----------------");
 	for(i=0; i < m_pModel->NumPieces(); i++)
 	{
 		pPiece = m_pModel->GetPiece(i);
-
-		// T.F ModelPiece ;
-		for( uint32 per_lod = 0 ; per_lod < pPiece->NumLODs() ; per_lod++ )
-		{
-			DrawToTextThing("%s, %d textures, texture[0] %d", pPiece->GetName(), 
-					pPiece->GetLOD(per_lod)->m_nNumTextures, pPiece->GetLOD(per_lod)->m_iTextures[0]);
-		}
+		DrawToTextThing("%s, texture %d", pPiece->GetName(), pPiece->m_iTexture);
 	}
-
 
 	DrawToTextThing("");
 	DrawToTextThing("Geometry Memory ----------------");
-
-	totalMem = 0 ;
-	for( i = 0 ; i < m_pModel->NumPieces() ; i++ )
+	DrawToTextThing("LOD 0 -------");
+	totalMem = ShowPieceMem(0);
+	for(i=0; i < m_pModel->m_LODs; i++)
 	{
-		uint32 memPiece, memVerts, memTris;
-		memPiece= memVerts= memTris=0;
-
-		DrawToTextThing("piece %s", m_pModel->GetPiece(i)->GetName() );
-		ModelPiece *pPiece = m_pModel->GetPiece(i);
-		memPiece += sizeof(ModelPiece);
-		for( uint32 j = 0 ; j < pPiece->NumLODs() ; j++ )
-		{
-			
-			DrawToTextThing("-------- LOD %d dist :%f -------",j, pPiece->m_LODDists[j]);		
-			DrawToTextThing(" n verts : %d  n tris %d ", pPiece->GetLOD(j)->m_Verts.GetSize(),pPiece->GetLOD(j)->m_Tris.GetSize());
-			memPiece 	+= sizeof(PieceLOD);
-			memVerts += pPiece->GetLOD(j)->m_Verts;
-			memTris  += pPiece->GetLOD(j)->m_Tris;
-		}
-		DrawToTextThing("Pieces: %d", memPiece);
-		DrawToTextThing("Verts: %d", memVerts);
-		DrawToTextThing("Tris: %d", memTris);
-		totalMem += memPiece + memVerts + memTris ;
+		DrawToTextThing("LOD %d -------", i+1);
+		// talon: retail bug, kept: shows LOD i under the heading of LOD i+1
+		// (0x421bad), so LOD 0 is counted twice and the last LOD never.
+		totalMem += ShowPieceMem(i);
 	}
 
 	DrawToTextThing("");
-	memWeights = m_pModel->m_VertexWeights.GetSize() * sizeof(NewVertexWeight);
-	DrawToTextThing("Weights: %d", memWeights);
+	DrawToTextThing("Weights: %d", m_pModel->m_VertexWeights.GetSize() * sizeof(NewVertexWeight));
 	DrawToTextThing("TOTAL: %d", totalMem);
 	return TRUE;  // return TRUE unless you set the focus to a control
 	              // EXCEPTION: OCX Property Pages should return FALSE
 }
-
-
