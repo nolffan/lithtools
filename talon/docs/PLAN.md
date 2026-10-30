@@ -440,7 +440,7 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     stand-ins (the map's last section). As it stands: 2,499 identical
     (38.6% of the bytes); the libraries nearly all identical, model.cpp
     226 of 267.
-  - [ ] Bring it back to 2001, in nine parts by image range (near / todo
+  - [x] Bring it back to 2001, in nine parts by image range (near / todo
     counts as recorded; each part owns the headers of its modules):
     1. Project Bar group, 0x401000..0x40d69f (345 rows: 169 near, 4 todo).
     2. A-C, 0x40d69f..0x415075 (301: 90 near, 6 todo): AdvancedSelect ..
@@ -469,6 +469,34 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     Then: the Build 69 only group and the stand-ins out; concommand and
     DebugDlg (2001's) into their places by name; zlib linked as a default
     library; LTTexture's code into Texture.cpp.
+  - [~] First matching round (2026-10-30, nine agents by the parts
+    above, then integrated): 3,855 identical of 4,402 (80.1% of the
+    bytes), from 2,499. Links clean with no Build 69 only source left
+    (the group and the rest: level errors, prefab manager and references,
+    hot keys, model view, the later options pages, trackers with no 2001
+    vtable, ...; removed). concommand and DebugDlg in their places,
+    LTTexture's code in Texture.cpp. Written from the image: the Options
+    Pages group, the 2001 tracker set-up (in RegionView.cpp, where the
+    image has it), RegionView's world, OBJ and LTA imports and prefab
+    save (.ed), the model dims reader, MakeRezFile, KeyMapDlg, mlistctrl,
+    OptionsPrimitives, OptionsWarnings, PreferencesDlg, RezBuildDlg, the
+    processor's world code under DIRECTEDITOR_BUILD with the world tree
+    (the module the map had as unknown at 0x46db7a), the LTA library's
+    2001 API. 117 interior function-table rows screened out and 13 missed
+    starts added (progress/extent-splits.csv); the second scored range
+    from CryptMgr's constructor, 0x4a25e0. 33 retail bugs (RETAIL_BUGS.md).
+  - [ ] What's left: 209 near and 58 todo; two 2001-only modules not
+    written: the 16-bit software renderer (0x429b55..0x42b077,
+    dm_CreateNormalDrawMgr a stand-in) and the self-closing dialog after
+    ColumnCtrl (0x414546, its handlers a stand-in in ColumnCtrl.cpp, its
+    module unknown); the stand-ins (progress/DEdit-map.md's last section:
+    Build 69's vertex flags and textured planes over the 2001 poly, the
+    trackers' FlushTracker, ViewDef's camera settings, viewrender's clip
+    mask and lighting, three light-texel functions of ViewFunctions, the
+    Quick Help dialog); Build 69's prefab-node code in EditRegion; zlib
+    and CryptMgr linked as default libraries (they are project
+    dependencies still); tools/rsrc2rc.py's three fixes (TOOLBAR
+    statements, cursor and icon order, WS_TABSTOP comboboxes).
 
 ## Method
 
