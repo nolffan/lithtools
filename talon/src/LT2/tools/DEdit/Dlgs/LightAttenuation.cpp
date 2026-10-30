@@ -366,7 +366,7 @@ void CLightAttenuationDlg::DrawGradient( float* values )
 				COLORREF curColor;
 				if( m_ShowColors )
 				{
-					LTVector col = (curVal * m_InnerColor) + ((1.0f - curVal) * m_OuterColor);
+					LTVector col = (m_InnerColor * curVal) + (m_OuterColor * (1.0f - curVal));
 					curColor = RGB(col.x,col.y,col.z);
 				}
 				else

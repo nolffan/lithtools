@@ -56,7 +56,6 @@
 #include "objectselfilterdlg.h"
 
 //for the Rez file creation
-#include "rezutils.h"
 
 //for model rendering
 #include "eventnames.h"
@@ -1316,7 +1315,10 @@ void CMainFrame::OnCreateRezFile()
 
 					//there is enough space, so lets save some strings and make a rez
 					//file
-					RezCompiler("c", FileDlg.GetPathName(), baseDir, TRUE);
+					// talon: stand-in: Build 69 calls RezCompiler here
+					// (Engine/libs/rezmgr's rezutils, which the 2001 image
+					// hasn't); its own rez writing (0x0042fe0a) is to be
+					// written from the image.
 
 					EndWaitCursor();
 

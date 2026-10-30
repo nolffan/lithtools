@@ -213,7 +213,7 @@ bool CObjectSelFilterDlg::CanSelectObject(CWorldNode* pObj)
 			for(int32 nCurrChar = 0; nCurrChar < nStrLen; nCurrChar++)
 			{
 				//see if we have an asterisk to allow for anything
-				if(m_sNameFilter[nCurrChar] == '*')
+				if(m_sNameFilter[(int)nCurrChar] == '*')
 				{
 					//we have a successful match at this point
 					bMatch = true;
@@ -221,7 +221,7 @@ bool CObjectSelFilterDlg::CanSelectObject(CWorldNode* pObj)
 				}
 
 				//check for any mismatch, the name filter should already be uppercase
-				if(toupper(pszName[nCurrChar]) != m_sNameFilter[nCurrChar])
+				if(toupper(pszName[nCurrChar]) != m_sNameFilter[(int)nCurrChar])
 				{
 					return false;
 				}

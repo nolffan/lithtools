@@ -2602,7 +2602,7 @@ void RotatePolyTCoords(CEditPoly *pPoly, uint32 nTexture,
 {
 	LTMatrix mRot;
 
-	Mat_SetupRot(&mRot, &vAxis, fRot);
+	Mat_SetupRot(&mRot, (LTVector*)&vAxis, fRot);	// talon: the LT2 SDK's takes no const
 	
 	newO = (mRot * (pPoly->GetTexture(nTexture).GetO() - vOrigin)) + vOrigin;
 	newP = mRot * pPoly->GetTexture(nTexture).GetP();

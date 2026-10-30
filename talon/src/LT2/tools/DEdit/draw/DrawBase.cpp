@@ -641,6 +641,14 @@ void DrawBase::DrawFlatPoly(CBasePoly *pPoly, COLORREF color)
 	DrawFlatPoly2(points, pPoly->NumVerts(), &vNormal, color);
 }
 
+// talon: stand-in: Build 69's brushes keep a bounding sphere; the 2001
+// CEditBrush has a box (m_BoundingBox): the sphere around it.
+static CBoundingSphere BrushBoundingSphere(CEditBrush *pBrush)
+{
+	LTVector vHalf = (pBrush->m_BoundingBox.m_Max - pBrush->m_BoundingBox.m_Min) * 0.5f;
+	return CBoundingSphere(pBrush->m_BoundingBox.Center(), vHalf.Mag());
+}
+
 //recursive function that will draw a decal node on a world tree and all the contained
 //prefabs
 void DrawBase::DrawDecalOnNode(CWorldNode* pNode, CDecalInfo& Info, LTMatrix& TransMat)
@@ -654,7 +662,7 @@ void DrawBase::DrawDecalOnNode(CWorldNode* pNode, CDecalInfo& Info, LTMatrix& Tr
 	static TLVertex VertBuff[256];
 
 	if(	(pNode->GetType() == Node_Brush) && 
-		Info.m_BSphere.IntersectsSphere(pNode->AsBrush()->m_BoundingSphere))
+		Info.m_BSphere.IntersectsSphere(BrushBoundingSphere(pNode->AsBrush())))
 	{
 		CEditBrush* pBrush = pNode->AsBrush();
 
@@ -1447,89 +1455,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 			color = D3DRGB_255((UINT )pVec->x, ( UINT )pVec->y, ( UINT )pVec->z );
 		}
 		//handle the model property type
-		else if( pProp->m_PropFlags & PF_MODEL)
-		{
-			//see if we actually are going to render the model for this node,
-			//if we aren't we don't even need to bother with it
-
-			BOOL bShowModel = (pInfo) ? pInfo->m_bForceShowModels : pObj->IsFlagSet(NODEFLAG_SHOWMODEL);
-
-			//the options for the model rendering
-			COptionsModels* pOptions = ::GetApp()->GetOptions().GetModelsOptions();
-			ASSERT(pOptions);
-
-			//allow the global force all models to override
-			if(pOptions->IsAlwaysShowModels())
-				bShowModel = TRUE;
-
-			if((pProp->m_Type == PT_STRING) && bShowModel)
-			{
-				//see if this object has a valid handle
-				if(!pObj->GetModelHandle().IsValid())
-					continue;
-				
-				//get the bounding box for this model
-				LTVector vBoundingMin, vBoundingMax;
-				GetApp()->GetModelMgr().GetBoundingBox(pObj->GetModelHandle(), vBoundingMin, vBoundingMax);
-
-				//expand the dimensions of the object to encompass the bounding box
-				vMaxDims.x = LTMAX(vMaxDims.x, fabsf(vBoundingMin.x));
-				vMaxDims.x = LTMAX(vMaxDims.x, fabsf(vBoundingMax.x));
-				vMaxDims.y = LTMAX(vMaxDims.y, fabsf(vBoundingMin.y));
-				vMaxDims.y = LTMAX(vMaxDims.y, fabsf(vBoundingMax.y));
-				vMaxDims.z = LTMAX(vMaxDims.z, fabsf(vBoundingMin.z));
-				vMaxDims.z = LTMAX(vMaxDims.z, fabsf(vBoundingMax.z));
-
-				//find the center and dims
-				LTVector vCenter = (vBoundingMin + vBoundingMax) / 2;
-				LTVector vDim = (vBoundingMax - vCenter);
-				vCenter += pos;
-
-
-				uint32 nMode;
-				if(m_pView->IsParallelViewType())
-				{
-					nMode = pOptions->GetOrthoMode();
-				}
-				else
-				{
-					nMode = pOptions->GetPerspectiveMode();
-
-					//see if we need to convert this to a box though due to distance
-					if(	pOptions->IsRenderBoxAtDist() && 
-						((pos - m_pViewDef->m_Nav.Pos()).Mag() >= pOptions->GetRenderBoxDist()))
-					{
-						nMode = COptionsModels::VIEWMODEL_BOX;
-					}
-				}
-
-				if(nMode == COptionsModels::VIEWMODEL_BOX)
-				{
-					//have it draw an oriented dims box
-					bOrientDims = true;
-				}
-				else
-				{
-					//see if this object has a model associated with it
-					CMeshShapeList* pShapeList = NULL;
-
-					if(GetApp()->GetModelMgr().GetShapeList(pObj->GetModelHandle(), &pShapeList))
-					{
-						//we successfully got the model. We now need to render it
-						DrawModel(pObj, nMode, pShapeList, mObjTrans);
-
-						//we need to unlock the shape list
-						GetApp()->GetModelMgr().ReleaseShapeList(pObj->GetModelHandle());
-
-						//prevent further use of this shape list
-						pShapeList = NULL;
-
-						//we also don't want the default box to be drawn
-						bDrawDims = false;
-					}
-				}
-			}
-		}
+		// talon: no PF_MODEL properties (Build 69's models) in the LT2 SDK
 		// Handle the PF_RADIUS properties...
 		// There can be many...
 		else if( pProp->m_PropFlags & PF_RADIUS)
@@ -1570,15 +1496,7 @@ void DrawBase::DrawObject(CWorldNode *pNode, CNodeStackInfo *pInfo)
 		}
 
 		//handle the rendering of orthographic frustums
-		else if((pProp->m_PropFlags & PF_ORTHOFRUSTUM) && (pProp->m_Type == PT_VECTOR) && bDrawExtra)
-		{
-			//we need to draw this box emitted from the object
-			LTVector vDims = ((CVectorProp*)pProp)->m_Vector / 2.0f;
-			LTVector vPos  = pos + vDims.z * forward;
-			
-			DrawRotatedBox(&vPos, &vDims, right, up, forward, false, GetDisplayColorD3D(COptionsDisplay::kColorObjectOrthoFrustum));
-		}
-
+		// talon: no PF_ORTHOFRUSTUM in the LT2 SDK
 		else if(bDrawExtra && pProp->m_PropFlags & PF_OBJECTLINK &&
 			(pProp->m_Type == PT_STRING))
 		{
@@ -2455,14 +2373,15 @@ bool DrawBase::SetupBrush(CEditBrush* pBrush, CNodeStackInfo *pInfo)
 	//need to transform the bounding sphere center into the wolrd
 	
 	LTVector vBSCenter;
-	mTrans.Apply4x4(pBrush->m_BoundingSphere.GetPos(), vBSCenter);
+	CBoundingSphere BrushSphere = BrushBoundingSphere(pBrush);
+	mTrans.Apply4x4(BrushSphere.GetPos(), vBSCenter);
 
 	//now see if it is on the outside, and also build up the list of planes that we need to clip against
 	LTPlane  ClipPlanes[6];
 	uint8	 ClipMask[6];
 	uint32	 nNumClipPlanes = 0;
 
-	float fSphereRadius = pBrush->m_BoundingSphere.GetRadius();
+	float fSphereRadius = BrushSphere.GetRadius();
 
 	float fDist;
 	for(uint32 i=0; i < m_pView->m_nClipPlanesToUse; i++ )

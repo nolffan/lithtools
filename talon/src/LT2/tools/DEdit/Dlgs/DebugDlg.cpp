@@ -73,8 +73,11 @@ void CDebugDlg::AddMessage2(const char *pStr, va_list marker)
 
 	pWnd = GetDlgItem(IDC_MESSAGES);
 
-	LTVSNPrintF(str, sizeof(str), pStr, marker);
-	LTStrCat(str, "\r\n", sizeof(str));
+	// talon: the C runtime's, for Build 69's LTVSNPrintF and LTStrCat
+	// (ltstrutils.h, which the LT2 SDK hasn't)
+	_vsnprintf(str, sizeof(str) - 3, pStr, marker);
+	str[sizeof(str) - 3] = '\0';
+	strcat(str, "\r\n");
 
 	nLen = pWnd->SendMessage(EM_GETLIMITTEXT, 0, 0);
 	pWnd->SendMessage(EM_SETSEL, nLen, nLen);
