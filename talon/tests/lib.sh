@@ -47,5 +47,27 @@ run_tool() {
     return $rc
 }
 
+# run_tool_until <timeout s> <working dir> <file> <regex> <exe> [args...]:
+# run a Windows tool that never exits by itself (its window stays up when it
+# is done) until <file>, in <working dir>, has a line matching <regex>, then
+# stop it; 124 if that never came.
+run_tool_until() {
+    local limit=$1 dir=$2 file=$3 re=$4 pid i
+    shift 4
+    (cd "$dir" && DISPLAY=$TEST_DISPLAY exec wine "$@" >wine.log 2>&1) &
+    pid=$!
+    for ((i = 0; i < limit; i++)); do
+        grep -qs -- "$re" "$dir/$file" && break
+        kill -0 $pid 2>/dev/null || break
+        sleep 1
+    done
+    sleep 1   # the log line comes after the .dat is closed; let it settle
+    grep -qs -- "$re" "$dir/$file"
+    local rc=$?
+    wineserver -k >/dev/null 2>&1 || true
+    wait $pid 2>/dev/null
+    [ $rc -eq 0 ] || return 124
+}
+
 # winpath <path>: the Z: path Wine gives a Unix path
 winpath() { printf 'Z:%s' "$(realpath -m "$1" | tr / '\\')"; }
