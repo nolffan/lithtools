@@ -63,8 +63,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\built\Release\tools\DEdit"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O1 /Gf /I "..\..\lithshared\stl" /I "." /I "..\shared\model" /I "mrcext" /I "mrcext\vc_headers" /I "..\..\sdk\inc" /I "..\PreProcessor" /I "options" /I "..\shared\world" /I "misc" /I "dlgs" /I "controls" /I "frames" /I "project" /I "..\shared\engine" /I "regionedit" /I "draw" /I "docs" /I "views" /I "trackers" /I "modelview" /I "fileformats" /I "keyaggregate" /I "levelerror" /I "lightmap" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\..\Libs\ButeMgr" /I "..\..\lithshared\incs" /I "..\..\..\Engine\libs\ltamgr" /I "t:\dxsdk-8.1\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WINVER=0x500" /D "REZMGRFULL" /D "DIRECTEDITOR_BUILD" /D "STDLITH_MFC" /D "BDEFS_MFC" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "NO_PRAGMA_LIBS" /D "LT15_COMPAT" /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O1 /Gf /I "..\..\lithshared\stl" /I "." /I "..\shared\model" /I "mrcext" /I "mrcext\vc_headers" /I "..\..\sdk\inc" /I "..\PreProcessor" /I "options" /I "..\shared\world" /I "misc" /I "dlgs" /I "controls" /I "frames" /I "project" /I "..\shared\engine" /I "regionedit" /I "draw" /I "docs" /I "views" /I "trackers" /I "modelview" /I "fileformats" /I "keyaggregate" /I "levelerror" /I "lightmap" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\..\Libs\ButeMgr" /I "..\..\lithshared\incs" /I "..\..\..\Engine\libs\ltamgr" /I "t:\dxsdk-8.1\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WINVER=0x500" /D "REZMGRFULL" /D "DIRECTEDITOR_BUILD" /D "STDLITH_MFC" /D "BDEFS_MFC" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "NO_PRAGMA_LIBS" /D "LT15_COMPAT" /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O1 /Gf /Op /I "..\..\lithshared\stl" /I "." /I "..\shared\model" /I "mrcext" /I "mrcext\vc_headers" /I "..\..\sdk\inc" /I "..\PreProcessor" /I "options" /I "..\shared\world" /I "misc" /I "dlgs" /I "controls" /I "frames" /I "project" /I "..\shared\engine" /I "regionedit" /I "draw" /I "docs" /I "views" /I "trackers" /I "modelview" /I "fileformats" /I "keyaggregate" /I "levelerror" /I "lightmap" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\..\Libs\ButeMgr" /I "..\..\lithshared\incs" /I "..\..\lithshared\ltamgr" /I "t:\dxsdk-8.1\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "WINVER=0x500" /D "REZMGRFULL" /D "DIRECTEDITOR_BUILD" /D "STDLITH_MFC" /D "BDEFS_MFC" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "NO_PRAGMA_LIBS" /D "LT15_COMPAT" /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O1 /Gf /Op /I "..\..\lithshared\stl" /I "." /I "..\shared\model" /I "mrcext" /I "mrcext\vc_headers" /I "..\..\sdk\inc" /I "..\PreProcessor" /I "options" /I "..\shared\world" /I "misc" /I "dlgs" /I "controls" /I "frames" /I "project" /I "..\shared\engine" /I "regionedit" /I "draw" /I "docs" /I "views" /I "trackers" /I "modelview" /I "fileformats" /I "keyaggregate" /I "levelerror" /I "lightmap" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\..\Libs\ButeMgr" /I "..\..\lithshared\incs" /I "..\..\lithshared\ltamgr" /I "t:\dxsdk-8.1\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "WINVER=0x500" /D "REZMGRFULL" /D "DIRECTEDITOR_BUILD" /D "STDLITH_MFC" /D "BDEFS_MFC" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "NO_PRAGMA_LIBS" /D "LT15_COMPAT" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -84,13 +84,21 @@ LINK32=link.exe
 # Begin Group "Source Files"
 
 # PROP Default_Filter "cpp;c;cxx;rc;def;r;odl;idl;hpj;bat"
-# Begin Group "Project Bar"
+# Begin Group "Options Pages"
 
 # PROP Default_Filter ""
 # Begin Source File
 
-SOURCE=.\BaseImgDlg.cpp
+SOURCE=.\OptionsSheet.cpp
 # End Source File
+# Begin Source File
+
+SOURCE=.\UndoPage.cpp
+# End Source File
+# End Group
+# Begin Group "Project Bar"
+
+# PROP Default_Filter ""
 # Begin Source File
 
 SOURCE=.\ModelDlg.cpp
@@ -158,15 +166,7 @@ SOURCE=..\shared\engine\bdefs.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\bindkeydlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\shared\engine\bindmgr.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\CameraFOVDlg.cpp
 # End Source File
 # Begin Source File
 
@@ -210,15 +210,15 @@ SOURCE=.\controls\ColumnCtrl.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\shared\engine\concommand.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\engine\conparse.cpp
 # End Source File
 # Begin Source File
 
 SOURCE=..\shared\engine\converge.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\RegionEdit\CreatePrimitive.cpp
 # End Source File
 # Begin Source File
 
@@ -231,6 +231,10 @@ SOURCE=.\draw\d3d_texturemgr.cpp
 # Begin Source File
 
 SOURCE=.\Project\d_filemgr.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Dlgs\DebugDlg.cpp
 # End Source File
 # Begin Source File
 
@@ -310,6 +314,10 @@ SOURCE=.\World\EditRegion.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\draw\EditSoftRender.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\ExportObjFile.cpp
 # End Source File
 # Begin Source File
@@ -346,10 +354,6 @@ SOURCE=..\shared\engine\geomroutines.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\globalhotkeydb.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\dlgs\ImportObjectDlg.cpp
 # End Source File
 # Begin Source File
@@ -358,11 +362,7 @@ SOURCE=.\ImportObjFileFormat.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\KeyAggregate\KeyDefaultAggregate.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\KeyAggregate\KeyDefaultFactory.cpp
+SOURCE=.\KeyMapDlg.cpp
 # End Source File
 # Begin Source File
 
@@ -386,6 +386,10 @@ SOURCE=.\LoadLTADialog.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\LoadModelDims.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\LTEulerAngles.cpp
 # End Source File
 # Begin Source File
@@ -398,7 +402,15 @@ SOURCE=.\Frames\MainFrm.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\MakeRezFile.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\MapTextureCoordsDlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\mlistctrl.cpp
 # End Source File
 # Begin Source File
 
@@ -469,14 +481,6 @@ SOURCE=.\ObjectImporter.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Dlgs\ObjectSearchDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\ObjectTrackerDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Options\OptionsAdvancedSelect.cpp
 # End Source File
 # Begin Source File
@@ -505,11 +509,15 @@ SOURCE=.\Options\OptionsObjectBrowser.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\Options\OptionsPrimitives.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\Options\OptionsRun.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\OptionsSheet.cpp
+SOURCE=.\Options\OptionsWarnings.cpp
 # End Source File
 # Begin Source File
 
@@ -525,15 +533,39 @@ SOURCE=..\shared\engine\pixelformat.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Dlgs\PlanePrimitiveDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\dlgs\PopupNoteDlg.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Controls\ProjectDirDlg.cpp
+SOURCE=.\PrefabDlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\Dlgs\PreferencesDlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\PreProcessor\pregeometry.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\PreProcessor\PreLeaf.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\PreProcessor\PreLightMap.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\PreProcessor\PrePoly.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\PreProcessor\PreSurface.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\PreProcessor\PreWorld.cpp
 # End Source File
 # Begin Source File
 
@@ -573,10 +605,6 @@ SOURCE=.\dlgs\PropPageOptionsD3D.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Dlgs\PropPageOptionsModels.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\dlgs\PropPageOptionsRun.cpp
 # End Source File
 # Begin Source File
@@ -597,10 +625,6 @@ SOURCE=.\Views\RegionView.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Views\RegionViewInitTracker.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Controls\ResizeBar.cpp
 # End Source File
 # Begin Source File
@@ -617,6 +641,10 @@ SOURCE=.\ResourceMgr.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\RezBuildDlg.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\RotateSelection.cpp
 # End Source File
 # Begin Source File
@@ -629,15 +657,7 @@ SOURCE=..\shared\world\s3tc_compress.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Dlgs\ScaleSelectDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\shared\engine\simple_dalloc.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\SolidAlphaDlg.cpp
 # End Source File
 # Begin Source File
 
@@ -673,10 +693,6 @@ SOURCE=.\TextureProp.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Dlgs\TextureSearchReplaceDlg.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=..\shared\model\transformmaker.cpp
 # talon: it includes <windows.h> before bdefs.h, as ModelEdit's
 # compile has it: without MFC
@@ -692,19 +708,7 @@ SOURCE=.\RegionEdit\undo_mgr.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\UndoPage.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\draw\UsefulDC.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\draw\UsefulDib.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\UVtoOPQ.cpp
 # End Source File
 # Begin Source File
 
@@ -733,6 +737,10 @@ SOURCE=.\RegionEdit\ViewFunctions.cpp
 # Begin Source File
 
 SOURCE=.\RegionEdit\viewrender.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\engine\world_tree.cpp
 # End Source File
 # Begin Source File
 
@@ -800,10 +808,6 @@ SOURCE=.\Trackers\RVTrackerDrawPoly.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Trackers\RVTrackerExtrudePoly.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Trackers\RVTrackerFarDist.cpp
 # End Source File
 # Begin Source File
@@ -820,23 +824,7 @@ SOURCE=.\Trackers\RVTrackerMarkerMove.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Trackers\RVTrackerMenuItem.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Trackers\RVTrackerNavArcRotate.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Trackers\RVTrackerNavDrag.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Trackers\RVTrackerNavMove.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Trackers\RVTrackerNavOrbit.cpp
 # End Source File
 # Begin Source File
 
@@ -849,14 +837,6 @@ SOURCE=.\Trackers\RVTrackerNodeMove.cpp
 # Begin Source File
 
 SOURCE=.\Trackers\RVTrackerNodeRotate.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Trackers\RVTrackerObjectSize.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Trackers\RVTrackerPolyScale.cpp
 # End Source File
 # Begin Source File
 
@@ -884,195 +864,7 @@ SOURCE=.\Trackers\RVTrackerVertSnap.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\Trackers\RVTrackerZoom.cpp
-# End Source File
-# Begin Source File
-
 SOURCE=.\Trackers\TrackerMgr.cpp
-# End Source File
-# End Group
-# Begin Group "Build 69 only"
-
-# PROP Default_Filter ""
-# Begin Source File
-
-SOURCE=..\shared\engine\concommand.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\DebugDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LevelError\Detectors.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\DirDialog.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\EditEffectGroupDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LevelError\ErrorDetector.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\ErrorInformationDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\EventEditorDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\EventListDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\hotkey.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\hotkeydb.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\ImportBumpMapDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\ImportCubeMapDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\keyconfigdlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LevelError\LevelError.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\LevelError\LevelErrorDB.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\LevelErrorDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\LevelErrorOptionsDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\LevelItemsDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\leveltexturesdlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\LevelTexturesOptionsDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\LightAttenuation.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\LTTexture.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ModelView\meshshape.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ModelView\meshshapelist.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ModelView\modelmesh.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ModelView\modelmgr.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\ObjectSelFilterDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Options\OptionsControls.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Options\OptionsMisc.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Options\OptionsModels.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Options\OptionsPrefabs.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Options\OptionsViewports.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PrefabDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\PrefabMgr.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\world\PrefabRef.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\PrefabTrackerDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\PropPageOptionsControls.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\PropPageOptionsMisc.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\PropPageOptionsPrefabs.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\RenameResourceDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\SelectEffectGroupDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\TextureTrackerDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\Dlgs\UndoWarningDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\UpdateAllObjects.cpp
 # End Source File
 # End Group
 # Begin Group "libs"

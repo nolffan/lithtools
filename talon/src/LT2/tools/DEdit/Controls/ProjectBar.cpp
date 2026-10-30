@@ -15,8 +15,8 @@
 #include "optionswindows.h"
 #include "prefabdlg.h"
 #include "ltamgr.h"
-#include "optionsmisc.h"
 #include "optionsrun.h"
+#include "loadmodeldims.h"
 
 #include <direct.h>		//for _mkdir
 
@@ -62,11 +62,6 @@ BEGIN_MESSAGE_MAP(CProjectBar, CMRCSizeDialogBar)
 	ON_COMMAND(ID_POPUP_FINDTEXINWORLD, OnFindTextureInWorld)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
-
-
-
-// The old model file's dims reader (0x42da61, "MonolithExport Model File v6").
-BOOL GetModelDimsFromFile(DStream *pStream, CVector *pDims);
 
 
 

@@ -2,6 +2,18 @@
 // the names are ours. A surface's lightmap is laid out on whichever of six
 // axis planes faces most like it.
 
+#ifdef DIRECTEDITOR_BUILD
+
+	// talon: DEdit (2001) has the engine's lightmap planes
+	// (shared/engine/lightmap_planes.cpp: SelectLMPlaneVector 0x42d599,
+	// SetupLMPlaneVectors 0x42d5ef), which its processor world code calls
+	// (0x44756b, 0x447574), and not these.
+	#include "../shared/engine/lightmap_planes.h"
+
+	#define FindLMPlane			SelectLMPlaneVector
+	#define GetLMPlaneVectors	SetupLMPlaneVectors
+
+#else
 #ifndef __LIGHTMAP_PLANES_H__
 #define __LIGHTMAP_PLANES_H__
 
@@ -29,5 +41,7 @@
 	// Lightmap texture vectors for a surface with normal vNormal on plane
 	// iPlane.
 	void GetLMPlaneVectors(uint32 iPlane, PVector &vNormal, PVector &P, PVector &Q);
+
+#endif
 
 #endif

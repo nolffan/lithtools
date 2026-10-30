@@ -51,9 +51,11 @@ TARGETS = [
          # StdLith (the allocator-override build) 0x00489190, DibMgr
          # 0x0048b5e0, the LTA library 0x0048ba90..0x0048d73d. From 0x0048d740
          # MFC's inline functions (CPropertySheet::GetTabControl), from
-         # 0x0048d759 nafxcw.lib's wincore.obj. zlib 1.0.4 is linked after the
-         # C runtime and the old iostreams (0x004a25f0..0x004a7cf1, deflate.obj
-         # first): Monolith's library too, a range of its own. Inside them, MFC's
+         # 0x0048d759 nafxcw.lib's wincore.obj. CryptMgr (its constructor
+         # alone, 0x004a25e0: nothing else of it is referenced) and zlib 1.0.4
+         # are linked after the C runtime and the old iostreams
+         # (0x004a25e0..0x004a7cf1, zlib's deflate.obj from 0x004a25f0):
+         # Monolith's libraries too, a range of their own. Inside them, MFC's
          # and the CRT's header functions our objects instantiate are screened
          # out (progress/DEdit-screen-exclude.csv)
          built="src/LT2/built/Release/tools/DEdit/DEdit.exe", optional=True,
@@ -64,9 +66,10 @@ TARGETS = [
                        "src/LT2/lithshared/built/Release/Lib_StdLith_alloc/Lib_StdLith.lib",
                        "src/LT2/lithshared/built/ReleaseTalon/DibMgr/dibmgr.lib",
                        "src/LT2/lithshared/built/ReleaseTalon/LTAMgr/ltamgr.lib",
-                       "src/LT2/lithshared/built/ReleaseTalon/Lib_ZLib/Lib_ZLib.lib"],
+                       "src/LT2/lithshared/built/ReleaseTalon/Lib_ZLib/Lib_ZLib.lib",
+                       "src/Libs/built/ReleaseTalon/CryptMgr/CryptMgr.lib"],
          middleware=[(0x0047d040, 0x00483020)],
-         app=[(0x00401000, 0x0048d740), (0x004a25f0, 0x004a7d00)]),
+         app=[(0x00401000, 0x0048d740), (0x004a25e0, 0x004a7d00)]),
     dict(label="ModelEdit.exe", what="model editor (Talon, Update 1/2)", kind="image",
          shipped=U2 + "/ModelEdit.exe", stem="ModelEdit",
          # src/LT2/tools/ModelEdit/ModelEdit.dsw (cl 9044, /O1, static MFC;

@@ -629,17 +629,6 @@ void D3DRender::DrawFlatPoly2(TLVertex *pPoints, DWORD nPoints, CVector *pNormal
 }
 
 
-// talon: stand-in: 0x446328, a CPreMainWorld member (part 6's range) that
-// finds the region document's selected lightmap poly from its world model
-// and name (CRegionDoc's 0x320 and 0x324, pushed by value).  Declared here
-// until DEdit's CPreMainWorld has it; the name is ours.
-class CPreMainWorld2001
-{
-public:
-	CPrePoly*	FindPoly(uint32 iWorld, uint32 nName);
-};
-
-
 // talon: 0x41987f.  2001's draws the poly's one texture itself: texture
 // coordinates from the poly's O, P and Q (0x34, 0x40, 0x4c), the shading
 // from the normal when the display options say so, and a selected brush
@@ -896,7 +885,7 @@ void D3DRender::DrawWorld(CPreMainWorld *pWorld, BOOL bBlend)
 	m_pDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &oldZEnable);
 	m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, FALSE);
 
-	pPoly = ((CPreMainWorld2001*)pWorld)->FindPoly(m_pView->GetRegionDoc()->m_LightPolyWorld,
+	pPoly = pWorld->FindPoly(m_pView->GetRegionDoc()->m_LightPolyWorld,
 		m_pView->GetRegionDoc()->m_LightPolyName);
 	if(pPoly)
 	{

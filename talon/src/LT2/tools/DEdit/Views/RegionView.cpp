@@ -7,7 +7,6 @@
 #include "regiondoc.h"
 #include "regionview.h"
 #include "regionframe.h"
-#include "usefuldc.h"
 #include "editpoly.h"
 #include "stringdlg.h"
 #include "edithelpers.h"
@@ -30,7 +29,6 @@
 #include "navigatordlg.h"
 #include "navigatorstoredlg.h"
 #include "advancedselect.h"
-#include "scaleselectdlg.h"
 #include "advancedselectdlg.h"
 #include "objectbrowserdlg.h"
 #include "optionsobjectbrowser.h"
@@ -40,16 +38,10 @@
 #include "cobjinterface.h"
 #include "optionsgenerateuniquenames.h"
 #include "stdrvtrackers.h"
-#include "globalhotkeydb.h"
-#include "bindkeydlg.h"
 #include "ImportObjFileFormat.h"
 #include "eventnames.h"
 #include "ltamgr.h"
-#include "meshshape.h"
-#include "meshshapelist.h"
-#include "camerafovdlg.h"
 #include "polylightmap.h"
-#include "optionsmisc.h"
 
 
 #ifdef _DEBUG
@@ -311,6 +303,329 @@ BEGIN_MESSAGE_MAP(CRegionView, CView)
 	ON_COMMAND(ID_RV2001_SAVE_LIGHT_DATA, OnSaveLightData)
 	ON_UPDATE_COMMAND_UI(ID_RV2001_SAVE_LIGHT_DATA, OnUpdateLightData)
 END_MESSAGE_MAP()
+
+
+// talon: the 2001 tracker set-up, written from the image (0x452bb7..
+// 0x455025, one function: the function table's 0x453e95 row starts inside
+// it). In the image it follows RegionView.cpp's constructor, destructor and
+// message map (0x4528f2..0x452bb6) and comes before its other functions,
+// as it does here. The 2001 trackers take their start and end events here
+// (Build 69 reads them from the hotkey configuration): 53 trackers, names
+// and keys as the image has them.
+
+// The focus tracker's name is the one name the image reads from a variable
+// (push 0x4f9aa8, a pointer to "Focus", RegionView.obj's first .data).
+static LPCTSTR g_pszFocusTracker = "Focus";
+
+void CRegionView::InitTracker()
+{
+	//the current tracker that is being added
+	CRegionViewTracker *pRVTracker;
+
+	//the tracker the drawing tracker lets override it
+	CRegionViewTracker *pNavRotateTracker;
+
+	pRVTracker = new CRVTrackerFocus(g_pszFocusTracker, this);
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEMOVE));
+	((CRVTrackerFocus *)pRVTracker)->SetLockEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Select.Depth", this, CRegionView::OnDepthSelect);
+	((CRVCallback *)pRVTracker)->SetToggle(0, CUIKeyEvent(UIEVENT_KEYDOWN, 'Y'));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'T', FALSE));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("ApplyTexture", this, CRegionView::OnApplyTextureClick);
+	((CRVCallback *)pRVTracker)->SetToggle(0, CUIKeyEvent(UIEVENT_KEYDOWN, 'Y'));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'A'));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallbackSimple("SplitBrush", this, CRegionView::OnBrushSplitBrush);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'S'));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'S'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallbackSimple("CarveBrush", this, CRegionView::OnBrushCarve);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'H'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'H'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Select.None", this, CRegionView::OnSelectNone);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'U'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'U'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("SetGridDir.Forward", this, CRegionView::OnSetGridOrientation);
+	((CRVCallback *)pRVTracker)->SetData(GRID_FORWARD);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, '8'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, '8'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("SetGridDir.Right", this, CRegionView::OnSetGridOrientation);
+	((CRVCallback *)pRVTracker)->SetData(GRID_RIGHT);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, '9'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, '9'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("SetGridDir.Up", this, CRegionView::OnSetGridOrientation);
+	((CRVCallback *)pRVTracker)->SetData(GRID_UP);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, '0'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, '0'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("InitTextureSpace", this, CRegionView::OnInitTextureSpace);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'K'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'K'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Delete", this, CRegionView::OnDelete);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_DELETE));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_DELETE));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Nudge.Up", this, CRegionView::OnNudge);
+	((CRVCallback *)pRVTracker)->SetData(VK_UP);
+	((CRVCallback *)pRVTracker)->SetToggle(0, CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL));
+	((CRVCallback *)pRVTracker)->SetToggle(1, CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_UP));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_UP));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Nudge.Down", this, CRegionView::OnNudge);
+	((CRVCallback *)pRVTracker)->SetData(VK_DOWN);
+	((CRVCallback *)pRVTracker)->SetToggle(0, CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL));
+	((CRVCallback *)pRVTracker)->SetToggle(1, CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_DOWN));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_DOWN));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Nudge.Left", this, CRegionView::OnNudge);
+	((CRVCallback *)pRVTracker)->SetData(VK_LEFT);
+	((CRVCallback *)pRVTracker)->SetToggle(0, CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL));
+	((CRVCallback *)pRVTracker)->SetToggle(1, CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_LEFT));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_LEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("Nudge.Right", this, CRegionView::OnNudge);
+	((CRVCallback *)pRVTracker)->SetData(VK_RIGHT);
+	((CRVCallback *)pRVTracker)->SetToggle(0, CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL));
+	((CRVCallback *)pRVTracker)->SetToggle(1, CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_RIGHT));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_RIGHT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("DeleteEdges.Remove", this, CRegionView::OnDeleteEdges);
+	((CRVCallback *)pRVTracker)->SetData(TRUE);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_HOME));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_HOME));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("DeleteEdges", this, CRegionView::OnDeleteEdges);
+	((CRVCallback *)pRVTracker)->SetData(FALSE);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_END));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_END));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("SplitEdge", this, CRegionView::OnSplitEdges);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_INSERT));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_INSERT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("DeleteTaggedPolies", this, CRegionView::OnDeleteTaggedPolygons);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_NEXT));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, VK_NEXT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("GridToPoly", this, CRegionView::OnGridToPoly);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'G'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'G'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("TagPolyVerts", this, CRegionView::OnTagPolyVerts);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'Y'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'Y'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("FlipNormal", this, CRegionView::OnFlipNormal);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'F'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'F'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("OrbitVertex", this, CRegionView::OnOrbitVertex);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'P'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'P'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("OrbitVertex", this, CRegionView::OnSelectLightNode);
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("EditLightNode.Up", this, CRegionView::OnEditLightNode);
+	((CRVCallback *)pRVTracker)->SetData(TRUE);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'Q'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'Q'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallback("EditLightNode.Down", this, CRegionView::OnEditLightNode);
+	((CRVCallback *)pRVTracker)->SetData(FALSE);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'W'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'W'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerNodeRotate("NodeRotate", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'N'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'N'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerTextureMove("TextureMove", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'R'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'R'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerTextureWrap("TextureWrap", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'L'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'L'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerBrushSize("BrushSize", this);
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerCurveEdit("CurveEdit", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'P'));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	pRVTracker->SetPhantomEnd(FALSE);
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerFarDist("FarDist", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'C'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'C'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerGridSize("GridSize", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'Z'));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSERIGHT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerMarkerMove("MarkerMove", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'X'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'X'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertMove("VertMove.Poly", this, CRVTrackerVertMove::esm_Poly);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_SHIFT));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSERIGHT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertMove("VertMove.SelVert", this, CRVTrackerVertMove::esm_SelVert);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'S'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'S'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertMove("VertMove.ImmVert", this, CRVTrackerVertMove::esm_ImmVert);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'M'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'M'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertSnap("VertSnap.Edge.SelVert", this, CRVTrackerVertMove::esm_SelVert, CRVTrackerVertSnap::est_Edge);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'D'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'D'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertSnap("VertSnap.Edge", this, CRVTrackerVertMove::esm_ImmVert, CRVTrackerVertSnap::est_Edge);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'E'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'E'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertSnap("VertSnap.Vert.SelVert", this, CRVTrackerVertMove::esm_SelVert, CRVTrackerVertSnap::est_Vert);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'B'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'B'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertSnap("VertSnap.Vert", this, CRVTrackerVertMove::esm_ImmVert, CRVTrackerVertSnap::est_Vert);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'V'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'V'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertScale("VertScale.Poly", this, CRVTrackerVertScale::esm_Poly);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'W'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'W'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerVertScale("VertScale.SelVert", this, CRVTrackerVertScale::esm_SelVert);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'Q'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'Q'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerNodeMove("NodeMove.Handle", this, CRVTrackerNodeMove::FLAG_HANDLE);
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerNodeMove("NodeMove.Snap", this, CRVTrackerNodeMove::FLAG_SNAP);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'M'));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerNodeMove("NodeMove.Perpendicular", this, CRVTrackerNodeMove::FLAG_PERP);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'M'));
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSERIGHT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSERIGHT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerNavMove("NavMove", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'I'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'I'));
+	pRVTracker->SetPhantomEnd(FALSE);
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerNavRotate("NavRotate", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'O'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'O'));
+	pRVTracker->SetPhantomEnd(FALSE);
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pNavRotateTracker = pRVTracker;
+	pRVTracker = new CRVTrackerDrawPoly("DrawPoly", this);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_SPACE));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_ESCAPE));
+	pRVTracker->AddOverride(pNavRotateTracker);
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVTrackerTag("Tag.All", this, CRVTrackerTag::FLAG_ALL);
+	pRVTracker->AddStartEvent(CUIMouseEvent(UIEVENT_MOUSEDOWN, UI_MOUSELEFT));
+	pRVTracker->AddEndEvent(CUIMouseEvent(UIEVENT_MOUSEUP, UI_MOUSELEFT));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallbackSimple("UnJoinBrushes", this, CRegionView::OnBrushUnJoin);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'J'));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'J'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallbackSimple("JoinBrushes", this, CRegionView::OnBrushJoin);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'J'));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'J'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+
+	pRVTracker = new CRVCallbackSimple("TriangulateBrushes", this, CRegionView::OnAutoTriangulate);
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, 'E'));
+	pRVTracker->AddStartEvent(CUIKeyEvent(UIEVENT_KEYDOWN, VK_CONTROL));
+	pRVTracker->AddEndEvent(CUIKeyEvent(UIEVENT_KEYUP, 'E'));
+	m_cTrackerMgr.AddTracker(pRVTracker);
+}
 
 
 
@@ -991,10 +1306,13 @@ void CRegionView::OnWorldImportObjects()
 // Imports a world into this world
 void CRegionView::OnFileImportWorld() 
 {
+	// talon: 2001 (0x456566): .ed worlds, .obj files and LTA geometry.
 	CString sFileName;
-	sFileName = GetProject()->m_BaseProjectDir + "\\*.lta;*.ltc";
+	sFileName = GetProject()->m_BaseProjectDir + "\\*.ed";
+	CString sFilter;
+	sFilter = "DEdit World (*.ed)|*.ed|Obj File (*.obj)|*.obj|LTA Geometry (*.lta)|*.lta||";
 	// Let the user choose the file to import from
-	CFileDialog fileDlg(TRUE, "lta", (LPCTSTR)sFileName, NULL, "LTA File (*.lta;*.ltc)|*.lta;*.ltc|Obj File (*.obj)|*.obj||");
+	CFileDialog fileDlg(TRUE, "ed", (LPCTSTR)sFileName, 0, sFilter, NULL);
 
 	// Display the dialog
 	if (fileDlg.DoModal() != IDOK)
@@ -1004,15 +1322,19 @@ void CRegionView::OnFileImportWorld()
 
 	// Import the file, leaving its original location in tact without
 	// pasting it at the green crosshair.
-	CString fileName = fileDlg.GetFileName();
-	fileName.MakeUpper();
- 	if( strstr( fileName, ".OBJ" ) )
+	CString fileName = fileDlg.GetPathName();
+	fileName.MakeLower();
+	if( strstr( fileName, ".ed" ) )
 	{
-		ImportOBJFile( fileName, FALSE /* Don't place at crosshair */ );
+		ImportWorldFile( fileDlg.GetPathName(), FALSE /* Don't place at crosshair */ );
 	}
-	else if( strstr( fileName, ".LTA" ) || strstr( fileName, ".LTC" ))
+	else if( strstr( fileName, ".lta" ) )
 	{
-		ImportLTAFile( fileName, FALSE /* Don't place at crosshair */ );
+		ImportLTAFile( fileDlg.GetPathName(), FALSE /* Don't place at crosshair */ );
+	}
+	else if( strstr( fileName, ".obj" ) )
+	{
+		ImportOBJFile( fileDlg.GetPathName(), FALSE /* Don't place at crosshair */ );
 	}
 	else
 	{
@@ -1027,7 +1349,10 @@ void CRegionView::OnFileImportWorld()
 // Returns: TRUE if the file import was a success.
 BOOL CRegionView::ImportLTAFile(CString sFilename, BOOL bPositionAtCrosshair)
 {
-		// The string holder for the region
+	// talon: 2001 (0x45670c): LTA geometry, through the 2001 LoadLTA (no
+	// file version, no prefabs).
+
+	// The string holder for the region
 	CStringHolder stringHolder;
 
 	// The region class
@@ -1038,14 +1363,8 @@ BOOL CRegionView::ImportLTAFile(CString sFilename, BOOL bPositionAtCrosshair)
 
 	// Load the region
 	BeginWaitCursor();
-	// RegionLoadStatus status=region.LoadFile(file, NULL, GetProject());
-	uint32 nFileVersion;
-	bool bBinary = false;
-	RegionLoadStatus status=region.LoadFile(sFilename, GetProject(), nFileVersion, bBinary);
+	RegionLoadStatus status=region.LoadLTA(sFilename, GetProject());
 	EndWaitCursor();
-
-	// Close the file
-	
 
 	// Handle the errors
 	switch (status)
@@ -1082,14 +1401,7 @@ BOOL CRegionView::ImportLTAFile(CString sFilename, BOOL bPositionAtCrosshair)
 
 	// Update all the texture IDs and polygon pieces.
 	region.UpdateTextureIDs(GetProject());
-
-	//resolve any children
-	region.GetPrefabMgr()->SetRootPath(region.GetPrefabMgr()->GetRootPath());
-	region.GetPrefabMgr()->BindAllRefs(region.GetRootNode());
-
-	bool bModified;
-	region.PostLoadUpdateVersion(nFileVersion, bModified);
-
+	region.UpdatePolyTriangles();
 
 	// This stores the nodes that are going to be pasted
 	CMoArray<CWorldNode*> nodeArray;
@@ -1104,31 +1416,133 @@ BOOL CRegionView::ImportLTAFile(CString sFilename, BOOL bPositionAtCrosshair)
 	if (nodeArray.GetSize() > 0)
 	{
 		nodeArray.Remove(0);
+
+		// Paste the nodes
+		if (nodeArray.GetSize() > 0)
+		{
+			// Don't check nodes in debug because it takes a very long time
+			BOOL bCheckNodes=g_bCheckNodes;
+			g_bCheckNodes=FALSE;
+
+			PreActionList actionList;
+			((CMainFrame *)AfxGetMainWnd( ))->GetClipboard( )->PasteNodes( GetRegion(), nodeArray, actionList, bPositionAtCrosshair);
+
+			// Setup the undo for the new nodes it added.
+			GetRegionDoc()->Modify(&actionList, TRUE);
+			GetRegionDoc()->NotifySelectionChange();
+
+			// Reset this parameter
+			g_bCheckNodes=bCheckNodes;
+		}
 	}
 
-	// Paste the nodes
+	return TRUE;
+}
+
+/************************************************************************/
+// This imports a file into the region and optionally positions it at
+// the green crosshair location.
+//
+// Returns: TRUE if the file import was a success.
+BOOL CRegionView::ImportWorldFile(CString sFilename, BOOL bPositionAtCrosshair)
+{
+	// talon: 2001 (0x4568fe; the name from ImportOBJFile's "calling
+	// ImportWorldFile"): a .ed world.
+
+	// The string holder for the region
+	CStringHolder stringHolder;
+
+	// Open the file
+	CMoFileIO file;
+	if (!file.Open(sFilename, "rb"))
+	{
+		MessageBox("Error: Unable to open file", "Error", MB_OK);
+		return FALSE;
+	}
+
+	// The region class
+	CEditRegion region;
+
+	// Set the string holder for the region
+	region.m_pStringHolder = GetRegion()->m_pStringHolder;
+
+	// Load the region
+	BeginWaitCursor();
+	RegionLoadStatus status=region.LoadFile(file, NULL, GetProject());
+	EndWaitCursor();
+
+	// Close the file
+	file.Close();
+
+	// Handle the errors
+	switch (status)
+	{
+	case REGIONLOAD_INVALIDFILE:
+		{
+			MessageBox("Error: Invalid file", "Error", MB_OK);
+			return FALSE;
+			break;
+		}
+	case REGIONLOAD_OUTOFMEMORY:
+		{
+			MessageBox("Error: Out of memory", "Error", MB_OK);
+			return FALSE;
+			break;
+		}
+	case REGIONLOAD_INVALIDFILEVERSION:
+		{
+			MessageBox("Error: Invalid file version", "Error", MB_OK);
+			return FALSE;
+			break;
+		}
+	case REGIONLOAD_OK:
+		{
+			// No errors
+			break;
+		}
+	default:
+		{
+			MessageBox("Unknown error", "Error", MB_OK);
+			return FALSE;
+		}
+	}
+
+	// Update all the texture IDs and polygon pieces.
+	region.UpdateTextureIDs(GetProject());
+	region.UpdatePolyTriangles();
+
+	// This stores the nodes that are going to be pasted
+	CMoArray<CWorldNode*> nodeArray;
+
+	// Set the cache size to the number of brushes plus the number of objects
+	nodeArray.SetCacheSize(region.m_Brushes.GetSize()+region.m_Objects.GetSize());
+
+	// Build the flattened array so that it can be pasted via the clipboard
+	region.FlattenTreeToArray(&region.m_RootNode, nodeArray);
+
+	// Remove the root node
 	if (nodeArray.GetSize() > 0)
 	{
-		// Don't check nodes in debug because it takes a very long time
-		BOOL bCheckNodes=g_bCheckNodes;
-		g_bCheckNodes=FALSE;
+		nodeArray.Remove(0);
 
-		PreActionList actionList;
-		((CMainFrame *)AfxGetMainWnd( ))->GetClipboard( )->PasteNodes( GetRegion(), nodeArray, actionList, bPositionAtCrosshair);
+		// Paste the nodes
+		if (nodeArray.GetSize() > 0)
+		{
+			// Don't check nodes in debug because it takes a very long time
+			BOOL bCheckNodes=g_bCheckNodes;
+			g_bCheckNodes=FALSE;
 
-		// Setup the undo for the new nodes it added.
-		GetRegionDoc()->Modify(&actionList, TRUE);
-		GetRegionDoc()->NotifySelectionChange();
+			PreActionList actionList;
+			((CMainFrame *)AfxGetMainWnd( ))->GetClipboard( )->PasteNodes( GetRegion(), nodeArray, actionList, bPositionAtCrosshair);
 
-		GetRegionDoc()->SynchronizePropertyLists( GetRegion() );
+			// Setup the undo for the new nodes it added.
+			GetRegionDoc()->Modify(&actionList, TRUE);
+			GetRegionDoc()->NotifySelectionChange();
 
-		// Reset this parameter
-		g_bCheckNodes=bCheckNodes;
+			// Reset this parameter
+			g_bCheckNodes=bCheckNodes;
+		}
 	}
-
-	//we don't want the imported world's info string overwriting the global
-	//info string
-	//GetRegion()->m_pInfoString = region.m_pInfoString;
 
 	return TRUE;
 }
@@ -1307,17 +1721,9 @@ bool CRegionView::CreateBrushesFromScene(CEditRegion *pRegion, CObjInterface *pS
 
 			pPoly->UpdatePlane();
 			
-			// setup the texture space, using UVs if they are available
-			if( foundUVs )
-			{
-				if( !pPoly->SetUVTextureSpace(0, tvert, 256, 256 ) )
-					return false ;
-			}
-			else
-			{
-				for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
-					pPoly->SetupBaseTextureSpace(nCurrTex);
-			}
+			// talon: 2001 (0x45704d) makes no texture space from the file's
+			// coordinates: Build 69's SetUVTextureSpace (UVtoOPQ) isn't there.
+			pPoly->SetupBaseTextureSpace();
 		}
 	}
 	no_DestroyNode(pRegion, pTemplateBrush, FALSE);
@@ -1333,6 +1739,7 @@ BOOL CRegionView::ImportOBJFile(CString sFilename, BOOL bPositionAtCrosshair)
 	// load the ed file into the scene
 	// save the scene as an ed file and name it sFilename+".ed"
 	// ImportWorldFile(CString sFilename+".ed", BOOL bPositionAtCrosshair)
+	// talon: 2001 (0x457092).
 	BOOL retVal = FALSE;
 	
 	CObjInterface objInterface;
@@ -1348,9 +1755,7 @@ BOOL CRegionView::ImportOBJFile(CString sFilename, BOOL bPositionAtCrosshair)
 		if( isOK == IDOK )
 		{
 			CEditRegion		region;
-
-			// the loader chokes on unlabeled null nodes, so label the root
-			region.GetRootNode()->SetNodeLabel( "Container" );
+			CMoFileIO		file;
 
 			BeginWaitCursor( ); // Put the wait cursor on the screen
 
@@ -1362,26 +1767,18 @@ BOOL CRegionView::ImportOBJFile(CString sFilename, BOOL bPositionAtCrosshair)
 				objInterface.ImportObj(pObjFile,impObjDlg.m_reverse_normals, CObjInterface::FSOFT );
 
 			OutputDebugString("\ncalling CreateBrushesFromScene()");
-			if (CreateBrushesFromScene(&region, &objInterface ))
-			{
-				CString ltaFilename = sFilename+".lta";
-				CLTAFile OutFile(ltaFilename, false, CLTAUtil::IsFileCompressed(ltaFilename));
+			CreateBrushesFromScene(&region, &objInterface );
 
-				if(OutFile.IsValid())
-				{
-					// printf("\n( p \"saving into ed file: %s\" ); ", filename);
-					OutputDebugString("\ncalling region.SaveFile(file);");
-					region.SaveLTA(&OutFile);
-					OutFile.Close();
-					OutputDebugString("\ncalling ImportWorldFile");
-					ImportLTAFile(ltaFilename, bPositionAtCrosshair);
-					unlink(LPCTSTR(ltaFilename));
-					retVal = TRUE;
-				}
-			}
-			else 
+			CString filename = sFilename+".ed";
+			if( file.Open(filename, "wb") )
 			{
-				MessageBox("Corrupt .OBJ file!", "Error", MB_OK | MB_TASKMODAL);
+				OutputDebugString("\ncalling region.SaveFile(file);");
+				region.SaveFile(file, FALSE);
+				file.Close();
+				OutputDebugString("\ncalling ImportWorldFile");
+				ImportWorldFile(filename, bPositionAtCrosshair);
+				unlink(LPCTSTR(filename));
+				retVal = TRUE;
 			}
 
 			EndWaitCursor( ); // End the wait cursor
@@ -4319,23 +4716,18 @@ void CRegionView::OnUpdateSelectionGenerateUniqueNames(CCmdUI* pCmdUI)
 // Save the selected nodes as a prefab file
 void CRegionView::OnSelectionSavePrefab() 
 {
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{		
-		return;
-	}
+	// talon: 2001 (0x45bfc4): a prefab is a .ed world.
 
 	// Make sure that we have selected nodes
-	if (pRegion->GetNumSelections() < 1)
+	if (!m_pRegion || m_pRegion->m_Selections.GetSize() < 1)
 	{
 		return;
 	}
 
 	CString sFileName;
-	sFileName = GetProject()->m_BaseProjectDir + "\\Prefab\\*.lta;*.ltc;*.tbw";
+	sFileName = GetProject()->m_BaseProjectDir + "\\Prefab\\*.ed";
 	// Let the user choose the file to save to
-	CFileDialog fileDlg(FALSE, "lta", (LPCTSTR)sFileName, OFN_OVERWRITEPROMPT, "DEdit World (*.lta;*.ltc;*.tbw)|*.lta;*.ltc;*.tbw|All Files (*.*)|*.*||");
+	CFileDialog fileDlg(FALSE, "ed", (LPCTSTR)sFileName, OFN_OVERWRITEPROMPT, "DEdit World (*.ed)|*.ed||");
 
 	// Display the dialog
 	if (fileDlg.DoModal() != IDOK)
@@ -4352,13 +4744,10 @@ void CRegionView::OnSelectionSavePrefab()
 
 	// Paste the selected nodes into the new region
 	PreActionList actionList;
-	((CMainFrame *)AfxGetMainWnd( ))->GetClipboard( )->PasteNodes(&region, GetRegion()->m_Selections, actionList, FALSE);
+	((CMainFrame *)AfxGetMainWnd( ))->GetClipboard( )->PasteNodes(&region, GetRegion()->m_Selections, actionList, TRUE);
 
 	// Clear the action list
 	GDeleteAndRemoveElements(actionList);
-
-	// Move the region to be relative to the marker
-	region.OffsetSelectedNodes(-(GetRegion()->m_vMarker));
 
 	// Clear the selections in the new region
 	region.ClearSelections();
@@ -4367,45 +4756,15 @@ void CRegionView::OnSelectionSavePrefab()
 	g_bCheckNodes=bCheckNodes;
 
 	// Open the file
-	char dir[_MAX_DIR];
-	char fname[_MAX_FNAME];
-	char ext[_MAX_EXT];
-
-	_splitpath( LPCTSTR(fileDlg.GetPathName()), NULL, dir, fname, ext );
-
-	bool bBinary = false;
-
-	if(stricmp(ext, ".tbw") == 0)
-		bBinary = true;
-
-	if(bBinary)
+	CMoFileIO OutFile;
+	if (!OutFile.Open(fileDlg.GetPathName(), "wb"))
 	{
-		CMoFileIO OutFile;
-
-		if( OutFile.Open(fileDlg.GetPathName(), "wb") )
-		{
-			region.SaveTBW(OutFile);
-			OutFile.Close();
-		}
-		else
-		{
-			MessageBox("Error: Unable to open file", "Error", MB_OK);
-		}
+		MessageBox("Error: Unable to open file", "Error", MB_OK);
+		return;
 	}
-	else
-	{
-		CLTAFile OutFile(fileDlg.GetPathName(), false, CLTAUtil::IsFileCompressed(fileDlg.GetPathName()));
 
-		if( OutFile.IsValid() )
-		{
-			region.SaveLTA(&OutFile);
-			OutFile.Close();
-		}
-		else
-		{
-			MessageBox("Error: Unable to open file", "Error", MB_OK);
-		}
-	}
+	region.SaveFile(OutFile, FALSE);
+	OutFile.Close();
 
 	// Update the project bar
 	GetProjectBar()->UpdateAll();	
@@ -4421,217 +4780,6 @@ void CRegionView::OnUpdateSelectionSavePrefab(CCmdUI* pCmdUI)
 }
 
 
-/************************************************************************/
-// Scale the selected brushes by given amounts along the axes
-void CRegionView::OnSelectionScale() 
-{
-	// Get the region
-	CEditRegion *pRegion=GetRegion();
-	if (!pRegion)
-	{		
-		return;
-	}
-
-	// Make sure that we have selected nodes
-	if (pRegion->GetNumSelections() < 1)
-	{
-		return;
-	}
-
-// Show the scale selected dialog
-
-	CVector SelectionSize;
-	CScaleSelectDlg dlg;
-
-	 // Get the document
-	CRegionDoc *pDoc=GetRegionDoc();
-
-	if (!pDoc)  return;
-
-	SelectionSize = pDoc->m_SelectionMax - pDoc->m_SelectionMin;
-
-	dlg.SetValues(&SelectionSize);
-
-	if(dlg.DoModal() == IDOK)
-	{
-				
-	// Show the wait cursor
-	BeginWaitCursor();
-
-	CVector		scaleAmt(1.0f, 1.0f, 1.0f);	
-	uint32		i, j;
-
-	CVector		startVal = pDoc->m_SelectionMax - pDoc->m_SelectionMin;
-	CVector		originVal = (pDoc->m_SelectionMax + pDoc->m_SelectionMin)/CVector(2.0f, 2.0f, 2.0f);
-
-	CEditBrush	 *pBrush;
-	CBaseEditObj *pObject;
-	CVector		*pVec;
-	CWorldNode	*pNode;
-
-	CVector O, P, Q; // texture coords for polies
-	CVector unitP, unitQ, cur;
-	int dot;
-
-	CEditRegion *pRegion = GetRegion();
-
-
-	pDoc->SetupUndoForSelections();
-
-	// Get the amount to scale.
-	if (startVal.x != 0.0f)
-	{
-		scaleAmt.x = SelectionSize.x / startVal.x;	
-	}
-	if (startVal.y != 0.0f)
-	{
-		scaleAmt.y = SelectionSize.y / startVal.y;	
-	}
-	if (startVal.z != 0.0f)
-	{
-		scaleAmt.z = SelectionSize.z / startVal.z;	
-	}		
-
-	// Don't allow scaling to a zero width
-	if (!scaleAmt.x || !scaleAmt.y || !scaleAmt.z)
-	{
-		pDoc->UpdateSelectionBox();
-		return;
-	}
-
-	// Determine if the polygon needs to be flipped
-	BOOL bFlip=FALSE;
-	if (scaleAmt.x < 0.0f)
-	{	
-		bFlip=!bFlip;
-	}
-	if (scaleAmt.y < 0.0f)
-	{	
-		bFlip=!bFlip;
-	}
-	if (scaleAmt.z < 0.0f)
-	{	
-		bFlip=!bFlip;
-	}
-
-	for( i=0; i < pRegion->m_Selections; i++ )
-	{
-		pNode = pRegion->m_Selections[i];
-
-		if(pNode->GetType() == Node_Brush)
-		{
-			pBrush = pNode->AsBrush();
-
-			if (bFlip)
-			{
-				pBrush->FlipNormals();
-			}
-
-			for( j=0; j < pBrush->m_Points; j++ )
-			{
-				pVec = &pBrush->m_Points[j];
-
-				(*pVec) -= originVal;
-				(*pVec).x *= scaleAmt.x;
-				(*pVec).y *= scaleAmt.y;
-				(*pVec).z *= scaleAmt.z;
-				(*pVec) += originVal;
-			}
-
-			if(dlg.m_bKeepTextures) 
-			{  // if they want to keep texture alignments, we must adjust
-				for( j=0; j < pBrush->m_Polies; j++ )
-				{
-					for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
-					{
-						pBrush->m_Polies[j]->GetTexture(nCurrTex).GetTextureSpace(O, P, Q);
-
-						// Adjust Texture OPQs to scale with the geometry
-
-						O -= originVal;
-						O.x *= scaleAmt.x;
-						O.y *= scaleAmt.y;
-						O.z *= scaleAmt.z;
-						O += originVal;
-						
-						P.x /= scaleAmt.x;
-						P.y /= scaleAmt.y;
-						P.z /= scaleAmt.z;
-						Q.x /= scaleAmt.x;
-						Q.y /= scaleAmt.y;
-						Q.z /= scaleAmt.z;
-
-						pBrush->m_Polies[j]->SetTextureSpace(nCurrTex, O, P, Q);
-					}
-				}
-			}
-
-			GetRegion()->UpdateBrushGeometry(pBrush);
-
-		}
-		else if((pNode->GetType() == Node_Object) || (pNode->GetType() == Node_PrefabRef))
-		{
-			LTVector vVec = pNode->GetPos();
-
-			vVec -= originVal;
-			vVec.x *= scaleAmt.x;
-			vVec.y *= scaleAmt.y;
-			vVec.z *= scaleAmt.z;
-			vVec += originVal;
-			pNode->SetPos(vVec);
-
-			if (pNode->GetType() == Node_Object)
-			{
-				pObject = pNode->AsObject();
-
-				if (pObject->GetNumDims() != 0) // has dims, so update the object
-				{
-					LTVector* dimV = pObject->GetDim(0);
-
-					dimV->x *= scaleAmt.x;
-					dimV->y *= scaleAmt.y;
-					dimV->z *= scaleAmt.z;
-
-					// update the brush properties as well
-
-					char* tempchar;
-
-					if (pObject->GetPropertyList() != NULL)
-					{
-						for (int j=0; j < pObject->GetPropertyList()->GetSize(); j++) 
-						{
-							if (strcmp("Dims", pObject->GetPropertyList()->GetAt(j)->GetName()) == 0) 
-							{
-								((CVectorProp*)pObject->GetPropertyList()->GetAt(j))->SetVector(*dimV);
-								break;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	// Recalculate plane equations for all planes...
-	pRegion->UpdatePlanes();
-	pRegion->CleanupGeometry( );
-
-	pDoc->UpdateSelectionBox();
-
-	// Update properties...
-	pDoc->SetupPropertiesDlg( FALSE );
-
-	//MessageBox(NULL, "Object resize completed", "Debug success", MB_OK);
-
-	return;
-
-			
-	EndWaitCursor();
-	}	
-
-	// Update the project bar
-	GetProjectBar()->UpdateAll();	
-}
 /************************************************************************/
 
 /************************************************************************/
@@ -4894,10 +5042,6 @@ void CRegionView::OnMapTextureToView()
 	GetRegionDoc()->RedrawAllViews();
 }
 
-void CRegionView::OnUpdateMapTextureToView(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(AreAnyPoliesSelected());
-}
 
 
 
@@ -4971,12 +5115,6 @@ void CRegionView::OnResetTextureCoords()
 	GetRegionDoc()->RedrawAllViews();
 }
 
-void CRegionView::OnUpdateResetTextureCoords(CCmdUI* pCmdUI)
-{
-	BOOL bEnable = AreAnyPoliesSelected();
-
-	pCmdUI->Enable(bEnable);
-}
 
 // talon: 2001 (0x45cddc..0x45ce12): the light animations kept with the
 // world (CRegionDoc, 0x450c20..).
