@@ -19,6 +19,9 @@
 #include "proplist.h"
 #include "genericprop_setup.h"
 #include "geomroutines.h"
+// talon: what Build 69's adds, for its functions below
+#include "ltamgr.h"
+#include "ltasaveutils.h"
 
 
 // ----------------------------------------------------------------------- //
@@ -486,3 +489,326 @@ bool CPropList::SameAs(CPropList* pPropList)
 
 // talon: CPropListContainer (the .tbw property groups, 2003) is not in
 // the 2001 tools
+
+
+// talon: Build 69's, which the processors' copy of this file has no
+// use for: DEdit's.
+
+
+uint32 CStringProp::DataSize( ) const
+{
+	if( strlen( m_String ) < MAX_STRINGPROP_LEN )
+		return 2 + strlen(m_String);
+	else
+		return 2;
+}
+
+
+void CStringProp::LoadDataLTA( CLTANode* pNode )
+{
+	strncpy(m_String,
+		PairCdr( CLTAUtil::ShallowFindList(pNode, "data" ) ),
+			MAX_STRINGPROP_LEN);
+}
+
+
+void CStringProp::SaveDataLTA( CLTAFile* pFile, uint32 level )
+{
+	if( strlen(m_String) )
+	{
+		pFile->WriteStrF("( data \"%s\") ", m_String );
+	}
+}
+
+
+void CStringProp::SaveDataLTA( CLTANodeBuilder &lb )
+{
+	if( strlen(m_String) )
+	{
+		SaveStringLTANamed("data",lb,m_String);
+	}
+}
+
+
+uint32 CVectorProp::DataSize( ) const
+{
+	return sizeof(m_Vector);
+}
+
+
+void CVectorProp::LoadDataLTA( CLTANode* pNode )
+{
+	CLTANode* pVectorNode = PairCdrNode(CLTAUtil::ShallowFindList( CLTAUtil::ShallowFindList(pNode, "data" ), "vector"));
+	if( pVectorNode && pVectorNode->GetNumElements() == 3 )
+	{
+		m_Vector.x = GetFloat(pVectorNode->GetElement(0));
+		m_Vector.y = GetFloat(pVectorNode->GetElement(1));
+		m_Vector.z = GetFloat(pVectorNode->GetElement(2));
+	}
+
+}
+
+
+
+void CVectorProp::SaveDataLTA( CLTAFile* pFile, uint32 level )
+{
+	pFile->WriteStrF("( data ( vector (%f %f %f) ) ) ", m_Vector.x, m_Vector.y, m_Vector.z );
+}
+
+
+void CVectorProp::SaveDataLTA( CLTANodeBuilder &lb )
+{
+	lb.Push("data");
+		SaveLTVecLTANamed("vector", lb, m_Vector);
+	lb.Pop();
+}
+
+
+uint32 CRotationProp::DataSize( ) const
+{
+	return sizeof(m_EulerAngles) + sizeof(float);
+}
+
+
+void CRotationProp::LoadDataLTA( CLTANode* pNode )
+{
+	CLTANode* pRotationNode = PairCdrNode(CLTAUtil::ShallowFindList( CLTAUtil::ShallowFindList(pNode, "data" ), "eulerangles"));
+	if( pRotationNode && pRotationNode->GetNumElements() == 3 )
+	{
+		m_EulerAngles.x = GetFloat(pRotationNode->GetElement(0));
+		m_EulerAngles.y = GetFloat(pRotationNode->GetElement(1));
+		m_EulerAngles.z = GetFloat(pRotationNode->GetElement(2));
+	}
+}
+
+
+void CRotationProp::SaveDataLTA( CLTAFile* pFile, uint32 level )
+{
+	// PrependTabs(pFile, level);
+	pFile->WriteStrF("( data (eulerangles (%f %f %f) ) ) ", 
+		m_EulerAngles.x, 
+		m_EulerAngles.y, 
+		m_EulerAngles.z );
+}
+
+
+void CRotationProp::SaveDataLTA( CLTANodeBuilder &lb )
+{
+	lb.Push("data");
+		SaveLTVecLTANamed("eulerangles", lb, m_EulerAngles );
+	lb.Pop();
+}
+
+
+uint32 CRealProp::DataSize( ) const
+{
+	return sizeof(m_Value);
+}
+
+
+void CRealProp::LoadDataLTA( CLTANode* pNode )
+{
+	m_Value = GetFloat( PairCdrNode(CLTAUtil::ShallowFindList(pNode, "data" )) );
+}
+
+
+void CRealProp::SaveDataLTA( CLTAFile* pFile, uint32 level )
+{
+	pFile->WriteStrF("( data %f )", m_Value ); 	// file << m_Value;
+}
+
+
+void CRealProp::SaveDataLTA( CLTANodeBuilder &lb  )
+{
+	SaveFloatLTANamed("data", lb, m_Value );
+}
+
+
+uint32 CBoolProp::DataSize( ) const
+{
+	return sizeof(m_Value);
+}
+
+
+void CBoolProp::LoadDataLTA( CLTANode* pNode )
+{
+	m_Value = GetBool( PairCdrNode(CLTAUtil::ShallowFindList(pNode, "data" )) );
+}
+
+
+void CBoolProp::SaveDataLTA( CLTAFile* pFile, uint32 level )
+{
+	pFile->WriteStrF("( data %d )", m_Value ? 1 : 0 ); 	// file << m_Value;
+}
+
+
+void CBoolProp:: SaveDataLTA( CLTANodeBuilder &lb )
+{
+	SaveBoolLTANamed("data",lb,m_Value);
+}
+
+
+CPropListContainer::CPropListContainer()
+{
+	Init();
+}
+
+
+void CPropListContainer::Init()
+{
+	m_propList.Term();
+	m_propList.Init();
+}
+
+
+uint32 CPropListContainer::AddPropList(CPropList* propList, uint32 nNumFilter, const char** pszFilter)
+{
+	const uint32 size = m_propList.GetSize();
+
+	for( uint32 i = 0; i < size; i++ )
+	{
+		if( m_propList[i]->SameAs(propList, nNumFilter, pszFilter) )
+			return i;
+	}
+
+	m_propList.Push(propList);
+	return size;
+}
+
+
+uint32 CPropListContainer::AddPropList(CPropList* propList, bool alwaysAdd)
+{
+	const uint32 size = m_propList.GetSize();
+
+	// don't look for matching properties if alwaysAdd is true
+	if( !alwaysAdd )
+	{
+		for( uint32 i = 0; i < size; i++ )
+		{
+			if( m_propList[i]->SameAs(propList) )
+				return i;
+		}
+	}
+
+	m_propList.Push(propList);
+	return size;
+}
+
+
+void CPropListContainer::UnloadFromMemory()
+{
+	
+	uint32 size = m_propList.GetSize();
+	for( uint32 i = 0; i < size; i++ )
+	{
+		delete m_propList[i];
+	}
+	Init();
+	
+}
+
+
+void CPropListContainer::SaveTBW( CAbstractIO& OutFile )
+{
+	//write out the size
+	uint32 nNumGroups = m_propList.GetSize();
+	OutFile << nNumGroups;
+
+	for(uint32 nCurrGroup = 0; nCurrGroup < nNumGroups; nCurrGroup++)
+	{
+		CPropList* pPropList = m_propList[nCurrGroup];
+
+		OutFile << pPropList->m_Props.GetSize();
+
+		for(uint32 k=0; k	< pPropList->m_Props; k++ )
+		{
+			CBaseProp* pProp = pPropList->m_Props[k];
+
+			OutFile << (BYTE)pProp->m_Type;
+			OutFile.WriteString( pProp->m_Name );
+			
+			OutFile << (uint32)pProp->m_PropFlags;
+
+			pProp->SaveData( OutFile );
+		}	
+	}
+}
+
+
+
+void CPropListContainer::SaveLTA( CLTAFile* pFile, uint32 level )
+{
+	
+	uint32 size = m_propList.GetSize();
+
+	CBaseProp		*pProp;
+
+	PrependTabs(pFile, level);
+	pFile->WriteStr("( globalproplist (");
+	for( uint32 i = 0; i < size; i++ )
+	{
+		PrependTabs(pFile, level+1);
+		pFile->WriteStr("( proplist ( ");
+			for( uint32 k=0; k	< m_propList[i]->m_Props; k++ )
+			{
+				pProp = m_propList[i]->m_Props[k];	
+				PrependTabs(pFile, level+2 );
+				pFile->WriteStr("( " );
+					switch(pProp->m_Type)
+					{
+					case PT_STRING:		pFile->WriteStr(" string ");	break;
+					case PT_VECTOR:		pFile->WriteStr(" vector ");	break;
+					case PT_COLOR:		pFile->WriteStr(" color ");		break;
+					case PT_REAL:		pFile->WriteStr(" real ");		break;
+					case PT_FLAGS:		pFile->WriteStr(" flags ");		break;
+					case PT_BOOL:		pFile->WriteStr(" bool ");		break;
+					case PT_LONGINT:	pFile->WriteStr(" longint ");   break;
+					case PT_ROTATION:	pFile->WriteStr(" rotation ");	break; 
+					default:
+						pFile->WriteStr(" invalid ");
+					}
+
+					pFile->WriteStrF("\"%s\"", pProp->m_Name );
+
+					pFile->WriteStr(" ( " );
+						if( pProp->m_PropFlags & PF_HIDDEN )
+							pFile->WriteStr("hidden " );
+						if( pProp->m_PropFlags & PF_RADIUS )
+							pFile->WriteStr("radius " );
+						if( pProp->m_PropFlags & PF_DIMS )
+							pFile->WriteStr("dims " );
+						if( pProp->m_PropFlags & PF_FIELDOFVIEW )
+							pFile->WriteStr("fieldofview " );
+						if( pProp->m_PropFlags & PF_LOCALDIMS )
+							pFile->WriteStr("localdims " );
+						if( pProp->m_PropFlags & PF_GROUPOWNER )
+							pFile->WriteStr("groupowner " );
+						if( pProp->m_PropFlags & PF_GROUPMASK )
+							pFile->WriteStrF("group%d ", GET_PF_GROUP(pProp->m_PropFlags));
+						if( pProp->m_PropFlags & PF_FOVRADIUS )
+							pFile->WriteStr("fovradius " );
+						if( pProp->m_PropFlags & PF_OBJECTLINK )
+							pFile->WriteStr("objectlink " );
+						if( pProp->m_PropFlags & PF_FILENAME )
+							pFile->WriteStr("filename " );
+						if( pProp->m_PropFlags & PF_BEZIERPREVTANGENT )
+							pFile->WriteStr("bezierprevtangent " );
+						if( pProp->m_PropFlags & PF_BEZIERNEXTTANGENT )
+							pFile->WriteStr("beziernexttangent " );
+						if( pProp->m_PropFlags & PF_STATICLIST )
+							pFile->WriteStr("staticlist " );
+						if( pProp->m_PropFlags & PF_DYNAMICLIST )
+							pFile->WriteStr("dynamiclist " );
+					pFile->WriteStr(" ) " );
+					pProp->SaveDataLTA( pFile, level+3 );
+
+				// PrependTabs(pFile, level+2 );
+				pFile->WriteStr(") " );
+			}
+		PrependTabs(pFile, level+1);
+		pFile->WriteStr(") )");
+	}
+	PrependTabs(pFile, level);
+	pFile->WriteStr(" ) )");	
+}
+

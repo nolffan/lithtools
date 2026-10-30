@@ -21,6 +21,9 @@
 #include "editpoly.h"
 #include "editregion.h"
 #include "editbrush.h"
+// talon: what Build 69's adds, for its functions below
+#include "ltamgr.h"
+#include "ltasaveutils.h"
 
 
 
@@ -414,5 +417,74 @@ BOOL CBasePoly::ValidTriangle( WORD a, WORD b, WORD c )
 }
 
 
+// talon: Build 69's, which the processors' copy of this file has no
+// use for: DEdit's.
 
+
+
+/*
+( basepoly  
+	( indices ( 6 0 3 7 ) )
+	( normal ( 1.000000 0.000000 0.000000 ) )
+	( dist 292.000000 )
+)
+*/
+
+bool CBasePoly::LoadBasePolyLTA( CLTANode* pNode )
+{
+	// CLTANode* pIndicesNode = pNode->getElem(0); // shallow_find_list(pNode, "indices");
+	CLTANode* pIndex = pNode->GetElement(1); //PairCdrNode(pIndicesNode);
+	uint32 listSize = pIndex->GetNumElements();
+
+	assert(listSize > 0);
+	m_Indices.SetSize( listSize - 1 );
+	
+	for( uint32 i = 1; i < listSize; i++ )
+	{
+		Index(i-1) = GetUint32(pIndex->GetElement(i));
+		if( Index(i-1) >= m_pBrush->m_Points )
+		{
+			Index(i-1) = 0;
+			return false;
+		}
+	}	
+	
+
+	CLTANode* pNormalNode = pNode->GetElement(2); //shallow_find_list(pNode, "normal");
+	if( pNormalNode )
+	{
+		Normal().x = GetFloat(pNormalNode->GetElement(1));
+		Normal().y = GetFloat(pNormalNode->GetElement(2));
+		Normal().z = GetFloat(pNormalNode->GetElement(3));
+	}
+	
+	CLTANode* pDistNode = pNode->GetElement(3); //shallow_find_list(pNode, "dist");
+	if( pDistNode )
+	{
+		Dist() = GetFloat(PairCdrNode(pDistNode));
+	}
+	
+	return true;
+}
+
+
+
+void CBasePoly::SaveBasePolyLTA( CLTAFile* pFile, uint32 level )
+{
+	uint32		i;
+
+	//write out the list of face indices
+	PrependTabs(pFile, level);
+	pFile->WriteStr("( f ");
+	for( i=0; i < m_Indices; i++ ){
+		pFile->WriteStrF("%i ", m_Indices[i] );
+	}
+	pFile->WriteStr(")");
+	
+	//write out the surface normal
+	PrependTabs(pFile, level);
+	pFile->WriteStrF("( n %f %f %f )", Normal().x, Normal().y, Normal().z );
+	PrependTabs(pFile, level);
+	pFile->WriteStrF("( dist %f )", Dist() );
+}
 

@@ -141,3 +141,66 @@ void no_DestroyNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bDeleteChildre
 
 	delete pNode;
 }
+
+
+// talon: Build 69's, which the processors' copy of this file has no
+// use for: DEdit's.
+
+
+
+void no_DetachNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bAttachToRoot)
+{
+	if(pNode->GetParent())
+	{
+		pNode->GetParent()->m_Children.RemoveAt(pNode);
+	}
+
+	if(bAttachToRoot)
+	{
+		pNode->SetParent(&pRegion->m_RootNode);
+		
+		#ifdef DIRECTEDITOR_BUILD
+			GetNodeView()->SetNode(pNode);
+		#endif
+		
+		pRegion->m_RootNode.m_Children.Append(pNode);
+	}
+	else
+	{
+		pNode->SetParent(NULL);
+	}
+}
+
+
+
+void no_InitializeNewNode(CEditRegion *pRegion, CWorldNode *pNode, CWorldNode *pParent)
+{
+	if(pNode->GetType() == Node_Brush)
+	{
+		pRegion->AddBrush(pNode->AsBrush());
+	}
+	else if(pNode->GetType() == Node_Object)
+	{
+		pRegion->AddObject(pNode->AsObject());
+	}
+
+	// Set it up in the node view.
+	no_AttachNode(pRegion, pNode, pParent);
+
+	// Select it if it was selected.
+	if(pNode->IsFlagSet(NODEFLAG_SELECTED))
+		pRegion->SelectNode(pNode);
+}
+
+
+
+CEditBrush* no_CreateNewBrush(CEditRegion *pRegion, CWorldNode *pParent)
+{
+	CEditBrush *pBrush;
+	
+	pBrush = new CEditBrush;
+	SetupBrushProperties(pBrush, pRegion);
+	no_InitializeNewNode(pRegion, pBrush, pParent);
+	return pBrush;
+}
+
