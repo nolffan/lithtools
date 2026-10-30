@@ -392,11 +392,53 @@ version 85). `progress/Processor-avp2-map.md` is the map.
 
 ## 3. The editors (cl 12.00.9044, static MFC)
 
-- [ ] **ModelEdit.exe** (221 KB of its own code), then **DEdit.exe** (573
-  KB). Their RTTI names their classes (135 and 101 type descriptors); the
-  shared libraries inside them (ButeMgr, StdLith, RegMgr, DibMgr: DEdit
-  0x4835a0..0x48ba82) match the AvP2 source release's prebuilt libraries
-  in places, and build 51's (src/Libs) are their near relatives.
+- [ ] **ModelEdit.exe** (221 KB of its own code, 1,927 functions;
+  `progress/ModelEdit-map.md`).
+  - [x] The project (`src/LT2/tools/ModelEdit/ModelEdit.dsw`, 2026-10-30):
+    Build 69's ModelEdit and shared model code with the LT2 SDK, StdLith
+    (its allocator-override build) and RegMgr, cl 9044 `/O1`, static MFC,
+    in the image's module order; the resources decompiled from the image
+    (byte-identical). Links with nothing unresolved, with two kinds of
+    code the image hasn't: Build 69's later features that its ModelEditDlg
+    calls (the "Build 69 only" group) and Build 69's LTA library
+    (ME_LTAMgr.dsp, a stand-in for the lost 2001 parse-node reader). As
+    it stands: 1,001 identical.
+  - [ ] Bring it back to 2001, in seven parts by image range (for parallel
+    work; near and todo as `make progress` counts them on 2026-10-30):
+    1. 0x401000..0x4035cd, the small dialogs A..G, animtracker, DragList,
+       LTEulerAngles, GenLodDlg: near 22, todo 3. AddChildModelDlg is
+       2001's modal list dialog; animtracker the LT2 tracker's.
+    2. 0x4035cd..0x409b6c, gl_modelrender, ImportAnimation, the keyframe
+       dialogs and KeyframeWnd, loadltadlg, LODEdit: near 52, todo 4.
+    3. 0x409b6c..0x415fc9, the LTA importer: the 2001 parse-node reader
+       to write from the image (three modules before ltaModel, one after:
+       the lexer, ILTAStream, CParseNode; smmempnproc.cpp names their
+       interface), ltaModel and ltaScene brought back to it, ltquatbase;
+       then ME_LTAMgr goes: near 116, todo 27.
+    4. 0x415fc9..0x421612, ModelEdit and ModelEditDlg (46 KB: list views,
+       not Build 69's tree control; .abc open and save; no D3D export,
+       OBBs, piece LODs, FOV dialog...; as its features go, the "Build 69
+       only" files go), and resource.h in 2001's numbering: near 166,
+       todo 10.
+    5. 0x421612..0x428866, ModelInfoDlg to win_idle: newgenlod, the Piece
+       Info dialog (2001's, to write), RenderWnd, smmempnproc (needs part
+       3's headers), SocketEdit (no scale, no node name), the small
+       dialogs: near 103, todo 8.
+    6. 0x428866..0x42f746, conparse, dtxmgr (ModelEdit's has
+       dtx_SetupDTXFormat; the shared copy is the processor's),
+       genltstream, geomroutines, model.cpp (the 2001 model, its command
+       string keys): near 148, todo 2.
+    7. 0x42f746..0x437170, model_cleanup, model_load (2001's .abc loader,
+       to write: nolfsrc's cmodelload.cpp reads the same format),
+       model_ops, model_save (the .abc writer), modelallocations,
+       pixelformat, simple_dalloc, streamsim, transformmaker, RegMgr,
+       StdLith: near 70, todo 10.
+    Parts 1-7 share the model headers (tools/shared/model/model.h,
+    ltaScene.h): part 6 owns model.h, part 3 ltaScene.h; the others ask.
+- [ ] **DEdit.exe** (573 KB). Its RTTI names its classes (101 type
+  descriptors); the shared libraries inside it (ButeMgr, StdLith, RegMgr,
+  DibMgr: 0x4835a0..0x48ba82) match the AvP2 source release's prebuilt
+  libraries in places, and build 51's (src/Libs) are their near relatives.
 
 ## Method
 
