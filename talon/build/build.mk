@@ -66,10 +66,13 @@ TALON_RCFLAGS ?=
 #   src/LT2/tools/LithRez/LithRez.dsw      LithRez 1.00 (1998), Visual C++ 5.0
 #   src/LT2/tools/PreProcessorNOLF/Processor.dsw  the world processor (NOLF),
 #                                          Intel C/C++ 4.0 and VC6 SP3
+#   src/LT2/tools/ModelEdit/ModelEdit.dsw  the model editor (Talon), VC6 SP5
+#                                          with the Processor Pack
 WORKSPACES := \
     src/LT2/lithshared/lithshared.dsw:LT2_StdLith,LT2_ZLib,LT2_RegMgr \
     src/LT2/tools/PreProcessor/Processor.dsw:Processor \
     src/LT2/tools/PreProcessorNOLF/Processor.dsw:ProcessorNOLF \
+    src/LT2/tools/ModelEdit/ModelEdit.dsw:ModelEdit \
     src/Libs/Libs.dsw:ButeMgr,CryptMgr,DibMgr,GenRegMgr,Lib_Lith,MFCStub,RegMgr,regmgr32,Lib_StdLith,Lib_ZLib \
     src/Engine/tools/Plugins/Plugins.dsw:MayaDTXLoader,MaxDTXLoader30,MaxDTXLoader40,MaxModelExport30,MaxModelExport40,MaxWorldExport30,MaxWorldExport40,MaxWorldImport30,MaxWorldImport40,MayaModelExport30,MayaModelExport40,MayaWorldExport30,MayaWorldExport40 \
     src/LT2/tools/LithRez/LithRez.dsw:LithRez
@@ -135,6 +138,16 @@ $(foreach p,NOLF_StdLith NOLF_ZLib NOLF_RegMgr ProcessorNOLF__PreWorld,$(eval EN
 ENV_ProcessorNOLF  := $(ENV_ICL40)
 CL_ProcessorNOLF   := $(ICL40)/BIN/icl.exe
 LINK_ProcessorNOLF := $(VC6SP3)/BIN/link.exe
+
+# The Talon ModelEdit (2001-12-19; progress/ModelEdit-map.md): its own
+# objects are VC6 SP5 with the Processor Pack's (cl 12.00.9044, Rich
+# 0x31/9044), with that toolchain's headers, MFC (nafxcw.lib, build 8569)
+# and C runtime, linked statically.
+ENV_VC6PP := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(VC6PP))\BIN' \
+    INCLUDE='$(call ws,$(VC6PP))\INCLUDE;$(call ws,$(VC6PP))\MFC\INCLUDE' \
+    LIB='$(call ws,$(VC6PP))\LIB;$(call ws,$(VC6PP))\MFC\LIB'
+$(foreach p,ModelEdit ME_LTAMgr,$(eval ENV_$(p) := $$(ENV_VC6PP))$(eval CL_$(p) := $$(VC6PP)/BIN/cl.exe)\
+    $(eval LINK_$(p) := $$(VC6PP)/BIN/link.exe)$(eval LIBEXE_$(p) := $$(VC6PP)/BIN/lib.exe))
 
 # The prefix: made the first time, then only checked; every tool run waits
 # for it (an order-only prerequisite, so it causes no rebuild).

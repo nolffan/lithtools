@@ -1,0 +1,77 @@
+Microsoft Developer Studio Workspace File, Format Version 6.00
+# WARNING: DO NOT EDIT OR DELETE THIS WORKSPACE FILE!
+
+# talon: the model editor and the LT2 libraries it links; written for this
+# project.
+
+###############################################################################
+
+Project: "LT2_StdLith_alloc"=..\..\lithshared\stdlith\Lib_StdLith_alloc.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "LT2_RegMgr"=..\..\lithshared\regmgr\regmgr60.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "ME_LTAMgr"=.\ME_LTAMgr.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+}}}
+
+###############################################################################
+
+Project: "ModelEdit"=.\ModelEdit.dsp - Package Owner=<4>
+
+Package=<5>
+{{{
+}}}
+
+Package=<4>
+{{{
+    Begin Project Dependency
+    Project_Dep_Name LT2_StdLith_alloc
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name LT2_RegMgr
+    End Project Dependency
+    Begin Project Dependency
+    Project_Dep_Name ME_LTAMgr
+    End Project Dependency
+}}}
+
+###############################################################################
+
+Global:
+
+Package=<5>
+{{{
+}}}
+
+Package=<3>
+{{{
+}}}
+
+###############################################################################
+
