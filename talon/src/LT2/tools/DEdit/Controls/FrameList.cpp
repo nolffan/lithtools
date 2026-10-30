@@ -157,10 +157,10 @@ void CFrameList::OnDblclk()
 		m_pNotifier->NotifyDblClk( this, GetCurSel() );
 }
 
+// 2001 (0x42bd0f): a jump to OnDblclk
 void CFrameList::OnSelchange() 
 {
-	if( m_pNotifier && (GetCurSel() != LB_ERR) )
-		m_pNotifier->NotifySelChange( this, GetCurSel() );
+	OnDblclk();
 }
 
 void CFrameList::OnContextMenu(CWnd* pWnd, CPoint point) 

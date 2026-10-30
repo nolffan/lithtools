@@ -18,7 +18,7 @@ class CProjectBar;
 #include "editclipboard.h"
 
 #include "mrcext.h"	//schlegz for new project bar
-#include "flattoolbar.h"
+#include "flattoolbar.h"	// talon: its constructor and destructor fold with MFC's CToolBar's (0x4c6f52, 0x4c708e)
 #include "dedockframewnd.h"
 
 class CPropertiesDlg;
@@ -81,19 +81,12 @@ public:
 
 	CEditClipboard *GetClipboard( )			{ return &m_Clipboard; }
 
-	BOOL			ShouldIgnoreMsgsInPrefabs() { return m_bIgnoreMsgsInPrefabs; }
 
 	
 	// Undo preferences
 
-	BOOL			CountUndo( UINT &iUndo, UINT &iResetVal );
-	BOOL			CountUndoGeometry( );
-	BOOL			CountUndoTextures( );
-	BOOL			CountUndoProperties( );
-	BOOL			CountUndoGeneral( );
 	
 	void			SetUndoPreferencesDefault( UINT &iGeometry, UINT &iTextures, UINT &iProperties, UINT &iGeneral );
-	void			SetUndoPreferencesCoarse( UINT &iGeometry, UINT &iTextures, UINT &iProperties, UINT &iGeneral );
 
 	UINT			m_iUndoGeometry;
 	UINT			m_iCurUndoGeometry;
@@ -141,13 +134,9 @@ public:
 	// destroyed window.
 	CMRCSizeDialogBar		*DestroyProjectControlBar(CMainFrame::ProjectControl controlType);
 
-	//Given a world name, this will use the options and launch a process to run the 
-	//specified world name
-	bool					RunWorld(const char* pszWorldName);
 
 private:
 
-	void			DockControlBarRightOf(CToolBar* Bar,CToolBar* LeftOf);
 	void			RestoreRegistryInfo( );
 	void			SaveRegistryInfo( );
 
@@ -171,6 +160,11 @@ public:
 #endif
 
 protected:  // control bar embedded members
+
+	// talon: 2001's CMainFrame (0x460 bytes; the constructor 0x42e0cb).
+	// The DScript editor's path, from the registry (0x42efac); the name is
+	// ours.
+	CString				m_DScriptEditor;
 
 	int					m_WorldEditMode;
 	int					m_NodeSelectionMode;
@@ -200,14 +194,16 @@ protected:  // control bar embedded members
 	// The rest of the control bars should be owned by the project bar.
 	CMoArray<CProjectControlBarInfo *>	m_projectControls;
 
+	// talon: a project manager of the frame's own (0x394, built and
+	// destroyed by the frame and used nowhere else); the name is ours.
+	CEditProjectMgr		m_Project;
+
 	BOOL				m_bToolTips;
 	BOOL				m_bClosing;
 
 	CEditClipboard		m_Clipboard;
 
 	CMenu				m_modeMenu;			// The mode menu which is added dynamically
-	
-	BOOL				m_bIgnoreMsgsInPrefabs;
 
 // Generated message map functions
 public:
@@ -215,45 +211,27 @@ public:
 	afx_msg void OnSelectTab(UINT id);
 	afx_msg void OnRunWorld();
 	afx_msg void OnUpdateRunWorld(CCmdUI *pCmdUI);
+	afx_msg void OnShowWorldTextures();
 	afx_msg void OnShowWorldClasses();
+	afx_msg void OnGroupWorldTextures();
+	afx_msg void OnFilePreferences();
+	afx_msg void OnLightEditMode();
+	afx_msg void OnUpdateLightEditMode(CCmdUI* pCmdUI);
 	afx_msg void OnUpdateViewDebugWindow(CCmdUI *pCmdUI);
 	afx_msg void OnViewDebugWindow();
-	afx_msg void OnUpdateViewTexturePalette(CCmdUI *pCmdUI);
-	afx_msg void OnViewTexturePalette();
 	afx_msg void OnUpdateSingleNodeSelection( CCmdUI *pCmdUI );
 	afx_msg void OnUpdateMultiNodeSelection( CCmdUI *pCmdUI );
 	afx_msg void OnSingleNodeSelection();
 	afx_msg void OnMultiNodeSelection();
 	afx_msg void OnCreateRezFile();
-	afx_msg void OnConvertEd2LTA();
 	afx_msg void OnReloadPalettes();
 	afx_msg void OnClose();
-	afx_msg void OnTexturePass1();
-	afx_msg void OnTexturePass2();
 	afx_msg void OnUpdateProjectOpen( CCmdUI *pCmdUI );
 	afx_msg int OnCreate(LPCREATESTRUCT lpCreateStruct);
 	afx_msg void OnViewProjectWindow();
 	afx_msg void OnUpdateViewProjectWindow(CCmdUI* pCmdUI);
-	afx_msg void OnPrefabTracker();
-	afx_msg void OnUpdatePrefabTracker(CCmdUI* pCmdUI);
-	afx_msg void OnObjectTracker();
-	afx_msg void OnUpdateObjectTracker(CCmdUI* pCmdUI);
-	afx_msg void OnTextureTracker();
-	afx_msg void OnUpdateTextureTracker(CCmdUI* pCmdUI);
-	afx_msg void OnSearchReplaceInTextures();
-	afx_msg void OnUpdateSearchReplaceInTextures(CCmdUI* pCmdUI);
 	afx_msg void OnViewColorSelection();
 	afx_msg void OnUpdateViewColorSelection(CCmdUI* pCmdUI);
-	afx_msg void OnViewLevelTextures();
-	afx_msg void OnUpdateViewLevelTextures(CCmdUI* pCmdUI);
-	afx_msg void OnViewObjectSearch();
-	afx_msg void OnUpdateViewObjectSearch(CCmdUI* pCmdUI);
-	afx_msg void OnObjectSelFilter();
-	afx_msg void OnUpdateObjectSelFilter(CCmdUI* pCmdUI);
-	afx_msg void OnViewLevelError();
-	afx_msg void OnUpdateViewLevelError(CCmdUI* pCmdUI);
-	afx_msg void OnViewLevelItems();
-	afx_msg void OnUpdateViewLevelItems(CCmdUI* pCmdUI);
 	afx_msg void OnDestroy();
 	afx_msg void OnGeometryEditMode();
 	afx_msg void OnUpdateGeometryEditMode(CCmdUI* pCmdUI);
@@ -273,13 +251,6 @@ public:
 	afx_msg void OnCenterOnMarker();
 	afx_msg void OnUpdateCenterOnMarker(CCmdUI* pCmdUI);
 	afx_msg void OnViewToggleFloatingToolbars();
-	afx_msg LRESULT OnModelLoaded(WPARAM, LPARAM);
-	afx_msg void OnRenameResources();
-	afx_msg void OnUpdateRenameResources( CCmdUI* pCmdUI);
-	afx_msg void OnUpdateWorldObjects();
-	afx_msg void OnUpdateUpdateWorldObjects( CCmdUI* pCmdUI);
-	afx_msg void OnIgnoreMsgsInPrefabs();
-	afx_msg void OnUpdateIgnoreMsgsInPrefabs( CCmdUI* pCmdUI );
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

@@ -33,7 +33,7 @@ CMyTreeCtrl::CMyTreeCtrl()
 {
 	m_bDragging			= FALSE;
 	m_pimagelist		= NULL;
-	m_nTimerIDHover		= 0;
+	// (2001, 0x43a2f8: m_nTimerIDHover not set)
 }
 
 CMyTreeCtrl::~CMyTreeCtrl()

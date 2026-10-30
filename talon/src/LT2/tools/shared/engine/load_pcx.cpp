@@ -98,13 +98,12 @@ LTBOOL pcx_Create2(ILTStream *pStream, LoadedBitmap *pBitmap)
 	pBitmap->m_Pitch = pcxHdr.bytesPerLine * bytesPerPixel;
 	pBitmap->m_Format = format;
 
-	// Read in the palette (if necessary).
-	if (pcxHdr.planes == 1) {
+	// Read in the palette.
+	// talon: 2001 (0x42d78b): whether or not the image is palettized.
 	pStream->GetPos(&curPos);
 	pStream->SeekTo(pStream->GetLen() - 768);
 	pStream->Read(tempPal, sizeof(tempPal));
 	pStream->SeekTo(curPos);
-	}
 
 	for(i=0; i < 256; i++)
 	{
@@ -117,34 +116,8 @@ LTBOOL pcx_Create2(ILTStream *pStream, LoadedBitmap *pBitmap)
 	// Uncompress!
 	pDestBuffer = pBitmap->m_Data.GetArray();
 
-	//This is an addition from New World, basically it speeds up PCX texture loading
-	//greatly by avoiding loading from disk byte by byte, and instead reads the whole
-	//PCX into a single buffer from which it then gets its data from. This increases
-	//performance, but requires more memory during loading. This shouldn't be a big
-	//issue, but may need to be done more intelligently where up to a quarter meg
-	//is read into memory at a time for very large PCX files - JohnO
-	uint32 numBytesToRead = pStream->GetLen() - sizeof(pcxHdr);
-
-	//see if it is a palettized image, if so the palette need not be read in
-	if( pcxHdr.planes == 1 )
-	{
-		numBytesToRead -= 768;	// subtract out the palette data
-	}
-
-	//allocate the buffers, ensuring we keep track of the head so it can
-	//be freed later
-	uint8* pSource = new uint8[numBytesToRead];
-	uint8* pCurPos = pSource;
-
-	//make sure that we could allocate the buffer successfully,
-	//and bail if we can't
-	if(!pSource)
-	{
-		pBitmap->Term();
-		return LTFALSE;
-	}
-
-	pStream->Read( pSource, numBytesToRead );
+	// talon: 2001 reads the image byte by byte (0x42d848): Build 69's
+	// buffered read is New World's later addition.
 
 	if(pDestBuffer)
 	{
@@ -158,14 +131,14 @@ LTBOOL pcx_Create2(ILTStream *pStream, LoadedBitmap *pBitmap)
 			planeBytesLeft = pcxHdr.bytesPerLine;
 			while( bytesLeft > 0 )
 			{
-				temp = *pCurPos++;
+				pStream->Read(&temp, 1);
 				
 				if( (temp & 0xC0) == 0xC0 )
 				{
 					nInSpan = temp & 0x3F;
 
 					// Read the pixel.
-					temp = *pCurPos++;
+					pStream->Read(&temp, 1);
 				}
 				else
 				{
@@ -225,9 +198,6 @@ LTBOOL pcx_Create2(ILTStream *pStream, LoadedBitmap *pBitmap)
 		}
 	}
 
-	//clean up the image buffer
-	delete [] pSource;
-
 	if(pStream->ErrorStatus() != LT_OK)
 	{
 		pBitmap->Term();
@@ -238,66 +208,31 @@ LTBOOL pcx_Create2(ILTStream *pStream, LoadedBitmap *pBitmap)
 }
 
 
+// talon: 2001's (0x42d97b): 32-bit uncompressed TGAs only, always stored
+// bottom up.
 LTBOOL tga_Create2(ILTStream *pStream, LoadedBitmap *pBitmap)
 {
 	char idField[256];
-	uint32 y, lineSize, dataSize;
-	uint8 *pLineData;
-	uint8 alphaFill = 255; // alpha value for 24-bit TGAs
+	uint32 y, lineSize;
 	TGAHeader hdr;
 
 	pStream->Read(&hdr, sizeof(hdr));
 
-	// We only support:
-	// 32-bit data (or 24-bit, which has an alpha tacked on by this function)
-	// Uncompressed image data
-	// No palette
-	// Not horizontally flipped
-	if(hdr.m_ImageType != 2 || hdr.m_ColorMapType != 0 || (hdr.m_ImageDescriptor & (1<<4)) != 0)
+	// We only support 32-bit, uncompressed image data with no palette.
+	if(hdr.m_PixelDepth != 32 || hdr.m_ImageType != 2 || hdr.m_ColorMapType != 0)
 		return LTFALSE;
 
 	// Read whatever ID stuff there is.
 	pStream->Read(idField, hdr.m_IDLength);
 
 	lineSize = (uint32)hdr.m_Width * sizeof(uint32);
-	dataSize = lineSize * hdr.m_Height;
-	if(!pBitmap->m_Data.SetSize(dataSize))
-	return LTFALSE;
+	if(!pBitmap->m_Data.SetSize(lineSize * hdr.m_Height))
+		return LTFALSE;
 
-	// choose which way we want to scan the image: top to bottom, or bottom to top
-	bool flipImage = (hdr.m_ImageDescriptor & (1<<5)) != 0;
-
-	if (hdr.m_PixelDepth == 32) {
-
-		for(y=0; y < hdr.m_Height; y++)
-		{
-			if( flipImage )
-				pLineData = &pBitmap->m_Data[y * lineSize];
-			else
-				pLineData = &pBitmap->m_Data[(hdr.m_Height-y-1) * lineSize];
-			pStream->Read(pLineData, lineSize);
-		}
+	for(y=0; y < hdr.m_Height; y++)
+	{
+		pStream->Read(&pBitmap->m_Data[(hdr.m_Height-y-1) * lineSize], lineSize);
 	}
-	else if (hdr.m_PixelDepth == 24) {
-
-		for(y=0; y < hdr.m_Height; y++)
-		{
-			for (uint32 z=0; z <lineSize; z += sizeof(uint32)) 
-			{
-				if( flipImage )
-					pLineData = &pBitmap->m_Data[(y * lineSize) + z];
-				else
-					pLineData = &pBitmap->m_Data[((hdr.m_Height-y-1) * lineSize) + z];
-
-				// add the three color bytes
-				pStream->Read(pLineData, 3 * sizeof(uint8));
-
-				// and tack on alpha byte
-				*(pLineData + 3 * sizeof(uint8)) = alphaFill;
-			}
-		}
-	}
-	else return LTFALSE;
 
 	pBitmap->m_Format.Init(BPP_32, 0xFF000000, 0x00FF0000, 0x0000FF00, 0x000000FF);
 	pBitmap->m_Width = hdr.m_Width;

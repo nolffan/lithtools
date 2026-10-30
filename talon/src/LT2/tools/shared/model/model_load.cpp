@@ -33,7 +33,11 @@ void LTStream_Read(ILTStream *pStream, LTRotation &quat);
 // Seeks to the named chunk's data.  Each chunk is its name, then the offset
 // of the next chunk (-1 for the last).
 // ------------------------------------------------------------------------
-static LTBOOL mod_FindChunk(ILTStream *pStream, const char *pName)
+// DEdit's old model dims reader (0x42da61) calls it: not static there.
+#ifndef DIRECTEDITOR_BUILD
+static
+#endif
+LTBOOL mod_FindChunk(ILTStream *pStream, const char *pName)
 {
 	uint32 i, nextChunk;
 	char chunkName[256];

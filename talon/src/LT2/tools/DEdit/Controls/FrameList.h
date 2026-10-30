@@ -17,7 +17,10 @@
 	{
 		public:
 
-			virtual void	NotifySelChange( CFrameList *pList, int curSel ) {}
+			// 2001: two slots (CSpriteEditDlg's vtable, 0x4dd75c: 0x460e06,
+			// 0x460e3d; CAllTextureDlg's, 0x4d5eec: 0x40ec2e, 0x40ed20).
+			// No NotifySelChange: a selection change notifies as a double
+			// click does (CFrameList::OnSelchange, 0x42bd0f).
 			virtual void	NotifyDblClk( CFrameList *pList, int curSel ) {}
 			virtual void	NotifyReCreate( CFrameList *pList) {}
 

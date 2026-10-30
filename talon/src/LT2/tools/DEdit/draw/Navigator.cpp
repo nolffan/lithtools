@@ -41,6 +41,21 @@ void CNavigator::LookAt(LTVector vPt)
 /*********************************************************/
 void CNavigator::UpdateLooking()
 {
+#ifdef DIRECTEDITOR_BUILD
+	// talon: DEdit's 2001 (0x43b52f): no collinearity test, and the
+	// forward vector normalized last.  The processors' objects keep Build
+	// 69's.
+	Forward() = m_LookAt - Pos();
+
+	Up( ).Init( 0.0f, 1.0f, 0.0f );
+
+	MakeRight();
+	MakeUp();
+
+	Right().Norm();
+	Up().Norm();
+	Forward().Norm();
+#else
 	Forward() = m_LookAt - Pos();
 	Forward().Norm();
 
@@ -57,6 +72,7 @@ void CNavigator::UpdateLooking()
 
 	Right().Norm();
 	Up().Norm();
+#endif
 
 	// Keep them the correct distance from the lookat point.
 	Pos() = m_LookAt - Forward() * m_LookAtDist;

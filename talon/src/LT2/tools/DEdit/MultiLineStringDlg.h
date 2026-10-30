@@ -19,9 +19,8 @@ class CMultiLineStringDlg : public CDialog
 {
 // Construction
 public:
+	// 2001 (0x43afea): 0x68 bytes, no text limit
 	BOOL m_bReadOnly;
-	BOOL m_bLimitText;
-	uint32 m_nTextLimit;
 	CMultiLineStringDlg(CWnd* pParent = NULL);   // standard constructor
 
 // Dialog Data

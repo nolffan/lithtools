@@ -97,6 +97,11 @@ void no_DestroyNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bDeleteChildre
 	LPOS lPos;
 	uint32 index;
 
+	// 2001 (0x43c769): out of the node view's tree first
+	GetNodeView()->RemoveFromTree(pNode);
+	pNode->RemoveFromTree();
+	GetNodeView()->DeleteNode(pNode);
+
 	if(pNode->IsFlagSet(NODEFLAG_SELECTED))
 		pRegion->UnselectNode(pNode);
 
@@ -150,13 +155,14 @@ void no_DestroyNode(CEditRegion *pRegion, CWorldNode *pNode, BOOL bDeleteChildre
 
 void no_InitializeNewNode(CEditRegion *pRegion, CWorldNode *pNode, CWorldNode *pParent)
 {
+	// 2001 (0x43c6b1): straight onto the region's lists
 	if(pNode->GetType() == Node_Brush)
 	{
-		pRegion->AddBrush(pNode->AsBrush());
+		pRegion->m_Brushes.AddTail(pNode->AsBrush());
 	}
 	else if(pNode->GetType() == Node_Object)
 	{
-		pRegion->AddObject(pNode->AsObject());
+		pRegion->m_Objects.Append(pNode->AsObject());
 	}
 
 	// Set it up in the node view.

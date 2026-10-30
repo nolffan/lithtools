@@ -29,8 +29,6 @@ CMultiLineStringDlg::CMultiLineStringDlg(CWnd* pParent /*=NULL*/)
 	//}}AFX_DATA_INIT
 
 	m_bReadOnly = FALSE;
-	m_bLimitText = TRUE;
-	m_nTextLimit = MAX_STRINGPROP_LEN;
 }
 
 
@@ -59,12 +57,6 @@ BOOL CMultiLineStringDlg::OnInitDialog()
 
 	GetDlgItem(IDC_MULTILINEEDIT)->SetFocus();
 	((CEdit*)GetDlgItem(IDC_MULTILINEEDIT))->SetReadOnly(m_bReadOnly);
-
-	//limit it to the specified number of characters
-	if(m_bLimitText)
-	{
-		((CEdit*)GetDlgItem(IDC_MULTILINEEDIT))->SetLimitText(m_nTextLimit);
-	}
 	
 	return TRUE;  
 }

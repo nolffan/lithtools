@@ -17,24 +17,24 @@ static char THIS_FILE[] = __FILE__;
 
 /////////////////////////////////////////////////////////////////////////////
 // CMapTextureCoordsDlg dialog
-CMapTextureCoordsDlg::CMapTextureCoordsDlg(CWnd* pParent /*=NULL*/)
-	: CDialog(CMapTextureCoordsDlg::IDD, NULL /*pParent*/)
+// talon: 2001's, written from the image (0x431464..0x431bd2).
+
+CMapTextureCoordsDlg::CMapTextureCoordsDlg(CRegionView *pView)
+	: CDialog(CMapTextureCoordsDlg::IDD, NULL)
 {
-
-
 	//{{AFX_DATA_INIT(CMapTextureCoordsDlg)
 	m_UOffset = 0.0f;
 	m_VOffset = 0.0f;
 	m_UScale = 0.0f;
 	m_VScale = 0.0f;
 	m_Rotation = 0.0f;
+	m_bStick = FALSE;
+	m_bXZOnly = FALSE;
 	//}}AFX_DATA_INIT
 
-	m_bAutoApply	= TRUE;
-	m_bCreateUndo	= FALSE;
-	m_bInitialized	= FALSE;
-
-	m_pView			= (CRegionView*)pParent; 
+	m_pView = pView;
+	m_UOffsetDelta = 0.0f;
+	m_VOffsetDelta = 0.0f;
 }
 
 
@@ -54,32 +54,12 @@ void CMapTextureCoordsDlg::DoDataExchange(CDataExchange* pDX)
 	DDV_MinMaxFloat(pDX, m_VScale, -1000000.0f, 1000000.0f);
 	DDX_Text(pDX, IDC_ET_ROTATION, m_Rotation);
 	DDV_MinMaxInt(pDX, (int)m_Rotation, -359, 359);
-	DDX_Check(pDX, IDC_CHECK_AUTO_APPLY, m_bAutoApply);
+	DDX_Check(pDX, IDC_CH_STICK, m_bStick);
+	DDX_Check(pDX, IDC_CH_XZONLY, m_bXZOnly);
 	//}}AFX_DATA_MAP
-}
 
-//reads the values from the controls into the internal member variables
-//but doesn't use DDX so dialogs will not pop up to prompt for numbers, etc
-void CMapTextureCoordsDlg::UpdateDataNoDDX()
-{
-	float fOldU = m_UOffset, fOldV = m_VOffset;
-
-	CString sText;
-
-	GetDlgItem(IDC_ET_UOFFSET)->GetWindowText(sText);
-	m_UOffset = atof(sText);
-
-	GetDlgItem(IDC_ET_VOFFSET)->GetWindowText(sText);
-	m_VOffset = atof(sText);
-
-	GetDlgItem(IDC_ET_USCALE)->GetWindowText(sText);
-	m_UScale = atof(sText);
-
-	GetDlgItem(IDC_ET_VSCALE)->GetWindowText(sText);
-	m_VScale = atof(sText);
-
-	GetDlgItem(IDC_ET_ROTATION)->GetWindowText(sText);
-	m_Rotation = atof(sText);
+	m_UOffsetDelta += m_UOffset - fOldU;
+	m_VOffsetDelta += m_VOffset - fOldV;
 }
 
 
@@ -88,44 +68,48 @@ BEGIN_MESSAGE_MAP(CMapTextureCoordsDlg, CDialog)
 	ON_COMMAND(IDC_APPLY, OnApply)
 	ON_COMMAND(IDC_FLIPX, OnFlipX)
 	ON_COMMAND(IDC_FLIPY, OnFlipY)
-	ON_BN_CLICKED(IDC_CHECK_AUTO_APPLY, OnAutoApply)
-	ON_EN_CHANGE(IDC_ET_UOFFSET, GenericChangeHandler)
-	ON_EN_CHANGE(IDC_ET_VOFFSET, GenericChangeHandler)
-	ON_EN_CHANGE(IDC_ET_USCALE, GenericChangeHandler)
-	ON_EN_CHANGE(IDC_ET_VSCALE, GenericChangeHandler)
-	ON_EN_CHANGE(IDC_ET_ROTATION, GenericChangeHandler)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 
-/////////////////////////////////////////////////////////////////////////////
-// CMapTextureCoordsDlg message handlers
 
+// Mirrors the selected polies' mapping along U (0) or V (1).
 void CMapTextureCoordsDlg::DoFlip(DWORD iAxis)
 {
-	switch(iAxis)
+	CMoArray<CEditPoly*> polies;
+	LTVector vPQO[3];	// P, Q and O: iAxis indexes it
+	uint32 i;
+	CEditPoly *pPoly;
+
+	m_pView->GetSelectedPolies(polies);
+
+	for(i=0; i < polies; i++)
 	{
-	case 0:
-		m_bUMirror = !m_bUMirror;
-		break;
-	case 1:
-		m_bVMirror = !m_bVMirror;
-		break;
+		pPoly = polies[i];
+
+		vPQO[0] = pPoly->GetTexture(0).GetP();
+		vPQO[1] = pPoly->GetTexture(0).GetQ();
+		vPQO[2] = pPoly->GetTexture(0).GetO();
+
+		vPQO[iAxis] = -vPQO[iAxis];
+		pPoly->SetTextureSpace(vPQO[2], vPQO[0], vPQO[1]);
 	}
+
+	m_pView->GetRegionDoc()->RedrawAllViews();
 }
 
 
 void CMapTextureCoordsDlg::ApplyChanges()
 {
 	CMoArray<CEditPoly*> polies;
-	int32 i;
+	PreActionList actionList;
+	uint32 i;
 	CEditPoly *pPoly;
-	float uScale, vScale, uOffset, vOffset, rotOffset;
+	float uScale, vScale, rotOffset;
 	LTVector rotAxis;
 	LTMatrix mRot;
 	LTVector O, P, Q;
 
-	
 	polies.SetCacheSize(50);
 	m_pView->GetSelectedPolies(polies);
 
@@ -137,49 +121,52 @@ void CMapTextureCoordsDlg::ApplyChanges()
 
 	if(fabs(vScale) < 0.0001f)
 		vScale = 0.0001f;
-	
+
+	// Setup undos.
+	for(i=0; i < polies; i++)
+	{
+		AddToActionListIfNew(&actionList, new CPreAction(ACTION_MODIFYNODE, polies[i]->m_pBrush), TRUE);
+	}
+
+	m_pView->GetRegionDoc()->Modify(&actionList, TRUE);
+
 	// Modify the polies.
 	for(i=0; i < polies; i++)
 	{
 		pPoly = polies[i];
 
-		O = m_OriginalOPQs[i * 3 + 0];
-		P = m_OriginalOPQs[i * 3 + 1];
-		Q = m_OriginalOPQs[i * 3 + 2];
+		O = pPoly->GetTexture(0).GetO();
+		P = pPoly->GetTexture(0).GetP();
+		Q = pPoly->GetTexture(0).GetQ();
 
 		P.Norm();
 		Q.Norm();
 
-		// Apply rotation.
-		rotOffset = m_Rotation;
-		
-		// Radians..
-		rotOffset *= (MATH_PI / 180.0f);
-		rotAxis = P.Cross(Q);
-		rotAxis.Norm();
-		Mat_SetupRot(&mRot, &rotAxis, -rotOffset);
-		MatVMul_InPlace_H(&mRot, &P);
-		MatVMul_InPlace_H(&mRot, &Q);
-
 		// Apply the offset.
-		O -= P * (m_UOffset - m_UStart) * uScale;
-		O -= Q * (m_VOffset - m_VStart) * vScale;
+		O += P * m_UOffsetDelta;
+		O += Q * m_VOffsetDelta;
 
 		// Apply scale.
 		P /= uScale;
 		Q /= vScale;
 
-		//mirror appropriately
-		if(m_bUMirror)
-			P = -P;
-		if(m_bVMirror)
-			Q = -Q;
+		// Apply rotation (radians).
+		rotOffset = m_Rotation - m_RefRotation;
+		rotOffset *= (MATH_PI / 180.0f);
+		rotAxis = P.Cross(Q);
+		rotAxis.Norm();
+		Mat_SetupRot(&mRot, &rotAxis, rotOffset);
+		MatVMul_InPlace_H(&mRot, &P);
+		MatVMul_InPlace_H(&mRot, &Q);
 
-		pPoly->SetTextureSpace(GetCurrTexture(), O, P, Q);
+		pPoly->SetTextureSpace(O, P, Q);
+		pPoly->m_Unknown_70 = m_bStick;
 	}
 
-	m_RefRotation	= m_Rotation;
-	m_pView->GetRegionDoc()->RedrawPerspectiveViews();
+	m_UOffsetDelta = 0.0f;
+	m_VOffsetDelta = 0.0f;
+	m_RefRotation = m_Rotation;
+	m_pView->GetRegionDoc()->RedrawAllViews();
 }
 
 
@@ -193,198 +180,10 @@ void CMapTextureCoordsDlg::OnApply()
 void CMapTextureCoordsDlg::OnFlipX()
 {
 	DoFlip(0);
-	GenericChangeHandler();
 }
 
 
 void CMapTextureCoordsDlg::OnFlipY()
 {
 	DoFlip(1);
-	GenericChangeHandler();
 }
-
-void CMapTextureCoordsDlg::SetupUndo()
-{
-	CMoArray<CEditPoly*> polies;
-	PreActionList actionList;
-
-	polies.SetCacheSize(50);
-	m_pView->GetSelectedPolies(polies);
-
-	// Setup undos.
-	for(int32 i=0; i < polies; i++)
-	{
-		AddToActionListIfNew(&actionList, new CPreAction(ACTION_MODIFYNODE, polies[i]->m_pBrush), TRUE);
-	}
-
-	m_pView->GetRegionDoc()->Modify(&actionList, TRUE);
-}
-
-void CMapTextureCoordsDlg::GenericChangeHandler()
-{
-
-	//only bother processing this update if it is a valid update (meaning we
-	//are initialized)
-	if(m_bInitialized)
-	{
-		//something changed, we'll need an undo
-		m_bCreateUndo = TRUE;
-
-		//determine if we should automatically update
-		if(m_bAutoApply)
-		{
-			//we need to apply
-			UpdateDataNoDDX();
-			ApplyChanges();
-		}
-	}
-}
-
-BOOL CMapTextureCoordsDlg::OnInitDialog()
-{
-	ASSERT(m_pView);
-
-	//init the base dialog
-	if(CDialog::OnInitDialog() == FALSE)
-		return FALSE;
-
-	//save all the original OPQ vectors
-	CMoArray<CEditPoly*> polies;
-	polies.SetCacheSize(50);
-	m_pView->GetSelectedPolies(polies);
-
-	//set up our array to hold the vectors
-	m_OriginalOPQs.SetSize(polies.GetSize() * 3);
-
-	//now save them
-	for(uint32 nCurrPoly = 0; nCurrPoly < polies.GetSize(); nCurrPoly++)
-	{
-		m_OriginalOPQs[nCurrPoly * 3 + 0] = polies[nCurrPoly]->GetTexture(GetCurrTexture()).GetO();
-		m_OriginalOPQs[nCurrPoly * 3 + 1] = polies[nCurrPoly]->GetTexture(GetCurrTexture()).GetP();
-		m_OriginalOPQs[nCurrPoly * 3 + 2] = polies[nCurrPoly]->GetTexture(GetCurrTexture()).GetQ();
-	}
-
-	//setup our spin ranges appropriately
-	((CSpinButtonCtrl*)GetDlgItem(IDC_SPIN_TEX_COORD_U))->SetRange(0, m_TextureWidth - 1);
-	((CSpinButtonCtrl*)GetDlgItem(IDC_SPIN_TEX_COORD_V))->SetRange(0, m_TextureHeight - 1);
-	((CSpinButtonCtrl*)GetDlgItem(IDC_SPIN_TEX_COORD_U_SCALE))->SetRange(1, 1024);
-	((CSpinButtonCtrl*)GetDlgItem(IDC_SPIN_TEX_COORD_V_SCALE))->SetRange(1, 1024);
-	((CSpinButtonCtrl*)GetDlgItem(IDC_SPIN_TEX_COORD_ROTATION))->SetRange(0, 359);
-
-	//move the window to the appropriate location
-	CRect DlgArea;
-	GetWindowRect(DlgArea);
-
-	//get the screen dimensions
-	HDC hScreen = ::GetDC(NULL);
-	int nWidth = GetDeviceCaps(hScreen, HORZRES);
-	int nHeight = GetDeviceCaps(hScreen, VERTRES);
-	::ReleaseDC(NULL, hScreen);
-
-	//make sure that the position won't push it off of the screen
-	m_nWindowX = LTMAX(0, LTMIN(nWidth - DlgArea.Width(), m_nWindowX));
-	m_nWindowY = LTMAX(0, LTMIN(nHeight - DlgArea.Height(), m_nWindowY));
-
-	MoveWindow(m_nWindowX, m_nWindowY, DlgArea.Width(), DlgArea.Height());
-
-	//setup our internal state
-	m_bCreateUndo = FALSE;
-
-	//save the original U and V values
-	m_UStart = m_UOffset;
-	m_VStart = m_VOffset;
-
-	//no mirrorings as of yet
-	m_bUMirror = false;
-	m_bVMirror = false;
-
-	//all done now
-	m_bInitialized = TRUE;
-
-	return TRUE;
-}
-
-void CMapTextureCoordsDlg::OnOK()
-{
-	//ok, we need to reset all the texture coordinates, setup the undo, and
-	//then reset them to this
-
-	//save the window pos
-	CRect DlgArea;
-	GetWindowRect(DlgArea);
-	m_nWindowX = DlgArea.left;
-	m_nWindowY = DlgArea.top;
-
-	//first off apply any changes that may have not gotten applied yet
-	UpdateData();
-	ApplyChanges();
-
-	CMoArray<CEditPoly*> polies;
-	polies.SetCacheSize(50);
-	m_pView->GetSelectedPolies(polies);
-
-	uint32 nCurrPoly;
-	for(nCurrPoly = 0; nCurrPoly < polies.GetSize(); nCurrPoly++)
-	{
-		//we want to swap the vectors
-		LTVector vO, vP, vQ;
-
-		vO = m_OriginalOPQs[nCurrPoly * 3 + 0];
-		vP = m_OriginalOPQs[nCurrPoly * 3 + 1];
-		vQ = m_OriginalOPQs[nCurrPoly * 3 + 2];
-
-		m_OriginalOPQs[nCurrPoly * 3 + 0] = polies[nCurrPoly]->GetTexture(GetCurrTexture()).GetO();
-		m_OriginalOPQs[nCurrPoly * 3 + 1] = polies[nCurrPoly]->GetTexture(GetCurrTexture()).GetP();
-		m_OriginalOPQs[nCurrPoly * 3 + 2] = polies[nCurrPoly]->GetTexture(GetCurrTexture()).GetQ();
-
-		polies[nCurrPoly]->SetTextureSpace(GetCurrTexture(), vO, vP, vQ);
-	}
-
-	//we have reset to the originals, so now create the undo
-	if(m_bCreateUndo)
-		SetupUndo();
-
-	//now restore the vectors
-	for(nCurrPoly = 0; nCurrPoly < polies.GetSize(); nCurrPoly++)
-	{
-		polies[nCurrPoly]->SetTextureSpace(GetCurrTexture(),	m_OriginalOPQs[nCurrPoly * 3 + 0],
-																m_OriginalOPQs[nCurrPoly * 3 + 1],
-																m_OriginalOPQs[nCurrPoly * 3 + 2]);
-	}
-
-	//all done
-	CDialog::OnOK();
-
-}
-
-void CMapTextureCoordsDlg::OnCancel()
-{
-	//save the window pos
-	CRect DlgArea;
-	GetWindowRect(DlgArea);
-	m_nWindowX = DlgArea.left;
-	m_nWindowY = DlgArea.top;
-
-	//the user cancelled so we want to reset all the texture coordinates
-	CMoArray<CEditPoly*> polies;
-	polies.SetCacheSize(50);
-	m_pView->GetSelectedPolies(polies);
-
-	for(uint32 nCurrPoly = 0; nCurrPoly < polies.GetSize(); nCurrPoly++)
-	{
-		polies[nCurrPoly]->SetTextureSpace(GetCurrTexture(),	m_OriginalOPQs[nCurrPoly * 3 + 0],
-																m_OriginalOPQs[nCurrPoly * 3 + 1],
-																m_OriginalOPQs[nCurrPoly * 3 + 2]);
-	}
-
-	//all done
-	CDialog::OnCancel();
-}
-
-void CMapTextureCoordsDlg::OnAutoApply()
-{
-	//update the boolean
-	UpdateData(TRUE);
-	GenericChangeHandler();
-}
-

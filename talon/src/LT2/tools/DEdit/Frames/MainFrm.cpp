@@ -24,7 +24,11 @@
 #include "advancedselect.h"
 #include "advancedselectdlg.h"
 #include "sysstreamsim.h"
+#include "d_filemgr.h"
+#include <math.h>
 #include "paletteedit.h"
+#include "preferencesdlg.h"
+#include "rezbuilddlg.h"
 #include "dedit_concommand.h"
 #include "texture.h"
 #include <dos.h>
@@ -41,30 +45,14 @@
 #include "spritedlg.h"
 #include "prefabdlg.h"
 #include "optionswindows.h"
-#include "optionsmodels.h"
-#include "optionsmisc.h"
 #include "texturedlg.h"
-#include "levelerrordlg.h"
-#include "renameresourcedlg.h"
-#include "prefabtrackerdlg.h"
-#include "objecttrackerdlg.h"
-#include "texturetrackerdlg.h"
-#include "leveltexturesdlg.h"
-#include "texturesearchreplacedlg.h"
-#include "objectsearchdlg.h"
-#include "levelitemsdlg.h"
-#include "objectselfilterdlg.h"
 
 //for the Rez file creation
 
 //for model rendering
 #include "eventnames.h"
-#include "modelmgr.h"
-#include "meshshapelist.h"
-#include "meshshape.h"
 
 //for updating world objects
-#include "UpdateAllObjects.h"
 
 
 
@@ -85,16 +73,25 @@ static char THIS_FILE[] = __FILE__;
 
 IMPLEMENT_DYNAMIC(CMainFrame, CMRCMDIFrameWndSizeDock)
 
+// talon: the 2001 commands whose ids Build 69's resource.h gives other
+// names or none (DEdit.rc's menus: "Group World Textures" 32954, "File
+// preferences" 32811, "Light Editing Mode" 40087, "Center views on the
+// marker" 40058).  The names are ours.
+#define ID_MAINFRM_GROUP_WORLD_TEXTURES	32954
+#define ID_MAINFRM_FILE_PREFERENCES		32811
+#define ID_MAINFRM_LIGHT_EDITMODE		40087
+
+// talon: 2001's message map (.rdata 0xd8430..0xd8970)
 BEGIN_MESSAGE_MAP(CMainFrame, CMRCMDIFrameWndSizeDock)
 	//{{AFX_MSG_MAP(CMainFrame)
-	ON_COMMAND_RANGE(ID_SELECT_TAB_WORLDSVIEW, ID_SELECT_TAB_PREFABVIEW, OnSelectTab)
+	ON_COMMAND_RANGE(ID_SELECT_TAB_WORLDSVIEW, ID_SELECT_TAB_CLASSVIEW, OnSelectTab)
 	ON_COMMAND(ID_RUN_WORLD, OnRunWorld)
 	ON_UPDATE_COMMAND_UI(ID_RUN_WORLD, OnUpdateRunWorld)
+	ON_COMMAND(ID_SHOW_WORLD_TEXTURES, OnShowWorldTextures)
 	ON_COMMAND(ID_SHOW_WORLD_CLASSES, OnShowWorldClasses)
+	ON_COMMAND(ID_MAINFRM_GROUP_WORLD_TEXTURES, OnGroupWorldTextures)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_DEBUGWINDOW, OnUpdateViewDebugWindow)
 	ON_COMMAND(ID_VIEW_DEBUGWINDOW, OnViewDebugWindow)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_TEXTUREPALETTE, OnUpdateViewTexturePalette)
-	ON_COMMAND(ID_VIEW_TEXTUREPALETTE, OnViewTexturePalette)
 	ON_UPDATE_COMMAND_UI(ID_SINGLE_NODE_SELECTION, OnUpdateSingleNodeSelection)
 	ON_UPDATE_COMMAND_UI(ID_MULTI_NODE_SELECTION, OnUpdateMultiNodeSelection)
 	ON_COMMAND(ID_SINGLE_NODE_SELECTION, OnSingleNodeSelection)
@@ -106,26 +103,9 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMRCMDIFrameWndSizeDock)
 	ON_WM_CREATE()
 	ON_COMMAND(ID_VIEW_PROJECT_WINDOW, OnViewProjectWindow)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_PROJECT_WINDOW, OnUpdateViewProjectWindow)
-	ON_COMMAND(ID_PREFAB_TRACKER, OnPrefabTracker)
-	ON_UPDATE_COMMAND_UI(ID_PREFAB_TRACKER, OnUpdatePrefabTracker)
-	ON_COMMAND(ID_OBJECT_TRACKER, OnObjectTracker)
-	ON_UPDATE_COMMAND_UI(ID_OBJECT_TRACKER, OnUpdateObjectTracker)
-	ON_COMMAND(ID_TEXTURE_TRACKER, OnTextureTracker)
-	ON_UPDATE_COMMAND_UI(ID_TEXTURE_TRACKER, OnUpdateTextureTracker)
-	ON_COMMAND(ID_SEARCH_REPLACE_IN_TEXTURES, OnSearchReplaceInTextures)
-	ON_UPDATE_COMMAND_UI(ID_SEARCH_REPLACE_IN_TEXTURES, OnUpdateSearchReplaceInTextures)
+	ON_COMMAND(ID_MAINFRM_FILE_PREFERENCES, OnFilePreferences)
 	ON_COMMAND(ID_VIEW_COLORSELECTION, OnViewColorSelection)
 	ON_UPDATE_COMMAND_UI(ID_VIEW_COLORSELECTION, OnUpdateViewColorSelection)
-	ON_COMMAND(ID_VIEW_LEVEL_ERROR, OnViewLevelError)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_LEVEL_ERROR, OnUpdateViewLevelError)
-	ON_COMMAND(ID_VIEW_LEVEL_ITEMS, OnViewLevelItems)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_LEVEL_ITEMS, OnUpdateViewLevelItems)
-	ON_COMMAND(ID_VIEW_LEVEL_TEXTURES, OnViewLevelTextures)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_LEVEL_TEXTURES, OnUpdateViewLevelTextures)
-	ON_COMMAND(ID_VIEW_OBJECT_SEARCH, OnViewObjectSearch)
-	ON_UPDATE_COMMAND_UI(ID_VIEW_OBJECT_SEARCH, OnUpdateViewObjectSearch)
-	ON_COMMAND(ID_OBJECT_SEL_FILTER, OnObjectSelFilter)
-	ON_UPDATE_COMMAND_UI(ID_OBJECT_SEL_FILTER, OnUpdateObjectSelFilter)
 	ON_WM_DESTROY()
 	ON_COMMAND(ID_GEOMETRY_EDITMODE, OnGeometryEditMode)
 	ON_UPDATE_COMMAND_UI(ID_GEOMETRY_EDITMODE, OnUpdateGeometryEditMode)
@@ -133,8 +113,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMRCMDIFrameWndSizeDock)
 	ON_UPDATE_COMMAND_UI(ID_OBJECT_EDITMODE, OnUpdateObjectEditMode)
 	ON_COMMAND(ID_BRUSH_EDITMODE, OnBrushEditMode)
 	ON_UPDATE_COMMAND_UI(ID_BRUSH_EDITMODE, OnUpdateBrushEditMode)
-	ON_COMMAND(ID_TEXTURE_PASS1, OnTexturePass1)
-	ON_COMMAND(ID_TEXTURE_PASS2, OnTexturePass2)
+	ON_UPDATE_COMMAND_UI(ID_MAINFRM_LIGHT_EDITMODE, OnUpdateLightEditMode)
 	ON_COMMAND(ID_CENTERONSELECTION, OnCenterOnSelection)
 	ON_UPDATE_COMMAND_UI(ID_CENTERONSELECTION, OnUpdateCenterOnSelection)
 	ON_WM_SETFOCUS()
@@ -159,13 +138,7 @@ BEGIN_MESSAGE_MAP(CMainFrame, CMRCMDIFrameWndSizeDock)
 	ON_UPDATE_COMMAND_UI(ID_EDIT_PALETTE, OnUpdateProjectOpen)
 	ON_COMMAND(ID_WINDOW_NEXT,MDINext)
 	ON_COMMAND(ID_VIEW_TOGGLE_FLOATING_TOOLBARS, OnViewToggleFloatingToolbars)
-	ON_MESSAGE(WM_USER_MODEL_LOADED, OnModelLoaded)
-	ON_COMMAND(ID_RENAME_RESOURCES, OnRenameResources)
-	ON_UPDATE_COMMAND_UI(ID_RENAME_RESOURCES, OnUpdateRenameResources)
-	ON_COMMAND(ID_UPDATE_WORLD_OBJECTS, OnUpdateWorldObjects)
-	ON_UPDATE_COMMAND_UI(ID_UPDATE_WORLD_OBJECTS, OnUpdateUpdateWorldObjects)
-	ON_COMMAND(ID_WORLD_SPECIAL_IGNORE_MSGS_IN_PREFABS, OnIgnoreMsgsInPrefabs)
-	ON_UPDATE_COMMAND_UI(ID_WORLD_SPECIAL_IGNORE_MSGS_IN_PREFABS, OnUpdateIgnoreMsgsInPrefabs)
+	ON_COMMAND(ID_MAINFRM_LIGHT_EDITMODE, OnLightEditMode)
 	//}}AFX_MSG_MAP
 	ON_WM_CLOSE()
 END_MESSAGE_MAP()
@@ -173,8 +146,7 @@ END_MESSAGE_MAP()
 static UINT indicators[] =
 {
 	ID_SEPARATOR,           // status line indicator
-	ID_INDICATOR_BRUSHNAME,
-	ID_INDICATOR_SELECTION,
+	// talon: 2001's seven (0x4f8964): no brush name or selection panes
 	ID_INDICATOR_TEXTURE,
 	ID_INDICATOR_VIEWTYPE,
 	ID_INDICATOR_GRID,
@@ -208,7 +180,6 @@ CMainFrame::CMainFrame()
 	m_bShown = FALSE;
 	m_bToolTips = TRUE;
 	m_bClosing = FALSE;
-	m_bIgnoreMsgsInPrefabs = TRUE;
 
 	m_projectControls.SetSize(0);
 }
@@ -244,7 +215,9 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 		TRACE0("Failed to create main toolbar\n");
 		return -1;      // fail to create
 	}
-	str.LoadString( IDS_STANDARD_TOOLBAR );
+	// talon: 2001 loads string 61446 (0x42e4ab), "an unnamed file" in
+	// DEdit.rc, not IDS_STANDARD_TOOLBAR's "Standard" (61448): retail.
+	str.LoadString( 61446 );
 	m_wndMainBar.SetWindowText( str );
 	m_wndMainBar.EnableDocking( CBRS_ALIGN_ANY );
 
@@ -364,55 +337,6 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	}
 	GetColorSelectDlg()->ShowWindow( SW_HIDE );
 
-	// Setup the level error dialog...
-	if( !GetLevelErrorDlg()->Create(IDD_LEVEL_ERROR, this) )
-	{
-		TRACE0("Failed to create the level error dialog.");
-		return -1;
-	}
-	GetLevelErrorDlg()->ShowWindow( SW_HIDE );
-
-	// Setup the level items dialog...
-	if( !GetLevelItemsDlg()->Create(IDD_LEVEL_ITEMS, this) )
-	{
-		TRACE0("Failed to create the level items dialog.");
-		return -1;
-	}
-	GetLevelItemsDlg()->ShowWindow( SW_HIDE );
-
-
-	// Setup the level textures dialog...
-	if( !GetLevelTexturesDlg()->Create(IDD_LEVEL_TEXTURES, this) )
-	{
-		TRACE0("Failed to create the level textures dialog.");
-		return -1;
-	}
-	GetLevelTexturesDlg()->ShowWindow( SW_HIDE );
-
-	// Setup the object search dialog...
-	if( !GetObjectSearchDlg()->Create(IDD_OBJECTSEARCH, this) )
-	{
-		TRACE0("Failed to create the object search dialog.");
-		return -1;
-	}
-	GetObjectSearchDlg()->ShowWindow( SW_HIDE );
-
-	// Setup the object selection filter dialog...
-	if( !GetObjectSelFilterDlg()->Create(IDD_OBJECTSELFILTER, this) )
-	{
-		TRACE0("Failed to create the object selection filter dialog.");
-		return -1;
-	}
-	GetObjectSelFilterDlg()->ShowWindow( SW_HIDE );
-
-	// Setup the rename resource dialog
-	if(!GetRenameResourceDlg()->Create(IDD_RENAMERESOURCE, this) )
-	{
-		TRACE0("Failed to create the rename resource dialog.");
-		return -1;
-	}
-	GetRenameResourceDlg()->ShowWindow( SW_HIDE );
-
 	// Create Project Bar...
 	InitProjectBar();
 
@@ -428,21 +352,12 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	DockControlBar( &m_NodeViewToolbar, AFX_IDW_DOCKBAR_TOP );
 	DockControlBar( &m_WorldEditToolbar, AFX_IDW_DOCKBAR_TOP );
 	DockControlBar( m_pProjectBar, AFX_IDW_DOCKBAR_LEFT );
-	ShowControlBar( &m_wndMainBar, (m_wndMainBar.GetStyle() & WS_VISIBLE) == 0, FALSE);
-	ShowControlBar( &m_NodeViewToolbar, (m_NodeViewToolbar.GetStyle() & WS_VISIBLE) == 0, FALSE);
-	ShowControlBar( &m_WorldEditToolbar, (m_WorldEditToolbar.GetStyle() & WS_VISIBLE) == 0, FALSE);
 	
 	// Get the window options
 	COptionsWindows *pOptions=GetApp()->GetOptions().GetWindowsOptions();
 
-	// Make sure that all of our control bars are visible
-	int32 i;
-	for (i=0; i < m_projectControls.GetSize(); i++)
-	{
-		ShowControlBar( m_projectControls[i]->m_pWnd, TRUE, FALSE );
-	}
-
 	// Create the project bars	
+	int32 i;
 	for (i=0; i < pOptions->GetNumMainControls(); i++)
 	{
 		CMRCSizeDialogBar *pControlBar=CreateProjectControlBar(pOptions->GetMainControl(i));
@@ -454,6 +369,13 @@ int CMainFrame::OnCreate(LPCREATESTRUCT lpCreateStruct)
 	// Load toolbar states from registry...
 	LoadBarState(_T("General"));
 	LoadSizeBarState(_T("General"));
+
+	// Make sure that all of our control bars are visible
+	// (2001, 0x42e98b: after the bar states are loaded)
+	for (i=0; i < m_projectControls.GetSize(); i++)
+	{
+		ShowControlBar( m_projectControls[i]->m_pWnd, TRUE, FALSE );
+	}
 
 	CSplashWnd::ShowSplashScreen(this);
 
@@ -498,12 +420,9 @@ CProjectControlBarInfo *CMainFrame::AddProjectControlInfo(CMoArray<CProjectContr
 			pControlInfo = new CProjectControlBarInfo(GetClassListDlg(), IDS_CLASSLIST, IDD_CLASSES_TABDLG, ID_SELECT_TAB_CLASSVIEW, controlType);
 			break;
 	case CB_PREFABVIEW:
-			pControlInfo = new CProjectControlBarInfo(GetPrefabDlg(), IDS_PREFABS, IDD_PREFAB_TABDLG, ID_SELECT_TAB_PREFABVIEW, controlType);
+			// talon: 2001's prefab tab command is 33009 (0x42ebd5)
+			pControlInfo = new CProjectControlBarInfo(GetPrefabDlg(), IDS_PREFABS, IDD_PREFAB_TABDLG, 33009, controlType);
 			break;
-	default:
-		{
-			return NULL;
-		}
 	}
 
 	ASSERT(pControlInfo);
@@ -629,29 +548,6 @@ void CMainFrame::UpdateStatusText(int nIndex, const char* szText)
 //  Purpose:	Puts Bar to the right of RightOf.
 //
 //--------------------------------------------------------------------------------
-void CMainFrame::DockControlBarRightOf( CToolBar* Bar,CToolBar* RightOf )
-{
-	CRect rect;
-	DWORD dw;
-	UINT n;
-
-	// get MFC to adjust the dimensions of all docked ToolBars
-	// so that GetWindowRect will be accurate
-	RecalcLayout();
-	RightOf->GetWindowRect(&rect);
-	rect.OffsetRect(1,0);
-	dw=RightOf->GetBarStyle();
-	n = 0;
-	n = (dw&CBRS_ALIGN_TOP) ? AFX_IDW_DOCKBAR_TOP : n;
-	n = (dw&CBRS_ALIGN_BOTTOM && n==0) ? AFX_IDW_DOCKBAR_BOTTOM : n;
-	n = (dw&CBRS_ALIGN_LEFT && n==0) ? AFX_IDW_DOCKBAR_LEFT : n;
-	n = (dw&CBRS_ALIGN_RIGHT && n==0) ? AFX_IDW_DOCKBAR_RIGHT : n;
-
-	// When we take the default parameters on rect, DockControlBar will dock
-	// each Toolbar on a seperate line.  By calculating a rectangle, we in effect
-	// are simulating a Toolbar being dragged to that location and docked.
-	DockControlBar(Bar,n,&rect);
-}
 
 
 //-----------------------------------------------------------------------------
@@ -667,6 +563,7 @@ extern TCHAR szRegKeyVer[];
 static TCHAR szMainWindow[] = _T( "MainWindow" );
 static TCHAR szColorSelectDlg[] = _T( "ColorSelectDlg" );
 static TCHAR szToolTips[] = _T( "ToolTips" );
+static TCHAR szDScriptEditor[] = _T( "DScriptEditor" );		// 2001
 static TCHAR szUndoPreferences[] = _T("Undo Preferences");
 static TCHAR szUndoPreferencesFormat[] = _T("%d %d %d %d");
 
@@ -726,6 +623,15 @@ void CMainFrame::RestoreRegistryInfo()
 			GetColorSelectDlg()->MoveWindow( left, top, width, height );
 			GetColorSelectDlg()->ShowWindow( bVisible ? SW_SHOW : SW_HIDE );
 		}
+
+		// 2001 (0x42ef86): the DScript editor, or the default.
+		// talon: string 32797 isn't in DEdit.rc's string table, so the
+		// default is empty (retail).
+		bufSize=256;
+		if( regMgr.Get( szDScriptEditor, temp, bufSize ) )
+			m_DScriptEditor = temp;
+		else
+			m_DScriptEditor.LoadString( 32797 );
 	
 		// Get the undo preferences...
 		bufSize=256;
@@ -782,6 +688,9 @@ void CMainFrame::SaveRegistryInfo()
 		GetColorSelectDlg()->GetWindowRect( &rect );
 		sprintf( keyVal, szColorDlgFormat, GetColorSelectDlg()->IsWindowVisible(), rect.left, rect.top, rect.Width(), rect.Height() );
 		regMgr.Set( szColorSelectDlg, keyVal);
+
+		// 2001 (0x42f1d2)
+		regMgr.Set( szDScriptEditor, m_DScriptEditor );
 	
 		sprintf( keyVal, szUndoPreferencesFormat, m_iUndoGeometry, m_iUndoTextures, m_iUndoProperties, m_iUndoGeneral );
 		regMgr.Set( szUndoPreferences, keyVal );
@@ -851,6 +760,131 @@ void CMainFrame::UpdateAllRegions( LPARAM hint )
 
 /////////////////////////////////////////////////////////////////////////////
 // CMainFrame message handlers
+
+static BOOL _FindNameInList(char *pTestName, CLinkedList<CString*> &names);
+static void _InsertStringIntoList(char *pString, CLinkedList<CString*> &theList);
+
+
+// talon: 2001's "Show World Textures" (0x42f331) and its size table
+// (0x42f2cf), written from the image; the names are ours.
+#define NUM_TEXTURE_SIZES	9
+
+static uint32 _GetTextureSizeIndex(uint32 size)
+{
+	switch(size)
+	{
+		case 16:	return 0;
+		case 32:	return 1;
+		case 64:	return 2;
+		case 128:	return 3;
+		case 256:	return 4;
+		case 512:	return 5;
+		case 1024:	return 6;
+		case 2048:	return 7;
+		case 4096:	return 8;
+		default:	return 0;
+	}
+}
+
+void CMainFrame::OnShowWorldTextures()
+{
+	CDocTemplate *pTemp = GetApp()->m_pWorldTemplate;
+	POSITION pos;
+	CRegionDoc *pDoc;
+	CString *pName;
+	uint32 iPoly, x, y, nBrushes;
+	LPOS brushPos, namePos;
+	CEditBrush *pBrush;
+	CEditPoly *pPoly;
+	char *pTextureName;
+	CTexture *pTexture;
+	DStream *pStream;
+	CLinkedList<CString*> textureNames;
+	CMoArray<CTexture*> textures;
+	uint32 sizeCounts[NUM_TEXTURE_SIZES][NUM_TEXTURE_SIZES];
+
+	memset(sizeCounts, 0, sizeof(sizeCounts));
+	textures.SetCacheSize(500);
+
+	// For each region doc.
+	for( pos=pTemp->GetFirstDocPosition(); pos != NULL; )
+	{
+		pDoc = (CRegionDoc*)pTemp->GetNextDoc(pos);
+
+		if(pDoc->IsKindOf(RUNTIME_CLASS(CRegionDoc)))
+		{	
+			// Build the list of texture names, and count the sizes.
+			for(brushPos=pDoc->m_Region.m_Brushes; brushPos; )
+			{
+				pBrush = pDoc->m_Region.m_Brushes.GetNext(brushPos);
+
+				for(iPoly=0; iPoly < pBrush->m_Polies.GetSize(); iPoly++)
+				{
+					pPoly = pBrush->m_Polies[iPoly];
+
+					pTextureName = pPoly->GetTexture(0).m_pTextureName;
+					if(!_FindNameInList(pTextureName, textureNames))
+					{
+						_InsertStringIntoList(pTextureName, textureNames);
+					}
+
+					pTexture = dib_GetDibTexture(pPoly->GetTexture(0).m_pTextureFile);
+					if(pTexture && textures.FindElement(pTexture) == BAD_INDEX)
+					{
+						sizeCounts[_GetTextureSizeIndex(pTexture->m_pDib->GetWidth())][_GetTextureSizeIndex(pTexture->m_pDib->GetHeight())]++;
+						textures.Append(pTexture);
+					}
+				}
+			}
+
+			// Print it to the debug window.
+			AddDebugMessage("");
+			AddDebugMessage("Textures for world %s", pDoc->m_FileName);
+			for(namePos=textureNames; namePos; )
+			{
+				pName = textureNames.GetNext(namePos);
+
+				CString fullName = dfm_GetFullFilename(GetFileMgr(), *pName);
+				pStream = streamsim_Open(fullName, "rb");
+				if(pStream)
+					pStream->Release();
+
+				// How many brushes use it.
+				nBrushes = 0;
+				for(brushPos=pDoc->m_Region.m_Brushes; brushPos; )
+				{
+					pBrush = pDoc->m_Region.m_Brushes.GetNext(brushPos);
+
+					for(iPoly=0; iPoly < pBrush->m_Polies.GetSize(); iPoly++)
+					{
+						if(stricmp(pBrush->m_Polies[iPoly]->GetTexture(0).m_pTextureName, *pName) == 0)
+						{
+							nBrushes++;
+							break;
+						}
+					}
+				}
+
+				AddDebugMessage("  %s (%d) %s", (LPCTSTR)(*pName), nBrushes, pStream ? "" : "(Invalid)");
+			}
+
+			AddDebugMessage("");
+			for(y=0; y < NUM_TEXTURE_SIZES; y++)
+			{
+				for(x=0; x < NUM_TEXTURE_SIZES; x++)
+				{
+					if(sizeCounts[y][x])
+					{
+						AddDebugMessage("%dx%d count: %d", (int)pow(2.0, (double)(y+4)), (int)pow(2.0, (double)(x+4)), sizeCounts[y][x]);
+					}
+				}
+			}
+
+			DeleteAndRemoveElements(textureNames);
+		}
+	}
+}
+
 
 static BOOL _FindNameInList(char *pTestName, CLinkedList<CString*> &names)
 {
@@ -940,15 +974,18 @@ void CMainFrame::OnShowWorldClasses()
 	}
 }
 
-BOOL FindName(CMoArray<char*> &textureNames, char *pName)
-{
-	for(DWORD i=0; i < textureNames; i++)
-	{
-		if(stricmp(textureNames[i], pName) == 0)
-			return TRUE;
-	}
 
-	return FALSE;
+// 2001's "File preferences" (0x42f912): the script editor's path, through
+// the "Script Editor Preference" dialog (IDD 183, its constructor 0x443ab5).
+void CMainFrame::OnFilePreferences()
+{
+	CPreferencesDlg dlg;
+
+	strcpy(dlg.m_szScriptEditor, m_DScriptEditor);
+	if(dlg.DoModal() == IDOK)
+	{
+		m_DScriptEditor = dlg.m_szScriptEditor;
+	}
 }
 
 void CMainFrame::OnViewProjectWindow() 
@@ -974,97 +1011,30 @@ void CMainFrame::OnUpdateViewProjectWindow(CCmdUI* pCmdUI)
 	}
 }
 
-void CMainFrame::OnPrefabTracker() 
-{
-	CPrefabTrackerDlg Dlg(this);
-	Dlg.DoModal();	
-}
-
-void CMainFrame::OnUpdatePrefabTracker(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable(GetProjectBar() && GetProjectBar()->IsProjectOpen());
-}
-
-void CMainFrame::OnObjectTracker() 
-{
-	CObjectTrackerDlg Dlg(this);
-	Dlg.DoModal();	
-}
-
-void CMainFrame::OnUpdateObjectTracker(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable(GetProjectBar() && GetProjectBar()->IsProjectOpen());
-}
-
-void CMainFrame::OnTextureTracker() 
-{
-	CTextureTrackerDlg Dlg(this);
-	Dlg.DoModal();	
-}
-
-void CMainFrame::OnUpdateTextureTracker(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable(GetProjectBar() && GetProjectBar()->IsProjectOpen());
-}
-
-void CMainFrame::OnSearchReplaceInTextures() 
-{
-	CTextureSearchReplaceDlg Dlg;
-	Dlg.DoModal();	
-}
 
 
-void CMainFrame::OnUpdateSearchReplaceInTextures(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable(GetProjectBar() && GetProjectBar()->IsProjectOpen());
-}
+
+
+
+
+
+
 
 
 void CMainFrame::OnOptions() 
 {
-	COptionsSheet	OptDlg("DEdit Options",this,0);
+	// 2001 (0x42f9cd): "DEdit", the autosave time, the mipmap offset and
+	// the run page; no backups, no misc or models pages
+	COptionsSheet	OptDlg("DEdit",this,0);
 
 	// Get the options
 	CDEditOptions *pOptions=&GetApp()->GetOptions();
 
 	// Set the autosave time
 	OptDlg.m_undoPage.m_dwAutoSaveTime		= pOptions->GetAutoSaveTime();
-	OptDlg.m_undoPage.m_bEnableAutoSave		= pOptions->IsAutoSave();
-	OptDlg.m_undoPage.m_nNumBackups			= pOptions->GetNumBackups();
-	OptDlg.m_undoPage.m_sBackupPath			= pOptions->GetAutoSavePath();
-	OptDlg.m_undoPage.m_bDeleteOnClose		= pOptions->DeleteOnClose();
 
 	if(OptDlg.DoModal() == IDOK)
 	{
-		// Check if the user changed the size of the undo buffer in the dialog.
-		// If so, resize the CMoArray, and set the new value in the options.
-		if (OptDlg.m_miscPage.DidUndoValueChange()) 
-		{
-			for(int i=0; i < m_pProjectBar->m_RegionDocs; i++ )
-			{
-				// Change array size
-				m_pProjectBar->m_RegionDocs[i]->m_UndoMgr.SetUndoLimit(pOptions->GetMiscOptions()->GetNumUndos());
-			}
-
-			// Save the number of undos in the options
-			//pOptions->SetNumUndos(OptDlg.m_miscPage.m_dwUndos);
-		}
-
-		//resize the memory of the model manager if applicable
-		if(pOptions->GetModelsOptions()->IsLimitMemoryUse())
-		{
-			GetApp()->GetModelMgr().SetMaxMemoryUsage(pOptions->GetModelsOptions()->GetMaxMemoryUse());
-		}
-		//we also need to have all the region objects update their class icons, and titles
-		for(uint32 nCurrDoc = 0; nCurrDoc < m_pProjectBar->m_RegionDocs; nCurrDoc++ )
-		{
-			//update class icons
-			m_pProjectBar->m_RegionDocs[nCurrDoc]->GetRegion()->UpdateObjectClassIcons();
-			//update the title
-			m_pProjectBar->m_RegionDocs[nCurrDoc]->SetTitleKeepModified();
-		}
-
-
 		BOOL offset = !!OptDlg.m_d3dPage.m_bBlurryTextures;
 
 		// Set the mipmap offset
@@ -1072,18 +1042,6 @@ void CMainFrame::OnOptions()
 		
 		// Set the autosave time
 		pOptions->SetAutoSaveTime(OptDlg.m_undoPage.m_dwAutoSaveTime);
-
-		// Set the number of backups
-		pOptions->SetNumBackups(OptDlg.m_undoPage.m_nNumBackups);
-
-		// Set whether or not backups are enabled
-		pOptions->EnableAutoSave(OptDlg.m_undoPage.m_bEnableAutoSave);
-
-		//set the path to where autosaves are stored
-		pOptions->SetAutoSavePath(OptDlg.m_undoPage.m_sBackupPath);
-
-		//set whether or not files should be deleted on close
-		pOptions->SetDeleteOnClose(OptDlg.m_undoPage.m_bDeleteOnClose);
 
 		// Update the run options
 		OptDlg.m_runPage.SaveOptions();
@@ -1110,73 +1068,15 @@ void CMainFrame::OnUpdateViewColorSelection(CCmdUI* pCmdUI)
 	pCmdUI->SetCheck( GetColorSelectDlg()->IsWindowVisible() );
 }
 
-void CMainFrame::OnViewLevelError() 
-{
-	if( GetLevelErrorDlg()->IsWindowVisible() )
-		GetLevelErrorDlg()->ShowWindow( SW_HIDE );
-	else
-		GetLevelErrorDlg()->ShowWindow( SW_SHOW );
-}
 
-void CMainFrame::OnUpdateViewLevelError(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck( GetLevelErrorDlg()->IsWindowVisible() );
-}
 
-void CMainFrame::OnViewLevelItems() 
-{
-	if( GetLevelItemsDlg()->IsWindowVisible() )
-		GetLevelItemsDlg()->ShowWindow( SW_HIDE );
-	else
-		GetLevelItemsDlg()->ShowWindow( SW_SHOW );
-}
 
-void CMainFrame::OnUpdateViewLevelItems(CCmdUI* pCmdUI) 
-{
-	pCmdUI->SetCheck( GetLevelItemsDlg()->IsWindowVisible() );
-}
 
-void CMainFrame::OnViewLevelTextures() 
-{
-	if( GetLevelTexturesDlg()->IsWindowVisible() )
-		GetLevelTexturesDlg()->ShowWindow( SW_HIDE );
-	else
-		GetLevelTexturesDlg()->ShowWindow( SW_SHOW );
-}
 
-void CMainFrame::OnUpdateViewLevelTextures(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable( GetNumRegionDocs() > 0 );
-	pCmdUI->SetCheck( GetLevelTexturesDlg()->IsWindowVisible() );
-}
 
-void CMainFrame::OnObjectSelFilter() 
-{
-	if( GetObjectSelFilterDlg()->IsWindowVisible() )
-		GetObjectSelFilterDlg()->ShowWindow( SW_HIDE );
-	else
-		GetObjectSelFilterDlg()->ShowWindow( SW_SHOW );
-}
 
-void CMainFrame::OnUpdateObjectSelFilter(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable( m_WorldEditMode == OBJECT_EDITMODE );
-	pCmdUI->SetCheck( GetObjectSelFilterDlg()->IsWindowVisible() );
-}
 
-void CMainFrame::OnViewObjectSearch() 
-{
-	if( GetObjectSearchDlg()->IsWindowVisible() )
-		GetObjectSearchDlg()->ShowWindow( SW_HIDE );
-	else
-		GetObjectSearchDlg()->ShowWindow( SW_SHOW );
-}
 
-void CMainFrame::OnUpdateViewObjectSearch(CCmdUI* pCmdUI) 
-{
-	pCmdUI->Enable( GetNumRegionDocs() > 0 );
-	pCmdUI->SetCheck( GetObjectSearchDlg()->IsWindowVisible() );
-}
 
 
 void CMainFrame::OnDestroy() 
@@ -1235,49 +1135,19 @@ DWORD GetDirectorySize(char* szPath)
 	return dwSize;
 }
 
+// 2001 (0x42fbe3): no confirmation, and the rez file is built by the
+// "Building Rez File" dialog (RezBuildDlg.cpp) through BuildRezFile.
 void CMainFrame::OnCreateRezFile()
 {
-	CProjectBar *pBar;
 	CString baseDir, filterStr, outputFilename;
+	CRezBuildDlg rezDlg;
 	char baseDirTitle[256];
-	int status;
 
-	pBar = GetProjectBar();
-
-	if(pBar->VerifyProjectIsOpen())
+	if(m_pProjectBar->VerifyProjectIsOpen())
 	{
 		// Get the name of the directory the resources are in.
 		baseDir = dfm_GetBaseDir(GetFileMgr());
 		CHelpers::ExtractNames(baseDir, NULL, NULL, baseDirTitle, NULL);
-
-		//Calculate the size of the rez file
-		char szOldPath[MAX_PATH];
-		GetCurrentDirectory(MAX_PATH,szOldPath);
-		DWORD dwSize = GetDirectorySize(baseDir.GetBuffer(0));
-		dwSize = dwSize / (DWORD)1024L; //convert to KBs
-		SetCurrentDirectory(szOldPath);
-
-
-		//lets make sure that they definately want to create the rez file
-	
-		//build up the string to display
-		CString sConfirmMsg;
-						
-		sConfirmMsg += "Creating the rez file may take a substantial amount of time.\n";
-		sConfirmMsg += "Are you sure you want to do this?\n\n";
-		
-		//show how big the rez file may be
-		CString sDiskSize;
-		sDiskSize.Format("Estimated size of Rez file: %.2fMB", dwSize / 1024.0f);
-
-		sConfirmMsg += sDiskSize;
-
-		//show the message box and give them a chance to back out
-		if(MessageBox(sConfirmMsg, "Rez file confirmation", MB_OKCANCEL | MB_ICONQUESTION) != IDOK)
-		{
-			return;
-		}
-
 
 		filterStr.LoadString(IDS_REZFILEFILTER);
 		
@@ -1287,54 +1157,29 @@ void CMainFrame::OnCreateRezFile()
 		CFileDialog FileDlg(FALSE, "rez", (LPCTSTR)outputFilename, OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT,
 			filterStr, GetMainFrame());
 
-		BOOL bSelectFile = TRUE;
-
-		while(bSelectFile)
+		while(FileDlg.DoModal() == IDOK)
 		{
-			if(FileDlg.DoModal() == IDOK)
+			//Calculate the size of the rez file
+			char szOldPath[MAX_PATH];
+			GetCurrentDirectory(MAX_PATH,szOldPath);
+			DWORD dwSize = GetDirectorySize(baseDir.GetBuffer(0));
+			dwSize = dwSize / (DWORD)1024L; //convert to KBs
+			SetCurrentDirectory(szOldPath);
+
+			//SCHLEGZ 1/23/98: check to see if we have enough space for a rez file
+			struct _diskfree_t diskfree;
+			int nDrive = _getdrive(); // use current default drive
+			if(_getdiskfree(nDrive, &diskfree) == 0 &&
+				dwSize < (DWORD)diskfree.avail_clusters * (DWORD)diskfree.sectors_per_cluster *
+					(DWORD)diskfree.bytes_per_sector / (DWORD)1024L)
 			{
-				//SCHLEGZ 1/23/98: check to see if we have enough space for a rez file
-				
-				//Calculate the size of memory free on disk
-				struct _diskfree_t diskfree;
-				DWORD dwDiskSpace = 0;
-				int nDrive = _getdrive(); // use current default drive
-				if (_getdiskfree(nDrive, &diskfree) == 0)
-				{
-					dwDiskSpace = (DWORD)diskfree.avail_clusters * (DWORD)diskfree.sectors_per_cluster *
-								  (DWORD)diskfree.bytes_per_sector / (DWORD)1024L;
-				}
-
-				//make sure there is space
-				if(dwSize < dwDiskSpace)
-				{
-					BeginWaitCursor();
-
-					//make sure that the resources are synced
-					pBar->Save();
-
-					//there is enough space, so lets save some strings and make a rez
-					//file
-					// talon: stand-in: Build 69 calls RezCompiler here
-					// (Engine/libs/rezmgr's rezutils, which the 2001 image
-					// hasn't); its own rez writing (0x0042fe0a) is to be
-					// written from the image.
-
-					EndWaitCursor();
-
-					bSelectFile = FALSE;
-				}
-				else
-				{
-					AfxMessageBox("There is not enough free disk space available on target drive.",MB_OK | MB_ICONSTOP);
-					bSelectFile = TRUE;
-				}
+				rezDlg.m_sRezFile = FileDlg.GetPathName();
+				rezDlg.m_sProjectDir = baseDir;
+				rezDlg.DoModal();
+				break;
 			}
-			else
-			{
-				//user hit cancel, so we don't want to select another file
-				bSelectFile = FALSE;
-			}
+
+			AfxMessageBox("There is not enough free disk space available on target drive.",MB_OK | MB_ICONSTOP);
 		}
 	}
 }
@@ -1350,6 +1195,12 @@ void CMainFrame::OnReloadPalettes()
 {
 }
 
+// talon: "Group World Textures" (32954) does nothing in 2001: its entry is
+// the shared empty function 0x42fe6f.  The name is ours.
+void CMainFrame::OnGroupWorldTextures()
+{
+}
+
 
 void CMainFrame::OnClose()
 {
@@ -1358,10 +1209,7 @@ void CMainFrame::OnClose()
 	// Save Registry information...
 	SaveRegistryInfo();	
 	
-	//save the last open project
-	CString sLastProject = GetProjectBar()->GetProjFilename();
-	GetApp()->GetOptions().GetMiscOptions()->SetStringValue("LastProject", sLastProject);
-
+	// (2001, 0x42fe70: no last project saved)
 	if( GetProjectBar() )
 		if( !GetProjectBar()->Close())
 			return;	
@@ -1423,8 +1271,6 @@ void CMainFrame::OnGeometryEditMode()
 
 void CMainFrame::OnUpdateGeometryEditMode(CCmdUI* pCmdUI) 
 {
-	CRegionView::SetMenuHotKeyText(UIE_GEOMETRY_EDIT_MODE, pCmdUI);
-
 	pCmdUI->Enable( GetNumRegionDocs() > 0 );
 	pCmdUI->SetRadio( GetWorldEditMode() == GEOMETRY_EDITMODE );
 }
@@ -1440,8 +1286,6 @@ void CMainFrame::OnObjectEditMode()
 
 void CMainFrame::OnUpdateObjectEditMode(CCmdUI* pCmdUI) 
 {
-	CRegionView::SetMenuHotKeyText(UIE_OBJECT_EDIT_MODE, pCmdUI);
-
 	pCmdUI->Enable( GetNumRegionDocs() > 0 );
 	pCmdUI->SetRadio( GetWorldEditMode() == OBJECT_EDITMODE );
 }
@@ -1460,21 +1304,31 @@ void CMainFrame::OnBrushEditMode()
 
 void CMainFrame::OnUpdateBrushEditMode(CCmdUI* pCmdUI) 
 {
-	CRegionView::SetMenuHotKeyText(UIE_BRUSH_EDIT_MODE, pCmdUI);
-
 	pCmdUI->Enable( GetNumRegionDocs() > 0 );
 	pCmdUI->SetRadio( GetWorldEditMode() == BRUSH_EDITMODE );
 }
 
-void CMainFrame::OnTexturePass1()
+// talon: 2001's light editing mode (0x4300b3, 0x4300cf; Ctrl+L)
+#ifndef LIGHT_EDITMODE
+#define LIGHT_EDITMODE		3
+#endif
+
+void CMainFrame::OnLightEditMode() 
 {
-	SetCurrTexture(0);
+	m_WorldEditMode = LIGHT_EDITMODE;
+	UpdateAllRegions( REGIONVIEWUPDATE_EDITMODE );
+
+	// Update the menubar with the mode menus
+	UpdateModeMenus();
 }
 
-void CMainFrame::OnTexturePass2()
+void CMainFrame::OnUpdateLightEditMode(CCmdUI* pCmdUI) 
 {
-	SetCurrTexture(1);
+	pCmdUI->Enable( GetNumRegionDocs() > 0 );
+	pCmdUI->SetRadio( GetWorldEditMode() == LIGHT_EDITMODE );
 }
+
+
 
 
 /************************************************************************/
@@ -1549,6 +1403,9 @@ void CMainFrame::UpdateModeMenus()
 
 /************************************************************************/
 // Centers the views on the current selection
+// 2001 (0x4302d4): the views look at the selection's centre (or the
+// marker), a perspective view from as far as the selection's largest half
+// dimension.
 void CMainFrame::OnCenterOnSelection() 
 {
 	//run through all currently open documents
@@ -1556,30 +1413,29 @@ void CMainFrame::OnCenterOnSelection()
 	{
 		CRegionDoc *pRegionDoc = m_pProjectBar->m_RegionDocs[i];
 
-		LTVector vMin = pRegionDoc->GetRegion( )->m_vMarker;
-		LTVector vMax = pRegionDoc->GetRegion( )->m_vMarker;
+		CVector vCenter;
+		float fDist;
 
 		if( pRegionDoc->GetRegion()->m_Selections > 0 )
 		{
-			vMin = pRegionDoc->m_SelectionMin;
-			vMax = pRegionDoc->m_SelectionMax;
+			CVector vHalfDims;
+			vHalfDims = (pRegionDoc->m_SelectionMax - pRegionDoc->m_SelectionMin) * 0.5f;
+			if( vHalfDims.Mag() < 0.001 )
+			{
+				vCenter = pRegionDoc->m_SelectionMin;
+				fDist = 100.0f;
+			}
+			else
+			{
+				vCenter = pRegionDoc->m_SelectionMin + vHalfDims;
+				fDist = LTMAX(vHalfDims.x, LTMAX(vHalfDims.y, vHalfDims.z));
+			}
 		}
-
-		//make sure that each dimension has at least some specified size
-		LTVector vCenter = (vMin + vMax) / 2;
-
-		//make them dimensions instead of points
-		vMin -= vCenter;
-		vMax -= vCenter;
-
-		static const float kfMinAxisDistance = 1.0f;
-		VEC_MIN(vMin, vMin, LTVector(kfMinAxisDistance, kfMinAxisDistance, kfMinAxisDistance));
-		VEC_MAX(vMax, vMax, LTVector(kfMinAxisDistance, kfMinAxisDistance, kfMinAxisDistance));
-
-		//give a little bit of a buffer space around the selection
-		static const float kfBufferSpaceScale = 1.2f;
-		vMin = vMin * kfBufferSpaceScale;
-		vMax = vMax * kfBufferSpaceScale;
+		else
+		{
+			vCenter = pRegionDoc->GetRegion( )->m_vMarker;
+			fDist = 100.0f;
+		}
 
 		//alright, now we need to reposition each and every view		
 		for(POSITION pos = pRegionDoc->GetFirstViewPosition(); pos; )
@@ -1587,99 +1443,36 @@ void CMainFrame::OnCenterOnSelection()
 			//make sure that this is one of our views
 			CView *pView = pRegionDoc->GetNextView(pos);
 		
-			if( !pView->IsKindOf(RUNTIME_CLASS(CRegionView)) )
+			if( pView->IsKindOf(RUNTIME_CLASS(CRegionView)) )
 			{
-				continue;
-			}
+				CRegionView *pRegionView = (CRegionView*)pView;
 
-			CRegionView *pRegionView = (CRegionView*)pView;
-
-			if( pRegionView->IsPerspectiveViewType() )
-			{
-				//for the perspective view, we keep the same forward vector, and then need to control
-				//the distance from a point. We do this for each and every point and then move the position back
-
-				//determine the smallest view angle
-				CPerspectiveViewDef* pPerspViewDef = (CPerspectiveViewDef*)pRegionView->m_pViewDef;
-				float fSmallestAngle = LTMIN(pPerspViewDef->GetHorzFOV(), pPerspViewDef->GetVertFOV()) / 2.0f;
-
-				float fTanAngle = (float)fabs(tan(fSmallestAngle));
-
-				//alright, now we need to find the largest 'move back' distance
-				LTVector vBBoxPts[8];
-				vBBoxPts[0].Init(vMin.x, vMin.y, vMin.z);
-				vBBoxPts[1].Init(vMin.x, vMin.y, vMax.z);
-				vBBoxPts[2].Init(vMin.x, vMax.y, vMin.z);
-				vBBoxPts[3].Init(vMin.x, vMax.y, vMax.z);
-				vBBoxPts[4].Init(vMax.x, vMin.y, vMin.z);
-				vBBoxPts[5].Init(vMax.x, vMin.y, vMax.z);
-				vBBoxPts[6].Init(vMax.x, vMax.y, vMin.z);
-				vBBoxPts[7].Init(vMax.x, vMax.y, vMax.z);
-
-				float fSmallestDist = 100000.0f;
-				
-				const LTVector& vForward = pRegionView->Nav().Forward();
-
-				for(uint32 nCurrPt = 0; nCurrPt < 8; nCurrPt++)
+				if( pRegionView->IsPerspectiveViewType() )
 				{
-					float fPtDotForward = vForward.Dot(vBBoxPts[nCurrPt]);
-
-					//find the distance along the forward vector that we would need to be
-					LTVector vParallel = vForward * fPtDotForward;
-					LTVector vPerp = vBBoxPts[nCurrPt] - vParallel;
-					float fBoxPtDist = vPerp.Mag();
-
-					if(fPtDotForward < 0.0f)
-						fBoxPtDist = -fBoxPtDist * 2.0f;
-
-					float fCurrDist = fBoxPtDist / fTanAngle;
-
-					if(fCurrDist < fSmallestDist)
+					if( !pRegionView->IsWalkThroughMovement() )
 					{
-						fSmallestDist = fCurrDist;
+						pRegionView->Nav().m_LookAt = vCenter;
+						pRegionView->Nav().UpdateLooking();
+					}
+					else
+					{
+						pRegionView->Nav().Pos() = vCenter - pRegionView->Nav().Forward() * fDist;
 					}
 				}
-
-				//now all we need to do is position the camera.
-				LTVector vPos = vCenter + vForward * fSmallestDist;
-
-				pRegionView->Nav().Pos() = vPos;
-			}
-			else
-			{
-				//we are in an ortho view, what we need to do is center it on the center,
-				//and find the scale we need
-				LTVector vCamPos = vCenter;
-
-				// Remove the displacement from centerPoint along normal and add in current
-				// displacement...
-				vCamPos += pRegionView->Nav().Forward( ) * 
-					( pRegionView->Nav().Forward( ).Dot( pRegionView->Nav().Pos( ) - vCamPos ));
-
-				//now transform that point into our space
-				LTVector vTransMax = pRegionView->m_pView->m_Transform * (vMax + vCenter);
-				LTVector vTransCenter = pRegionView->m_pView->m_Transform * vCenter;
-
-				//make sure we can access the info
-				if(pRegionView->m_pViewDef && pRegionView->m_pViewDef->m_pInfo)
+				else
 				{
-					//now make it so that the extent will map to the edge of the view
-					float fMagX = pRegionView->m_pViewDef->m_pInfo->m_fHalfWidth / fabs(vTransMax.x - vTransCenter.x);
-					float fMagY = pRegionView->m_pViewDef->m_pInfo->m_fHalfHeight / fabs(vTransMax.y - vTransCenter.y);
-
-					//setup that magnify scale to whichever shows more
-					pRegionView->m_pViewDef->m_Magnify = LTMIN(fMagX, fMagY);
+					// Remove the displacement from centerPoint along normal and add in current
+					// displacement...
+					CVector vCamPos = vCenter;
+					vCamPos += pRegionView->Nav().Forward( ) * 
+						( pRegionView->Nav().Forward( ).Dot( pRegionView->Nav().Pos( ) - vCamPos ));
+					pRegionView->Nav().Pos() = vCamPos;
 				}
-
-				//setup the final position
-				pRegionView->Nav().Pos() = vCamPos;
 			}
 		}
 
 		pRegionDoc->RedrawAllViews();
 	}
-
-//	UpdateAllRegions( REGIONVIEWUPDATE_REDRAW );
 }
 
 void CMainFrame::OnUpdateCenterOnSelection(CCmdUI* pCmdUI) 
@@ -1724,8 +1517,17 @@ void CMainFrame::CenterViewsAtVector(CVector vCenter, BOOL bCenterPerspective)
 			{
 				if (bCenterPerspective)
 				{
-					// Move the camera to the marker
-					pRegionView->Nav().Pos() = vCenter;
+					// 2001 (0x430615): an orbiting camera looks at it
+					if (!pRegionView->IsWalkThroughMovement())
+					{
+						pRegionView->Nav().m_LookAt = vCenter;
+						pRegionView->Nav().UpdateLooking();
+					}
+					else
+					{
+						// Move the camera to the marker
+						pRegionView->Nav().Pos() = vCenter;
+					}
 				}
 			}
 			else
@@ -1794,54 +1596,60 @@ void CMainFrame::OnUpdateMDINext(CCmdUI* pCmdUI)
 
 //Given a world name, this will use the options and launch a process to run the 
 //specified world name
-bool CMainFrame::RunWorld(const char* pszWorldName)
+// 2001 (0x430765): one function, the world's own .dat (its name less its
+// three-letter extension), the arguments' %WorldName% replaced, and the
+// frame not minimized.
+void CMainFrame::OnRunWorld()
 {
 	// The run options
 	COptionsRun *pOptions=GetApp()->GetOptions().GetRunOptions();
 	if (!pOptions)
 	{
-		return false;
+		return;
 	}
 
 	// Make sure a project is open.
 	if(!GetProjectBar()->VerifyProjectIsOpen())
 	{
-		return false;
+		return;
 	}		
-	
-	//get the name of the .dat file (essentially the name of the file, minus 
-	//the extension)
 
-	//can't just remove a certain number of characters since there could be .ed, .lta
-	//etc. Should just move back and truncate after the first period -JohnO
-	CString sDatFilename = pszWorldName;
-	
-	for(int32 nCurrChar = sDatFilename.GetLength() - 1; nCurrChar >= 0; nCurrChar--)
+	// Get the frame
+	CRegionFrame *pFrame = (CRegionFrame *)MDIGetActive();	
+	if (!pFrame)
 	{
-		//don't continue any further if there is a slash
-		if(sDatFilename[(int)nCurrChar] == '\\')
-		{
-			break;
-		}
-		//otherwise, if it is a period, this is the first one, and where we want to
-		//truncate
-		if(sDatFilename[(int)nCurrChar] == '.')
-		{
-			sDatFilename = sDatFilename.Left(nCurrChar);
-			break;
-		}
+		return;
 	}
+
+	// Get the active document
+	CRegionDoc *pDoc = (CRegionDoc *)pFrame->GetActiveDocument();
+	if (!pDoc)	
+	{
+		return;
+	}	
+
+	// The world filename
+	CString sFilename = pDoc->m_FileName;
+	if (sFilename.GetLength() < 4)
+	{
+		return;
+	}
+
+	// The .dat file
+	CString sDatFilename = sFilename.Left(sFilename.GetLength()-3);
 
 	// Verify that the .dat file exists
 	if (_access(sDatFilename + ".dat", 00) != 0)
 	{
 		MessageBox("Error: Cannot find the .dat file for your world.  Please run the processor.",
 				   "Cannot find file", MB_OK | MB_ICONERROR);
-		return false;
+		return;
 	}
 
 	// Get the project base directory
 	CString sBaseProjectDir=GetProject()->m_BaseProjectDir;
+	sBaseProjectDir.MakeUpper();
+	sDatFilename.MakeUpper();
 	
 	// Make sure that the file is within the base project
 	if (sBaseProjectDir.GetLength() > sBaseProjectDir.GetLength() ||
@@ -1849,7 +1657,7 @@ bool CMainFrame::RunWorld(const char* pszWorldName)
 	{
 		MessageBox("Error: Your .dat file must be in your project path.",
 				   "Invalid file path", MB_OK | MB_ICONERROR);
-		return false;
+		return;
 	}
 
 	// Get the relative path to the file but subtracting the base project directory from it
@@ -1857,18 +1665,7 @@ bool CMainFrame::RunWorld(const char* pszWorldName)
 		
 	// Create the program arguments string by replacing the "%WorldName%" string with the world name
 	CString sArguments=pOptions->GetProgramArguments();
-
-	CString sArgumentsUpper = sArguments;
-	sArgumentsUpper.MakeUpper();
-
-	int nWorldNamePos = sArgumentsUpper.Find("%WORLDNAME%");
-	if(nWorldNamePos != -1)
-	{
-		//we have the world name, so we need to replace it in the original string
-		sArguments =	sArguments.Left(nWorldNamePos) + 
-						sRelativePath + 
-						sArguments.Mid(nWorldNamePos + strlen("%WORLDNAME%"));
-	}
+	sArguments.Replace("%WorldName%", sRelativePath);
 
 	// Create the command line
 	CString sCommandLine=pOptions->GetExecutable()+" "+sArguments;
@@ -1883,11 +1680,8 @@ bool CMainFrame::RunWorld(const char* pszWorldName)
 		MessageBox("Error: Cannot change working directory to: \""+pOptions->GetWorkingDirectory()+"\" "+
 				   "Please verify your settings in the DEdit options dialog.",
 				   "Cannot change directory", MB_OK | MB_ICONERROR);
-		return false;
+		return;
 	}
-
-	// Minimize so it doesn't mess with our mojo
-	AfxGetMainWnd()->ShowWindow(SW_MINIMIZE);
 
 	// The create process structures
 	PROCESS_INFORMATION processInfo;
@@ -1905,32 +1699,6 @@ bool CMainFrame::RunWorld(const char* pszWorldName)
 
 	// Change the working directory back
 	_chdir(szCurrentDir);
-
-	//succes 
-	return true;
-}
-
-void CMainFrame::OnRunWorld()
-{
-	// Get the frame
-	CRegionFrame *pFrame = (CRegionFrame *)MDIGetActive();	
-	if (!pFrame)
-	{
-		return;
-	}
-
-	// Get the active document
-	CRegionDoc *pDoc = (CRegionDoc *)pFrame->GetActiveDocument();
-	if (!pDoc)	
-	{
-		return;
-	}	
-
-	// The world filename
-	CString sFilename = pDoc->m_FileName;
-
-	//Now run the world
-	RunWorld(sFilename);
 }
 
 
@@ -1956,30 +1724,8 @@ void CMainFrame::OnViewDebugWindow()
 }
 
 
-void CMainFrame::OnUpdateViewTexturePalette(CCmdUI *pCmdUI)
-{
-	if( GetProjectBar( )->IsProjectOpen() )
-	{
-		pCmdUI->SetCheck(IsWindow(GetTextureDlg()->m_AllTextureDlg.m_hWnd));
-	}
-}
 
 
-void CMainFrame::OnViewTexturePalette()
-{
-	if( GetProjectBar( )->VerifyProjectIsOpen() )
-	{
-		if( IsWindow( GetTextureDlg()->m_AllTextureDlg.m_hWnd ))
-		{
-			GetTextureDlg()->m_AllTextureDlg.DestroyWindow();
-		}
-		else
-		{
-			GetTextureDlg()->m_AllTextureDlg.Create(IDD_ALLTEXTUREDLG, this );
-			GetTextureDlg()->m_AllTextureDlg.ShowWindow( SW_SHOW );
-		}
-	}
-}
 
 
 void CMainFrame::OnUpdateSingleNodeSelection( CCmdUI *pCmdUI )
@@ -1988,22 +1734,18 @@ void CMainFrame::OnUpdateSingleNodeSelection( CCmdUI *pCmdUI )
 	pCmdUI->SetCheck( m_NodeSelectionMode == SINGLE_SELECTION );
 }
 
+// 2001 (0x430ba1, 0x430c40): both clear every region's selections.
 void CMainFrame::OnSingleNodeSelection()
 {
 	DWORD			i;
 
-	
 	m_NodeSelectionMode = SINGLE_SELECTION;
 
 	for( i=0; i < m_pProjectBar->m_RegionDocs; i++ )
 	{
-		// if we have more than one item selected, we need to clear the selections
-		if (m_pProjectBar->m_RegionDocs[i]->GetRegion()->GetNumSelections() > 1)
-		{
-			m_pProjectBar->m_RegionDocs[i]->GetRegion()->ClearSelections();
-			m_pProjectBar->m_RegionDocs[i]->NotifySelectionChange();
-			m_pProjectBar->m_RegionDocs[i]->RedrawAllViews();
-		}
+		m_pProjectBar->m_RegionDocs[i]->GetRegion()->ClearSelections();
+		m_pProjectBar->m_RegionDocs[i]->NotifySelectionChange();
+		m_pProjectBar->m_RegionDocs[i]->RedrawAllViews();
 	}
 }
 
@@ -2019,15 +1761,12 @@ void CMainFrame::OnMultiNodeSelection()
 
 	m_NodeSelectionMode = MULTI_SELECTION;
 	
-	// No longer clear selections
-	/*
 	for( i=0; i < m_pProjectBar->m_RegionDocs; i++ )
 	{
 		m_pProjectBar->m_RegionDocs[i]->GetRegion()->ClearSelections();
 		m_pProjectBar->m_RegionDocs[i]->NotifySelectionChange();
 		m_pProjectBar->m_RegionDocs[i]->RedrawAllViews();
 	}
-	*/
 }
 
 
@@ -2102,39 +1841,10 @@ void CMainFrame::OnUpdateViewTooltips( CCmdUI* pCmdUI )
 //				Returns TRUE when hits zero.
 //
 //-----------------------------------------------------------------------------
-BOOL CMainFrame::CountUndo( UINT &iUndo, UINT &iResetVal )
-{
-	if( iUndo )
-		iUndo--;
 
-	if( iUndo == 0 && iResetVal )
-	{
-		iUndo = iResetVal;
-		return TRUE;
-	}
 
-	return FALSE;
-}
 
-BOOL CMainFrame::CountUndoGeometry( )
-{
-	return CountUndo( m_iCurUndoGeometry, m_iUndoGeometry );
-}
 
-BOOL CMainFrame::CountUndoTextures( )
-{
-	return CountUndo( m_iCurUndoTextures, m_iUndoTextures );
-}
-
-BOOL CMainFrame::CountUndoProperties( )
-{
-	return CountUndo( m_iCurUndoProperties, m_iUndoProperties );
-}
-
-BOOL CMainFrame::CountUndoGeneral( )
-{
-	return CountUndo( m_iCurUndoGeneral, m_iUndoGeneral );
-}
 
 //-----------------------------------------------------------------------------
 //
@@ -2151,13 +1861,6 @@ void CMainFrame::SetUndoPreferencesDefault( UINT &iGeometry, UINT &iTextures, UI
 	iGeneral = 1;
 }
 
-void CMainFrame::SetUndoPreferencesCoarse( UINT &iGeometry, UINT &iTextures, UINT &iProperties, UINT &iGeneral )
-{
-	iGeometry = 5;
-	iTextures = 10;
-	iProperties = 10;
-	iGeneral = 10;
-}
 
 void CMainFrame::OnSelectTab(UINT id)
 {
@@ -2253,101 +1956,4 @@ void CMainFrame::OnViewToggleFloatingToolbars()
 			ShowControlBar(m_pProjectBar, TRUE, FALSE);
 		}
 	}
-}
-
-
-//this message is sent whenever a model manager completes loading up a model,
-//this indicates that the views need to be redrawn, and the memory management
-//on the model manager needs to be performed
-LRESULT CMainFrame::OnModelLoaded(WPARAM, LPARAM lParam)
-{
-	//update the memory for the model manager
-	if(GetApp()->GetOptions().GetModelsOptions()->IsLimitMemoryUse())
-	{
-		GetApp()->GetModelMgr().SetMaxMemoryUsage(GetApp()->GetOptions().GetModelsOptions()->GetMaxMemoryUse());
-	}
-
-	//now we need to update the textures for the model that was just loaded
-	CModelMesh *pMesh = (CModelMesh*)lParam;
-
-	for(uint32 nCurrShape = 0; nCurrShape < pMesh->GetShapeList()->GetNumShapes(); nCurrShape++)
-	{
-		CMeshShape* pShape = pMesh->GetShapeList()->GetShape(nCurrShape);
-
-		//now update the texture
-		if(pShape->GetTextureFilename())
-		{
-			const char* pszFilename = pShape->GetTextureFilename();
-
-			//see if we need to skip over any slashes
-			if((pszFilename[0] == '\\') || (pszFilename[0] == '/'))
-				pszFilename++;
-
-			//try and load in the image
-			if(dfm_GetFileIdentifier(GetFileMgr(), pszFilename, &pShape->m_pTextureFile) != DFM_OK)
-			{
-				//we have failed
-				pShape->m_pTextureFile = NULL;		
-			}
-		}
-	}
-
-	//now tell all the views to update
-	POSITION Position;
-	for( Position = GetApp()->m_pWorldTemplate->GetFirstDocPosition(); Position != NULL; )
-	{
-		CRegionDoc* pDoc = (CRegionDoc*)GetApp()->m_pWorldTemplate->GetNextDoc( Position );
-		if( pDoc != NULL )
-		{
-			pDoc->RedrawAllViews();
-		}
-	}	
-
-	return 0;
-}
-
-void CMainFrame::OnRenameResources()
-{
-	GetRenameResourceDlg()->ShowWindow(SW_SHOW);
-}
-
-void CMainFrame::OnUpdateRenameResources(CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(GetProjectBar() && GetProjectBar()->IsProjectOpen());
-}
-
-void CMainFrame::OnUpdateWorldObjects()
-{
-	UpdateAllLevelObjects();
-}
-
-void CMainFrame::OnUpdateUpdateWorldObjects( CCmdUI* pCmdUI)
-{
-	pCmdUI->Enable(GetProjectBar() && GetProjectBar()->IsProjectOpen());
-}
-
-//-----------------------------------------------------------------------------
-//
-//  CMainFrame::OnIgnoreMsgsInPrefabs()
-//
-//  Purpose:	Handles toggle of ignore prefab properties.
-//
-//-----------------------------------------------------------------------------
-
-void CMainFrame::OnIgnoreMsgsInPrefabs() 
-{
-	m_bIgnoreMsgsInPrefabs = !m_bIgnoreMsgsInPrefabs;
-}
-
-//-----------------------------------------------------------------------------
-//
-//  CMainFrame::OnUpdateIgnoreMsgsInPrefabs()
-//
-//  Purpose:	Handles updating menu for ignore prefab properties check.
-//
-//-----------------------------------------------------------------------------
-
-void CMainFrame::OnUpdateIgnoreMsgsInPrefabs( CCmdUI* pCmdUI ) 
-{
-	pCmdUI->SetCheck( m_bIgnoreMsgsInPrefabs );
 }

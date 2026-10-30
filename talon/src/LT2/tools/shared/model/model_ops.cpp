@@ -105,3 +105,33 @@ void model_SetAnimFramerate(Model *pModel, unsigned long iAnim, float framerate)
 		}
 	}
 }
+
+
+#ifdef DIRECTEDITOR_BUILD
+// talon: DEdit's model_ops has Build 69's model_GetDimsFromBounding too
+// (0x43a144, after model_load's code): the old model dims reader
+// (DEdit/LoadModelDims.cpp, 0x42da61) calls it.  ModelEdit's has not.
+
+// {BP 1/20/98}
+// Moved this code to this function because it was used in a couple places...
+void model_GetDimsFromBounding( LTVector *pvBoundMax, LTVector *pvBoundMin, LTVector *pvDims )
+{
+	LTVector vDimsMax;
+
+	// Set the model dims from the first frame of the first animation bounding box...
+	// Not sure if BoundMin is always negative and BoundMax is always positive,
+	// so got to do some absolute values...
+	pvDims->x = ( pvBoundMin->x > 0.0f ) ? pvBoundMin->x : -pvBoundMin->x;
+	pvDims->y = ( pvBoundMin->y > 0.0f ) ? pvBoundMin->y : -pvBoundMin->y;
+	pvDims->z = ( pvBoundMin->z > 0.0f ) ? pvBoundMin->z : -pvBoundMin->z;
+	vDimsMax.x = ( pvBoundMax->x > 0.0f ) ? pvBoundMax->x : -pvBoundMax->x;
+	vDimsMax.y = ( pvBoundMax->y > 0.0f ) ? pvBoundMax->y : -pvBoundMax->y;
+	vDimsMax.z = ( pvBoundMax->z > 0.0f ) ? pvBoundMax->z : -pvBoundMax->z;
+	if( pvDims->x < vDimsMax.x )
+		pvDims->x = vDimsMax.x;
+	if( pvDims->y < vDimsMax.y )
+		pvDims->y = vDimsMax.y;
+	if( pvDims->z < vDimsMax.z )
+		pvDims->z = vDimsMax.z;
+}
+#endif

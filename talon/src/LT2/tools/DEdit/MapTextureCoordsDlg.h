@@ -14,59 +14,34 @@ class CRegionView;
 /////////////////////////////////////////////////////////////////////////////
 // CMapTextureCoordsDlg dialog
 
+// talon: the 2001 dialog (0x431464..0x431bd2): applied with Apply or OK,
+// relative to the polies' current mapping; no undo of its own, no auto
+// apply, no saved originals.
 class CMapTextureCoordsDlg : public CDialog
 {
 // Construction
 public:
-	CMapTextureCoordsDlg(CWnd* pParent = NULL);   // standard constructor
+	CMapTextureCoordsDlg(CRegionView *pView);	// 0x431464
 
 // Dialog Data
 	//{{AFX_DATA(CMapTextureCoordsDlg)
 	enum { IDD = IDD_MAPTEXTURECOORDS };
-	float	m_UOffset;
-	float	m_VOffset;
-	float	m_UScale;
-	float	m_VScale;
-	float	m_Rotation;
+	float	m_UOffset;			// 0x5c
+	float	m_VOffset;			// 0x60
+	float	m_UScale;			// 0x64
+	float	m_VScale;			// 0x68
+	float	m_Rotation;			// 0x6c
+	BOOL	m_bStick;			// 0x70: "Stick", copied to each poly's 0x70
+	BOOL	m_bXZOnly;			// 0x74: "XZ Only"
 	//}}AFX_DATA
 
-	BOOL m_bAutoApply;
-	int  m_nWindowX;
-	int  m_nWindowY;
+	CRegionView *m_pView;		// 0x78
+	int		m_TextureWidth, m_TextureHeight;	// 0x7c, 0x80
+	float	m_RefRotation;		// 0x84: the rotation already applied
+	float	m_UOffsetDelta, m_VOffsetDelta;		// 0x88, 0x8c: the offsets' changes not yet applied
 
-	//the region in which this brush exists (for undo purposes)
-	CRegionView *m_pView;
-
-	//the dimensions of the texture
-	int m_TextureWidth, m_TextureHeight;
-
-	// Used to figure out how much to rotate by.
-	float m_RefRotation; 
-
-	// The initial U and V values to create deltas
-	float m_UStart, m_VStart; 
-	
-	void DoFlip(DWORD iAxis);
-	void ApplyChanges();
-
-private:
-
-	//determine if an undo will be needed or not
-	BOOL m_bCreateUndo;
-
-	//determine if this dialog has been initialized yet....this is to avoid
-	//problems with windows sending update messages too early
-	BOOL m_bInitialized;
-
-	void SetupUndo();
-
-	BOOL OnInitDialog();
-	void OnOK();
-	void OnCancel();
-
-	bool	m_bUMirror, m_bVMirror;
-
-	CMoArray<LTVector>	m_OriginalOPQs;
+	void	DoFlip(DWORD iAxis);
+	void	ApplyChanges();
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -78,17 +53,11 @@ private:
 // Implementation
 protected:
 
-	//reads the values from the controls into the internal member variables
-	//but doesn't use DDX so dialogs will not pop up to prompt for numbers, etc
-	void UpdateDataNoDDX();
-
 	// Generated message map functions
 	//{{AFX_MSG(CMapTextureCoordsDlg)
 	afx_msg void OnApply();
-	afx_msg void OnAutoApply();
 	afx_msg void OnFlipX();
 	afx_msg void OnFlipY();
-	afx_msg void GenericChangeHandler();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
