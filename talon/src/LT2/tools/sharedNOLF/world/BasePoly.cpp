@@ -120,9 +120,11 @@ BOOL CBasePoly::IsValid()
 }
 
 
-void CBasePoly::DecrementPoints( uint32 index )
+// talon: WORDs in 2001: 0x401550 takes the index as a WORD and counts in
+// one, against NumVerts() (signed compares of the promoted WORDs)
+void CBasePoly::DecrementPoints( WORD index )
 {
-	for( uint32 i=0; i < m_Indices; i++ )
+	for( WORD i=0; i < NumVerts(); i++ )
 		if( m_Indices[i] >= index )
 			--m_Indices[i];
 }
@@ -151,9 +153,10 @@ BOOL CBasePoly::PointInPoly( const LTVector &point )
 }
 
 
+// talon: a 16-bit counter in 2001: 0x4015a0 sign-extends it from 16 bits
 void CBasePoly::RemoveCollinearVertices()
 {
-	int32			i;
+	int16			i;
 	CVector			v1, v2;
 
 	for( i=0; i < (int32)m_Indices; i++ )
@@ -293,6 +296,13 @@ CEditVert& CBasePoly::Pt( uint32 i )
 	return m_pBrush->m_Points[m_Indices[i]];
 }
 
+// talon: not inline in 2001 either: 0x402360, which RemoveCollinearVertices
+// calls (0x4015dd)
+CEditVert& CBasePoly::PrevPt( uint32 i )
+{
+	return m_pBrush->m_Points[m_Indices.Prev(i)];
+}
+
 CEditVert& CBasePoly::NextPt( uint32 i )
 {
 	return m_pBrush->m_Points[m_Indices.Next(i)];
@@ -380,9 +390,10 @@ BOOL CBasePoly::Left( WORD a, WORD b, WORD c )
 //                      in the vicinity of a.
 // ----------------------------------------------------------------------- //
 
+// talon: WORDs in 2001: 0x402250 truncates both neighbours to 16 bits
 BOOL CBasePoly::InsideDiagonal( WORD a, WORD b )
 {
-    uint32	a_plus_1, a_minus_1;
+    WORD	a_plus_1, a_minus_1;
 
     a_plus_1 = m_Indices.NextI( a );
     a_minus_1 = m_Indices.PrevI( a );

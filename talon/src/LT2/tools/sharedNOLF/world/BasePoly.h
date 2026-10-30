@@ -65,7 +65,7 @@
 			virtual void		CopyAttributes( CBasePoly *pOther, CStringHolder *pStringHolder=NULL )	{}
 			
 			// Decrements all points >= index.
-			void				DecrementPoints( uint32 index );
+			void				DecrementPoints( WORD index );
 
 			// Tells if the point is in the polygon's plane or in the poly itself.
 			BOOL				PointInPlane(const LTVector &point );
@@ -112,7 +112,7 @@
 			CEditVert&			Pt( uint32 i );
 
 			CEditVert&			NextPt( uint32 i );
-			CEditVert&			PrevPt( uint32 i )		{ return m_pBrush->m_Points[m_Indices.Prev(i)]; }
+			CEditVert&			PrevPt( uint32 i );
 			CEditVert&			LastPt()				{ return m_pBrush->m_Points[m_Indices.Last()]; }
 			
 		
