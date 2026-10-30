@@ -73,7 +73,20 @@ cvtres 1735, and 82 objects without `@comp.id`.
   LightMapMaker, WorldNode and EditBrush: 6, 1, 1, 1 and 1 functions,
   against 4.0's 52, 72, 309, 105 and 60) and inlines into EH-framed
   functions too. So it is 4.0, and probably another build of it than
-  ours (the original 5.0, unheld, is unlikely if 5.0.1 is this far). /Ob0 for a whole file is the
+  ours (the original 5.0, unheld, is unlikely if 5.0.1 is this far).
+  Nor is it a back-end setting of ours (mcpcom's `-m` options, which icl
+  passes through). `/Ob0` is `-mIPOPT_inline_limit=0
+  -mIPOPT_opt_mask=0xfffe`; clearing bit 4 of the mask alone does the
+  same (bit 7 changes other code; the rest change nothing here). The
+  inliner's reasons for not inlining (its trace strings: size limits, call
+  weights, recursion, asm, `#pragma optimize` off, a dtor thunk) have none
+  about EH. `-mIPOPT_inline_max_total_stats` is the only threshold that
+  moves anything; every value tried (150..400; the default lies above)
+  matches more functions but fewer bytes over the icl objects. The inline
+  script (`/Qip -mIPOPT_script_control=2 -mIPOPT_script_output=`) dumps
+  every function's inline tree, but reading one back
+  (`script_control=1`, `-mIPOPT_script_input=`) turns all inlining off in
+  a one-file compile, so it can't steer call sites either. /Ob0 for a whole file is the
   stand-in where it wins (Processor.dsp: streamsim, ProcessorApp,
   EditObjects, create_world_tree, BuildHulls).
 - **`X$$1`** is a second entry point: a function with 8-byte locals gets
