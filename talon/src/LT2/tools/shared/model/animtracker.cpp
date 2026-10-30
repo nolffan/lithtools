@@ -28,7 +28,7 @@ LTBOOL AnimTimeRef::SetKeyframePosition(
 		return false;
 
 	dwTime1 = pAnim->m_KeyFrames[iFrame1].m_Time;
-	dwTime2 = pAnim->m_KeyFrames[iFrame1].m_Time;
+	dwTime2 = pAnim->m_KeyFrames[iFrame2].m_Time;	// talon: 2001's (0x401708); Build 69 reads iFrame1 twice
 	dwTime = (uint32)(dwTime1 + (float)(dwTime2 - dwTime1) * fPercent);
 
 	m_Prev.m_iAnim = (uint16)iAnim;
@@ -48,10 +48,14 @@ LTBOOL AnimTimeRef::SetKeyframePosition(
 void trk_Init(LTAnimTracker *pTracker, Model *pModel, uint32 iAnim)
 {
 	pTracker->m_StringKeyCallback = NULL;
+	pTracker->m_pUser1 = NULL;
 	pTracker->SetModel(pModel);
 	pTracker->m_CurKey = 0;
 	pTracker->m_Flags = 0;
 	pTracker->m_InterpolationMS = 0;
+	pTracker->m_TimeScaleNum = 1;
+	pTracker->m_TimeScaleDenom = 1;
+	pTracker->m_bAllowInterpolation = TRUE;
 	pTracker->m_TimeRef.m_Prev.Clear();
 	pTracker->m_TimeRef.m_Cur.Clear();
 	pTracker->m_TimeRef.m_Percent = 0.0f;
@@ -84,12 +88,18 @@ void trk_Update(LTAnimTracker *pTracker, uint32 msDelta)
 {
 	if(pTracker->m_Flags & AT_PLAYING)
 	{
-		trk_ScanToKeyFrame(pTracker, msDelta, TRUE);
+		// talon: 2001's tracker plays at m_TimeScaleNum / m_TimeScaleDenom (0x4017d8).
+		msDelta *= pTracker->m_TimeScaleNum;
+
+		if(pTracker->m_TimeScaleDenom == 0)
+			pTracker->m_TimeScaleDenom = 1;
+
+		trk_ScanToKeyFrame(pTracker, msDelta / pTracker->m_TimeScaleDenom, TRUE);
 	}
 }
 
 
-bool trk_IsStopped(LTAnimTracker *pTracker)
+LTBOOL trk_IsStopped(LTAnimTracker *pTracker)
 {
 	uint32 iEndKey, endTime;
 	ModelAnim *pAnim;
@@ -112,7 +122,7 @@ bool trk_IsStopped(LTAnimTracker *pTracker)
 }
 
 
-void trk_SetCurTime(LTAnimTracker *pTracker, uint32 msTime, bool bTransition)
+void trk_SetCurTime(LTAnimTracker *pTracker, uint32 msTime, LTBOOL bTransition)
 {
 	// If we're not transitioning, then prev should move to the same keyframe as cur.
 	if(!pTracker->IsValid() || !bTransition)
@@ -131,7 +141,7 @@ void trk_SetCurTime(LTAnimTracker *pTracker, uint32 msTime, bool bTransition)
 }
 
 
-bool trk_SetCurAnim(LTAnimTracker *pTracker, char *sName, bool bTransition)
+LTBOOL trk_SetCurAnim(LTAnimTracker *pTracker, char *sName, LTBOOL bTransition)
 {
 	ModelAnim *pAnim;
 	uint32 iAnim;
@@ -144,15 +154,22 @@ bool trk_SetCurAnim(LTAnimTracker *pTracker, char *sName, bool bTransition)
 }
 
 
-bool trk_SetCurAnim(LTAnimTracker *pTracker, uint32 iAnim, bool bTransition)
+// 0x40182a
+LTBOOL trk_SetCurAnim(LTAnimTracker *pTracker, uint32 iAnim, LTBOOL bTransition)
 {
+	uint32 iWeightSet;
+	ModelAnim *pAnim;
+
 	if(!pTracker->AllowInvalid())
 	{
 		if(iAnim >= pTracker->GetModel()->m_Anims)
 			return FALSE;
 	}
 
+	// talon: 2001's keeps the previous frame locator's weight set.
+	iWeightSet = pTracker->m_TimeRef.m_Prev.m_iWeightSet;
 	pTracker->m_TimeRef.m_Prev = pTracker->m_TimeRef.m_Cur;
+	pTracker->m_TimeRef.m_Prev.m_iWeightSet = iWeightSet;
 
 	pTracker->m_TimeRef.m_Percent = 0.0f;
 	pTracker->m_TimeRef.m_Cur.m_iAnim = (uint16)iAnim;
@@ -160,7 +177,15 @@ bool trk_SetCurAnim(LTAnimTracker *pTracker, uint32 iAnim, bool bTransition)
 	pTracker->m_TimeRef.m_Cur.m_iFrame = 0;
 	pTracker->m_TimeRef.m_Cur.m_Time = 0;
 
-	if(bTransition && pTracker->IsValid())
+	// No transition into an animation that doesn't interpolate.
+	if(bTransition)
+	{
+		pAnim = pTracker->GetModel()->GetAnim(iAnim);
+		if(pAnim)
+			bTransition = pAnim->m_InterpolationMS > 0;
+	}
+
+	if(bTransition && pTracker->IsValid() && pTracker->m_bAllowInterpolation)
 	{
 		// Start the interpolation.
 		pTracker->m_InterpolationMS = 0;
@@ -178,6 +203,7 @@ bool trk_SetCurAnim(LTAnimTracker *pTracker, uint32 iAnim, bool bTransition)
 void trk_Reset(LTAnimTracker *pTracker)
 {
 	pTracker->m_TimeRef.m_Prev.m_iAnim = pTracker->m_TimeRef.m_Cur.m_iAnim;
+	pTracker->m_TimeRef.m_Prev.m_iWeightSet = pTracker->m_TimeRef.m_Cur.m_iWeightSet;
 	pTracker->m_CurKey = 0;
 	pTracker->m_TimeRef.m_Prev.m_iFrame = pTracker->m_TimeRef.m_Cur.m_iFrame = 0;
 	pTracker->m_TimeRef.m_Prev.m_Time = pTracker->m_TimeRef.m_Cur.m_Time = 0;
@@ -232,6 +258,12 @@ static void trk_ProcessKey(LTAnimTracker *pTracker, ModelAnim *pAnim, uint32 iFr
 		if(pFrame->m_pString[0] != 0 && pTracker->m_StringKeyCallback != NULL)
 		{
 			pTracker->m_StringKeyCallback(pTracker, pFrame, LTNULL, LTFALSE);
+		}
+
+		// talon: 2001's: the last key also sends "LTAnim_End" (0x401a98).
+		if(iFrame == pAnim->m_KeyFrames.GetSize() - 1 && pTracker->m_StringKeyCallback != NULL && pFrame->m_Time > 1)
+		{
+			pTracker->m_StringKeyCallback(pTracker, pFrame, "LTAnim_End", LTTRUE);
 		}
 		
 		pNextPosition = trk_NextPositionFrame(pTracker, iFrame+1, iNextPosition);
@@ -333,7 +365,7 @@ void trk_SetAtKeyFrame(LTAnimTracker *pTracker, uint32 msDelta)
 	}
 }
 
-void trk_ScanToKeyFrame(LTAnimTracker *pTracker, uint32 msDelta, bool bProcessKeys)
+void trk_ScanToKeyFrame(LTAnimTracker *pTracker, uint32 msDelta, LTBOOL bProcessKeys)
 {
 	uint32 startTime;
 	uint32 iEndKey;

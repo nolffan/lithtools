@@ -95,6 +95,6 @@ EulerAngles Eul_(float ai, float aj, float ah, int order);
 LTRotation Eul_ToQuat(EulerAngles ea);
 void Eul_ToMatrix(EulerAngles ea, LTMatrix &M);
 EulerAngles Eul_FromMatrix(LTMatrix& M, int order);
-EulerAngles Eul_FromQuat(LTRotation& q, int order);
+EulerAngles Eul_FromQuat(LTRotation q, int order);
 
 #endif

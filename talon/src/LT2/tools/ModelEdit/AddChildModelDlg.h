@@ -7,28 +7,27 @@
 // AddChildModelDlg.h : header file
 //
 
+#include "stringdlg.h"
+
 /////////////////////////////////////////////////////////////////////////////
 // CAddChildModelDlg dialog
+//
+// talon: 2001's (0x401062..0x401298): a CStringDlg on dialog 181, "Select
+// child model(s)", whose Browse button fills the edit field from a
+// multiple-selection file dialog. Build 69's is a CFileDialog template.
 
-class CAddChildModelDlg : public CFileDialog
+class CAddChildModelDlg : public CStringDlg
 {
-	DECLARE_DYNAMIC(CAddChildModelDlg)
-
 public:
-	CAddChildModelDlg(BOOL bOpenFileDialog, // TRUE for FileOpen, FALSE for FileSaveAs
-		LPCTSTR lpszDefExt = NULL,
-		LPCTSTR lpszFileName = NULL,
-		DWORD dwFlags = OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
-		LPCTSTR lpszFilter = NULL,
-		CWnd* pParentWnd = NULL);
-
-	virtual void OnInitDone( );	
+	CAddChildModelDlg(CWnd* pParent = NULL);
 
 	BOOL	m_bScaleSkeleton;
 
 protected:
+	virtual void DoDataExchange(CDataExchange* pDX);
+
 	//{{AFX_MSG(CAddChildModelDlg)
-		afx_msg void OnCheck();
+	afx_msg void OnBrowse();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

@@ -30,23 +30,17 @@ public:
 
 
 	// Set this before running the dialog.
+	// talon: 2001's is a modal dialog for the selected animations
+	// (0x402165..0x40243f): m_Anims holds 1024 (0x114..0x1114).
 	Model *m_pModel;
-	int m_Anims[100];
+	int m_Anims[1024];
 	int m_nAnims;
-
-	// put the current dimensions into the edit controls
-	void UpdateControls();
-
-	//given an animation and a keyframe, this will find the dims that encompass the
-	//model
-	static bool FindAnimDims(Model* pModel, uint32 nAnim, uint32 nKeyFrame, LTVector& vDims);
 
 // Overrides
 	// ClassWizard generated virtual function overrides
 	//{{AFX_VIRTUAL(CDimensionsDlg)
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
-	virtual void PostNcDestroy();
 	//}}AFX_VIRTUAL
 
 // Implementation
@@ -54,17 +48,10 @@ protected:
 
 	// Generated message map functions
 	//{{AFX_MSG(CDimensionsDlg)
+	virtual void OnOK();
 	virtual BOOL OnInitDialog();
-	afx_msg void OnApply();
-	afx_msg void OnShowWindow(BOOL bShow, UINT nStatus);
-	afx_msg void OnDone();
-	afx_msg void OnUseCurAnim();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
-
-private:
-	// modify the models dimensions based on values in the dialog
-	void SetDimensions();
 };
 
 //{{AFX_INSERT_LOCATION}}

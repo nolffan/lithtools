@@ -115,7 +115,7 @@ EulerAngles Eul_FromMatrix(LTMatrix& M, int order)
 }
 
 /* Convert quaternion to Euler angles (in radians). */
-EulerAngles Eul_FromQuat(LTRotation& q, int order)
+EulerAngles Eul_FromQuat(LTRotation q, int order)
 {
     LTMatrix M;
     float Nq = q[0]*q[0]+q[1]*q[1]+q[2]*q[2]+q[3]*q[3];

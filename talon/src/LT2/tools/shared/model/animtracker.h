@@ -29,16 +29,17 @@
 
 	void trk_Update(LTAnimTracker *pTracker, uint32 msDelta);
 	
-	bool trk_IsStopped(LTAnimTracker *pTracker);
-	void trk_SetCurTime(LTAnimTracker *pTracker, uint32 msTime, bool bTransition);
+	// talon: LTBOOL, as the 2001 image tests them (Build 69: bool).
+	LTBOOL trk_IsStopped(LTAnimTracker *pTracker);
+	void trk_SetCurTime(LTAnimTracker *pTracker, uint32 msTime, LTBOOL bTransition);
 
-	bool trk_SetCurAnim(LTAnimTracker *pTracker, char *sName, bool bTransition);
-	bool trk_SetCurAnim(LTAnimTracker *pTracker, uint32 iAnim, bool bTransition);
+	LTBOOL trk_SetCurAnim(LTAnimTracker *pTracker, char *sName, LTBOOL bTransition);
+	LTBOOL trk_SetCurAnim(LTAnimTracker *pTracker, uint32 iAnim, LTBOOL bTransition);
 	
 	// Resets the current animation to its start position.
 	void trk_Reset(LTAnimTracker *pTracker);
 
-	void trk_ScanToKeyFrame(LTAnimTracker *pTracker, uint32 msDelta, bool bProcessKeys);
+	void trk_ScanToKeyFrame(LTAnimTracker *pTracker, uint32 msDelta, LTBOOL bProcessKeys);
 	void trk_SetAtKeyFrame(LTAnimTracker *pTracker, uint32 msDelta);
 
 
@@ -111,7 +112,7 @@
 		pTracker->m_Flags |= AT_PLAYING;
 	}
 	
-	inline void trk_Loop(LTAnimTracker *pTracker, bool bLoop)
+	inline void trk_Loop(LTAnimTracker *pTracker, LTBOOL bLoop)
 	{
 		if(bLoop)
 			pTracker->m_Flags |= AT_LOOPING;
@@ -119,7 +120,7 @@
 			pTracker->m_Flags &= ~AT_LOOPING;
 	}
 
-	inline void trk_Play(LTAnimTracker *pTracker, bool bPlaying)
+	inline void trk_Play(LTAnimTracker *pTracker, LTBOOL bPlaying)
 	{
 		if(bPlaying)
 			pTracker->m_Flags |= AT_PLAYING;

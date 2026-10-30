@@ -29,6 +29,9 @@ public:
 	// Set this before running the dialog.
 	Model *m_pModel;
 
+	// talon: 2001's: the string the helper controls build (0x9c).
+	char	m_szCommandString[2000];
+
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -44,7 +47,13 @@ protected:
 	//{{AFX_MSG(CCommandStringDlg)
 	virtual void OnOK();
 	virtual BOOL OnInitDialog();
+	afx_msg void OnChangeHelperControl();
+	afx_msg void OnChangeCommandString();
 	//}}AFX_MSG
+
+	// talon: 2001's command helper controls (0x401d68, 0x401e31).
+	void	UpdateCommandString();
+	void	UpdateControls();
 	DECLARE_MESSAGE_MAP()
 };
 
