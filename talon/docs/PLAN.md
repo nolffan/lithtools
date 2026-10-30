@@ -361,7 +361,18 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     nothing unresolved. Brought back so far: DAT version 66, no AI volumes,
     no light groups, NOLF's option names, its resources (decompiled). First
     score: 1,058 identical of 2,633 (34.8%).
-  - [ ] The modules, by source file (the map's table and differences).
+  - [~] The modules, by source file (the map's table and differences).
+    First round (2026-10-30, seven agents): NOLF's SDK and StdLith headers,
+    /EHa, NOLF's lighting (vertex colours, 16-bit lightmaps), world format,
+    staged processing, options dialog and tokenizer: 1,297 identical of
+    2,587 (42.4%). The rest is mostly held by icl's no-inlining into
+    EH-framed functions (the map's "How icl 4.0 compiled it"); still to
+    write: EditBrush's splitters (0x412770..0x4154f0), Terrain and
+    TJunctions from the image, CPreWorld::LoadFile's format, PreWorld's
+    older STL.
+  - [ ] Behaviour: `tests/processor-nolf.sh`, the six sample worlds of the
+    Tools 001 with DEdit's default options and with lighting and full
+    visibility (the shipped exe is deterministic on all twelve).
 
 ## 2b. The other tools (on the scoreboard since 2026-10-24)
 

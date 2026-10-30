@@ -53,6 +53,53 @@ cvtres 1735, and 82 objects without `@comp.id`.
   .tmp/rename logic, `_snprintf`, an inverse trig function). The image's
   that ours lacks: rtti.obj (a `dynamic_cast` or `typeid` somewhere).
 
+## How icl 4.0 compiled it (what the first round learned)
+
+- **/EHa.** A new-expression keeps `this` in a stack slot it never reads
+  and stores the result twice more (CBoolProp::CreateSameKind 0x454b80,
+  streamsim_Open 0x455a00): icl 4.0 gives that with /EHa, not /GX alone.
+  Locals and `this` live in stack slots, not registers, under it.
+- **Nothing is inlined into a function with an EH frame, nor is a
+  function that has one inlined anywhere.** Elsewhere icl inlines as
+  usual. So the small helpers the image has out of line (CMoArray's
+  constructor, Init, GetSize, operator[]; ILTStream's 13-byte implicit
+  constructor 0x456ab0; MFC's AfxGetApp, IsIconic, ...) are there because
+  EH-framed functions call them. Our icl 4.0 (build 99100, the trial)
+  inlines into those too, under every switch and pragma tried (/EHs,
+  /Ob1, /Qip_no_inlining, /Qvc6, `#pragma inline_depth(0)`,
+  `auto_inline`, mcpcom without `-mGLOB_new_eh`); icl 4.5 is further
+  off. Probably an earlier 4.0 build. /Ob0 for a whole file is the
+  stand-in where it wins (Processor.dsp: streamsim, ProcessorApp,
+  EditObjects, create_world_tree, BuildHulls).
+- **`X$$1`** is a second entry point: a function with 8-byte locals gets
+  a 14-byte realigning stub (`push ebx; mov ebx,esp; and esp,-16; ...;
+  jmp`) and its body, `$$1`, which aligned callers call directly. The
+  function table splits them, as it does each function's unwind funclets.
+  What makes icl align a frame isn't always visible (InitProcessOptions
+  has no double on its stack).
+- **`if(!x) return CONST;`** as its own statement gives a `jne +2; jmp
+  <shared return>` island; folded into an enclosing if or `&&` it gives a
+  plain `je`. A void function's early return copies the epilogue.
+- **Blocks follow the source:** an if's first arm falls through; a
+  ternary puts its second operand out of line.
+- **Register choice follows statement order** where statements don't
+  depend on each other, and moves with unrelated code in the object (the
+  same inlined SetSize in CompressLightMap and CompressShadowMap). Unused
+  locals change operand order the way VC6's declaration count does
+  (BasePoly: Intersect or Left matches, by the count alone).
+- A constant divisor reached through a local isn't reduced to a shift
+  (ShowStatusText 0x44f1fe). Floating-point values live across a call are
+  spilled as doubles. `T *p = new X;` takes one more slot than declaring
+  `p` and then assigning it.
+- Every function is its own COMDAT, so the unreferenced ones aren't in
+  the image (not missing rows); a file's functions come out first, then
+  the COMDAT copies of the inlines they called.
+- The headers are NOLF's (sdkNOLF/inc, lithshared/stdlithNOLF, from
+  nolfsrc): ILTMath without SetupEuler(vec) or GetEulerAngles,
+  `sb_Free` testing only the object. PreWorld.cpp's STL is older than
+  our STLport 4.0 (SGI 3.x: the deque's map first, 42-element buffers,
+  the node allocator's `(n+7)>>3`): not yet a tree of ours.
+
 ## Layout (libscan.py)
 
 | Range | What | Source |
