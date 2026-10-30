@@ -1641,7 +1641,7 @@ void CMainFrame::OnCenterOnSelection()
 				}
 
 				//now all we need to do is position the camera.
-				LTVector vPos = vCenter + fSmallestDist * vForward;
+				LTVector vPos = vCenter + vForward * fSmallestDist;
 
 				pRegionView->Nav().Pos() = vPos;
 			}

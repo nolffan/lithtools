@@ -488,8 +488,8 @@ void DrawBase::DrawPolyLines(CEditPoly *pPoly, int xOffset, int yOffset, DWORD l
 
 	if(pPoly->NumVerts() >= 2)
 	{
-		uint32* pStart = pPoly->m_Indices.GetArray();
-		uint32* pEnd = pStart + pPoly->NumVerts();
+		WORD* pStart = pPoly->m_Indices.GetArray();	// talon: WORDs in 2001
+		WORD* pEnd = pStart + pPoly->NumVerts();
 
 		uint32* pPrevIndex = pEnd - 1;
 

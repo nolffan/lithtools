@@ -319,22 +319,8 @@ void CPropertiesControls::CreateControls()
 		m_nControls++;
 
 
-		if(pProp->m_PropFlags & PF_COMPOSITETYPE)
-		{
-			// this property is a composite type.  the property name specifies which custom controls to use
-			if( 0 == strcmp( pProp->m_Name, "LightAttenuation" ) )
-			{
-				pButton = new CButton;
-				pButton->Create( "...", WS_CHILD | WS_VISIBLE | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i );
-				m_Controls[i] = pButton;
-			}
-			else
-			{
-				ASSERT( 0 );	// a composite type of unknown type was found, ignoring it
-				m_Controls[i] = NULL;
-			}
-		}
-		else if(pProp->m_PropFlags & PF_GROUPOWNER)
+		// talon: no PF_COMPOSITETYPE (Build 69's light attenuation presets) in the LT2 SDK
+		if(pProp->m_PropFlags & PF_GROUPOWNER)
 		{
 			// this button launches a modal dialog for setting a group of properties
 			pButton = new CButton;
@@ -362,7 +348,7 @@ void CPropertiesControls::CreateControls()
 						m_Controls[i] = pPropEditStringList;
 						
 						// Check to see if this has the PF_FILENAME flag
-						if ((pProp->m_PropFlags & PF_FILENAME) || (pProp->m_PropFlags & PF_TEXTUREEFFECT))
+						if ((pProp->m_PropFlags & PF_FILENAME))
 						{
 							if ( pProp->m_PropFlags & PF_DYNAMICLIST )
 							{
@@ -397,7 +383,7 @@ void CPropertiesControls::CreateControls()
 						m_Controls[i] = pPropEditString;
 						
 						// Check to see if this has the PF_FILENAME flag
-						if ((pProp->m_PropFlags & PF_FILENAME) || (pProp->m_PropFlags & PF_TEXTUREEFFECT))
+						if ((pProp->m_PropFlags & PF_FILENAME))
 						{
 							pPropEditString->AddButton("B", this, PROPDLG_ID_BASE+i, m_pFont);
 							pPropEditString->SetButtonWidth(14);
@@ -1147,38 +1133,17 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 			pProp = m_pPropList->m_Props[offset];
 			ASSERT( pProp );
 
-			if(pProp->m_PropFlags & PF_COMPOSITETYPE)
-			{
-				// this is a composite type, name of prop is the name of the type
-				if( 0 == strcmp( pProp->m_Name, "LightAttenuation" ) )
-				{
-					// this is a light attenuation composite type
-					if( notifyCode == BN_CLICKED )
-					{
-						CLightAttenuationDlg lightAttenuationDlg( m_pPropList );
-
-						lightAttenuationDlg.DoModal();
-					}
-				}
-				else
-				{
-					ASSERT( 0 );
-				}
-			}
-			else if(pProp->m_PropFlags & PF_EVENT)
-			{
-				CEventEditorDlg Dlg(this, this);
-				Dlg.DoModal();
-			}
-			else if(pProp->m_PropFlags & PF_GROUPOWNER)
+			// talon: no PF_COMPOSITETYPE (Build 69's light attenuation presets) in the LT2 SDK
+			// talon: no PF_EVENT (Build 69's event editor) in the LT2 SDK
+			if(pProp->m_PropFlags & PF_GROUPOWNER)
 			{
 				if(notifyCode == BN_CLICKED)
 				{
 					// Get all the group properties.
-					groupMask = GET_PF_GROUP(pProp->m_PropFlags);
+					groupMask = (pProp->m_PropFlags & PF_GROUPMASK);
 					for(i=0; i < m_pPropList->m_Props; i++)
 					{
-						if(GET_PF_GROUP(m_pPropList->m_Props[i]->m_PropFlags) == groupMask)
+						if((m_pPropList->m_Props[i]->m_PropFlags & PF_GROUPMASK) == groupMask)
 						{
 							if(!(m_pPropList->m_Props[i]->m_PropFlags & PF_GROUPOWNER))
 							{
@@ -1280,19 +1245,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 									}
 								}
 							}
-							else if (pProp->m_PropFlags & PF_TEXTUREEFFECT)
-							{
-								CSelectEffectGroupDlg Dlg(NULL);
-								Dlg.m_sEffectGroup = pStringProp->m_String;
-
-								//now do the dialog
-								if(Dlg.DoModal())
-								{
-									bNotify = TRUE;
-									strncpy(pStringProp->m_String, Dlg.m_sEffectGroup, 256);
-									m_Controls[offset]->SetWindowText(pStringProp->m_String);
-								}
-							}
+							// talon: no PF_TEXTUREEFFECT in the LT2 SDK
 							// If the string is a filename, then browse for a new file
 							else if (pProp->m_PropFlags & PF_FILENAME)
 							{
@@ -1506,7 +1459,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 							pVectorProp = (CVectorProp*)pProp;
 
 							if( (stricmp(pVectorProp->GetName(), "Pos") == 0) || 
-								(pVectorProp->GetFlags() & (PF_DIMS | PF_LOCALDIMS | PF_ORTHOFRUSTUM)))
+								(pVectorProp->GetFlags() & (PF_DIMS | PF_LOCALDIMS)))
 							{
 								if(HandlePosVectorProp(pVectorProp))
 								{

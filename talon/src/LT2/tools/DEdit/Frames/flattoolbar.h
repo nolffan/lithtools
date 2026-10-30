@@ -43,7 +43,7 @@ class CFlatToolbar : public CControlBar
 public:
 	CFlatToolbar();
 	BOOL Create(CWnd* pParentWnd,
-			unsigned int dwStyle = WS_CHILD | WS_VISIBLE | CBRS_TOP,
+			uint32 dwStyle = WS_CHILD | WS_VISIBLE | CBRS_TOP,	// talon: uint32, as the definition has it
 			unsigned int  nID = AFX_IDW_TOOLBAR);
 
 	void SetSizes(SIZE sizeButton, SIZE sizeImage);

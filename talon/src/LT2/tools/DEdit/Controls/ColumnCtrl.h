@@ -36,7 +36,7 @@ public:
 
 	// Add columns to the control
 	// note: call CListCtrl::DeleteColumn to remove a column
-	BOOL AddColumn ( LPCTSTR lpszColumnHeading, unsigned int dwSortMethod=SORT_ALPHA_ASCENDING, int nPercentWidth = -1 );
+	BOOL AddColumn ( LPCTSTR lpszColumnHeading, uint32 dwSortMethod=SORT_ALPHA_ASCENDING, int nPercentWidth = -1 );	// talon: uint32, as the definition has it
 	
 	// Add/Delete lines of text to/from the control	
 	BOOL AddRow ( CString sRowText, HICON hIcon=NULL );		// Separate the columns with \t
