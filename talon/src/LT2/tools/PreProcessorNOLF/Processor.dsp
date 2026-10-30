@@ -32,6 +32,11 @@ CFG=Processor - Win32 Release
 # are 8447's, linked statically by VC6 SP3's linker. build.mk sets the
 # compilers (CL_ProcessorNOLF, CL_ProcessorNOLF__PreWorld).
 #
+# talon: icl's /EHa (asynchronous EH, which PreWorld.cpp's cl doesn't get): a
+# new-expression keeps `this` in a stack slot it never reads and stores the
+# result twice more (CBoolProp::CreateSameKind 0x454b80), which /GX alone
+# doesn't give.
+#
 # talon: the sources are listed in the shipped image's module order
 # (progress/Processor-nolf-map.md), which the link keeps. The libraries'
 # #pragma comment(lib) names (\proj\libs\...) are not linked: the project
@@ -59,7 +64,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /MT /W2 /GX /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
-# ADD CPP /nologo /MT /W2 /GX /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
+# ADD CPP /nologo /MT /W2 /GX /EHa /O1 /I "." /I "..\sharedNOLF\engine" /I "..\sharedNOLF\world" /I "win" /I "..\DEdit\draw" /I "..\DEdit\lightmap" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\stdlith\sys\win" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\lithshared\stl" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "PRE_FLOAT" /D "PREPROCESSOR_BUILD" /D "BDEFS_MFC" /D "STDLITH_MFC" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -246,6 +251,13 @@ SOURCE=.\ProcessorApp.cpp
 # Begin Source File
 
 SOURCE=.\PreWorld.cpp
+
+!IF  "$(CFG)" == "Processor - Win32 Release"
+
+# SUBTRACT CPP /EHa
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
