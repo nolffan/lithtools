@@ -20,83 +20,47 @@ CImportAnimation::CImportAnimation(BOOL bOpenFileDialog, LPCTSTR lpszDefExt, LPC
 		DWORD dwFlags, LPCTSTR lpszFilter, CWnd* pParentWnd) :
 		CFileDialog(bOpenFileDialog, lpszDefExt, lpszFileName, dwFlags, lpszFilter, pParentWnd)
 {
-	m_bImportAnimations = TRUE;
+	//{{AFX_DATA_INIT(CImportAnimation)
+	m_bImportKeystrings = FALSE;
 	m_bImportUserDims = FALSE;
 	m_bImportTranslations = FALSE;
 	m_bUseUVCoords = FALSE;
 	m_bImportSockets = FALSE;
 	m_bImportWeightSets = FALSE;
+	m_bImportLODs = FALSE;
+	//}}AFX_DATA_INIT
 	m_ofn.Flags |= OFN_ENABLETEMPLATE;
+	m_bImportAnimations = TRUE;
 	m_ofn.lpTemplateName = MAKEINTRESOURCE( IDD_IMPORTANIM );
-	m_ofn.Flags |= OFN_ALLOWMULTISELECT;
+}
+
+void CImportAnimation::DoDataExchange(CDataExchange* pDX)
+{
+	//{{AFX_DATA_MAP(CImportAnimation)
+	DDX_Check(pDX, IDC_IMPORT_ANIMATIONS, m_bImportAnimations);
+	DDX_Check(pDX, IDC_IMPORT_KEYSTRINGS, m_bImportKeystrings);
+	DDX_Check(pDX, IDC_IMPORT_LODS, m_bImportLODs);
+	DDX_Check(pDX, IDC_IMPORT_SOCKETS, m_bImportSockets);
+	DDX_Check(pDX, IDC_IMPORT_TRANSLATIONS, m_bImportTranslations);
+	DDX_Check(pDX, IDC_IMPORT_USERDIMS, m_bImportUserDims);
+	DDX_Check(pDX, IDC_IMPORT_USEUVCOORDS, m_bUseUVCoords);
+	DDX_Check(pDX, IDC_IMPORT_WEIGHTSETS, m_bImportWeightSets);
+	//}}AFX_DATA_MAP
 }
 
 BEGIN_MESSAGE_MAP(CImportAnimation, CFileDialog)
 	//{{AFX_MSG_MAP(CImportAnimation)
-	ON_BN_CLICKED(IDC_IMPORT_USEUVCOORDS, OnCheck)
-	ON_BN_CLICKED(IDC_IMPORT_ANIMATIONS, OnCheck)
-	ON_BN_CLICKED(IDC_IMPORT_USERDIMS, OnCheck)
-	ON_BN_CLICKED(IDC_IMPORT_TRANSLATIONS, OnCheck)
-	ON_BN_CLICKED(IDC_IMPORT_SOCKETS, OnCheck)
-	ON_BN_CLICKED(IDC_IMPORT_WEIGHTSETS, OnCheck)
+	ON_WM_DESTROY()
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
 
 void CImportAnimation::OnInitDone( )
 {
-	CButton *pCheck;
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_ANIMATIONS );
-	if( pCheck )
-		pCheck->SetCheck( m_bImportAnimations );
-	
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_USEUVCOORDS );
-	if( pCheck )
-		pCheck->SetCheck( m_bUseUVCoords );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_USERDIMS );
-	if( pCheck )
-		pCheck->SetCheck( m_bImportUserDims );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_TRANSLATIONS );
-	if( pCheck )
-		pCheck->SetCheck( m_bImportTranslations );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_SOCKETS );
-	if( pCheck )
-		pCheck->SetCheck( m_bImportSockets );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_WEIGHTSETS );
-	if( pCheck )
-		pCheck->SetCheck( m_bImportWeightSets );
 }
 
-void CImportAnimation::OnCheck() 
+void CImportAnimation::OnDestroy() 
 {
-	CButton *pCheck;
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_ANIMATIONS );
-	if( pCheck )
-		m_bImportAnimations = pCheck->GetCheck( );
-	
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_USEUVCOORDS );
-	if( pCheck )
-		m_bUseUVCoords = pCheck->GetCheck( );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_USERDIMS );
-	if( pCheck )
-		m_bImportUserDims = pCheck->GetCheck( );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_TRANSLATIONS );
-	if( pCheck )
-		m_bImportTranslations = pCheck->GetCheck( );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_SOCKETS );
-	if( pCheck )
-		m_bImportSockets = pCheck->GetCheck( );
-
-	pCheck = ( CButton * )GetDlgItem( IDC_IMPORT_WEIGHTSETS );
-	if( pCheck )
-		m_bImportWeightSets = pCheck->GetCheck( );
+	UpdateData(TRUE);
+	CFileDialog::OnDestroy();
 }

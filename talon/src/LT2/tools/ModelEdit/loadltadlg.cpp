@@ -28,9 +28,9 @@ BOOL	CLoadLTADlg::sm_bLoadThreadDone = TRUE;
 // CLoadLTADlg dialog
 
 
-CLoadLTADlg::CLoadLTADlg(bool bAutoConfirm, CWnd* pParent /*=NULL*/)
+CLoadLTADlg::CLoadLTADlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CLoadLTADlg::IDD, pParent),
-	  m_bPrevLoaderDone(TRUE), m_bAutoConfirm(bAutoConfirm)
+	  m_bPrevLoaderDone(TRUE)
 {
 	//{{AFX_DATA_INIT(CLoadLTADlg)
 		// NOTE: the ClassWizard will add member initialization here
@@ -123,12 +123,6 @@ void CLoadLTADlg::OnTimer(UINT nIDEvent)
 			((CButton*)GetDlgItem(IDC_SAVELOADLOG))->EnableWindow(bDone);
 			((CButton*)GetDlgItem(IDOK))->EnableWindow(bDone);
 			m_bPrevLoaderDone = bDone;
-		}
-
-		// automatically close the dialog on load completion
-		if( m_bAutoConfirm && bDone && m_bPrevLoaderDone )
-		{
-			OnOK();
 		}
 	}
 	

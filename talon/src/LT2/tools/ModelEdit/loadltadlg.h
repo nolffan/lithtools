@@ -15,7 +15,7 @@ class CLoadLTADlg : public CDialog
 {
 // Construction
 public:
-	CLoadLTADlg(bool bAutoConfirm, CWnd* pParent = NULL);   // standard constructor
+	CLoadLTADlg(CWnd* pParent = NULL);   // standard constructor
 
 // Dialog Data
 	//{{AFX_DATA(CLoadLTADlg)
@@ -71,9 +71,6 @@ protected:
 	enum	{TIMER_ID	= 1000};
 
 private:
-
-	// if true, the dialog exits automatically once the load is done
-	bool m_bAutoConfirm;
 
 	//DO NOT ACCESS DIRECTLY. THIS IS A COMMUNICATION POINT
 	//FOR MULTIPLE THREADS

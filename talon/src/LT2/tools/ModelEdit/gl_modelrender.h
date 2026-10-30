@@ -4,7 +4,6 @@
 
 #include "model.h"
 #include "dtxmgr.h"
-#include "ltaModel.h"
 #include <GL/gl.h>
 #include <GL/glu.h>
 
@@ -50,77 +49,72 @@ public:
 
 	Model*		GetModel()	{return m_Times[0]->m_TimeRef.m_pModel;}
 
+	// talon: 2001's layout (0x15c bytes), read off gl_modelrender's and
+	// CRenderWnd's uses: no LOD distance, movement encoding, OBBs, vertex
+	// weights or texture switch, and the light colors at the end.
+
 	// The exact place to draw from.
-	AnimTracker	*m_Times[NUM_ANIM_INFOS];
-	
-	DWORD	m_iLOD;
-	float	m_CurrentLODDist ;
+	AnimTracker	*m_Times[NUM_ANIM_INFOS];		// 0x00
+
+	BOOL	m_bNormals;							// 0x10
+	DWORD	m_iLOD;								// 0x14
 
 	// VIEW PARAMS
-	float	m_FOV;
-	CVector	m_ViewerPos;
-	CVector	m_LookAt;
+	float	m_FOV;								// 0x18 (gl_modelrender doesn't read it)
+	CVector	m_ViewerPos;						// 0x1c
+	CVector	m_LookAt;							// 0x28
 
+	BOOL	m_bWireframe;						// 0x34
 	
 	// LIGHT PARAMS
-	CVector	m_LightPositions[MAX_GLM_LIGHTS];
-	// RGB 0-255
-	CVector	m_LightColors[MAX_GLM_LIGHTS];
-	int		m_nLights;
-	
+	CVector	m_LightPositions[MAX_GLM_LIGHTS];	// 0x38
+	int		m_nLights;							// 0x98
 
-	BOOL	m_bDims;
-	CVector m_DimsColor;
-	CVector m_ModelBoxColor;
-	BOOL	m_bAnimBox;
-	CVector m_AnimBoxColor;
+	BOOL	m_bDims;							// 0x9c
+	CVector m_DimsColor;						// 0xa0
+	CVector m_ModelBoxColor;					// 0xac
+	BOOL	m_bAnimBox;							// 0xb8
+	CVector m_AnimBoxColor;						// 0xbc
 	
 	// --------------------------------------
 	// DRAW FLAGS 
 	// --------------------------------------
-	BOOL	m_bWireframe;
-	BOOL	m_bNormals;
 	// Draw the model bright (without lighting).
-	BOOL	m_bDrawBright;
-    BOOL	m_bDrawVertexWeights ;
+	BOOL	m_bDrawBright;						// 0xc8
 
 	// Draw the skeleton.
-	BOOL	m_bDrawSkeleton;
-	BOOL    m_bDrawOBB ;
+	BOOL	m_bDrawSkeleton;					// 0xcc
 	// draw the original mesh
-	BOOL	m_bDrawOriginalModel;
-
-	// draw the model using movement encoding
-	bool	m_bMovementEncoding;
-
-	// show textures
-	BOOL	m_bDrawTextures;
+	BOOL	m_bDrawOriginalModel;				// 0xd0
 
 	// Show sockets and/or attachments.
-	BOOL	m_bDrawSockets;
-	BOOL	m_bDrawAttachments;
-	BOOL	m_bSolidAttachments;
+	BOOL	m_bDrawSockets;						// 0xd4
+	BOOL	m_bDrawAttachments;					// 0xd8
+	BOOL	m_bSolidAttachments;				// 0xdc
 	
 	// calculate the internal radius of the model while rendering
-	bool	m_bCalcRadius;
+	BOOL	m_bCalcRadius;						// 0xe0
 	// filled in with the model radius if m_bCalcRadius is set
-	float	m_fModelRadius;
+	float	m_fModelRadius;						// 0xe4
 	// if set this will cause it to calculate radius AND draw the animation
-	bool	m_bCalcAndDraw;
+	BOOL	m_bCalcAndDraw;						// 0xe8
 
 	// Show profile info.
-	BOOL	m_bProfile;
+	BOOL	m_bProfile;							// 0xec
 
-	BOOL	m_bShowNormalRef;
+	BOOL	m_bShowNormalRef;					// 0xf0
 
-	BYTE	*m_SelectedPieces; // Should be as big as Model::NumPieces().
-	BYTE	*m_SelectedNodes; // Should be as big as Model::NumNodes().
-	
-	
+	BYTE	*m_SelectedPieces; // Should be as big as Model::NumPieces().	0xf4
+	BYTE	*m_SelectedNodes; // Should be as big as Model::NumNodes().	0xf8
+
+	// RGB 0-255
+	CVector	m_LightColors[MAX_GLM_LIGHTS];		// 0xfc
 };
 
 						   
 // Represents a transformed vertex.
+// talon: 2001's is 0x18 bytes, the position and the normal (DrawPiece,
+// 0x4054f8; DrawModelPolies' vertex stride, 0x404e58).
 class TVert
 {
 public:
@@ -128,14 +122,11 @@ public:
 	{
 		m_vPos = other.m_vPos;
 		m_vNormal = other.m_vNormal;
-		m_vColor = other.m_vColor ;
 		return *this;
 	}
 	
 	LTVector		m_vPos;
 	LTVector		m_vNormal;
-	float			m_UV[2];
-	LTVector		m_vColor ;
 };
 
 // ------------------------------------------------------------------------
@@ -153,24 +144,16 @@ void DeleteGLMContext(GLM_CONTEXT hContext);
 // pLookAt is where it looks at (it should probably be (0,0,0)).
 void DrawModel(GLM_CONTEXT hContext, DrawStruct *pStruct);
 
-// ------------------------------------------------------------------------
-// DrawMetaModel test the raw lta file
-void DrawMetaModel( GLM_CONTEXT, DrawStruct * );
-
-
 void DrawCoordSys(DMatrix *pMat, float arrowLength);
-void DrawWorldCoordSys();
 
 // ------------------------------------------------------------------------
 // setup viewing parameters, sets up lookat, lights, wireframe params etc
-// for gl
-void SetupViewingParameters( GLMContext *pContext, DrawStruct *);
+// for gl (talon: 2001's reads the DrawStruct DrawModel was given)
+void SetupViewingParameters( GLMContext *pContext );
 
 // ------------------------------------------------------------------------
 // Set the texture to draw with.
 BOOL SetGLMTexture(GLM_CONTEXT hContext, TextureData *pTexture, DWORD nTextureNum = 0);
-// get rid of animated textures.
-void ReleaseAllTextures( GLM_CONTEXT hContext );
 
 // set the background color for the gl-window.
 void SetGLMBackgroundColor( GLM_CONTEXT , COLORREF );
@@ -196,7 +179,6 @@ BOOL AlternateGetVertexPositions(	Model *pModel,
 									BOOL bSetupTransforms,
 									BOOL bNormals,
 									BOOL bDrawOriginalModel,
-									BOOL bMovementEncoding,
 									void **pNextVert = NULL );
 
 #endif  // __GL_MODELRENDER_H__

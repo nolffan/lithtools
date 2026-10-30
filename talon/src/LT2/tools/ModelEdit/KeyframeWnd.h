@@ -57,17 +57,15 @@ protected:
 	CPoint		m_ptEndBox;
 
 	COLORREF	m_crKeyframe;
-	COLORREF	m_crKeyframeString;
 	COLORREF	m_crTaggedKeyframe;
-	COLORREF	m_crTaggedKeyframeString;
 
 	// Tracks whether the window has been selected.
 	// Basically chooses whether the animation controls affect this window.
 	BOOL		m_bActive;
 
-	//this function will verify that this operation can be performed given the current animation
-	//settings, and will inform the user and return false if it cannot
-	bool		CanPerformOperation(const char* pszDescription);
+	// talon: 2001's (0x407869; the name is ours): the keyframe whose x value
+	// is x, or the one before x.
+	int			FindKeyframeX(int x);
 
 
 // Operations
@@ -126,6 +124,7 @@ protected:
 	afx_msg void OnDeleteTaggedKeyframes();
 	afx_msg void OnEditTaggedKeyframeString();
 	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
+	afx_msg void OnCreateKeyframe();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

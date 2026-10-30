@@ -23,18 +23,25 @@ public:
 		CWnd* pParentWnd = NULL);
 
 
-	BOOL	m_bUseUVCoords;
+// Dialog Data
+	//{{AFX_DATA(CImportAnimation)
 	BOOL	m_bImportAnimations;
-	BOOL	m_bImportUserDims;
-	BOOL	m_bImportTranslations;
+	BOOL	m_bImportKeystrings;
+	BOOL	m_bImportLODs;
 	BOOL	m_bImportSockets;
+	BOOL	m_bImportTranslations;
+	BOOL	m_bImportUserDims;
+	BOOL	m_bUseUVCoords;
 	BOOL	m_bImportWeightSets;
-	
-	virtual void OnInitDone( );	
+	//}}AFX_DATA
+
+	virtual void OnInitDone( );
 
 protected:
+	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV support
+
 	//{{AFX_MSG(CImportAnimation)
-	afx_msg void OnCheck();
+	afx_msg void OnDestroy();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };
