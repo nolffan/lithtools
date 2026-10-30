@@ -47,9 +47,10 @@
 	#define DTX_LUMBUMPMAP		(1<<12) // Bump mapped texture with luminance, this has 8 bits for luminance, U and V
 
 	// Which flags actually get saved.
-	#define DTX_FLAGSAVEMASK    (	DTX_FULLBRITE|DTX_32BITSYSCOPY|DTX_PREFER16BIT|\
-									DTX_SECTIONSFIXED|DTX_PREFER4444|DTX_PREFER5551|\
-									DTX_CUBEMAP|DTX_BUMPMAP|DTX_LUMBUMPMAP|DTX_NOSYSCACHE)
+	// talon: 2001's mask is 0x18b (dtx_Save, 0x41faff): no 32-bit sys copy,
+	// cube, bump or no-sys-cache bits saved.
+	#define DTX_FLAGSAVEMASK    (	DTX_FULLBRITE|DTX_PREFER16BIT|\
+									DTX_SECTIONSFIXED|DTX_PREFER4444|DTX_PREFER5551)
 
 	#define CURRENT_DTX_VERSION	-5	// m_Version in the DTX header.
 
@@ -161,8 +162,8 @@
 		// `push $0x18c` at 0x40d154, and its destructor steps through them
 		// by 0x18, 0x40d086): a second plane's pointer and pitch, which
 		// dtx_Alloc sets when its seventh argument is (0x40d27a..0x40d286).
-		uint8	*m_pPlane2;
-		uint32	m_Plane2Pitch;
+		uint8	*m_BumpData;		// talon: 2001 name (Texture.cpp prints it, 0x461e9e)
+		uint32	m_BumpPitch;
 	};
 
 

@@ -16,8 +16,8 @@ TextureMipData::TextureMipData()
 	m_Height = 0;
 	m_Pitch = 0;
 	m_Data = LTNULL;
-	m_pPlane2 = LTNULL;
-	m_Plane2Pitch = 0;
+	m_BumpData = LTNULL;
+	m_BumpPitch = 0;
 }
 
 
@@ -191,8 +191,8 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 
 		if(bPlane2)
 		{
-			pMip->m_pPlane2 = pOutData;
-			pMip->m_Plane2Pitch = width;
+			pMip->m_BumpData = pOutData;
+			pMip->m_BumpPitch = width;
 			pOutData += width * height;
 		}
 

@@ -50,9 +50,6 @@
 	// (implemented in d3dtexture.h).
 	void d3d_UnbindFromTexture(void *pBinding);
 
-	//this function will, given the desired size for a texture, find the appropriate
-	//size that should be used
-	void d3d_FindTextureSize(uint32 nDesiredX, uint32 nDesiredY, uint32& nOutX, uint32& nOutY);
 
 
 #endif  // __DRAWMGR_H__

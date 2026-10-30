@@ -10,11 +10,11 @@
 #include "d3d_texturemgr.h"
 #include "projectbar.h"
 #include "cyclemgr.h"
-#include "lightmapdefs.h"
-#include "meshshapelist.h"
-#include "meshshape.h"
 #include "geomroutines.h"
-#include "optionsmodels.h"
+#include "preworld.h"
+#include "prepoly.h"
+#include "presurface.h"
+#include "prelightmap.h"
 
 
 // ------------------------------------------------------------------------ //
@@ -154,6 +154,10 @@ static BOOL PASCAL __stdcall d3d_EnumDDrawObjects(GUID* pGuid, char* sDriverDesc
 	{
 		++g_DeviceCount;
 	}
+
+	// talon: 2001 (0x419551).
+	if(g_bFoundDevice)
+		AddDebugMessage("Chose d3d driver %s, description %s", sDriverName, sDriverDescription);
 
 	// This is not a 3D driver
 	lpDD->Release();
@@ -353,7 +357,12 @@ BOOL D3DRender::Init(int deviceNum, int renderMode, CRect *pRect)
 	m_pSurface->AddAttachedSurface(m_pZSurface);
 
 	hResult = m_pDirect3d->CreateDevice(id, m_pSurface, &m_pDevice, NULL);
-	if(hResult != D3D_OK)
+	if(hResult == D3D_OK)
+	{
+		// talon: 2001's success message (Init, 0x418eac).
+		AddDebugMessage("Created '%s' device", g_RenderModeInfos[renderMode].m_ModeName);
+	}
+	else
 	{
 		AddDebugMessage("Unable to create '%s' device", g_RenderModeInfos[renderMode].m_ModeName);
 		Term();
@@ -436,7 +445,7 @@ BOOL D3DRender::Init(int deviceNum, int renderMode, CRect *pRect)
 	m_pDevice->SetRenderState(D3DRENDERSTATE_SPECULARENABLE, FALSE);
 	m_pDevice->SetRenderState(D3DRENDERSTATE_SUBPIXEL, TRUE);
 	//m_pDevice->SetRenderState(D3DRENDERSTATE_EDGEANTIALIAS, TRUE);
-	m_pDevice->SetRenderState(D3DRENDERSTATE_SHADEMODE, D3DSHADE_GOURAUD);
+	m_pDevice->SetRenderState(D3DRENDERSTATE_SHADEMODE, D3DSHADE_FLAT);	// talon: 2001 (0x419396)
 	m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, TRUE);
 	m_pDevice->SetRenderState(D3DRENDERSTATE_ZWRITEENABLE, TRUE);
 	m_pDevice->SetRenderState(D3DRENDERSTATE_TEXTUREPERSPECTIVE, TRUE);
@@ -481,20 +490,24 @@ BOOL D3DRender::Init(int deviceNum, int renderMode, CRect *pRect)
 
 	
 	// Initialize the texture manager.
-	if(!d3d_InitTextureStuff(this))
+	if(d3d_InitTextureStuff(this))
 	{
-		Term();
-		return FALSE;
+		m_pDevice->SetRenderState(D3DRENDERSTATE_ZFUNC, D3DCMP_LESSEQUAL);
+
+		AddDebugMessage("Successfully initialized Direct3D renderer!");
+		return TRUE;
 	}
 
-	m_pDevice->SetRenderState(D3DRENDERSTATE_ZFUNC, D3DCMP_LESSEQUAL);
-
-	return TRUE;
+	Term();
+	return FALSE;
 }
 
 
 void D3DRender::Term()
 {
+	// talon: 2001 first unbinds its processed worlds (0x419582).
+	UnbindWorlds();
+
 	d3d_TermTextureStuff(this);
 	
 	if(m_pZSurface)
@@ -564,44 +577,40 @@ void D3DRender::Term()
 // Overrides.
 // ------------------------------------------------------------------------ //
 
+// 0x419650.  2001's takes the points and normal in world space and
+// transforms them itself.
 void D3DRender::DrawFlatPoly2(TLVertex *pPoints, DWORD nPoints, CVector *pNormal, COLORREF color)
 {
-	static TLVertex points[128];
+	CVector pt, normal;
+	TLVertex points[256];
 	TLVertex *pCur, *pOutputVerts;	
 	DWORD i;
 	WORD pointStart, pointEnd, nOutputVerts;
 	HRESULT hResult;
 	float dot;
 
-	ASSERT(nPoints > 0);
-	ASSERT(nPoints < 128);
-
 	m_pDevice->SetTexture(0, 0);
 
-	// Note:  the normal and point have been rotated into camera space...
-	dot = pNormal->Dot(pPoints[0].m_Vec);
-	if( dot >= 0.0f )
+	// Backface test in camera space.
+	m_pView->m_Rotation.Apply3x3(*pNormal, normal);
+	m_pView->m_Transform.Apply(pPoints[0].m_Vec, pt);
+	dot = pt.Dot(normal);
+	if(dot >= 0.0f)
 		return;
 
-	//set the color
-	for( i=0; i < nPoints; i++ )
+	for(i=0; i < nPoints; i++)
 	{
-		points[i].m_Vec = pPoints[i].m_Vec;
+		m_pView->m_Transform.Apply(pPoints[i].m_Vec, points[i].m_Vec);
 		points[i].color = color;
 	}
 
-	pPoints = points;
-
-
 	// Clip.
+	pointEnd = (WORD)nPoints;
 	pointStart = 0;
-	pointEnd = nPoints;
-	for( i=0; i < m_pView->m_nClipPlanesToUse; i++ )
+	for(i=0; i < m_pView->m_nClipPlanesToUse; i++)
 	{
-		if( !ClipPolyToPlane(&m_pView->m_ClipPlanes[i], points, pointStart, pointEnd) )
-		{
+		if(!ClipPolyToPlane(&m_pView->m_ClipPlanes[i], points, pointStart, pointEnd))
 			return;
-		}
 	}
 
 	pOutputVerts = &points[pointStart];
@@ -612,390 +621,321 @@ void D3DRender::DrawFlatPoly2(TLVertex *pPoints, DWORD nPoints, CVector *pNormal
 	for(i=0; i < nOutputVerts; i++)
 	{
 		m_pView->m_pViewDef->ProjectPt(pCur->m_Vec, pCur->m_Vec);
-
-		//do perspective vert Z since we will only be rendering it in that situation
-		SetupVertZPerspective(*pCur, pCur->m_Vec.z);
+		SetupVertZ(*pCur, pCur->m_Vec.z);
 		++pCur;
 	}
 
 	hResult = m_pDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, TLVERTEX_FORMAT, pOutputVerts, nOutputVerts, DRAWPRIM_FLAGS);
 }
 
-void D3DRender::DrawTexturedPoly(CEditPoly* pPoly)
+
+// talon: stand-in: 0x446328, a CPreMainWorld member (part 6's range) that
+// finds the region document's selected lightmap poly from its world model
+// and name (CRegionDoc's 0x320 and 0x324, pushed by value).  Declared here
+// until DEdit's CPreMainWorld has it; the name is ours.
+class CPreMainWorld2001
 {
-	InternalDrawTexturedPoly(pPoly, FALSE, 0);
-}
+public:
+	CPrePoly*	FindPoly(uint32 iWorld, uint32 nName);
+};
 
-void D3DRender::DrawTintedTexturedPoly(CEditPoly* pPoly, DWORD nTintColor)
+
+// talon: 0x41987f.  2001's draws the poly's one texture itself: texture
+// coordinates from the poly's O, P and Q (0x34, 0x40, 0x4c), the shading
+// from the normal when the display options say so, and a selected brush
+// darkened and fogged in the selection colour.
+void D3DRender::DrawTexturedPoly(CEditPoly *pPoly)
 {
-	InternalDrawTexturedPoly(pPoly, TRUE, nTintColor);
-}
+	TLVertex verts[256];
+	COptionsDisplay *pDisp;
+	CVector pos;
+	float pDotO, qDotO, u, v;
+	float fXDot, fZDot;
+	uint32 i;
+	WORD pointStart, pointEnd, nVerts;
+	uint8 r, g, b;
+	TLVertex *pOutputVerts, *pCur;
 
-void D3DRender::DrawTexturedPoly(	TLVertex* pVerts, uint32 nNumVerts,  
-									BOOL bTint, DWORD nTintColor, DFileIdent_t *pTextureFile, 
-									DFileIdent_t *pDetailFile, DWORD nFlatShade, uint32 nClipMask)
-{
-	ASSERT(nNumVerts >= 3);
-
-	static LMVertex verts[256];
-	LMVertex *pCur, *pOutputVerts;	
-	WORD pointStart, pointEnd, nOutputVerts;
-	HRESULT hResult;
-
-	if(!d3d_SetupPolyTexture(this, pTextureFile, pDetailFile))
+	if(!d3d_SetupPolyTexture(this, pPoly))
 	{
-		//calculate the polygon normal
-		LTVector vNormal = (pVerts[2].m_Vec - pVerts[0].m_Vec).Cross(pVerts[1].m_Vec - pVerts[0].m_Vec);
-		vNormal.Norm();
-
-		DrawFlatPoly2(pVerts, nNumVerts, &vNormal, nFlatShade);
-		d3d_UnsetDetailTexture(this);
+		DrawFlatPoly(pPoly, (COLORREF)pPoly * 0x9aeb0);
 		return;
 	}
 
-	//setup the detail texture transformations for this polygon
-	if(pDetailFile && m_pDisplayOptions->IsDetailTexEnabled())
+	pDotO = pPoly->O.Dot(pPoly->P);
+	qDotO = pPoly->O.Dot(pPoly->Q);
+
+	pDisp = GetApp()->GetOptions().GetDisplayOptions();
+	if(!pDisp)
+		return;
+
+	for(i=0; i < pPoly->NumVerts(); i++)
 	{
-		float tScale[2], tMat[2][2];
+		CEditVert &vert = pPoly->Pt(i);
 
-		// Setup the detail texture rotation matrix.
-		tScale[0] = g_uMul * g_fDetailTextureScale;
-		tScale[1] = g_vMul * g_fDetailTextureScale;
-
-		tMat[0][0] = tScale[0]  * g_fDetailTextureAngleCos;
-		tMat[0][1] = tScale[1]  * -g_fDetailTextureAngleSin;
-
-		tMat[1][0] = tScale[0]  * g_fDetailTextureAngleSin;
-		tMat[1][1] = tScale[1]  * g_fDetailTextureAngleCos;
-
-		//now we need to copy over the vertex information
-		TLVertex* pSrc = pVerts;
-		TLVertex* pSrcEnd = pVerts + nNumVerts;
-		pCur = verts;
-
-		while(pSrc < pSrcEnd)
-		{
-			pCur->m_Vec = pSrc->m_Vec;
-			pCur->SetTCoordsRaw(pSrc->tu * g_uMul, pSrc->tv * g_vMul);
-			pCur->color = pSrc->color;
-
-			pCur->lm_tu = pSrc->tu * tMat[0][0] + pSrc->tv * tMat[0][1];
-			pCur->lm_tv = pSrc->tu * tMat[1][0] + pSrc->tv * tMat[1][1];
-			
-			++pCur;
-			++pSrc;
-		}
+		verts[i].m_Vec = vert.m_Transformed;
+		v = (pPoly->Q.Dot(vert) - qDotO) * g_vMul;
+		u = (pPoly->P.Dot(vert) - pDotO) * g_uMul;
+		verts[i].tu = u;
+		verts[i].tv = v;
 	}
-	else
-	{
-		TLVertex* pSrc = pVerts;
-		TLVertex* pSrcEnd = pVerts + nNumVerts;
-		pCur = verts;
-
-		//we need to copy over the info, but not with the detail tex info
-		while(pSrc < pSrcEnd)
-		{
-			pCur->m_Vec = pSrc->m_Vec;
-			pCur->SetTCoordsRaw(pSrc->tu * g_uMul, pSrc->tv * g_vMul);
-			pCur->color = pSrc->color;
-			
-			++pCur;
-			++pSrc;
-		}
-	}
-
 
 	// Clip.
+	pointEnd = pPoly->NumVerts();
 	pointStart = 0;
-	pointEnd = nNumVerts;
-
-	if(nClipMask)
+	for(i=0; i < m_pView->m_nClipPlanesToUse; i++)
 	{
-		for(uint32 i=0; i < m_pView->m_nClipPlanesToUse; i++ )
-		{
-			if(nClipMask & (1 << i))
-			{
-				if( !ClipPolyToPlane(&m_pView->m_ClipPlanes[i], verts, pointStart, pointEnd) )
-				{
-					d3d_UnsetDetailTexture(this);
-					return;
-				}
-			}
-		}
+		if(!ClipPolyToPlane(&m_pView->m_ClipPlanes[i], verts, pointStart, pointEnd))
+			return;
 	}
 
-	if(bTint)
+	r = 0xFF;
+	g = 0xFF;
+	b = 0xFF;
+	if(pDisp->IsShadePolygons())
 	{
-		// Make sure fog is turned on
-		m_pDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, TRUE);		
-		m_pDevice->SetRenderState(D3DRENDERSTATE_FOGCOLOR, nTintColor);
+		fXDot = (float)sqrt(CVector(1.0f, 0.0f, 0.0f).Dot(pPoly->Normal()));
+		fZDot = (float)sqrt(CVector(0.0f, 0.0f, 1.0f).Dot(pPoly->Normal()));
+		r = (uint8)(fZDot * 96.0f);
+		r = (uint8)(fXDot * -32.0f) - r + 128;
+		g = r;
+		b = r;
 	}
 
-
-	pOutputVerts = &verts[pointStart];
-	nOutputVerts = pointEnd - pointStart;
-
-	pCur = pOutputVerts;
-	for(uint32 i=0; i < nOutputVerts; i++)
+	if(pPoly->m_pBrush->m_Flags & 1)
 	{
-		m_pView->m_pViewDef->ProjectPt(*((CVector*)pCur), *((CVector*)pCur));
-		SetupVertZPerspective(*pCur, pCur->m_Vec.z);
+		g = (uint8)LTMIN((uint32)(g * 3) >> 2, (uint32)0xFF);
+		r = (uint8)LTMIN((uint32)(r * 3) >> 2, (uint32)0xFF);
+		b = (uint8)LTMIN((uint32)(b * 3) >> 2, (uint32)0xFF);
 
-		// Make sure it gets fogged as necessary
-		pCur->specular.color = 0xC0000000;
-
-		++pCur;
+		m_pDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, TRUE);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_FOGCOLOR, GetDisplayColorD3D(4));
 	}
-
-	hResult = m_pDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, LMVERTEX_FORMAT, pOutputVerts, nOutputVerts, DRAWPRIM_FLAGS);
-
-	// Make sure fog gets turned off when we're done
-	if(bTint)
+	else
 	{
 		m_pDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, FALSE);
 	}
 
-	d3d_UnsetDetailTexture(this);
-
-}
-
-
-void D3DRender::InternalDrawTexturedPoly(CEditPoly *pPoly, BOOL bTint, DWORD nTintColor)
-{
-	//sanity checks
-	ASSERT(pPoly);
-	ASSERT(pPoly->NumVerts() <= 256);
-
-	static TLVertex verts[256];
-	CEditVert* pEditVert;
-
-	//get the texture we will be working with
-	CTexturedPlane& Texture = pPoly->GetTexture(GetCurrTexture());
-
-	float oDotP = Texture.GetO().Dot(Texture.GetP());
-	float oDotQ = Texture.GetO().Dot(Texture.GetQ());
-	
-	// convert to TLVERTEXs and build up our clipping information
-	uint32 nClipAgainstMask = 0;
-	uint32 nClipOutMask		= 0xFFFFFFFF;
-
-	TLVertex* pCur = verts;
-	for(uint32 i=0; i < pPoly->NumVerts(); i++)
+	// Project.
+	pOutputVerts = &verts[pointStart];
+	nVerts = pointEnd - pointStart;
+	pCur = pOutputVerts;
+	for(i=0; i < nVerts; i++)
 	{
-		pEditVert = &pPoly->Pt(i);
-
-		nClipOutMask		&= pEditVert->m_nClipPlanes;
-		nClipAgainstMask	|= pEditVert->m_nClipPlanes;
-
-		pCur->m_Vec = pEditVert->m_Transformed;		
-		pCur->SetTCoordsRaw((Texture.GetP().Dot(*pEditVert) - oDotP), (Texture.GetQ().Dot(*pEditVert) - oDotQ));
-
+		m_pView->m_pViewDef->ProjectPt(pCur->m_Vec, pCur->m_Vec);
+		SetupVertZ(*pCur, pCur->m_Vec.z);
+		pCur->color = RGBA_MAKE(r, g, b, 0xFF);
+		pCur->specular.color = 0xC0000000;
 		++pCur;
 	}
 
-	//see if we are entirely clipped out
-	if(nClipOutMask)
+	m_pDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, TLVERTEX_FORMAT, pOutputVerts, nVerts, DRAWPRIM_FLAGS);
+	m_pDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, FALSE);
+}
+
+
+// talon: 0x419c68.  A processed-world poly with its lightmap: lightmap
+// coordinates from the poly's origin and the surface's P and Q over the
+// world's lightmap grid size; the points are pulled 1 unit toward the eye.
+// The name is ours.
+void D3DRender::DrawPrePoly(CPrePoly *pPoly, float lmGridSize)
+{
+	TLVertex verts[256];
+	uint32 i;
+	WORD pointStart, pointEnd, nVerts;
+	TLVertex *pOutputVerts, *pCur;
+	float u, v;
+
+	for(i=0; i < pPoly->NumVerts(); i++)
+	{
+		m_pView->m_Transform.Apply4x4(pPoly->Vert(i).m_Vec, verts[i].m_Vec);
+
+		u = pPoly->m_pSurface->P.Dot(pPoly->Vert(i).m_Vec - pPoly->m_PolyO) / lmGridSize + 0.5f;
+		v = pPoly->m_pSurface->Q.Dot(pPoly->Vert(i).m_Vec - pPoly->m_PolyO) / lmGridSize + 0.5f;
+		verts[i].tu = u;
+		verts[i].tv = v;
+	}
+
+	// Clip.
+	pointEnd = pPoly->NumVerts();
+	pointStart = 0;
+	for(i=0; i < m_pView->m_nClipPlanesToUse; i++)
+	{
+		if(!ClipPolyToPlane(&m_pView->m_ClipPlanes[i], verts, pointStart, pointEnd))
+			return;
+	}
+
+	pOutputVerts = &verts[pointStart];
+	nVerts = pointEnd - pointStart;
+
+	if(!d3d_SetupLMTexture(this, pPoly))
 		return;
 
-	//setup the colors for all the vertices
-	uint8 nShadeValueR=255, nShadeValueG=255, nShadeValueB=255;
-
-	if(bTint)
+	// Project.
+	pCur = pOutputVerts;
+	for(i=0; i < nVerts; i++)
 	{
-		nShadeValueG = 191;
-		nShadeValueR = nShadeValueG;
-		nShadeValueB = nShadeValueG;
-	}
-	else 
-	{
-		if (m_bShadePolygons)
-		{
-			// Calculate the shading value (SHP)
-			nShadeValueR  = 128;
-			nShadeValueR += (uint8)(fabs(pPoly->Normal().x) * 96.0f);
-			nShadeValueR += (uint8)(fabs(pPoly->Normal().z) * 32.0f);
-			nShadeValueG  = nShadeValueR;
-			nShadeValueB  = nShadeValueR;
-		}
+		pCur->tu *= g_uMul;
+		pCur->tv *= g_vMul;
+		m_pView->m_pViewDef->ProjectPt(pCur->m_Vec, pCur->m_Vec);
+		pCur->color = 0xFFFFFFFF;
+		pCur->m_Vec.z -= 1.0f;
+		SetupVertZ(*pCur, pCur->m_Vec.z);
+		++pCur;
 	}
 
-	DWORD nColor = D3DRGB_255(nShadeValueR, nShadeValueG, nShadeValueB);
-
-	//set the color
-	pCur = verts;
-	for(uint32 nCurrPt = 0; nCurrPt < pPoly->NumVerts(); nCurrPt++)
-	{
-		pCur->color = nColor;
-		pCur++;
-	}
-
-
-	DrawTexturedPoly(	verts, pPoly->NumVerts(),  
-						bTint, nTintColor, Texture.m_pTextureFile, 
-						Texture.m_pDetailTextureFile, ((DWORD)pPoly)*634544, nClipAgainstMask);
+	m_pDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, TLVERTEX_FORMAT, pOutputVerts, nVerts, DRAWPRIM_FLAGS);
 }
 
-//draws a model for the specified object
-void D3DRender::DrawModel(CBaseEditObj* pObject, uint32 nMode, CMeshShapeList* pShapeList, LTMatrix& mObjTrans)
+
+// talon: 0x419f0e.  Binds a processed world to this renderer: TRUE if it
+// is already ours, FALSE if another renderer has it.  The name is ours.
+BOOL D3DRender::BindWorld(CPreMainWorld *pWorld)
 {
-	ASSERT(pObject);
-	ASSERT(pShapeList);
+	if(pWorld->m_Unknown_f0)
+		return pWorld->m_Unknown_f0 == (uint32)this;
 
-	//determine if we should shade this model
-	bool bApplyShading = true;
-
-	//for preserving render states
-	unsigned long nOldFillMode, nOldShadeMode, nOldFogEnable;
-	m_pDevice->GetRenderState(D3DRENDERSTATE_FILLMODE, &nOldFillMode);
-	m_pDevice->GetRenderState(D3DRENDERSTATE_SHADEMODE, &nOldShadeMode);
-	m_pDevice->GetRenderState(D3DRENDERSTATE_FOGENABLE, &nOldFogEnable);
-
-	//setup the fill mode
-	if(nMode == COptionsModels::VIEWMODEL_WIREFRAME)
-	{
-		m_pDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, D3DFILL_WIREFRAME);
-		//don't shade in wireframe
-		bApplyShading = false;
-	}
-	else
-	{
-		m_pDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, D3DFILL_SOLID);
-	}
-
-	m_pDevice->SetRenderState(D3DRENDERSTATE_SHADEMODE,  D3DSHADE_GOURAUD);
-	m_pDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, FALSE);
-
-	//figure out a matrix to handle transforming of normals by
-	LTMatrix mNormalTransMat = m_pView->m_Transform * mObjTrans;
-	LTMatrix mTransMat = m_pView->m_Transform * mObjTrans;
-
-	//disable texturing by default
-	m_pDevice->SetTexture(0, 0);
-
-	//the lighting vector
-	LTVector vLight = m_pView->m_vCameraSpaceLight;
-
-	//we need to run through and draw each and every piece
-	for(uint32 nCurrShape = 0; nCurrShape < pShapeList->GetNumShapes(); nCurrShape++)
-	{
-		//get the shape
-		CMeshShape* pShape = pShapeList->GetShape(nCurrShape);
-
-		//sanity check
-		ASSERT(pShape);
-
-		//see if we are going to be applying textures
-		if(nMode == COptionsModels::VIEWMODEL_TEXTURED)
-		{
-			//get the shape's texture
-			if(pShape->m_pTextureFile)
-			{
-				if(!d3d_SetupPolyTexture(this, pShape->m_pTextureFile, NULL))
-				{
-					m_pDevice->SetTexture(0, 0);
-				}
-			}
-			else
-			{
-				//failed to get the shape's texture, disable texturing
-				m_pDevice->SetTexture(0, 0);
-			}
-		}
-
-		//get the primitives for this shape
-		TLVertex*	pVertList		= pShape->GetVertexList();
-		uint16*		pTriList		= pShape->GetTriangleList();
-		LTVector*	pOriginalPos	= pShape->GetOriginalPosList();
-		LTVector*	pNormals		= pShape->GetNormalList();
-
-		//sanity checks
-		ASSERT(pVertList);
-		ASSERT(pTriList);
-		ASSERT(pOriginalPos);
-		ASSERT(pNormals);
-
-		//transform all the vertices
-		uint32 nNumVerts = pShape->GetNumVertices();
-
-		//to store the transformed normal
-		LTVector vTransNormal;
-		float fDotVal;
-
-		for(uint32 nCurrVert = 0; nCurrVert < nNumVerts; nCurrVert++)
-		{
-			//transform the point and its normal
-			mTransMat.Apply(pOriginalPos[nCurrVert], pVertList[nCurrVert].m_Vec);
-
-			//figure out the coloring of this vertex
-			if(bApplyShading)
-			{
-				mNormalTransMat.Apply3x3(pNormals[nCurrVert], vTransNormal);
-				fDotVal = m_pView->AdjustDotLight(vLight.Dot(vTransNormal));
-
-				//calculate the points color
-				pVertList[nCurrVert].rgb.r = (uint8)(fDotVal * 255.0f);
-				pVertList[nCurrVert].rgb.g = pVertList[nCurrVert].rgb.r;
-				pVertList[nCurrVert].rgb.b = pVertList[nCurrVert].rgb.r;
-			}
-			else
-			{
-				pVertList[nCurrVert].color = 0xFFFFFFFF;
-			}
-
-			//handle projection of the point
-			m_pViewDef->ProjectPt(pVertList[nCurrVert].m_Vec, pVertList[nCurrVert].m_Vec);
-			SetupVertZPerspective(pVertList[nCurrVert], pVertList[nCurrVert].m_Vec.z);
-		}
-
-		HRESULT hr = m_pDevice->DrawIndexedPrimitive(	D3DPT_TRIANGLELIST, TLVERTEX_FORMAT, 
-														pVertList, nNumVerts, 
-														pTriList, pShape->GetNumTriangles() * 3,
-														0);
-
-		if(FAILED(hr))
-		{
-			ASSERT(false);
-		}
-	}
-
-	m_pDevice->SetRenderState(D3DRENDERSTATE_FILLMODE, nOldFillMode);
-	m_pDevice->SetRenderState(D3DRENDERSTATE_SHADEMODE, nOldShadeMode);
-	m_pDevice->SetRenderState(D3DRENDERSTATE_FOGENABLE, nOldFogEnable);
-
+	pWorld->m_Unknown_f0 = (uint32)this;
+	m_Worlds.Append(pWorld);
+	return TRUE;
 }
 
+
+// talon: 0x419f46.  The name is ours.
+void D3DRender::UnbindWorlds()
+{
+	while(m_Worlds > 0)
+	{
+		d3d_UnbindWorld(m_Worlds[0]);
+	}
+}
+
+
+// talon: 0x419f68.  A poly's lightmap samples as vertices, the ones in the
+// region document's list (0x328, 0x413e00) larger and bordered in red.
+// The name is ours.
+void D3DRender::DrawLightmapPoints(CPrePoly *pPoly, float lmGridSize)
+{
+	uint32 data[1024];
+	uint32 x, y;
+	uint32 color;
+	CVector rowPos, pos;
+	CTexelRef texel;
+
+	if(!pPoly->m_Unknown_24)
+		return;
+
+	if(!((CPreLightMap*)pPoly->m_Unknown_24)->Decompress(data))
+		return;
+
+	rowPos = pPoly->m_PolyO;
+	for(y=0; y < pPoly->m_LMHeight; y++)
+	{
+		pos = rowPos;
+		for(x=0; x < pPoly->m_LMWidth; x++)
+		{
+			color = data[y * pPoly->m_LMWidth + x];
+			color = 0xFF000000 | (color & 0xFFFF0000) | (((color & 0xFF0000) | (((color >> 16) & 0xFF) << 8)) >> 8);
+
+			texel.m_X = x;
+			texel.m_Y = y;
+			if(m_pView->GetRegionDoc()->m_SelTexels.FindElement(texel) == BAD_INDEX)
+				TransformAndDrawVert(pos, 0xFFFFFFFF, color, 4);
+			else
+				TransformAndDrawVert(pos, 0xFFFF0000, color, 6);
+
+			pos += pPoly->m_pSurface->InverseP * lmGridSize;
+		}
+
+		rowPos += pPoly->m_pSurface->InverseQ * lmGridSize;
+	}
+}
+
+
+// talon: 0x41a0d9, slot 4.  Draws a processed world's polies with their
+// lightmaps (blended over the textures when bBlend), then the selected
+// poly's lightmap points.
+void D3DRender::DrawWorld(CPreMainWorld *pWorld, BOOL bBlend)
+{
+	DWORD oldBlend, oldSrc, oldDest, oldZEnable;
+	CPreWorld *pModel;
+	CPrePoly *pPoly;
+	uint32 i;
+	GPOS pos;
+
+	if(!BindWorld(pWorld))
+		return;
+
+	if(bBlend)
+	{
+		m_pDevice->GetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, &oldBlend);
+		m_pDevice->GetRenderState(D3DRENDERSTATE_SRCBLEND, &oldSrc);
+		m_pDevice->GetRenderState(D3DRENDERSTATE_SRCBLEND, &oldDest);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, TRUE);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, D3DBLEND_DESTCOLOR);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_DESTBLEND, D3DBLEND_SRCCOLOR);
+	}
+
+	for(i=0; i < pWorld->m_WorldModels; i++)
+	{
+		pModel = pWorld->m_WorldModels[i];
+		for(pos=pModel->m_Polies; pos; )
+		{
+			pPoly = pModel->m_Polies.GetNext(pos);
+			DrawPrePoly(pPoly, pWorld->m_LMGridSize);
+		}
+	}
+
+	if(bBlend)
+	{
+		m_pDevice->SetRenderState(D3DRENDERSTATE_ALPHABLENDENABLE, oldBlend);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, oldSrc);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_SRCBLEND, oldDest);
+	}
+
+	m_pDevice->GetRenderState(D3DRENDERSTATE_ZENABLE, &oldZEnable);
+	m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, FALSE);
+
+	pPoly = ((CPreMainWorld2001*)pWorld)->FindPoly(m_pView->GetRegionDoc()->m_LightPolyWorld,
+		m_pView->GetRegionDoc()->m_LightPolyName);
+	if(pPoly)
+	{
+		DrawPrePolyLines(pPoly, 1, 1, GetDisplayColorD3D(4));
+		DrawLightmapPoints(pPoly, pWorld->m_LMGridSize);
+		m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, oldZEnable);
+	}
+}
+
+
+// 0x41a25b
 void D3DRender::DrawLine(TLVertex *pVerts)
 {
-	ASSERT(pVerts);
+	COptionsDisplay *pDisp = GetApp()->GetOptions().GetDisplayOptions();
 
-	if (!m_pDisplayOptions->IsZBufferLines())
-	{
-		// Disable the Z buffer
+	if(!pDisp->IsZBufferLines())
 		m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, D3DZB_FALSE);
-	
-		m_pDevice->SetTexture(0, 0);
-		m_pDevice->DrawPrimitive(D3DPT_LINELIST, TLVERTEX_FORMAT, pVerts, 2, DRAWPRIM_FLAGS);
 
-		// Enable the Z buffer
+	m_pDevice->SetTexture(0, 0);
+	m_pDevice->DrawPrimitive(D3DPT_LINELIST, TLVERTEX_FORMAT, pVerts, 2, DRAWPRIM_FLAGS);
+
+	if(!pDisp->IsZBufferLines())
 		m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, D3DZB_TRUE);
-	}
-	else
-	{
-		m_pDevice->SetTexture(0, 0);
-		m_pDevice->DrawPrimitive(D3DPT_LINELIST, TLVERTEX_FORMAT, pVerts, 2, DRAWPRIM_FLAGS);
-	}
 }
 
 
 void D3DRender::DrawVert(CVector &pos, DWORD borderColor, DWORD fillColor, int nSize)
 {
+	COptionsDisplay *pDisp = GetApp()->GetOptions().GetDisplayOptions();
 	D3DTLVERTEX verts[5], *pVert;
 	HRESULT hResult;
 	
-	float z				= 1.0f;
-	float oneOverZ		= 1.0f / z;
-	float vertSize		= (float)nSize;
-	bool bDrawOutline	= true;
+	// talon: retail bug: z and oneOverZ are only set in a perspective view
+	// (0x41a2f6..0x41a328); a parallel view's vertices get whatever was on
+	// the stack for rhw and z.
+	float z;
+	float oneOverZ;
+	float vertSize;
+	BOOL bDrawOutline;
 
 	m_pDevice->SetTexture(0, 0);
 
@@ -1011,13 +951,17 @@ void D3DRender::DrawVert(CVector &pos, DWORD borderColor, DWORD fillColor, int n
 
 		bDrawOutline = vertSize > VERT_SIZE_BORDER_CUTOFF;
 	}
-
-	float fSZ = g_A - g_A * oneOverZ;
+	else
+	{
+		vertSize = (float)nSize;
+		bDrawOutline = TRUE;
+	}
 
 	pVert = &verts[0];
 	pVert->sx = pos.x - vertSize;
 	pVert->sy = pos.y - vertSize;
 	pVert->rhw = oneOverZ;
+	float fSZ = (g_A * z + g_B) * oneOverZ;
 	pVert->sz = fSZ;
 	pVert->color = fillColor;
 	if(pVert->sx < 0.0f || pVert->sy > g_xMax || pVert->sy < 0.0f || pVert->sy > g_yMax)
@@ -1049,12 +993,6 @@ void D3DRender::DrawVert(CVector &pos, DWORD borderColor, DWORD fillColor, int n
 	pVert->color = fillColor;
 	if(pVert->sx < 0.0f || pVert->sy > g_xMax || pVert->sy < 0.0f || pVert->sy > g_yMax)
 		return;
-
-	if (!m_pDisplayOptions->IsZBufferLines())
-	{
-		// Disable the Z buffer
-		m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, FALSE);
-	}
 
 	hResult = m_pDevice->DrawPrimitive(D3DPT_TRIANGLEFAN, TLVERTEX_FORMAT, 
 		&verts, 4, DRAWPRIM_FLAGS);
@@ -1064,15 +1002,20 @@ void D3DRender::DrawVert(CVector &pos, DWORD borderColor, DWORD fillColor, int n
 		verts[0].color = verts[1].color = verts[2].color = verts[3].color = borderColor;
 		verts[4] = verts[0];		
 
+		if (!pDisp->IsZBufferLines())
+		{
+			// Disable the Z buffer
+			m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, FALSE);
+		}
+
 		hResult = m_pDevice->DrawPrimitive(D3DPT_LINESTRIP, TLVERTEX_FORMAT, 
 			&verts, 5, DRAWPRIM_FLAGS);
 
-	}
-
-	if (!m_pDisplayOptions->IsZBufferLines())
-	{
-		// Enable the Z buffer
-		m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, TRUE);
+		if (!pDisp->IsZBufferLines())
+		{
+			// Enable the Z buffer
+			m_pDevice->SetRenderState(D3DRENDERSTATE_ZENABLE, TRUE);
+		}
 	}
 }
 
@@ -1090,31 +1033,26 @@ BOOL D3DRender::ZEnable(BOOL bEnable)
 }
 
 
+// 0x41a636.  The mipmap offset halves the texture coordinate scale.
 void D3DRender::InitVars()
 {
-	DWORD i, k;
-	CMatrix scale, translate;
-	CEditBrush *pBrush;
-	CEditRegion *pRegion;
-	CBaseEditObj *pObj;
-	LPOS pos;
-
-	
-	pRegion = m_pView->m_pRegion;
+	DWORD i;
 
 	g_xMax = (float)m_SurfaceWidth - 1.0f;
 	g_yMax = (float)m_SurfaceHeight - 1.0f;
 
 	m_bPerspectiveProjection = m_pViewDef->ViewType() == PERSPECTIVE_VIEWTYPE;
 
+	i = GetApp()->GetOptions().GetDisplayOptions()->GetMipMapOffset();
 	g_TextureMipScale = 1.0f;
+	for(; i > 0; i--)
+	{
+		g_TextureMipScale *= 0.5f;
+	}
 
 	m_pDevice->SetTexture(0, 0);
 	m_pDevice->SetRenderState(D3DRENDERSTATE_TEXTUREMIN, g_bBilinear ? D3DFILTER_LINEAR : D3DFILTER_NEAREST);
 	m_pDevice->SetRenderState(D3DRENDERSTATE_TEXTUREMAG, g_bBilinear ? D3DFILTER_LINEAR : D3DFILTER_NEAREST);
-
-	m_pDevice->SetTextureStageState(1, D3DTSS_MINFILTER, g_bBilinear ? D3DFILTER_LINEAR : D3DFILTER_NEAREST);
-	m_pDevice->SetTextureStageState(1, D3DTSS_MAGFILTER, g_bBilinear ? D3DFILTER_LINEAR : D3DFILTER_NEAREST);
 }
 
 
@@ -1137,8 +1075,7 @@ void D3DRender::DrawTagRectPoly()
 	tagRect.right = MIN( tagRect.right, clientRect.right );
 	tagRect.bottom = MIN( tagRect.bottom, clientRect.bottom );
 
-	if(tagRect.IsRectEmpty())
-		return;
+	// talon: 2001 has no empty-rect test (0x41a707).
 
 	verts[0].m_Vec.Init((float)tagRect.left, (float)tagRect.top, 0.0f);
 	verts[1].m_Vec.Init((float)tagRect.right, (float)tagRect.top, 0.0f);
@@ -1170,11 +1107,12 @@ void D3DRender::DrawTagRectPoly()
 }
 
 
+// 0x41a918.  The frame's statistics are cleared, and the drawing and the
+// blit timed into them.
 void D3DRender::Draw()
 {
 	HRESULT hResult;
 	CRect destRect, srcRect;
-	DDSURFACEDESC desc;
 	D3DRECT clearRect = {0, 0, m_SurfaceWidth, m_SurfaceHeight};
 	CycleMgr drawCounter, blitCounter;
 
@@ -1185,14 +1123,12 @@ void D3DRender::Draw()
 		return;
 	}
 
-
-	if(!DrawBase::InitFrame())
+	if(!InitFrame())
 		return;
 
-	//make sure we have our options
-	ASSERT(m_pDisplayOptions);
+	memset(&m_Stats, 0, sizeof(m_Stats));
 
-	m_bShadePolygons =		m_pDisplayOptions->IsShadePolygons();
+	StartCycleCount(&drawCounter);
 	
 	hResult = m_pDevice->BeginScene();
 	if(hResult != D3D_OK)
@@ -1209,8 +1145,10 @@ void D3DRender::Draw()
 
 	DrawTagRectPoly();
 
-
 	m_pDevice->EndScene();
+
+	m_Stats.m_DrawCycles = EndCycleCount(&drawCounter);
+	StartCycleCount(&blitCounter);
 	
 	// Blit to the primary.
 	srcRect.SetRect(0, 0, m_SurfaceWidth, m_SurfaceHeight);
@@ -1227,12 +1165,15 @@ void D3DRender::Draw()
 	{
 		hResult = m_pPrimarySurface->BltFast(destRect.left, destRect.top, m_pSurface, &srcRect, DDBLTFAST_NOCOLORKEY);
 	}		
+
+	m_Stats.m_BlitCycles = EndCycleCount(&blitCounter);
 }
 
 
+// 0x41aab3.  The surface is the view's size over its pixel scale.
 void D3DRender::Resize(int width, int height)
 {
-	CRect rect(0, 0, width, height);
+	CRect rect(0, 0, width / m_pView->m_nPixelScale, height / m_pView->m_nPixelScale);
 
 	Term();
 	Init(m_DeviceNum, m_RenderMode, &rect);
@@ -1255,6 +1196,8 @@ DrawMgr* dm_CreateDirect3dDrawMgr(CRegionView *pView, int *deviceNum, int *rende
 	pRet = new D3DRender(pView);
 
 	pView->GetClientRect(&rect);
+	rect.right /= pView->m_nPixelScale;
+	rect.bottom /= pView->m_nPixelScale;
 	
 	// In here, it tries device numbers down to zero, and all the render 
 	// modes it can for each device.

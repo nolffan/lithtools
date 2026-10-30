@@ -44,7 +44,6 @@ public:
 	afx_msg void OnHide();
 	afx_msg void Clear();
 	afx_msg void OnRunCommand();
-	afx_msg void OnUpdateProperties();
 	//}}AFX_MSG
 
 protected:

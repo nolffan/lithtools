@@ -13,9 +13,9 @@ class CDEDockFrameWnd : public CSizableMiniDockFrameWnd
 private:
     DECLARE_DYNCREATE(CDEDockFrameWnd)
 
+	// talon: 2001's is empty (CreateObject, 0x41868a)
 	CDEDockFrameWnd::CDEDockFrameWnd()
 	{
-		m_pFloatingFrameClass = RUNTIME_CLASS(CDEDockFrameWnd);
 	}
 
     //{{AFX_VIRTUAL(CSizableMiniDockFrameWnd)

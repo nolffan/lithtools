@@ -123,7 +123,7 @@
 #define IDS_SPRITE_EXTENSION            152
 #define IDD_SETPATCHRESOLUTION          152
 #define IDS_NEWSPRITE                   153
-#define IDD_AUTOTEXTURE_OPTIONS         153
+#define IDD_AUTOTEXTURE_OPTIONS         123
 #define IDD_ADDOBJECTDLG                154
 #define IDS_ENTERSPRITENAME             154
 #define IDD_CLASSDLG                    155
@@ -224,6 +224,7 @@
 #define IDS_RESTYPE_SOUND               198
 #define IDS_OK                          199
 #define IDD_RENAMERESOURCE              199
+#define IDD_KEYMAP                      199
 #define IDS_COMPILE                     200
 #define IDD_EVENTEDITOR                 200
 #define IDD_PRIMCYLINDER                201
@@ -536,7 +537,7 @@
 #define IDC_VECTOR_EDITZ                1058
 #define IDC_RADIO_SELECTED_BRUSHES      1059
 #define IDC_VECTOR_EDIT_INC             1059
-#define IDC_SHOWRESULTS                 1060
+#define IDC_SHOWRESULTS                 1015
 #define IDC_NODESWITHPROPERTY           1061
 #define IDC_SPIN_HANDLE_SIZE            1062
 #define IDC_EDIT_HANDLE_SIZE            1063
@@ -740,10 +741,10 @@
 #define IDC_SPIN_SET_PATCH_RES_X        1148
 #define IDC_SPIN_ADD_PATCH_X_CP         1149
 #define IDC_SPIN_SET_PATCH_RES_Y        1149
-#define IDC_STYLE_LINEAR                1149
+#define IDC_STYLE_LINEAR                1020
 #define IDC_SPIN_ADD_PATCH_Y_CP         1150
 #define IDC_STYLE_PATH                  1150
-#define IDC_RESTRICT_DIR                1153
+#define IDC_RESTRICT_DIR                1111
 #define IDC_PALETTE_COLORS              1154
 #define IDC_ALLTEXTURE_EDIT4            1154
 #define IDC_PALETTE_INDEX               1155
@@ -1113,7 +1114,7 @@
 #define ID_POPUP_SETACTIVEPARENT        40014
 #define ID_POPUP_SCALETEXTURECOORDS     40014
 #define ID_NAVIGATOR_STORE              40015
-#define ID_POPUP_FINDTEXINWORLD         40015
+#define ID_POPUP_FINDTEXINWORLD         40006
 #define ID_NAVIGATOR_GOTONEXT           40016
 #define ID_NAVIGATOR_GOTOPREVIOUS       40017
 #define ID_NAVIGATOR_ORGANIZE           40018
@@ -1192,7 +1193,7 @@
 #define ID_LOAD_LIGHT_DATA              40085
 #define ID_UNLOAD_LIGHT_DATA            40086
 #define ID_POPUP_TEXTUREPALETTE_REMOVE  40087
-#define ID_CENTER_ON_MARKER             40088
+#define ID_CENTER_ON_MARKER             40058
 #define ID_POPUP_SHADEMODE_LIGHTMAPSONLY 40089
 #define ID_WORLD_SCALE_GEOMETRY         40090
 #define ID_POPUP_FRAMELIST_ZOOM_50      40091
@@ -1207,7 +1208,7 @@
 #define ID_POPUP_TEXTUREPALETTE_DELETE  40100
 #define ID_POPUP_TEXTUREPALETTE_IMPORT  40101
 #define ID_POPUP_TEXTUREPALETTE_SORT    40102
-#define ID_PLACE_MARKER_AT_VECTOR       40103
+#define ID_PLACE_MARKER_AT_VECTOR       40067
 #define ID_FIT_TEXTURE_TO_POLY          40104
 #define ID_TOGGLE_CLASS_ICONS           40105
 #define ID_VIEW_TEXTUREPALETTE          40106
@@ -1274,7 +1275,7 @@
 #define ID_INDICATOR_BOUNDING_BOX       59147
 #define ID_INDICATOR_SELECTION          59148
 #define ID_INDICATOR_BRUSHNAME          59149
-#define ID_INDICATOR_VIEWTYPE           59150
+#define ID_INDICATOR_VIEWTYPE           59142
 #define IDS_NODEVIEWTOOLBAR_TEXT        61447
 #define IDS_STANDARD_TOOLBAR            61448
 #define IDS_NONOBJECT_NODES_SELECTED    61449

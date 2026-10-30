@@ -146,25 +146,21 @@ static void dcon_ReplaceTextures(int argc, char *argv[])
 		CEditBrush *pBrush = pRegion->m_Brushes.GetNext(iPos);
 
 		// Did we find a match on this brush?
-		bool bFoundMatch = false;
+		BOOL bFoundMatch = FALSE;
 
 		// For every polygon..
 		for (uint32 nPolyLoop = 0; nPolyLoop < pBrush->m_Polies; ++nPolyLoop)
 		{
 			CEditPoly *pPoly = pBrush->m_Polies[nPolyLoop];
 
-			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
+			// Is this your texture?  (2001's poly has one, 0x417ea5)
+			if (stricmp(pPoly->m_pTextureName, argv[0]) == 0)
 			{
-				// Is this your texture?
-				if (stricmp(pPoly->GetTexture(nCurrTex).m_pTextureName, argv[0]) == 0)
-				{
-					// Replace it...
-					pPoly->GetTexture(nCurrTex).m_pTextureName = pRegion->m_pStringHolder->AddString(argv[1]);
-					pPoly->GetTexture(nCurrTex).UpdateTextureID();
+				// Replace it...
+				pPoly->m_pTextureName = pRegion->m_pStringHolder->AddString(argv[1]);
 
-					// Found a match..
-					bFoundMatch = true;
-				}
+				// Found a match..
+				bFoundMatch = TRUE;
 			}
 		}
 

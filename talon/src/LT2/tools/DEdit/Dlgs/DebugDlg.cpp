@@ -10,7 +10,6 @@
 #include "..\dedit.h"
 #include "debugdlg.h"
 #include "dedit_concommand.h"
-#include "regiondoc.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -44,8 +43,6 @@ BEGIN_MESSAGE_MAP(CDebugDlg, CDialog)
 	//{{AFX_MSG_MAP(CDebugDlg)
 	ON_COMMAND(IDHIDE, OnHide)
 	ON_COMMAND(IDC_RUNCOMMAND, OnRunCommand)
-	ON_BN_CLICKED(IDC_CLEAR_DEBUG_TEXT, Clear)
-	ON_BN_CLICKED(IDC_BUTTON_UPDATE_PROPERTIES, OnUpdateProperties)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -62,9 +59,10 @@ void CDebugDlg::AddMessage(const char *pStr, ...)
 }
 
 
+// 0x416442: 2001's, vsprintf into 500 bytes (Build 69 has LTVSNPrintF).
 void CDebugDlg::AddMessage2(const char *pStr, va_list marker)
 {
-	char str[512];
+	char str[500];
 	CWnd *pWnd;
 	int nLen;
 
@@ -73,10 +71,7 @@ void CDebugDlg::AddMessage2(const char *pStr, va_list marker)
 
 	pWnd = GetDlgItem(IDC_MESSAGES);
 
-	// talon: the C runtime's, for Build 69's LTVSNPrintF and LTStrCat
-	// (ltstrutils.h, which the LT2 SDK hasn't)
-	_vsnprintf(str, sizeof(str) - 3, pStr, marker);
-	str[sizeof(str) - 3] = '\0';
+	vsprintf(str, pStr, marker);
 	strcat(str, "\r\n");
 
 	nLen = pWnd->SendMessage(EM_GETLIMITTEXT, 0, 0);
@@ -98,8 +93,8 @@ void CDebugDlg::OnRunCommand()
 	pWnd = GetDlgItem(IDC_COMMANDSTRING);
 	if(pWnd)
 	{
-		char pszText[512];
-		pWnd->GetWindowText(pszText, 512);
+		char pszText[500];
+		pWnd->GetWindowText(pszText, 500);
 		AddMessage("--- %s ---", pszText);
 		
 		dedit_CommandHandler(pszText);
@@ -114,17 +109,4 @@ void CDebugDlg::Clear()
 		return;
 
 	pWnd->SendMessage(WM_SETTEXT, 0, (LPARAM)"");
-}
-
-void CDebugDlg::OnUpdateProperties()
-{
-	CRegionDoc* pDoc = ::GetActiveRegionDoc();
-
-	if(!pDoc)
-	{
-		MessageBox("There is currently no region selected", "Cannot update object properties", MB_OK | MB_ICONEXCLAMATION);
-		return;
-	}
-
-	pDoc->UpdateAllObjectProperties();
 }

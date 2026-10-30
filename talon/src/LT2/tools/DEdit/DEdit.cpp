@@ -9,10 +9,10 @@
 #include "bdefs.h"
 #include "butemgr.h"
 #include "dedit.h"
+#include "keymapdlg.h"
 
 #include "optionsdisplay.h"
 #include "mainfrm.h"
-#include "projectdirdlg.h"
 
 #include "edithelpers.h"
 
@@ -28,18 +28,11 @@
 #include "projectbar.h"
 #include <afxadv.h>
 #include "stringdlg.h"
-#include "globalhotkeydb.h"
 #include "dedit_concommand.h"
 
 #include "newprojectdlg.h"
-#include "keyconfigdlg.h"
 #include "deditoptions.h"
 #include "version_resource.h"
-
-#include "optionsmodels.h"
-#include "eventnames.h"
-#include "optionsmisc.h"
-#include "ltamgr.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -48,29 +41,38 @@ static char THIS_FILE[] = __FILE__;
 #endif
 
 
-#define HOTKEY_REG_PATH  "HKEY_CURRENT_USER\\Software\\LithTech Inc.\\Jupiter\\DEdit\\Settings\\Hotkeys"
-
-TCHAR szRegKeyCompany[] = _T( "LithTech Inc.\\Jupiter" );
+TCHAR szRegKeyCompany[] = _T( "LithTech Inc.\\Talon" );
 TCHAR szRegKeyApp[] = _T( "DEdit" );
 TCHAR szRegKeyVer[] = _T( "Settings" );
+
+
+// talon: stand-in: 2001's Quick Help dialog (dialog 198, its constructor
+// 0x44eeca), whose source (QuickHelpDlg.cpp by its place in the image)
+// isn't written yet; its constructor is at the end of this file.
+class CQuickHelpDlg : public CDialog
+{
+public:
+	CQuickHelpDlg(CWnd* pParent = NULL);
+};
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CDEditApp
 
+// 0x4d71b0
 BEGIN_MESSAGE_MAP(CDEditApp, CWinApp)
 	//{{AFX_MSG_MAP(CDEditApp)
 	ON_COMMAND(ID_APP_ABOUT, OnAppAbout)
+	ON_COMMAND(ID_QUICKHELP, OnQuickHelp)
+	ON_COMMAND(ID_KEYMAP, OnKeyMap)
 	ON_COMMAND(ID_FILE_NEWPROJECT, OnFileNewProject)
 	ON_COMMAND(ID_FILE_SAVE, OnFileSave)
-	ON_COMMAND(ID_EDIT_KEY_CONFIGURATION, OnEditKeyConfiguration)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVE, OnUpdateFileSave)
 	ON_COMMAND(ID_FILE_CLOSEPROJECT, OnFileCloseProject)
 	ON_UPDATE_COMMAND_UI(ID_FILE_CLOSEPROJECT, OnUpdateFileCloseProject)
 	ON_COMMAND(ID_FILE_OPEN, OnFileOpen)
 	ON_COMMAND(ID_FILE_NEWWORLD, OnFileNewWorld)
 	ON_UPDATE_COMMAND_UI(ID_FILE_NEWWORLD, OnUpdateFileNewWorld)
-	ON_COMMAND(ID_FILE_RELOADWORLD, OnFileReloadWorld)
-	ON_UPDATE_COMMAND_UI(ID_FILE_RELOADWORLD, OnUpdateFileReloadWorld)
 	ON_COMMAND(ID_FILE_SAVEWORLDAS, OnFileSaveWorldAs)
 	ON_UPDATE_COMMAND_UI(ID_FILE_SAVEWORLDAS, OnUpdateFileSaveWorldAs)
 	ON_COMMAND(ID_FILE_CLOSEWORLD, OnFileCloseWorld)
@@ -82,8 +84,6 @@ BEGIN_MESSAGE_MAP(CDEditApp, CWinApp)
 	ON_COMMAND(ID_FILE_OPEN, CWinApp::OnFileOpen)
 	// Standard print setup command
 	ON_COMMAND(ID_FILE_PRINT_SETUP, CWinApp::OnFilePrintSetup)
-	ON_COMMAND(ID_HELP_INTRODUCTION, OnHelpIntroduction)
-	ON_COMMAND(ID_HELP_CREATION_GUIDE, OnHelpCreationGuide)
 	ON_COMMAND(ID_HELP_WWWDE, OnDEHomePage)
 	ON_COMMAND(ID_HELP_ONLINEDOCUMENTATION, OnOnlineDoc)
 END_MESSAGE_MAP()
@@ -91,19 +91,19 @@ END_MESSAGE_MAP()
 /////////////////////////////////////////////////////////////////////////////
 // CDEditApp construction
 
-CDEditApp::CDEditApp()
+// 0x41653e
+CDEditApp::CDEditApp() : CWinApp("DEdit")
 {
 	m_pWorldTemplate		= NULL;
 	m_TextureDisplaySize	= 64;
 	m_bFullUpdate			= TRUE;
-	m_pClassHelpButeMgr		= NULL;
-	m_pClassHelpButeAgg		= NULL;
 
 	// Init the global managers.
 	dedit_InitConsoleCommands();
 }
 
 
+// 0x4165dc
 CDEditApp::~CDEditApp()
 {
 	// Close the palette manager.
@@ -116,17 +116,6 @@ CDEditApp::~CDEditApp()
 		delete m_pClassHelpButeMgr;
 		m_pClassHelpButeMgr=NULL;
 	}
-
-	//clean up any old aggreagates
-	if(GetClassHelpButeAgg())
-	{
-		GetClassHelpButeAgg()->Term();
-		delete GetClassHelpButeAgg();
-	}
-
-	//make sure we don't leak any memory through the global hotkey database
-	CGlobalHotKeyDB::ClearAggregateList();
-
 }
 
 BOOL g_bGlobalUndoDisable=FALSE;
@@ -166,15 +155,9 @@ CDEditApp theApp;
 /////////////////////////////////////////////////////////////////////////////
 // CDEditApp initialization
 
+// 0x416687
 BOOL CDEditApp::InitInstance()
 {
-
-	//initialize the global hotkey database, and then overwrite the configuration with
-	//that found in the registry (this allows new keys to be added to the database
-	//and not have to be contained in the registry)
-	CGlobalHotKeyDB::Init();
-	CGlobalHotKeyDB::m_DB.LoadFromRegistry(m_genRegMgr, HOTKEY_REG_PATH, false);
-	
 	// Set the working directory and the EXE directory
 	GetCurrentDirectory( sizeof(m_WorkingDir), m_WorkingDir );
 
@@ -204,7 +187,7 @@ BOOL CDEditApp::InitInstance()
 	//  of your final executable, you should remove from the following
 	//  the specific initialization routines you do not need.
 
-	AfxInitRichEdit();
+	Enable3dControlsStatic();	// Call this when linking to MFC statically
 
 	LoadStdProfileSettings();  // Load standard INI file options (including MRU)
 
@@ -223,10 +206,6 @@ BOOL CDEditApp::InitInstance()
    
    LoadRegistryStuff();
 
-   //setup our model manager
-   GetModelMgr().Create(GetOptions().GetModelsOptions()->IsRunLowPriority(), GetOptions().GetModelsOptions()->GetMaxMemoryUse());
-
-   //\nWorld\nWorld\nWorlds (*.ed)\n.ed\n
 	// create main MDI Frame window
 	CMainFrame* pMainFrame = new CMainFrame;
 	if (!pMainFrame->LoadFrame(IDR_MAINFRAME))
@@ -236,22 +215,6 @@ BOOL CDEditApp::InitInstance()
 	// Parse command line for standard shell commands, DDE, file open
 	CCommandLineInfo cmdInfo;
 	ParseCommandLine(cmdInfo);
-
-	// Dispatch commands specified on the command line
-//	if (!ProcessShellCommand(cmdInfo))
-//		return FALSE;
-
-	//extract the class help file if needed
-	if(GetApp()->GetOptions().GetMiscOptions()->IsAutoExtractClassHelp())
-	{
-		//see if the file exists
-		CFileStatus DummyStatus;
-
-		if(!CFile::GetStatus("ClassHlp.but", DummyStatus))
-		{
-			CProjectBar::CreateFileFromResource(MAKEINTRESOURCE(IDR_CLASSHLP_BUT), "BUT", "ClassHlp.but");
-		}
-	}
 
 	// Load the bute file for the class help	
 	m_pClassHelpButeMgr=new CButeMgr;
@@ -267,57 +230,10 @@ BOOL CDEditApp::InitInstance()
 		m_pClassHelpButeMgr->SetDisplayFunc(NULL);
 	}
 
-	// Load the intro if this is the first time running DEdit
-	if(m_DEditOptions.IsFirstRun())  
-	{
-		OnHelpIntroduction();
-		m_DEditOptions.SetFirstRun(false);
-	}
-
 	// The main window has been initialized, so show and update it.
 	pMainFrame->UpdateWindow();
 
-	//open our last project
-//	if(( *m_pRecentFileList )[0].GetLength( ) > 0 )
-//		GetProjectBar()->Open( ( LPCTSTR )( *m_pRecentFileList )[0] );
-	
 	ProcessSpecialArgs();
-
-
-	// Sanity check on Window Size
-
-	RECT screen, window, final;
-
-	::SystemParametersInfo(SPI_GETWORKAREA, NULL, &screen, NULL);
-
-	m_pMainWnd->GetWindowRect(&window);
-
-	// Clip to window size
-
-	screen.top < window.top ? final.top = window.top : final.top = screen.top;
-	screen.left < window.left ? final.left = window.left : final.left = screen.left;
-	screen.right > window.right ? final.right = window.right : final.right = screen.right;
-	screen.bottom > window.bottom ? final.bottom = window.bottom : final.bottom = screen.bottom;
-
-	// Check if window is off screen
-
-	if (window.top > screen.bottom)  final.top = screen.top;
-	if (window.left > screen.right)  final.left = screen.left;
-	if (window.right < screen.left)  final.right = screen.right;
-	if (window.bottom < screen.top)  final.bottom = screen.bottom;
-
-	m_pMainWnd->MoveWindow(&final, true);
-
-	//now load up the last saved project
-	if(GetApp()->GetOptions().GetMiscOptions()->IsAutoLoadProj())
-	{
-		CString sLastProject = GetApp()->GetOptions().GetMiscOptions()->GetStringValue("LastProject", "");
-		if(!sLastProject.IsEmpty())
-		{
-			//load up this project
-			GetProjectBar()->Open(sLastProject);
-		}
-	}
 
 	return TRUE;
 }
@@ -377,10 +293,25 @@ void CDEditApp::OnAppAbout()
 	aboutDlg.DoModal();
 }
 
+// 0x416a82
+void CDEditApp::OnQuickHelp()
+{
+	CQuickHelpDlg dlg;
+	dlg.DoModal();
+}
+
+// 0x416abd
+void CDEditApp::OnKeyMap()
+{
+	CKeyMapDlg dlg;
+	dlg.DoModal();
+}
+
 
 /////////////////////////////////////////////////////////////////////////////
 // CDEditApp commands
 
+// 0x416b48
 void CDEditApp::OnFileNewProject() 
 {
 	CString str, projFilename, fileExtension;
@@ -460,13 +391,12 @@ void CDEditApp::OnFileNewProject()
 		return;
 	}
 
+	// 2001's five resource directories (0x416d8f..0x416e2c)
 	if( !CResourceMgr::CreateDir( "Worlds", RESTYPE_WORLD ) ||
 		!CResourceMgr::CreateDir( "Sprites", RESTYPE_SPRITE ) ||
 		!CResourceMgr::CreateDir( "Textures", RESTYPE_TEXTURE ) ||
 		!CResourceMgr::CreateDir( "Sounds", RESTYPE_SOUND ) ||
-		!CResourceMgr::CreateDir( "Models", RESTYPE_MODEL ) ||
-		!CResourceMgr::CreateDir( "Prefabs", RESTYPE_PREFAB ) ||
-		!CResourceMgr::CreateDir( "Physics", RESTYPE_PHYSICS ))
+		!CResourceMgr::CreateDir( "Models", RESTYPE_MODEL ))
 	{
 			str.FormatMessage( IDS_ERRORCREATING_PROJECT, title );
 			AppMessageBox( str, MB_OK );
@@ -540,6 +470,7 @@ void CDEditApp::OnFileNewProject()
 //				everything is successful, the file is added to the recent file list.
 //
 //----------------------------------------------------------------------------------------
+// 0x4171dc
 void CDEditApp::OnFileOpen() 
 {
 	CString			ext, filter;
@@ -570,6 +501,7 @@ void CDEditApp::OnFileOpen()
 //				Doc/View framework.
 //
 //----------------------------------------------------------------------------------------
+// 0x41731a
 BOOL CDEditApp::OnOpenRecentFile(UINT nID)
 {
 	TCHAR szTemp[_MAX_PATH];
@@ -628,6 +560,8 @@ BOOL CAboutDlg::OnInitDialog()
 }
 
 
+// 0x417476: 2001's auto-save always runs, every GetAutoSaveTime() minutes,
+// and saves the world itself.
 BOOL CDEditApp::OnIdle( LONG lCount )
 {
 	CDocument			*pDoc;
@@ -647,9 +581,6 @@ BOOL CDEditApp::OnIdle( LONG lCount )
 
 				pDoc = m_pWorldTemplate->GetNextDoc( docPos );
 			
-				//let the lightmaps be calculated
-				CEditRegion* pRegion = ((CRegionDoc*)pDoc)->GetRegion();
-
 				for( viewPos = pDoc->GetFirstViewPosition(); viewPos != NULL; )
 				{
 					pView = (CRegionView*)pDoc->GetNextView( viewPos );
@@ -660,34 +591,24 @@ BOOL CDEditApp::OnIdle( LONG lCount )
 					}
 				}
 
-				//added extra features to autosaving, such as the ability to change
-				//the path and other fun stuff -JohnO
-
-				//see if we need to test for autosaving
-				if(GetApp()->GetOptions().IsAutoSave())
+				// Get the autosave time
+				DWORD dwAutoSaveTime = GetApp()->GetOptions().GetAutoSaveTime();
+				if((timeGetTime() - lastSaveTime) > (dwAutoSaveTime * 60000))
 				{
-					// Get the autosave time
-					DWORD dwAutoSaveTime = GetApp()->GetOptions().GetAutoSaveTime();
-					if((timeGetTime() - lastSaveTime) > (dwAutoSaveTime * 60000))
-					{
-						CMainFrame* pFrame = (CMainFrame*)AfxGetMainWnd();
+					CMainFrame* pFrame = (CMainFrame*)AfxGetMainWnd();
 
-						//update the status bar so that it will reflect the state
-						CString csTemp = "Auto-saving: " + ((CRegionDoc*)pDoc)->m_FileName;
-						pFrame->UpdateStatusText(0,( char * )LPCTSTR( csTemp ));
+					//update the status bar so that it will reflect the state
+					CString csTemp = "Auto-saving: " + ((CRegionDoc*)pDoc)->m_FileName;
+					pFrame->UpdateStatusText(0,( char * )LPCTSTR( csTemp ));
 
-						//update the backup filename in case the options changed
-						((CRegionDoc*)pDoc)->UpdateBackupName(((CRegionDoc*)pDoc)->m_FileName);
+					//save the current time for the next time around
+					lastSaveTime = timeGetTime();
 
-						//save the actual backup file
-						((CRegionDoc*)pDoc)->SaveLTA(FALSE);
+					//save the backup file
+					((CRegionDoc*)pDoc)->SaveRegion(FALSE);
 
-						//save the current time for the next time around
-						lastSaveTime = timeGetTime();
-
-						//return the status to ready
-						pFrame->UpdateStatusText(0,"Ready");
-					}
+					//return the status to ready
+					pFrame->UpdateStatusText(0,"Ready");
 				}
 			}
 			break;
@@ -710,177 +631,22 @@ BOOL CDEditApp::PreTranslateMessage(MSG* pMsg)
 void CDEditApp::LoadRegistryStuff()
 {	
 	// Load the options
-	m_DEditOptions.Init(&m_genRegMgr, "HKEY_CURRENT_USER\\Software\\LithTech Inc.\\Jupiter\\DEdit");
+	m_DEditOptions.Init(&m_genRegMgr, "HKEY_CURRENT_USER\\Software\\LithTech Inc.\\Talon\\DEdit");
 	m_DEditOptions.Load();
-
-	/*
-	CString sProject=m_DEditOptions.GetStringValue("Project", "");
-	if (sProject.GetLength() > 0)
-	{
-		CMoFileIO file;
-		if( file.Open(sProject, "rb"))
-		{
-			file.Close();
-			GetProjectBar()->Open( sProject );
-		}
-	}
-	*/
 }
 
 
 void CDEditApp::SaveRegistryStuff()
 {
-	// Save the current project	
-	// m_DEditOptions.SetStringValue("Project", GetProjectBar()->m_ProjectFileName);	
-	
 	// Save the options
 	m_DEditOptions.Save();
 }
 
 BOOL CDEditApp::SaveAllModified() 
 {
-	//GetProjectBar()->Save();	
 	SaveRegistryStuff();
 
 	return CWinApp::SaveAllModified();
-}
-
-void CDEditApp::OnHelpIntroduction()
-{
-	char szPath[MAX_PATH];
-	bool bShowErrors = !m_DEditOptions.IsFirstRun();
-
-	sprintf(szPath, "%s..\\..\\..\\docs\\DEditWelcome\\welcome.htm", GetApp()->m_ExeDirectory);
-	int shellVal = (int)ShellExecute(AfxGetMainWnd()->GetSafeHwnd(),"open",szPath,NULL,NULL,SW_SHOWNORMAL);
-
-	// Check installed path in registry if we don't find the file in the normal location
-	if ((shellVal <= 32) && ((shellVal == ERROR_FILE_NOT_FOUND) || (shellVal == ERROR_PATH_NOT_FOUND)))
-	{
-		char szPath2[MAX_PATH];
-		HKEY hKey;
-		unsigned long dataSize = sizeof(char) * MAX_PATH, keyType = REG_SZ;
-
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,"SOFTWARE\\LithTech Inc.\\Jupiter\\", NULL, KEY_ALL_ACCESS, &hKey) == NO_ERROR)
-		{
-			if (RegQueryValueEx(hKey, "InstallDir", NULL, &keyType, (unsigned char *)szPath, &dataSize) == NO_ERROR)
-			{
-				if(szPath)
-				{
-					if (szPath[0] == '\"') // Remove quotes from path
-					{
-						int stringLen = strlen(szPath)-2;			ASSERT(stringLen > 0);
-						strncpy(szPath2, &szPath[1], stringLen);
-						szPath2[stringLen] = '\0';
-						strcpy(szPath, szPath2);
-					}
-					sprintf(szPath2, "%s\\docs\\DEditWelcome\\welcome.htm", szPath);
-					shellVal = (int)ShellExecute(AfxGetMainWnd()->GetSafeHwnd(),"open",szPath2,NULL,NULL,SW_SHOW);
-				}
-			}
-			else
-			{
-				shellVal = 33; // in order to skip switch below
-				if(bShowErrors)  AppMessageBox(AFX_IDP_REGISTRY_ERROR, MB_OK);
-			}
-
-			RegCloseKey(hKey);
-		}
-		else
-		{
-			shellVal = 33; // in order to skip switch below
-			if(bShowErrors)  AppMessageBox(AFX_IDP_REGISTRY_ERROR, MB_OK);
-		}
-	}
-
-
-	if (shellVal <= 32)
-	{
-		switch (shellVal)
-		{
-			case ERROR_FILE_NOT_FOUND:
-			case ERROR_PATH_NOT_FOUND:
-				if(bShowErrors)  AppMessageBox(AFX_IDP_NO_INTRODUCTION, MB_OK);
-				break;
-
-			case SE_ERR_ASSOCINCOMPLETE:
-			case SE_ERR_NOASSOC:
-				if(bShowErrors)  AppMessageBox(AFX_IDP_NO_HTML_READER, MB_OK);
-				break;
-
-			default:
-				CString str;
-				str.FormatMessage(AFX_IDP_GENERIC_INTRODUCTION_FALURE, shellVal);
-				if(bShowErrors)  AppMessageBox(str, MB_OK);
-		}
-	}
-
-	return;
-}
-
-void CDEditApp::OnHelpCreationGuide()
-{
-	char szPath[MAX_PATH];
-	sprintf(szPath, "%s..\\..\\..\\docs\\GameContentCreationGuide.pdf", GetApp()->m_ExeDirectory);
-	int shellVal = (int)ShellExecute(AfxGetMainWnd()->GetSafeHwnd(),"open",szPath,NULL,NULL,SW_SHOWNORMAL);
-
-	// Check installed path in registry if we don't find the file in the normal location
-	if ((shellVal <= 32) && ((shellVal == ERROR_FILE_NOT_FOUND) || (shellVal == ERROR_PATH_NOT_FOUND)))
-	{
-		char szPath2[MAX_PATH];
-		HKEY hKey;
-		unsigned long dataSize = sizeof(char) * MAX_PATH, keyType = REG_SZ;
-
-		if (RegOpenKeyEx(HKEY_LOCAL_MACHINE,"SOFTWARE\\LithTech Inc.\\Jupiter\\", NULL, KEY_ALL_ACCESS, &hKey) == NO_ERROR)
-		{
-			if (RegQueryValueEx(hKey, "InstallDir", NULL, &keyType, (unsigned char *)szPath, &dataSize) == NO_ERROR)
-			{
-				if (szPath[0] == '\"') // Remove quotes from path
-				{
-					int stringLen = strlen(szPath)-2;				ASSERT(stringLen > 0);
-					strncpy(szPath2, &szPath[1], stringLen);
-					szPath2[stringLen] = '\0';
-					strcpy(szPath, szPath2);
-				}
-				sprintf(szPath2, "%s\\docs\\GameContentCreationGuide.pdf", szPath);
-				shellVal = (int)ShellExecute(AfxGetMainWnd()->GetSafeHwnd(),"open",szPath2,NULL,NULL,SW_SHOWNORMAL);
-			}
-			else
-			{
-				shellVal = 33; // in order to skip switch below
-				AppMessageBox(AFX_IDP_REGISTRY_ERROR, MB_OK);
-			}
-
-			RegCloseKey(hKey);
-		}
-		else
-		{
-			shellVal = 33; // in order to skip switch below
-			AppMessageBox(AFX_IDP_REGISTRY_ERROR, MB_OK);
-		}
-	}
-
-	if (shellVal <= 32)
-	{
-		switch (shellVal)
-		{
-			case ERROR_FILE_NOT_FOUND:
-			case ERROR_PATH_NOT_FOUND:
-				AppMessageBox(AFX_IDP_NO_CREATION_GUIDE, MB_OK);
-				break;
-
-			case SE_ERR_ASSOCINCOMPLETE:
-			case SE_ERR_NOASSOC:
-				AppMessageBox(AFX_IDP_NO_PDF_READER, MB_OK);
-				break;
-
-			default:
-				CString str;
-				str.FormatMessage(AFX_IDP_GENERIC_CREATION_GUIDE_FALURE, shellVal);
-				AppMessageBox(str, MB_OK);
-		}
-	}
-
-	return;
 }
 
 void CDEditApp::OnDEHomePage()
@@ -900,46 +666,7 @@ void CDEditApp::OnOnlineDoc()
 	return;
 }
 
-void CDEditApp::OnFileReloadWorld()
-{
-	//get the currently active document
-	CRegionDoc* pDoc = GetActiveRegionDoc();
-
-	if(!pDoc)
-		return;
-
-	//alright, now see if it has changed
-	if(pDoc->IsModified())
-	{
-		if(MessageBox(AfxGetMainWnd()->GetSafeHwnd(), "Reloading this world will cause changes to be lost. Are you sure you want to do this?", "Reload World", MB_ICONQUESTION | MB_OKCANCEL) != IDOK)
-		{
-			//they canceled
-			return;
-		}
-	}
-
-	//pull up a wait cursor instantly so the user knows what is going on
-	CWaitCursor	WaitCursor;
-
-	//alright, close out this document and reopen it
-	CString sWorldName = pDoc->m_FileName;
-
-	//if they went this far, they wanted to discard changes anyway
-	pDoc->SetModifiedFlag(FALSE);
-
-	//send a message to ourself to close the document
-	SendMessage(AfxGetMainWnd()->GetSafeHwnd(), WM_COMMAND, MAKEWPARAM(ID_FILE_CLOSE, 0), 0);
-
-	//now we need to reopen it
-	GetProjectBar()->OpenRegionDoc(sWorldName);
-}
-
-void CDEditApp::OnUpdateFileReloadWorld(CCmdUI* pCmdUI)
-{
-	//see if they have a currently active document
-	pCmdUI->Enable(GetActiveRegionDoc() != NULL);
-}
-
+// 0x417699: 2001's creates an empty world file (Build 69 writes an LTA one).
 void CDEditApp::OnFileNewWorld()
 {
 	CStringDlg			dlg;
@@ -967,14 +694,7 @@ void CDEditApp::OnFileNewWorld()
 
 		if( dlg.DoModal(IDS_NEWWORLD, IDS_ENTERWORLDNAME) == IDOK )
 		{
-			if(GetApp()->GetOptions().GetMiscOptions()->IsDefaultCompressed())
-			{
-				extension.LoadString( IDS_COMPRESSEDWORLDEXTENSION );
-			}
-			else
-			{
-				extension.LoadString( IDS_WORLDEXTENSION );
-			}
+			extension.LoadString( IDS_WORLDEXTENSION );
 			
 			// Make sure they have a worlds directory selected.
 			if(GetWorldsDlg()->IsDirectorySelected())
@@ -1025,53 +745,18 @@ void CDEditApp::OnFileNewWorld()
 				}
 			}
 
-			/*
-				( nodehierarchy 
-					( worldnode 
-						( type null )
-						( label "Container" ) 
-						( nodeid 1 ) 
-						( flags ( worldroot expanded ) ) 
-						( properties
-							( propid  0 ) 
-						)
-			*/
-
+			// talon: retail bug: bCreate is never set unless the file exists
+			// and they answer No (0x4178b1 reads a dead temporary's slot).
 			if( bCreate )
 			{
-				CLTAWriter OutFile;
-
-				if( OutFile.Open(fullName, CLTAUtil::IsFileCompressed(fullName)) )
- 				{
- 					OutFile.WriteF(false, "\n( world								");
- 					OutFile.WriteF(false, "\n		( header						");
- 					OutFile.WriteF(false, "\n			( versioncode 1249 )		");
- 					OutFile.WriteF(false, "\n		)								");
-					OutFile.WriteF(false, "\n		( nodehierarchy					");
-					OutFile.WriteF(false, "\n			( worldnode					");
- 					OutFile.WriteF(false, "\n				( type null )			");	
- 					OutFile.WriteF(false, "\n				( label \"%s\" )		", dlg.m_EnteredText);
- 					OutFile.WriteF(false, "\n				( nodeid 1 )			");
- 					OutFile.WriteF(false, "\n				( flags (worldroot expanded) ) ");
- 					OutFile.WriteF(false, "\n				( properties			");
- 					OutFile.WriteF(false, "\n					( propid  0 )		");
- 					OutFile.WriteF(false, "\n				)						");
- 					OutFile.WriteF(false, "\n				( childlist ( ) )		");
- 					OutFile.WriteF(false, "\n			)							");
-					OutFile.WriteF(false, "\n		)								");
-					OutFile.WriteF(false, "\n		( globalproplist (				");
-					OutFile.WriteF(false, "\n			( proplist (				");
-					OutFile.WriteF(false, "\n		) )								");
- 					OutFile.WriteF(false, "\n)										");
- 
- 					OutFile.Close();
- 				}
- 				else
- 				{
+				fp = fopen( fullName, "wb" );
+				if( !fp )
+				{
  					str.FormatMessage( IDS_ERRORCREATING_WORLD, dlg.m_EnteredText );
  					AppMessageBox( str, MB_OK );
  					return;
- 				}
+				}
+				fclose( fp );
 			}
 
 			GetProjectBar( )->OpenRegionDoc(fullName);
@@ -1121,6 +806,7 @@ void CDEditApp::OnUpdateFileCloseProject( CCmdUI *pCmdUI )
 
 }
 
+// 0x4179da: 2001's saves the world, without asking, before closing it.
 void CDEditApp::OnFileCloseWorld()
 {
 	CMDIFrameWnd *pFrame = (CMDIFrameWnd*)AfxGetApp()->m_pMainWnd;
@@ -1128,13 +814,9 @@ void CDEditApp::OnFileCloseWorld()
 	CView *pView = (CView *) pChild->GetActiveView();
 	CRegionDoc *pDoc = (CRegionDoc*)pView->GetDocument();
 
-	if(pDoc->SaveModifiedLTA()) // User didn't click cancel on the save request box
-	{
-		m_pWorldTemplate->RemoveDocument( pDoc );
-		pDoc->OnCloseDocument();
-	}
-
-	return;
+	pDoc->SaveRegion(TRUE);
+	m_pWorldTemplate->RemoveDocument( pDoc );
+	pDoc->OnCloseDocument();
 }
 
 void CDEditApp::OnUpdateFileCloseWorld( CCmdUI *pCmdUI )
@@ -1145,13 +827,15 @@ void CDEditApp::OnUpdateFileCloseWorld( CCmdUI *pCmdUI )
 		pCmdUI->Enable(FALSE);
 }
 
+// 0x417a36: 2001's backup name is a temporary file named from the world's
+// first three letters; .ed and .obj saves.
 void CDEditApp::OnFileSaveWorldAs()
 {
 	CString			ext, filter, sFileName;
 
 	ext.LoadString( IDS_WORLDEXTENSION );
 	filter.LoadString( IDS_FILESAVEAS_FILTER );
-	sFileName = GetProject()->m_BaseProjectDir + "\\Worlds\\*.lta;*.ltc";
+	sFileName = GetProject()->m_BaseProjectDir + "\\Worlds\\*" + ext;
 
 	CFileDialog		dlg(FALSE, ext, (LPCTSTR)sFileName, OFN_HIDEREADONLY|OFN_OVERWRITEPROMPT, filter, AfxGetMainWnd( ));
 
@@ -1162,27 +846,31 @@ void CDEditApp::OnFileSaveWorldAs()
 		CView *pView = (CView *) pChild->GetActiveView();
 		CRegionDoc *pDoc = (CRegionDoc*)pView->GetDocument();
 
-		char	pathName[_MAX_PATH], fileName[_MAX_PATH];
-		char	worldName[_MAX_PATH], extension[_MAX_PATH], backupName[_MAX_PATH];
+		char	pathName[256], fileName[256];
+		char	worldName[256], extension[256], backupName[256];
 
 		CHelpers::ExtractPathAndFileName( dlg.GetPathName(), pathName, fileName );
 		CHelpers::ExtractFileNameAndExtension( fileName, worldName, extension );
 
 		pDoc->m_FileName = dlg.GetPathName();	
 		pDoc->m_WorldName = worldName;
-		pDoc->SetTitle(false);
+		// talon: CDocument's virtual SetTitle (0x417bb6); Build 69's
+		// CRegionDoc::SetTitle(bool) hides it
+		((CDocument*)pDoc)->SetTitle(pDoc->m_WorldName);
 		pDoc->SetPathName(dlg.GetPathName(),FALSE);
 
-		//update the name of the backup file
-		pDoc->UpdateBackupName(dlg.GetPathName());
+		GetTempPath(256, pathName);
+		fileName[3] = 0;
+		GetTempFileName(pathName, fileName, 0, backupName);
+		pDoc->m_BackupName = backupName;
 
-		if( stricmp(extension,"obj") == 0 ) 
+		if( stricmp(extension,"ed") == 0 ) 
+		{
+			pDoc->SaveRegion(TRUE);
+		}
+		else if( stricmp(extension,"obj") == 0 ) 
 		{
 			pDoc->SaveOBJ(TRUE);
-		}
-		else if( (stricmp(extension,"lta") == 0) || (stricmp(extension,"ltc") == 0) || (stricmp(extension,"tbw") == 0)) 
-		{
-			pDoc->SaveLTA(TRUE);
 		}
 		GetProjectBar( )->UpdateAll();
 	}
@@ -1199,93 +887,13 @@ void CDEditApp::OnUpdateFileSaveWorldAs( CCmdUI *pCmdUI )
 }
 
 
-void CDEditApp::OnEditKeyConfiguration()
+// ------------------------------------------------------------------------
+// talon: stand-in: the Quick Help dialog (see the top of this file).
+// ------------------------------------------------------------------------
+
+CQuickHelpDlg::CQuickHelpDlg(CWnd* pParent)
+	: CDialog(IDD_QUICKHELP, pParent)
 {
-	CKeyConfigDlg KeyConfigDlg(CGlobalHotKeyDB::m_DB);
-
-	if(KeyConfigDlg.DoModal() == IDOK)
-	{
-		SetHotKeyDB(KeyConfigDlg.m_Config);
-	}
-}
-
-
-//sets up the hot key database to reflect a specified database
-void CDEditApp::SetHotKeyDB(const CHotKeyDB& NewDB)
-{
-	CGlobalHotKeyDB::m_DB = NewDB;
-
-	//one thing we need to do is make sure that the draw poly tracker is handled correctly.
-	//this means clearing out its end event list and making sure that it is escape instead
-	const CHotKey* pDrawPoly = CGlobalHotKeyDB::m_DB.GetHotKey(UIE_DRAW_POLY);
-	if(pDrawPoly)
-	{
-		CHotKey NewDrawPoly(*pDrawPoly);
-		NewDrawPoly.ClearEndEventList();
-		NewDrawPoly.m_EndEventList.Add(new CUIKeyEvent(UIEVENT_KEYDOWN, VK_ESCAPE));
-		CGlobalHotKeyDB::m_DB.SetHotKey(NewDrawPoly);
-	}
-
-	CGlobalHotKeyDB::m_DB.SaveToRegistry(m_genRegMgr, HOTKEY_REG_PATH);
-
-	//have all the views reset their trackers now that they have a new configuration to use
-	POSITION position;
-	for( position = m_pWorldTemplate->GetFirstDocPosition(); position != NULL; )
-	{
-		CDocument* pDoc = m_pWorldTemplate->GetNextDoc( position );
-		if( pDoc != NULL )
-		{
-			POSITION viewPos;
-			for( viewPos = pDoc->GetFirstViewPosition(); viewPos != NULL; )
-			{
-				CRegionView* pView = (CRegionView*)pDoc->GetNextView( viewPos );
-				if( pView != NULL )
-				{
-					pView->OnHotKeysChanged();
-				}
-			}
-		}
-	}
-}
-
-//attempts to get a string from the bute help files. It will first try the aggregate
-//if one exists, if that fails it will try the base, and if that fails the function will
-//fail. If it succeeds, the string will be returned in sMatch
-BOOL CDEditApp::GetHelpString(const char* pszTag, const char* pszAttrib, CString& sMatch)
-{
-	//first try out the aggregate
-	if(GetClassHelpButeAgg() && GetClassHelpButeAgg()->Exist(pszTag, pszAttrib))
-	{
-		//found it in the aggregate
-		sMatch = GetClassHelpButeAgg()->GetString(pszTag, pszAttrib);
-		return TRUE;
-	}
-
-	//now try out the base
-	if(GetClassHelpButeMgr() && GetClassHelpButeMgr()->Exist(pszTag, pszAttrib))
-	{
-		//found it in the aggregate
-		sMatch = GetClassHelpButeMgr()->GetString(pszTag, pszAttrib);
-		return TRUE;
-	}
-
-	//failed to find it
-	return FALSE;
-}
-
-//this sets the class help bute aggregate. This will be in charge of freeing memory
-//associated with it. Assumes it is allocated with new
-void CDEditApp::SetClassHelpButeAgg(CButeMgr* pMgr)
-{
-	//clean up any old aggreagates
-	if(GetClassHelpButeAgg())
-	{
-		GetClassHelpButeAgg()->Term();
-		delete GetClassHelpButeAgg();
-	}
-
-	//set the new one
-	m_pClassHelpButeAgg = pMgr;
 }
 
 // talon: no DefStdlithAlloc and DefStdlithFree here: the 2001 StdLith

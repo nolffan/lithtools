@@ -5,7 +5,7 @@
 //#include "edithelpers.h"
 //#include "projectbar.h"
 #include "dedockframewnd.h"
-#include "mainfrm.h"
+#include "mrcext.h"	// talon: for CMRCSizeControlBar; mainfrm.h not needed
 
 
 IMPLEMENT_DYNCREATE(CDEDockFrameWnd, CSizableMiniDockFrameWnd)

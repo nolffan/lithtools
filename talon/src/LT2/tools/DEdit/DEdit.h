@@ -17,17 +17,20 @@
 #include "resource.h"       // main symbols
 #include "deditoptions.h"
 #include "oldtypes.h"
-#include "modelmgr.h"
 
 class CMainFrame;
 class CDEditOptions;
-class CHotKeyDB;
 
 
 /////////////////////////////////////////////////////////////////////////////
 // CDEditApp:
 // See DEdit.cpp for the implementation of this class
 //
+// talon: 2001's layout (the constructor 0x41653e, InitInstance 0x416687):
+// m_WorkingDir 0xc0, m_ExeDirectory 0x1c4, m_bFullUpdate 0x2c8,
+// m_TextureDisplaySize 0x2cc, m_pWorldTemplate 0x2d0, m_genRegMgr 0x2d4,
+// m_DEditOptions 0x2dc, m_pClassHelpButeMgr 0x328. No hot keys, model
+// manager or class help aggregate.
 class CButeMgr;
 class CDEditApp : public CWinApp
 {
@@ -60,41 +63,22 @@ public:
 	char		m_WorkingDir[MAX_PATH];		// The working directory
 	char		m_ExeDirectory[MAX_PATH];	// The directory which the DEdit.exe file was run resides	
 
-	// Global preferences.
 	BOOL		m_bFullUpdate;
 	int			m_TextureDisplaySize;
 
-	//gets the model manager for the application
-	CModelMgr&	GetModelMgr()						{ return m_ModelMgr; }
-
-
-	//sets up the hot key database to reflect a specified database
-	void		SetHotKeyDB(const CHotKeyDB& NewDB);
-
-	// Document templates.
 	CMultiDocTemplate		*m_pWorldTemplate;
 
-	// Access to member variables
 	CDEditOptions			&GetOptions()			{ return m_DEditOptions; }
 
-	//attempts to get a string from the bute help files. It will first try the aggregate
-	//if one exists, if that fails it will try the base, and if that fails the function will
-	//fail. If it succeeds, the string will be returned in sMatch
-	BOOL					GetHelpString(const char* pszTag, const char* pszAttrib, CString& sMatch);
-
-	//this sets the class help bute aggregate. This will be in charge of freeing memory
-	//associated with it. Assumes it is allocated with new
-	void					 SetClassHelpButeAgg(CButeMgr* pMgr);
-	
-	//access to the class help aggregate
-	CButeMgr				*GetClassHelpButeAgg()	{ return m_pClassHelpButeAgg; }
-	
 	CButeMgr				*GetClassHelpButeMgr()	{ return m_pClassHelpButeMgr; }
 
 
-	// Implementation
+// Implementation
+
 	//{{AFX_MSG(CDEditApp)
 		afx_msg void OnAppAbout();
+		afx_msg void OnQuickHelp();
+		afx_msg void OnKeyMap();
 		afx_msg void OnFileNewProject();
 		afx_msg void OnFileSave();
 		afx_msg void OnUpdateFileSave(CCmdUI *pCmdUI);
@@ -103,16 +87,11 @@ public:
 		afx_msg void OnFileOpen();
 		afx_msg void OnFileNewWorld();
 		afx_msg void OnUpdateFileNewWorld(CCmdUI *pCmdUI);
-		afx_msg void OnFileReloadWorld();
-		afx_msg void OnUpdateFileReloadWorld(CCmdUI* pCmdUI);
 		afx_msg void OnUpdateFileCloseWorld(CCmdUI *pCmdUI);
 		afx_msg void OnFileCloseWorld();
 		afx_msg void OnFileSaveWorldAs();
 		afx_msg void OnUpdateFileSaveWorldAs(CCmdUI *pCmdUI);
-		afx_msg void OnEditKeyConfiguration();
 		afx_msg BOOL OnOpenRecentFile(UINT nID);
-		afx_msg void OnHelpIntroduction();
-		afx_msg void OnHelpCreationGuide();
 		afx_msg void OnDEHomePage();
 		afx_msg void OnOnlineDoc();
 	//}}AFX_MSG
@@ -120,19 +99,11 @@ public:
 
 protected:
 
-
 	CGenRegMgr			m_genRegMgr;
 	CDEditOptions		m_DEditOptions;
 
-	CModelMgr			m_ModelMgr;
-
-	// The ButeMgr that is used to read the property help file
 	CButeMgr			*m_pClassHelpButeMgr;
-
-	//the aggregate bute mgr so that projects can override the default
-	CButeMgr			*m_pClassHelpButeAgg;
 };
-
 
 #include "edithelpers.h"
 

@@ -22,17 +22,17 @@
 class COptionsDisplay;
 class COptionsAdvancedSelect;
 class COptionsClassDialog;
+class COptionsPrimitives;
 class COptionsRun;
+class COptionsWarnings;
 class COptionsObjectBrowser;
 class COptionsGenerateUniqueNames;
 class COptionsClipboard;
 class COptionsWindows;
-class COptionsModels;
-class COptionsViewports;
-class COptionsControls;
-class COptionsMisc;
-class COptionsPrefabs;
 
+// talon: 2001's, 0x4c bytes (its constructor 0x417fa2, destructor 0x418180):
+// ten option sets (Build 69 has thirteen, and not Primitives or Warnings)
+// and the auto-save time.
 class CDEditOptions : public COptionsBase
 {
 public:
@@ -42,80 +42,44 @@ public:
 	// Initialization
 	BOOL					Init(CGenRegMgr *pRegMgr, CString sRegRoot);
 
-	// Saves/Loads all of the options classes
+	// Load/Save
 	BOOL					Load();
 	BOOL					Save();
 
-	// Access to the various options classes
+	// Access to the options classes
 	COptionsDisplay				*GetDisplayOptions()				{ return m_pDisplayOptions; }
 	COptionsAdvancedSelect		*GetAdvancedSelectOptions()			{ return m_pAdvancedSelectOptions; }
 	COptionsClassDialog			*GetClassDialogOptions()			{ return m_pClassDialogOptions; }
+	COptionsPrimitives			*GetPrimitivesOptions()				{ return m_pPrimitivesOptions; }
 	COptionsRun					*GetRunOptions()					{ return m_pRunOptions; }
+	COptionsWarnings			*GetWarningsOptions()				{ return m_pWarningsOptions; }
 	COptionsObjectBrowser		*GetObjectBrowserOptions()			{ return m_pObjectBrowserOptions; }
 	COptionsGenerateUniqueNames	*GetGenerateUniqueNamesOptions()	{ return m_pGenerateUniqueNamesOptions; }
 	COptionsClipboard			*GetClipboardOptions()				{ return m_pClipboardOptions; }
 	COptionsWindows				*GetWindowsOptions()				{ return m_pWindowsOptions; }
-	COptionsModels				*GetModelsOptions()					{ return m_pModelsOptions; }
-	COptionsControls			*GetControlsOptions()				{ return m_pControlsOptions; }
-	COptionsMisc				*GetMiscOptions()					{ return m_pMiscOptions; }
-	COptionsPrefabs				*GetPrefabsOptions()				{ return m_pPrefabsOptions; }
-	COptionsViewports			*GetViewportOptions()				{ return m_pViewportOptions; }
 
-	// Access to options
-
-	//auto saving
-	bool					IsAutoSave() const				{return m_bAutoSave;}
-	void					EnableAutoSave(bool bAutoSave)	{m_bAutoSave = bAutoSave;}
-
-	//auto save path
-	const char*				GetAutoSavePath() const					{return m_sAutoSavePath;}
-	void					SetAutoSavePath(const char* pszPath)	{m_sAutoSavePath = pszPath;}
-
-	//time between auto saves (in minutes)
+	// Access to the autosave time
 	DWORD					GetAutoSaveTime() const			{ return m_dwAutoSaveTime; }
 	void					SetAutoSaveTime(DWORD dwTime)	{ m_dwAutoSaveTime=dwTime; }
 
-	//number of backups to create for each file
-	DWORD					GetNumBackups() const			{ return m_dwNumBackups; }
-	void					SetNumBackups(DWORD dwNum)		{ m_dwNumBackups = dwNum; }
+protected:
 
-	//number of backups to create for each file
-	bool					DeleteOnClose() const			{ return m_bDeleteOnClose; }
-	void					SetDeleteOnClose(bool bDel)		{ m_bDeleteOnClose = bDel; }
+	COptionsDisplay				*m_pDisplayOptions;				// 0x0c
+	COptionsAdvancedSelect		*m_pAdvancedSelectOptions;		// 0x10
+	COptionsClassDialog			*m_pClassDialogOptions;			// 0x14
+	COptionsPrimitives			*m_pPrimitivesOptions;			// 0x18
+	COptionsRun					*m_pRunOptions;					// 0x1c
+	COptionsWarnings			*m_pWarningsOptions;			// 0x20
+	COptionsObjectBrowser		*m_pObjectBrowserOptions;		// 0x24
+	COptionsGenerateUniqueNames	*m_pGenerateUniqueNamesOptions;	// 0x28
+	COptionsClipboard			*m_pClipboardOptions;			// 0x2c
+	COptionsWindows				*m_pWindowsOptions;				// 0x30
 
-	// Is this the first time running DEdit?
-	bool					IsFirstRun()					{ return m_bFirstRun; }
-	void					SetFirstRun(bool bFirst)		{ m_bFirstRun = bFirst; }
+	// Array of the options classes
+	CArray<COptionsBase *, COptionsBase *>	m_optionsArray;		// 0x34
 
-
-protected:	
-	// The various options classes
-	COptionsDisplay				*m_pDisplayOptions;
-	COptionsAdvancedSelect		*m_pAdvancedSelectOptions;
-	COptionsClassDialog			*m_pClassDialogOptions;
-	COptionsRun					*m_pRunOptions;
-	COptionsObjectBrowser		*m_pObjectBrowserOptions;
-	COptionsGenerateUniqueNames	*m_pGenerateUniqueNamesOptions;
-	COptionsClipboard			*m_pClipboardOptions;
-	COptionsWindows				*m_pWindowsOptions;
-	COptionsModels				*m_pModelsOptions;
-	COptionsControls			*m_pControlsOptions;
-	COptionsMisc				*m_pMiscOptions;
-	COptionsPrefabs				*m_pPrefabsOptions;
-	COptionsViewports			*m_pViewportOptions;
-
-	// An array of all of the option class
-	CArray<COptionsBase *, COptionsBase *>	m_optionsArray;
-
-	// The autosave interval
-	DWORD					m_dwAutoSaveTime;
-	DWORD					m_dwNumBackups;
-	bool					m_bAutoSave;
-	bool					m_bDeleteOnClose;
-	CString					m_sAutoSavePath;
-
-	// First run record
-	bool					m_bFirstRun;
+	// The autosave time
+	DWORD					m_dwAutoSaveTime;					// 0x48
 };
 
 #endif // !defined(AFX_DEDITOPTIONS_H__D15CECC2_F290_11D2_BE14_0060971BDC6D__INCLUDED_)
