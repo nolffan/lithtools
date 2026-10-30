@@ -107,6 +107,14 @@ SOURCE=.\BspGen.cpp
 # Begin Source File
 
 SOURCE=.\BuildHulls.cpp
+# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
+
+!IF  "$(CFG)" == "Processor - Win32 Release"
+
+# ADD CPP /Ob0
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -119,6 +127,14 @@ SOURCE=..\sharedNOLF\engine\conparse.cpp
 # Begin Source File
 
 SOURCE=.\create_world_tree.cpp
+# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
+
+!IF  "$(CFG)" == "Processor - Win32 Release"
+
+# ADD CPP /Ob0
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -135,6 +151,14 @@ SOURCE=..\sharedNOLF\world\EditBrush.cpp
 # Begin Source File
 
 SOURCE=..\sharedNOLF\world\EditObjects.cpp
+# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
+
+!IF  "$(CFG)" == "Processor - Win32 Release"
+
+# ADD CPP /Ob0
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
@@ -247,6 +271,14 @@ SOURCE=.\PrePoly.cpp
 # Begin Source File
 
 SOURCE=.\ProcessorApp.cpp
+# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
+
+!IF  "$(CFG)" == "Processor - Win32 Release"
+
+# ADD CPP /Ob0
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
