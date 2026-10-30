@@ -467,6 +467,14 @@
 #define IDS_ENTER_NULL_LOD_DISTANCE_CAPTION 32906
 #define ID_ANIMATION_CREATEANIMFROMBINDPOSE 32906
 
+// talon: the Animation Cleanup dialog's, which Build 69's resource.h lacks
+// (AnimCleanupDlg is not in its project); the 2001 image's values (its
+// dialog 198: the edit 1134, the check box 1133), which Build 69 gives to
+// IDD_EXPORT_D3D and IDC_FOV_SLIDER.
+#define IDD_ANIMATIONCLEANUP            198
+#define IDC_PRESERVEROT                 1133
+#define IDC_MINVARIANCE                 1134
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
