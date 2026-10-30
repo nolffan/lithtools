@@ -357,6 +357,42 @@
 	};
 
 
+	// Surface flags (talon: not in nolfsrc, which the game didn't need; AvP2's,
+	// but NOLF has no SURF_NOWALLWALK).
+	#define SURF_SOLID				(1<<0)		// Solid.
+	#define SURF_NONEXISTANT		(1<<1)		// Gets removed in preprocessor.
+	#define SURF_INVISIBLE			(1<<2)		// Don't draw.
+	#define SURF_TRANSPARENT		(1<<3)		// Translucent.
+	#define SURF_SKY				(1<<4)		// Sky portal.
+	#define SURF_BRIGHT				(1<<5)		// Fully bright.
+	#define SURF_FLATSHADE			(1<<6)		// Flat shade this poly.
+	#define SURF_LIGHTMAP			(1<<7)		// Lightmap this poly.
+	#define SURF_NOSUBDIV			(1<<8)		// Don't subdivide the poly.
+	#define SURF_HULLMAKER			(1<<9)		// Adds hulls to make PVS better for open areas.
+	#define SURF_ALWAYSLIGHTMAP		(1<<10)		// Override for preprocessor's -allgouraud and -lightmaptogouraud.
+	#define SURF_DIRECTIONALLIGHT	(1<<11)		// This surface is only lit by the GlobalDirLight.
+	#define SURF_GOURAUDSHADE		(1<<12)		// Gouraud shade this poly.
+	#define SURF_PORTAL				(1<<13)		// This surface defines a portal that can be opened/closed.
+	#define SURF_SPRITEANIMATE		(1<<14)		// This surface's texture is animated by a sprite.
+	#define SURF_PANNINGSKY			(1<<15)		// This surface has the panning sky overlaid on it.
+	#define SURF_XZONLY				(1<<16)		// Only DEdit cares about this.
+	#define SURF_PHYSICSFIX			(1<<17)		// A dummy poly used to protect objects from moving through
+												// certain non axis-aligned edges.
+	#define SURF_TERRAINOCCLUDER	(1<<18)		// Used for visibility calculations on terrain.
+	#define SURF_ADDITIVE			(1<<19)		// Add source and dest colors.
+	#define SURF_TIMEOFDAY			(1<<20)		// Uses time of day stuff (ambient and directional light).
+	#define SURF_VISBLOCKER			(1<<21)		// Blocks off the visibility tree
+	#define SURF_NOTASTEP			(1<<22)		// Don't try to step up onto this polygon
+	#define SURF_NOBLOCKLIGHT		(1<<24)		// Don't block light with this surface
+
+	// NOTE: The top 3 bits of the surface flags is used for the lm plane index.
+	#define LMPLANE_MASK	0xE0000000
+	#define LMPLANE_SHIFT	29
+
+	#define MAX_SURFACE_DETAIL_LEVEL 100
+
+
+
 	// Device input for device tracking
 	#define MAX_INPUT_BUFFER_SIZE	32
 
