@@ -20,8 +20,9 @@ CFG=Talon_DibMgr - Win32 Release
 !MESSAGE "Talon_DibMgr - Win32 Release" (based on "Win32 (x86) Static Library")
 !MESSAGE 
 
-# talon: DibMgr as the Talon DEdit (2001-12-06) links it: the Release
-# talon: configuration's sources and settings, compiled by VC6 SP5 with the
+# talon: DibMgr as the Talon DEdit (2001-12-06) links it: build 51's sources
+# talon: with the LT2 header (incs/dibmgr.h) and without build 51's DWORD as
+# talon: unsigned int, the Release configuration's settings, compiled by VC6 SP5 with the
 # talon: Processor Pack (cl 12.00.9044: build.mk's Talon_DibMgr) into their own
 # talon: directory (progress/DEdit-map.md).
 
@@ -45,7 +46,7 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\built\ReleaseTalon\DibMgr"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\LT2\lithshared\stl" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "NO_PRAGMA_LIBS" /YX /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\stl" /I "..\incs" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "NO_PRAGMA_LIBS" /YX /FD /c
 # ADD BASE RSC /l 0x409
 # ADD RSC /l 0x409
 BSC32=bscmake.exe

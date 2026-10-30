@@ -15,20 +15,6 @@
 #define _DIB_H_
 
 
-// These have been removed from the engine and replaced with size specific types.
-// However, they have not yet been removed from the tools sl we need to setup
-// a compatability with the two usages
-#undef DWORD
-#define DWORD unsigned int
-#undef SDWORD
-#define SDWORD int
-#undef WORD
-#define WORD unsigned short
-#undef SWORD
-#define SWORD short
-#undef BYTE
-#define BYTE unsigned char
-
 // Defines...
 
 #define DIB_DT_RAW			1
