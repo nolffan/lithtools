@@ -425,10 +425,50 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     analize_stream; ParseShapeNode); the guarded-atexit initializers at
     three module starts (0x40243f, 0x4160b8, 0x436849) our objects emit
     last; string pooling (probably /Gf).
-- [ ] **DEdit.exe** (573 KB). Its RTTI names its classes (101 type
-  descriptors); the shared libraries inside it (ButeMgr, StdLith, RegMgr,
-  DibMgr: 0x4835a0..0x48ba82) match the AvP2 source release's prebuilt
-  libraries in places, and build 51's (src/Libs) are their near relatives.
+- [ ] **DEdit.exe** (573 KB of code, 4,471 functions scored;
+  `progress/DEdit-map.md`).
+  - [x] The project (`src/LT2/tools/DEdit/DEdit.dsw`, 2026-10-30): Build
+    69's DEdit with the processors' 2001 world headers (DEdit's own copies
+    of the world sources in DEdit/World, Build 69's editor functions added;
+    the editor's declarations under DIRECTEDITOR_BUILD), ModelEdit's 2001
+    model code, the LT2 SDK, StdLith (the allocator-override build) and
+    RegMgr, and the 2001 GenRegMgr, ButeMgr, CryptMgr, DibMgr, LTA library
+    and zlib compiled with 9044 /O2; cl 9044 /O1 /Gf, static MFC, STLport,
+    DirectDraw 4 / Direct3D 3 (DX 8.1 SDK headers); the resources
+    decompiled from the image (all 224 byte-identical). Links with nothing
+    unresolved, with Build 69's later features in a group of their own and
+    stand-ins (the map's last section). As it stands: 2,499 identical
+    (38.6% of the bytes); the libraries nearly all identical, model.cpp
+    226 of 267.
+  - [ ] Bring it back to 2001, in nine parts by image range (near / todo
+    counts as recorded; each part owns the headers of its modules):
+    1. Project Bar group, 0x401000..0x40d69f (345 rows: 169 near, 4 todo).
+    2. A-C, 0x40d69f..0x415075 (301: 90 near, 6 todo): AdvancedSelect ..
+       CylinderPrimDlg, concommand, conparse, BasePoly.
+    3. D, 0x415075..0x41fdf1 (286: 126 near, 10 todo): the application
+       (DEdit.cpp, resource.h), the renderer (d3d_texturemgr, draw_d3d,
+       DrawBase), dtxmgr, d_filemgr, dhashtable.
+    4. E, 0x41fdf1..0x42b5ee (369: 139 near, 9 todo): the world core
+       (EditBrush, EditObjects, EditPoly, EditRegion and the shared world
+       headers, kept so the processors' objects don't change), the project
+       manager, clipboard, helpers, the .map exporter (2001's, to write).
+    5. F-N, 0x42b5ee..0x43c8de (661: 111 near, 13 todo): FilePalette ..
+       MainFrm, the model dims reader (2001's), the model code (with
+       ModelEdit), mtreectl, Navigator (shared with the processors),
+       node_ops.
+    6. N-P, 0x43c8de..0x44fbee (720: 220 near, 29 todo): the node view,
+       object browser and importer, the options, pixelformat, the
+       processing dialog, the property editors and pages, PropList.
+    7. R, 0x44fbee..0x45f697 (481: 268 near, 13 todo): RegionDoc (and its
+       light animations), RegionFrame, RegionView, the resource manager.
+    8. S-W, 0x45f697..0x46f3c0 (402: 191 near, 11 todo): Splash ..
+       WorldNode: textures (Texture.cpp with LTTexture's dumps), the view
+       functions and primitives, undo, the vector controls.
+    9. MRCEXT, the trackers and the libraries, 0x46f3c0..0x47d040,
+       0x483020..0x48d740, 0x4a25f0..0x4a7d00 (804: 184 near, 20 todo).
+    Then: the Build 69 only group and the stand-ins out; concommand and
+    DebugDlg (2001's) into their places by name; zlib linked as a default
+    library; LTTexture's code into Texture.cpp.
 
 ## Method
 
