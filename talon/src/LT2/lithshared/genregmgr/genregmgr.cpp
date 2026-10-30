@@ -102,9 +102,9 @@ BOOL CGenRegMgr::SetStringBoolValue (LPCSTR strKey, LPCSTR strValueName, BOOL bV
 	}
 }
 
-BOOL CGenRegMgr::GetDwordValue (LPCSTR strKey, LPCSTR strValueName, unsigned int *pdwBuffer)
+BOOL CGenRegMgr::GetDwordValue (LPCSTR strKey, LPCSTR strValueName, DWORD *pdwBuffer)
 {
-	return GetValue(strKey, strValueName, (void *)pdwBuffer, sizeof(unsigned int));
+	return GetValue(strKey, strValueName, (void *)pdwBuffer, sizeof(DWORD));
 }
 
 BOOL CGenRegMgr::GetStringBoolValue (LPCSTR strKey, LPCSTR strValueName, BOOL *pbBuffer)
@@ -144,7 +144,7 @@ BOOL CGenRegMgr::SetStringValue (LPCSTR strKey, LPCSTR strValueName, LPCSTR strV
 	return (lResult == ERROR_SUCCESS);
 }
 
-BOOL CGenRegMgr::SetDwordValue (LPCSTR strKey, LPCSTR strValueName, unsigned int dwValue)
+BOOL CGenRegMgr::SetDwordValue (LPCSTR strKey, LPCSTR strValueName, DWORD dwValue)
 {
 	HKEY hKey = OpenKey (strKey);
 	if (!hKey)
@@ -152,14 +152,14 @@ BOOL CGenRegMgr::SetDwordValue (LPCSTR strKey, LPCSTR strValueName, unsigned int
 		return FALSE;
 	}
 
-	LONG lResult = RegSetValueEx (hKey, strValueName, 0, REG_DWORD, (LPBYTE)&dwValue, sizeof (unsigned int));
+	LONG lResult = RegSetValueEx (hKey, strValueName, 0, REG_DWORD, (LPBYTE)&dwValue, sizeof (DWORD));
 
 	CloseKey (hKey);
 
 	return (lResult == ERROR_SUCCESS);
 }
 
-BOOL CGenRegMgr::SetBinaryValue (LPCSTR strKey, LPCSTR strValueName, void* pData, unsigned int dwDataSize)
+BOOL CGenRegMgr::SetBinaryValue (LPCSTR strKey, LPCSTR strValueName, void* pData, DWORD dwDataSize)
 {
 	HKEY hKey = OpenKey (strKey);
 	if (!hKey)
@@ -174,7 +174,7 @@ BOOL CGenRegMgr::SetBinaryValue (LPCSTR strKey, LPCSTR strValueName, void* pData
 	return (lResult == ERROR_SUCCESS);
 }
 
-unsigned int CGenRegMgr::GetValueSize (LPCSTR strKey, LPCSTR strValueName)
+DWORD CGenRegMgr::GetValueSize (LPCSTR strKey, LPCSTR strValueName)
 {
 	HKEY hKey = OpenKey (strKey);
 	if (!hKey)
@@ -182,7 +182,7 @@ unsigned int CGenRegMgr::GetValueSize (LPCSTR strKey, LPCSTR strValueName)
 		return 0;
 	}
 
-	unsigned int dwDataSize = 0;
+	DWORD dwDataSize = 0;
 	RegQueryValueEx (hKey, strValueName, NULL, NULL, NULL, (unsigned long *)&dwDataSize);
 
 	CloseKey (hKey);
@@ -190,7 +190,7 @@ unsigned int CGenRegMgr::GetValueSize (LPCSTR strKey, LPCSTR strValueName)
 	return dwDataSize;
 }
 
-BOOL CGenRegMgr::GetValue (LPCSTR strKey, LPCSTR strValueName, void* pBuffer, unsigned int dwBufferSize)
+BOOL CGenRegMgr::GetValue (LPCSTR strKey, LPCSTR strValueName, void* pBuffer, DWORD dwBufferSize)
 {
 	HKEY hKey = OpenKey (strKey);
 	if (!hKey)
@@ -255,7 +255,7 @@ HKEY CGenRegMgr::OpenKey (LPCSTR strKey)
 
 	char* ptr = strCopy;
 	
-	unsigned int nKeys = *ptr ? 1 : 0;
+	DWORD nKeys = *ptr ? 1 : 0;
 	while (*ptr)
 	{
 		if (*ptr == '/' || *ptr == '\\')
@@ -323,8 +323,8 @@ HKEY CGenRegMgr::OpenKey (LPCSTR strKey)
 
 	// create or open the intermediate keys...
 
-	unsigned int dwDisposition = 0;
-	for (unsigned int i = 1; i < m_nKeys; i++)
+	DWORD dwDisposition = 0;
+	for (DWORD i = 1; i < m_nKeys; i++)
 	{
 		ptr = strtok (NULL, sep);
 		assert (ptr);
@@ -376,7 +376,7 @@ void CGenRegMgr::CloseKey (HKEY hKey)
 
 	// now go backwards up the tree closing keys...
 
-	for (unsigned int i = m_nKeys - 1; i > 0; i--)
+	for (DWORD i = m_nKeys - 1; i > 0; i--)
 	{
 		RegCloseKey (m_pKeys[i]);
 	}
@@ -401,10 +401,10 @@ BOOL CGenRegMgr::RecurseAndDeleteKey (HKEY hKeyParent, LPCSTR strKey)
 	// recurse through this key's children, deleting them first
 
 	char strBuff[512];
-	unsigned int dwSizeBuff = 512;
+	DWORD dwSizeBuff = 512;
 	FILETIME ftime;
 	
-	unsigned int dwIndex = 0;
+	DWORD dwIndex = 0;
 	while (1)
 	{
 		LONG lResult = RegEnumKeyEx (hKey, dwIndex, strBuff, (unsigned long *)&dwSizeBuff, NULL, NULL, NULL, &ftime);
