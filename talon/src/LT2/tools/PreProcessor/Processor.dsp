@@ -243,6 +243,10 @@ SOURCE=.\ProcessorApp.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=.\PreSurface.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\PreWorld.cpp
 # End Source File
 # Begin Source File
