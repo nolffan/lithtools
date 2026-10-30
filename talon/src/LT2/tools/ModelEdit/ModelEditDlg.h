@@ -22,20 +22,13 @@
 #include "resource.h"
 #include "weighteditdlg.h"
 #include "win_idle.h"
+#include "lveditlist.h"
 #include "draglist.h"
 #include "animtracker.h"
 #include "solidrectwnd.h"
 #include "dimensionsdlg.h"
-#include "ltwintreemgr.h"
-#include "ltwintreeitem.h"
-#include <vector>
-
-
-
-
-#include "SetFOVDlg.h" 
-
-#include "importstringkeysdlg.h"
+#include <fstream>
+#include <string>
 
 // For GetPlaybackActiveFlags.
 #define PA_ACTIVE	(1<<0)
@@ -45,8 +38,7 @@
 typedef enum
 {
 	RT_ROTATION,
-	RT_POSITION,
-	RT_SCALE
+	RT_POSITION
 } RTType;
 
 class RectTracker
@@ -62,25 +54,6 @@ public:
 	DWORD			m_Axis;	
 };
 
-// an item in the piece tree control
-class PieceListItem : public CLTWinTreeItem
-{
-public:
-	PieceListItem( const char* pszText ) : CLTWinTreeItem( pszText ) {};
-
-	int m_PieceNum;			// which piece this item is part of
-	int m_LOD;				// which LOD this is.  -1 is the piece as a whole
-};
-
-// all the info needed to work with a piece LOD
-struct PieceLODInfo
-{
-	PieceLOD* m_PieceLOD;		// pointer to the piece LOD
-	ModelPiece* m_ModelPiece;	// pointer to the piece containing this piece LOD
-	int m_LODNum;				// which LOD this piece LOD is within the piece
-};
-
-
 // ------------------------------------------------------------------------
 //this is the structure that will be passed into the thread main function that handles
 //the loading of the LTA files.
@@ -90,11 +63,14 @@ class CLoadLTAThreadParams
 {
 public:
 	CLoadLTAThreadParams() :
+		m_pInFile(NULL),
 		m_pAllocCount(NULL),
 		m_pModel(NULL),
 		m_bChildLoad(false)
 		{}
 
+	// talon: 2001's (0x416f5c): the open stream comes first.
+	std::ifstream*	m_pInFile;
 	LAllocCount*	m_pAllocCount;
 	Model*			m_pModel;
 	bool			m_bChildLoad ;
@@ -112,6 +88,9 @@ public:
 
 	// Reset everything.
 	void			Reset(Model *pModel=NULL);
+
+	// talon: 2001's: back to the start of the current animation, stopped.
+	void			ResetTime();
 
 	void			StartPlayback();
 	void			StopPlayback();
@@ -137,7 +116,6 @@ public:
 	uint32			CurKeyframe()	{return m_Tracker.m_TimeRef.m_Cur.m_iFrame;}
 	uint32			PrevKeyframe()	{return m_Tracker.m_TimeRef.m_Prev.m_iFrame;}
 
-	ModelAnim*		PrevAnim();
 	ModelAnim*		CurAnim();
 
 	BOOL			IsAnimPlaying()			{ return m_bAnimPlayingForward; }
@@ -178,11 +156,14 @@ public:
 	~CModelEditDlg();
 
 // Dialog Data
+	// talon: 2001's controls (the constructor at 0x416363, DoDataExchange
+	// at 0x4169a4): list views for the pieces and nodes, not Build 69's
+	// tree control.
 	//{{AFX_DATA(CModelEditDlg)
 	enum { IDD = IDD_MODELEDIT_DIALOG };
 	CDragList		m_AnimList;
-	CLTWinTreeMgr	m_PieceList;
-	CListCtrl		m_NodeList;
+	CLVEditList		m_PieceList;
+	CLVEditList		m_NodeList;
 	CButton			m_GlobalSpace;
 	CListBox		m_SocketList;
 	CMyEdit			m_EditFrameTime;
@@ -232,27 +213,11 @@ public:
 										DWORD nKeyframe2, 
 										float nPercentBetween);
 
-	//this will run through each animation in the model, looking for animations that have the X and Z
-	//dimensions of the animation not equal. It will then prompt them for how to fix.
-	void			CheckValidAnimationDims();
-
-	// retrieve a list of the selected pieces (returns number of selected pieces)
-	// this does not iterate through children, the piece itself must be explicitly selected in order to be returned
-	int GetSelectedPieces( CLTWinTreeMgr* tree, Model* model, std::vector<ModelPiece*>& selection );
-
-	// retrieve a list of the selected piece LODs (returns number of selected LODs)
-	// if firstIfParentOnly is true, then only the 0th lod will be returned if only the parent piece is selected
-	// otherwise all lods will be returned for the selected piece
-	int GetSelectedPieceLODs( CLTWinTreeMgr* tree, Model* model, std::vector<PieceLODInfo>& selection, bool firstIfParentOnly=false );
-
 	Model*			GetModel() {return m_pModel;}
 	void			UpdateEditFrameTime( );
 	void			SetEditFrameTime();
 	void			UpdateEditFrameString( );
 	void			SetEditFrameString();
-	void			UpdateEditFrameTimeEnabled();
-	void			UpdateEditFrameStringEnabled();
-	void			SetCurrentAnimTime( uint32 iAnimInfo, DWORD dwAnimTime );
 	BOOL			SetRenderTexture(const char *pFilename, DWORD nTexture = 0);
 
 	// Very useful function.  If any of the animations are invalid or are from a base model (and shouldn't
@@ -269,10 +234,9 @@ public:
 
 	// Used when something is going to change an animation.. makes sure everything is valid
 	// and fills in the current animation and keyframe indices.
-	BOOL			GetEditAnimInfo(DWORD *pAnimIndex, DWORD *pKeyframeIndex, bool bAllowChildAnims);
+	BOOL			GetEditAnimInfo(DWORD *pAnimIndex, DWORD *pKeyframeIndex);
 
-	bool			DoSave(const char *pFilename);
-	void			CompileD3D( bool saveBeforeCompile );
+	void			DoSave(const char *pFilename);
 
 	int				DoMessageBox(UINT idString, int style);
 	int				DoMessageBox(LPCTSTR pStr, int style);
@@ -299,28 +263,30 @@ public:
 	
 	void			FillNodeList();
 	void			FillSocketList(BOOL bPreserveSel=FALSE);
-	void			InitTheScrollBar(float max_dist);
 	void			SetLODText(int nLOD);
+	void			InitTheScrollBar(int nLODs);
 
-	// fill a piece list with a given models pieces
-	void			FillPieceList( CLTWinTreeMgr* tree, Model* model );
+	void			SortPiecesByTexture();
+	void			FillPieceList();
+	void			LoadRegistryTextures();
 
 	BOOL			VerifyModels( Model *pModel1, Model *pModel2 );
 	BOOL			RecurseAndVerifyModels( ModelNode* pNode1, ModelNode* pNode2 );
 	
 	void			MoveAnims(int dir);
+	void			MovePieces(int dir);
 
 	void			OffsetTrans(LTVector vec);
 	void			OffsetDims(LTVector vec);
 
 	void			DoAnimEdit(LTVector vec);
 
-	void			SetCurrentLOD(float fLOD);
+	void			SetCurrentLOD(DWORD iLOD);
 	
 
 	// note: these really belong somewhere else.
 	static	float			CalcFOV();
-	static void			SetFOV(float FOV);
+	void			SetFOV(float FOV);
 
 	MEAnimInfo*		GetAnimInfo(uint32 iAnimInfo);
 
@@ -366,11 +332,15 @@ public:
 
 	CString			m_OldWindowText;
 
-	CImportStringKeysDlg	*m_pImportStringKeyDlg;
-
 protected:
 
 	WeightEditDlg	m_WeightEditDlg;
+
+	// talon: 2001's (+0x3bc): the move up and move down buttons move the
+	// selected pieces (MovePieces) instead of the animations.  2001 only
+	// ever clears it (the constructor, OnSelChangeAnimList).  The name is
+	// ours.
+	BOOL			m_bMovePieces;
 		
 	HICON			m_hIcon;
 	
@@ -387,18 +357,10 @@ protected:
 	CBitmapButton	m_btnDelete;
 
 	Model			*m_pModel;
-	CString			m_sModelPath;
-	CString			m_szCurProjectPath ;
-
-	bool			m_bConfirmLoadDlg;		// if false, the load log dialog will disappear automatically
 
 	LAllocCount		m_AllocCount;
 
 	CRenderWnd		m_RenderWnd; // gl render window.
-	//CD3DRenderWnd		m_RenderWnd; // d3d render window
-
-	CDimensionsDlg	*m_pDimensionDlg;
-
 
 	// Animation windows..
 	MEAnimInfo		m_AnimInfos[NUM_ANIM_INFOS];
@@ -410,7 +372,6 @@ protected:
 	BOOL			m_bEndDialog;
 
 	DWORD			m_nCurrentLOD;
-	float			m_CurrentLODDist ;
 	BOOL			m_bChangesMade;
 	BOOL			m_bFillingNodeList;
 
@@ -420,17 +381,6 @@ protected:
 
 	// Tracks if we're in a string change (so we don't get into it again).
 	BOOL			m_bInStringChange;
-
-	struct SLittleLODSlider {
-		CScrollBar *m_ScrollBar;
-		CMyEdit *m_CurrentValue;
-		CWnd *m_MinDist, *m_MaxDist;
-
-		void SetMinDist( float val ) { char buf[245] ;sprintf(buf,"%.2f",val); m_MinDist->SetWindowText(buf); }
-		void SetMaxDist( float val ) { char buf[245] ;sprintf(buf,"%.2f",val); m_MaxDist->SetWindowText(buf); }
-		void SetCurrentValue( float val ) { char buf[245] ;sprintf(buf,"%.2f",val); m_CurrentValue->SetWindowText(buf); }
-
-	} m_LODSlider ;
 
 public:
 
@@ -442,10 +392,6 @@ public:
 	BOOL			UpdateSelectedAnimList();
 	void			OnSelChangeAnimList();
 	virtual void	OnDropAnimList(int iItem);
-
-	// handle updates from the piece tree control
-	void PieceSelChanged( CLTWinTreeMgr* tree );
-	void PieceEditText( CLTWinTreeMgr* tree, PieceListItem* item );
 
 	// Generated message map functions
 	//{{AFX_MSG(CModelEditDlg)
@@ -464,12 +410,8 @@ public:
 	afx_msg void OnNextKeyframe();
 	afx_msg void OnPrevKeyframe();
 	afx_msg void OnImport();
-	afx_msg void OnImportLODs();
 	afx_msg void OnSave();
 	afx_msg void OnSaveAs();
-	afx_msg void OnCompile();
-	afx_msg void OnSaveAndCompile();
-	afx_msg void OnSetProjwectDir();
 	afx_msg void OnCreateSingleFrame();
 	afx_msg void OnRenameAnim();
 	afx_msg void OnWireframe();
@@ -478,16 +420,17 @@ public:
 	afx_msg void OnDims();
 	afx_msg void OnAnimBox();
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
+	afx_msg void OnBuildLODs();
 	afx_msg void OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags);
 	afx_msg void OnModelInfo();
 	afx_msg void OnCommandString();
 	afx_msg void OnDimensions();
 	afx_msg void OnAnimationFramerate();
+	afx_msg void OnAnimationCleanup();
 	afx_msg void OnAnimationLength();
 	afx_msg void OnAnimationInterpolation();
 	afx_msg void OnTranslationButton();
 	afx_msg void OnRotationButton();
-	afx_msg void OnSetProjectDir();
 	afx_msg void OnXsub();
 	afx_msg void OnXadd();
 	afx_msg void OnYsub();
@@ -496,7 +439,6 @@ public:
 	afx_msg void OnZadd();
 	afx_msg void OnNumberAnim();
 	afx_msg void OnDuplicateAnim();
-	afx_msg void OnCreateAnimFromBindPose();
 	afx_msg void OnRenameNode();
 	afx_msg void OnUnrotateTopNode();
 	afx_msg void OnGenerateVertexNormals();
@@ -506,7 +448,6 @@ public:
 	afx_msg void OnSetTexture();
 	afx_msg void OnDrawSkeleton();
 	afx_msg void OnShowSockets();
-	afx_msg void OnShowTextures();
 	afx_msg void OnShowAttachments();
 	afx_msg void OnSolidAttachments();
 	afx_msg void OnAddChildModel();
@@ -518,7 +459,6 @@ public:
 	afx_msg void OnShowNormals();
 	afx_msg void OnShowNormalRef();
 	afx_msg void OnProfile();
-	afx_msg void OnMovementEncoding();
 	afx_msg void OnTimer(UINT nIDEvent);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
 	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
@@ -527,20 +467,13 @@ public:
 	afx_msg void OnInternalRadius();
 	afx_msg void OnCalcInternalRadius();
 	afx_msg void OnEditWeights();
-	afx_msg	void OnReCalcOBBExtent();
 	afx_msg void OnPieceInfo();
-	afx_msg void OnCreateNullLOD();
-	afx_msg void OnPieceSelectNone();
-	afx_msg void OnPieceRemoveLODs();
-	afx_msg void OnPieceBuildLODs();
 	afx_msg void OnPieceMerge();
-	afx_msg void OnPieceExpandAll();
-	afx_msg void OnPieceCollapseAll();
 	afx_msg void OnEndlabeleditNodeList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnItemChangedNodeList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnDestroy();
-	afx_msg LRESULT OnTreeSelChanged(WPARAM wParam, LPARAM lParam);
-	afx_msg LRESULT OnTreeEditText(WPARAM wParam, LPARAM lParam);
+	afx_msg void OnItemChangedPieceList(NMHDR* pNMHDR, LRESULT* pResult);
+	afx_msg void OnEndLabelEditPieceList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnBeginLabelEditAnimList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnEndLabelEditAnimList(NMHDR* pNMHDR, LRESULT* pResult);
 	afx_msg void OnItemChangingAnimList(NMHDR* pNMHDR, LRESULT* pResult);
@@ -550,21 +483,8 @@ public:
 	afx_msg void OnSortAnimRelation();
 	afx_msg void OnDblClkSocketList();
 	afx_msg void OnFrameStringChange();
-	afx_msg void OnFrameTimeChange();
 	afx_msg void OnNewBgColor();
-	afx_msg void OnLoadConfirm();
 	afx_msg void OnOptionsShoworiginalmodel();
-	afx_msg void OnChangeFov();
-	afx_msg void OnExportModelStringKeys();
-	afx_msg void OnImportModelStringKeys();
-	afx_msg void OnItemclickNodelist(NMHDR* pNMHDR, LRESULT* pResult);
-	afx_msg void OnOptionsShowVertexWeighting();
-	afx_msg void OnNodeeditEditobb();
-	afx_msg void OnNodeEditRename();
-	afx_msg void OnNodeEditLookAt();
-	afx_msg void OnSocketEditLookAt();
-	afx_msg void OnExportWeightSets();
-	afx_msg void OnImportWeightSets();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

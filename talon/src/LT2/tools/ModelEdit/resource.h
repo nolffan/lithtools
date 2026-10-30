@@ -441,11 +441,11 @@
 #define ID_NODEEDIT_RENAME              32882
 #define ID_NODEEDIT_DELETE              32883
 #define ID_USEANIMDIMS                  32884
-#define ID_CALC_INTERNAL_RADIUS         32884
+#define ID_CALC_INTERNAL_RADIUS         32824
 #define IDC_SET_PROJ_DIR                32885
 #define ID_SET_PROJ_DIR                 32886
 #define ID_OPTIONS_LOADCONFIRM          32886
-#define ID_PIECE_SET_TEXTURE            32887
+#define ID_PIECE_SET_TEXTURE            32794
 #define ID_PIECE_SELECT_NONE            32888
 #define ID_PIECE_BUILD_LODS             32889
 #define ID_SHOW_TEXTURES                32890
@@ -459,7 +459,7 @@
 #define ID_IMPORTLODS_COLLAPSEALL       32898
 #define IDC_SAVE_AND_COMPILE            32899
 #define IDC_COMPILE                     32900
-#define ID_PIECE_MERGE                  32901
+#define ID_PIECE_MERGE                  32825
 #define ID_NODEEDIT_LOOKAT              32902
 #define ID_SOCKETEDIT_LOOKAT            32903
 #define ID_CREATE_NULL_LOD              32904
@@ -474,6 +474,57 @@
 #define IDD_ANIMATIONCLEANUP            198
 #define IDC_PRESERVEROT                 1133
 #define IDC_MINVARIANCE                 1134
+
+// talon: 2001's own ids, from the image (ModelEdit.rc, decompiled from it,
+// and CModelEditDlg's message map at 0x4750f8). The names are ours where
+// Build 69 has none; the values are the image's. Three Build 69 names above
+// carry their 2001 values: ID_PIECE_SET_TEXTURE (Model > Set Texture,
+// 32794; Build 69's 32887), ID_CALC_INTERNAL_RADIUS (32824; 32884) and
+// ID_PIECE_MERGE (Piece > Merge Pieces, 32825; 32901). Build 69 reuses
+// 32824..32827 for its export commands and ID_IMPORTMODELSTRINGKEYS.
+//
+// Menu 170 (the main menu) and menu 149 (the keyframe menu):
+#define IDC_BUILDLODS                   1035
+#define ID_ANIMATION_CLEANUP            32826
+#define ID_CREATE_KEYFRAME              32827
+// Dialog 161 (the import dialog): "&Keystrings"; 1054, "&LODs", is
+// IDC_IMPORT_LODS.
+#define IDC_IMPORT_KEYSTRINGS           1055
+// Dialog 181 (Select child model(s)): "Browse...".
+#define IDC_ADDCHILD_BROWSE             1141
+// Dialog 157 (Model Command String): the helper controls, one per command
+// string key (1105 is IDC_COMMANDSTRING, the final string).
+#define IDC_CMDSTR_AMBIENTLIGHT         1138
+#define IDC_CMDSTR_DIRLIGHT             1032
+#define IDC_CMDSTR_DRAWINDEXEDDIST      1033
+#define IDC_CMDSTR_FADERANGEMIN         1044
+#define IDC_CMDSTR_FADERANGEMAX         1043
+#define IDC_CMDSTR_FADESPRITETEXTURE    1036
+#define IDC_CMDSTR_FADESPRITESIZEX      1038
+#define IDC_CMDSTR_FADESPRITESIZEY      1037
+#define IDC_CMDSTR_FOVXOFFSET           1042
+#define IDC_CMDSTR_FOVYOFFSET           1041
+#define IDC_CMDSTR_LODINCREMENT         1034
+#define IDC_CMDSTR_LODMAXDIST           1035
+#define IDC_CMDSTR_LODSTARTDIST         1039
+#define IDC_CMDSTR_NOANIMATION          1135
+#define IDC_CMDSTR_NORMALREF1           1046
+#define IDC_CMDSTR_NORMALREF2           1045
+#define IDC_CMDSTR_SHADOWENABLE         1136
+#define IDC_CMDSTR_SHADOWPROJECTLENGTH  1040
+#define IDC_CMDSTR_SHADOWLIGHTDIST      1047
+#define IDC_CMDSTR_SHADOWSIZEX          1049
+#define IDC_CMDSTR_SHADOWSIZEY          1048
+#define IDC_CMDSTR_SHADOWCENTERX        1051
+#define IDC_CMDSTR_SHADOWCENTERY        1052
+#define IDC_CMDSTR_SHADOWCENTERZ        1050
+#define IDC_CMDSTR_SPECULARENABLE       1137
+#define IDC_CMDSTR_VISRADIUS            1053
+#define IDC_CMDSTR_EXTRAPARAMS          1054
+// Dialog 180 (Piece Info) is IDD_PIECEINFO: IDC_SPECULARPOWER 1108,
+// IDC_SPECULARSCALE 1032, IDC_TEXTUREINDEX0 1033 ("Texture Index:"), and
+// the labels IDC_SPECULARPOWER_LABEL, _SCALE_LABEL, IDC_TEXTUREINDEX_LABEL
+// (1109..1111), all Build 69's names above.
 
 // Next default values for new objects
 // 

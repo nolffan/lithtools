@@ -20,6 +20,7 @@
 #include "dimensionsdlg.h"
 #include "importanimation.h"
 #include "animframeratedlg.h"
+#include "animcleanupdlg.h"
 #include "keyframetimedlg.h"
 #include "translationdlg.h"
 #include "uvimportdlg.h"
@@ -34,30 +35,21 @@
 #include "transformmaker.h"
 #include "animmergedlg.h"
 #include "newgenlod.h"
+#include "pieceinfodlg.h"
+#include "genloddlg.h"
 #include "addchildmodeldlg.h"
 #include "regmgr.h"
 #include "lteulerangles.h"
 #include "socketedit.h"
 #include "weightsetselectdlg.h"
-#include "ExportD3D_Dlg.h"
 #include "loadltadlg.h"
 #include <process.h>
-#include "importstringkeysdlg.h"
-#include "piecematerialdlg.h"
-#include "piecelodgendlg.h"
-#include "piecelodgen.h"
-#include "piecemerge.h"
-#include "importloddlg.h"
-#include "editobbdlg.h"
-#include "DirDialog.h"
-#include "ltwintreeitem.h"
-#include "ltwintreeitemiter.h"
 #include <set>
-#include "invalidanimdimsdlg.h"
+#include <map>
 
-
-extern char g_szStartPath[_MAX_PATH];	// working directory at launch
-extern char g_szExePath[_MAX_PATH];		// path to executable
+// talon: what ModelLoadRequest::m_pLoadedSet points at (model_load.cpp
+// reads it: child model name -> file names).
+typedef std::map<std::string, std::set<std::string> > ChildModelRemap;
 
 
 // ------------------------------------------------------------------------
@@ -118,36 +110,24 @@ int g_CV_ModelTransitionMS = 200;
 
 #define MENUCHECK(test) ((test) ? MF_CHECKED : MF_UNCHECKED)
 
-bool g_bUpdateNodeFlags = false;
+static void SetListColumnWidth(CListCtrl *pList, int width, int iIgnore);
 
-// ------------------------------------------------------------------------
-// IsLtaFile
-// does this filename have an lta extention, (case insensitive)
-// ------------------------------------------------------------------------
-static inline 
-int IsFilenameLTAExt( const char *filename )
+// talon: an LOD's info, inlined at 0x418e7d (OnImport); Build 69's
+// Model::GetLOD, which model.h no longer has.
+inline LODInfo* GetModelLODInfo(Model *pModel, uint32 i)
 {
-	CString pathName ;
-
-	// not enough chars in the name  
-	if( strlen( filename ) < 4 )
-		return 0;
-
-	pathName = filename ; 
-	CString szFileExt = pathName.Right(4);
-	szFileExt.MakeLower();
-
-	
-	//check for either normal or compressed extensions
-	if(( szFileExt == ".lta" ) || ( szFileExt == ".ltc" ))
-	{
-		return 1;
-	}
-
-	else return 0;
-
+	if (i == 0)
+		return &pModel->m_BaseLODInfo;
+	else if (i-1 < pModel->m_LODs.GetSize())
+		return &pModel->m_LODs[i-1];
+	else
+		return NULL;
 }
- 
+static BOOL ImportKeyStrings(AnimInfo *pDest, AnimInfo *pSrc);
+BOOL CreateKeyframe(ModelAnim *pAnim, int iPrev, int iNext, float fPercent);
+int IsFilenameLTAExt( const char *filename );
+
+
 // Used for socket rotation and positioning.
 float GetRotAngle(int delta)
 {
@@ -159,31 +139,6 @@ float GetPosAmount(int delta)
 	return (float)delta * (1.0f / 64.0f);
 }
 
-float GetScaleAmount(int delta)
-{
-	return 1.0f + ((float)delta * (1.0f / 64.0f));
-}
-
-// ------------------------------------------------------------------------
-// GetModelMaxLODDist
-// get the largest largest dist specified in any piece of a model.
-// ------------------------------------------------------------------------
-float GetModelMaxLODDist( Model *pModel )
-{
-	float max_dist = 0.0f ;
-
-	if( !pModel )
-		return max_dist ;
-
-	for( int i = 0 ;i < pModel->NumPieces() ; i++ )
-	{
-		ModelPiece *pPiece = pModel->GetPiece(i);
-		float max = pPiece->GetMaxDist();
-		if( max > max_dist )
-			max_dist = max ;
-	}
-	return max_dist ;
-}
 // ------------------------------------------------------------------------
 // AddTracker
 // ui thing.
@@ -244,6 +199,15 @@ void MEAnimInfo::Reset(Model *pModel)
 }
 
 
+// talon: 2001's (0x4162de): back to the start of the current animation.
+// The name is ours; OnAnimationCleanup calls it.
+void MEAnimInfo::ResetTime()
+{
+	m_Tracker.m_TimeRef.SetKeyframePosition(CurAnimIndex(), 0, 0, 0.0f);
+	m_bAnimPlayingForward = FALSE;
+}
+
+
 void MEAnimInfo::StartPlayback()
 {
 	StopPlayback();
@@ -270,15 +234,6 @@ void MEAnimInfo::SetKeyframeWindowTime()
 }
 
 
-ModelAnim* MEAnimInfo::PrevAnim()
-{
-	if(IsValid())
-		return m_Tracker.m_TimeRef.m_pModel->GetAnim(PrevAnimIndex());
-	else
-		return NULL;
-}
-
-
 ModelAnim* MEAnimInfo::CurAnim()
 {
 	if(IsValid())
@@ -293,8 +248,7 @@ ModelAnim* MEAnimInfo::CurAnim()
 
 CModelEditDlg::CModelEditDlg(CWnd* pParent /*=NULL*/)
 	: CDialog(CModelEditDlg::IDD, pParent),
-	m_AllocCount(&g_DefAlloc),
-	m_pDimensionDlg(NULL)
+	m_AllocCount(&g_DefAlloc)
 {
 	DWORD i;
 	MEAnimInfo *pInfo;
@@ -310,6 +264,7 @@ CModelEditDlg::CModelEditDlg(CWnd* pParent /*=NULL*/)
 	//{{AFX_DATA_INIT(CModelEditDlg)
 	m_bDrawSkeleton = FALSE;
 	//}}AFX_DATA_INIT
+	m_bMovePieces = FALSE;
 	// Note that LoadIcon does not require a subsequent DestroyIcon in Win32
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 	m_pModel = NULL;
@@ -317,10 +272,7 @@ CModelEditDlg::CModelEditDlg(CWnd* pParent /*=NULL*/)
 	m_bTracking = FALSE;
 	m_bInStringChange = FALSE;
 
-	m_LastIdleTime = timeGetTime();
-
-	m_nCurrentLOD = PIECELOD_BASE;
-	m_CurrentLODDist = 0.0f ;
+	m_nCurrentLOD = 0;
 
 	m_bChangesMade = FALSE;
 	m_hAccel = NULL;
@@ -340,44 +292,12 @@ CModelEditDlg::CModelEditDlg(CWnd* pParent /*=NULL*/)
 	}
 
 	m_RenderWnd.InitAnims(animTrackerPointers);
-
-	m_RenderWnd.ResetLocator();	
-	
-	m_pImportStringKeyDlg = NULL;	
-
-	// get the project dir
-		// get the dep proj dir stuff it into the model db.
-	CRegMgr regMgr;
-	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER))
-	{
-		CString csOpenDir ;
-		UINT32 dwSize = 256;
-		regMgr.Get("dep_file_location", csOpenDir.GetBufferSetLength(dwSize), dwSize);
-		m_szCurProjectPath =  csOpenDir ;
-	}
-
-	// should we require user confirmation of the load dialog
-	if( regMgr.Init( szRegKeyCompany, szRegKeyApp, szRegKeyVer, "Options", HKEY_CURRENT_USER ) )
-	{
-		m_bConfirmLoadDlg = regMgr.Get( "confirm_load", 1 ) > 0;
-	}
 }
 
 
 CModelEditDlg::~CModelEditDlg()
 {
-	if (m_pImportStringKeyDlg)
-	{
-		m_pImportStringKeyDlg->DestroyWindow();
-		delete m_pImportStringKeyDlg;
-		m_pImportStringKeyDlg = NULL;
-	}
-	
-	for( int i = 0; i < m_Trackers; i++ )
-	{
-		delete m_Trackers[i];
-	}
-
+	DeleteAndClearArray(m_Trackers);
 	DeleteModel();
 }
 
@@ -386,7 +306,7 @@ void CModelEditDlg::DoDataExchange(CDataExchange* pDX)
 	CDialog::DoDataExchange(pDX);
 	//{{AFX_DATA_MAP(CModelEditDlg)
 	DDX_Control(pDX, IDC_ANIMLIST, m_AnimList);
-//	DDX_Control(pDX, IDC_PIECES, m_PieceList);
+	DDX_Control(pDX, IDC_PIECES, m_PieceList);
 	DDX_Control(pDX, IDC_NODELIST, m_NodeList);
 	DDX_Control(pDX, IDC_GLOBAL_SPACE, m_GlobalSpace);
 	DDX_Control(pDX, IDC_SOCKETLIST, m_SocketList);
@@ -397,6 +317,7 @@ void CModelEditDlg::DoDataExchange(CDataExchange* pDX)
 }
 
 BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
+	// talon: 2001's map (0x4750f8), entry for entry.
 	//{{AFX_MSG_MAP(CModelEditDlg)
 	ON_WM_PAINT()
 	ON_WM_QUERYDRAGICON()
@@ -411,7 +332,6 @@ BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
 	ON_BN_CLICKED(IDC_NEXTKEY, OnNextKeyframe)
 	ON_BN_CLICKED(IDC_PREVKEY, OnPrevKeyframe)
 	ON_BN_CLICKED(IDC_IMPORT, OnImport)
-	ON_BN_CLICKED(IDC_IMPORT_LODS, OnImportLODs)
 	ON_BN_CLICKED(IDC_SAVE, OnSave)
 	ON_BN_CLICKED(IDC_SAVEAS, OnSaveAs)
 	ON_BN_CLICKED(IDC_CREATE_SINGLE_FRAME, OnCreateSingleFrame)
@@ -422,16 +342,17 @@ BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
 	ON_BN_CLICKED(IDC_DIMS, OnDims)
 	ON_BN_CLICKED(IDC_ANIM_BOX, OnAnimBox)
 	ON_WM_HSCROLL()
+	ON_BN_CLICKED(IDC_BUILDLODS, OnBuildLODs)
 	ON_WM_KEYDOWN()
 	ON_BN_CLICKED(IDC_MODELINFO, OnModelInfo)
 	ON_BN_CLICKED(IDC_COMMANDSTRING_BUTTON, OnCommandString)
 	ON_BN_CLICKED(IDC_DIMENSIONS_BUTTON, OnDimensions)
 	ON_BN_CLICKED(IDC_ANIMATION_FRAMERATE, OnAnimationFramerate)
+	ON_BN_CLICKED(ID_ANIMATION_CLEANUP, OnAnimationCleanup)
 	ON_BN_CLICKED(IDC_ANIMATIONLENGTH, OnAnimationLength)
 	ON_BN_CLICKED(IDC_ANIMATIONINTERPOLAION, OnAnimationInterpolation)
 	ON_BN_CLICKED(IDC_TRANSLATION_BUTTON, OnTranslationButton)
 	ON_BN_CLICKED(IDC_ROTATION_BUTTON, OnRotationButton)
-	ON_BN_CLICKED(IDC_SET_PROJ_DIR, OnSetProjectDir)
 	ON_BN_CLICKED(IDC_XSUB, OnXsub)
 	ON_BN_CLICKED(IDC_XADD, OnXadd)
 	ON_BN_CLICKED(IDC_YSUB, OnYsub)
@@ -440,7 +361,6 @@ BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
 	ON_BN_CLICKED(IDC_ZADD, OnZadd)
 	ON_BN_CLICKED(IDC_NUMBER, OnNumberAnim)
 	ON_BN_CLICKED(IDC_DUPLICATEANIM, OnDuplicateAnim)
-	ON_BN_CLICKED(ID_ANIMATION_CREATEANIMFROMBINDPOSE, OnCreateAnimFromBindPose)
 	ON_BN_CLICKED(IDC_RENAMENODE, OnRenameNode)
 	ON_BN_CLICKED(IDC_UNROTATE_TOP_NODE, OnUnrotateTopNode)
 	ON_BN_CLICKED(ID_GENERATE_VERTEX_NORMALS, OnGenerateVertexNormals)
@@ -450,10 +370,8 @@ BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
 	ON_BN_CLICKED(ID_PIECE_SET_TEXTURE, OnSetTexture)
 	ON_BN_CLICKED(IDC_DRAWSKELETON, OnDrawSkeleton)
 	ON_BN_CLICKED(ID_SHOW_SOCKETS, OnShowSockets)
-	ON_COMMAND(ID_SHOW_TEXTURES, OnShowTextures)
 	ON_BN_CLICKED(ID_SHOW_ATTACHMENTS, OnShowAttachments)
 	ON_BN_CLICKED(ID_SOLID_ATTACHMENTS, OnSolidAttachments)
-	ON_BN_CLICKED(IDC_MOVEMENT_ENCODING, OnMovementEncoding)
 	ON_BN_CLICKED(ID_ADDCHILDMODEL, OnAddChildModel)
 	ON_BN_CLICKED(ID_REMOVECHILDMODEL, OnRemoveChildModel)
 	ON_BN_CLICKED(ID_ADD_SOCKET, OnAddSocket)
@@ -471,20 +389,13 @@ BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
 	ON_BN_CLICKED(ID_INTERNAL_RADIUS, OnInternalRadius)
 	ON_BN_CLICKED(ID_CALC_INTERNAL_RADIUS, OnCalcInternalRadius)
 	ON_BN_CLICKED(ID_EDIT_WEIGHTS, OnEditWeights)
-	ON_BN_CLICKED(IDC_CALC_OBB, OnReCalcOBBExtent)
 	ON_BN_CLICKED(ID_PIECE_INFO, OnPieceInfo)
-	ON_BN_CLICKED(ID_CREATE_NULL_LOD, OnCreateNullLOD)
-	ON_BN_CLICKED(ID_PIECE_SELECT_NONE, OnPieceSelectNone)
-	ON_BN_CLICKED(ID_PIECE_REMOVE_LODS, OnPieceRemoveLODs)
-	ON_BN_CLICKED(ID_PIECE_BUILD_LODS, OnPieceBuildLODs)
 	ON_BN_CLICKED(ID_PIECE_MERGE, OnPieceMerge)
-	ON_COMMAND(ID_PIECEEDIT_EXPANDALL, OnPieceExpandAll)
-	ON_COMMAND(ID_PIECEEDIT_COLLAPSEALL, OnPieceCollapseAll)
 	ON_NOTIFY(LVN_ENDLABELEDIT, IDC_NODELIST, OnEndlabeleditNodeList)
 	ON_NOTIFY(LVN_ITEMCHANGED, IDC_NODELIST, OnItemChangedNodeList)
 	ON_WM_DESTROY()
-	ON_MESSAGE(WM_LTTREE_SELCHANGED, OnTreeSelChanged)
-	ON_MESSAGE(WM_LTTREE_EDITTEXT, OnTreeEditText)
+	ON_NOTIFY(LVN_ITEMCHANGED, IDC_PIECES, OnItemChangedPieceList)
+	ON_NOTIFY(LVN_ENDLABELEDIT, IDC_PIECES, OnEndLabelEditPieceList)
 	ON_NOTIFY(LVN_BEGINLABELEDIT, IDC_ANIMLIST, OnBeginLabelEditAnimList)
 	ON_NOTIFY(LVN_ENDLABELEDIT, IDC_ANIMLIST, OnEndLabelEditAnimList)
 	ON_NOTIFY(LVN_ITEMCHANGING, IDC_ANIMLIST, OnItemChangingAnimList)
@@ -495,25 +406,9 @@ BEGIN_MESSAGE_MAP(CModelEditDlg, CDialog)
 	ON_LBN_DBLCLK(IDC_SOCKETLIST, OnDblClkSocketList)
 	ON_EN_CHANGE(IDC_FRAMESTRING, OnFrameStringChange)
 	ON_COMMAND(ID_OPTIONS_NEWBACKGROUND, OnNewBgColor)
-	ON_COMMAND(ID_OPTIONS_LOADCONFIRM, OnLoadConfirm)
-	ON_COMMAND(ID_OPTIONS_SHOWORIGINALMODEL, OnOptionsShoworiginalmodel)
-	ON_COMMAND(IDC_CHANGE_FOV, OnChangeFov)
-	ON_COMMAND(IDC_COMPILE, OnCompile)
-	ON_COMMAND(IDC_SAVE_AND_COMPILE, OnSaveAndCompile)
-	ON_COMMAND(ID_EXPORTMODELSTRINGKEYS, OnExportModelStringKeys)
-	ON_COMMAND(ID_IMPORTMODELSTRINGKEYS, OnImportModelStringKeys)
-	ON_NOTIFY(HDN_ITEMCLICK, IDC_NODELIST, OnItemclickNodelist)
-	ON_COMMAND(ID_OPTIONS_SHOWVERTEXWEIGHTING, OnOptionsShowVertexWeighting)
-	ON_COMMAND(ID_NODEEDIT_EDITOBB, OnNodeeditEditobb)
-	ON_COMMAND(ID_NODEEDIT_RENAME, OnNodeEditRename)
-	ON_COMMAND(ID_NODEEDIT_LOOKAT, OnNodeEditLookAt)
-	ON_COMMAND(ID_SOCKETEDIT_LOOKAT, OnSocketEditLookAt)
 	ON_COMMAND(IDC_DELETEANIM, OnAnimDelete)
 	ON_COMMAND(IDC_DUPLICATEANIM, OnDuplicateAnim)
-	ON_COMMAND(IDC_CHANGE_FOV, OnChangeFov)
-	ON_COMMAND(IDC_CHANGE_FOV, OnChangeFov)
-	ON_COMMAND(ID_MODEL_EXPORTWEIGHTSETS, OnExportWeightSets)
-	ON_COMMAND(ID_MODEL_IMPORTWEIGHTSETS, OnImportWeightSets)
+	ON_COMMAND(ID_OPTIONS_SHOWORIGINALMODEL, OnOptionsShoworiginalmodel)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -731,8 +626,6 @@ void CModelEditDlg::OnIdle()
 	dwTime = timeGetTime();
 
 	msDelta = dwTime - m_LastIdleTime;
-	//msDelta = (DWORD)( (float)msDelta * .5f ) ;
-	msDelta = (DWORD)( (float)msDelta ) ;
 	msDelta = DCLAMP(msDelta, 1, 1000);
 
 	m_LastIdleTime = dwTime;
@@ -769,7 +662,6 @@ void CModelEditDlg::InterpForward(uint32 iAnimInfo, DWORD msDelta)
 	pInfo->SetKeyframeWindowTime();
 	
 	UpdateEditFrameString();
-	UpdateEditFrameTime();
 }
 
 // {BP 1/20/97}
@@ -809,13 +701,18 @@ BOOL CModelEditDlg::RecurseAndVerifyModels( ModelNode* pNode1, ModelNode* pNode2
 // ------------------------------------------------------------------------
 Model* CModelEditDlg::load_LTA_Using_FeedBackDialog( const char *pFilename, bool isChildModel  )
 {
-	void LoadLTAThreadMain( void* pUser );
+	DWORD WINAPI LoadLTAThreadMain( LPVOID pUser );
+	DWORD threadID;
+
+	ifstream InFile(pFilename);
+	if (!InFile)
+		return NULL;
 
 	m_AllocCount.ClearCounts();
 
 	//creat the dialog that will exist on this thread to display
 	//the status
-	CLoadLTADlg LoadDlg( !m_bConfirmLoadDlg );
+	CLoadLTADlg LoadDlg;
 
 	//tell it that the thread will now be running
 	CLoadLTADlg::SetLoadThreadDone(FALSE);
@@ -824,6 +721,7 @@ Model* CModelEditDlg::load_LTA_Using_FeedBackDialog( const char *pFilename, bool
 
 	//create the parameters for the thread
 	CLoadLTAThreadParams Params;
+	Params.m_pInFile		= &InFile;
 	Params.m_pAllocCount	= &m_AllocCount ;
 	Params.m_pModel			= NULL;
 	Params.m_bChildLoad     = isChildModel;
@@ -833,22 +731,21 @@ Model* CModelEditDlg::load_LTA_Using_FeedBackDialog( const char *pFilename, bool
 	CLTATranslStatus::SetLoadLogCB( CLoadLTADlg::AppendLoadLog );
 
 	//spawn the new thread to handle the loading of the LTA
-	unsigned long hThread = _beginthread( LoadLTAThreadMain, 0, &Params );
-
-	if( hThread == -1 )
+	if( !CreateThread(NULL, 0, LoadLTAThreadMain, &Params, 0, &threadID) )
 	{
 		MessageBox("Failed to create thread to load LTA", "Error!");
 		return FALSE;
 	}
 
 	//set the filename
-	//LoadDlg.m_sFilename = pathName;
 	LoadDlg.m_sFilename = pFilename ;
 
 	//tell the dialog to take control. It will not return until
 	//the LTA loading thread has finished and the user has closed
 	//it
 	LoadDlg.DoModal();
+
+	InFile.close();
 
 	//unload the parameters that have been modified by the thread
 	return  Params.m_pModel;	
@@ -874,19 +771,22 @@ Model* LoadChildModel(ModelLoadRequest *pRequest, char *pBaseName, char *pChildF
 		sprintf(newFilename, "%s\\%s", dirName, pChildFilename);
 	}
 
-	CString puff;
-	puff= pBaseName ;
-	puff+=pChildFilename ;
-
-	int base_is_lta = IsFilenameLTAExt( pBaseName ) ;
-	int child_is_lta= IsFilenameLTAExt( pChildFilename );
-
-	if( base_is_lta && child_is_lta )
+	// talon: 2001 loads the child's .abc (Build 69's only reads LTA).
+	pRequest->m_pFile = streamsim_Open(newFilename, "rb");
+	if (pRequest->m_pFile)
 	{
-		MessageBox(NULL, "Programer Error Report this as a bug.\r\nCannot Load LTA Child Models From ME",
-					"Error in ChildModel Load", MB_OK);
-		pModel = NULL ;
-		return pModel;
+		pModel = new Model;
+		if (pModel)
+		{
+			if (pModel->Load(pRequest) != LT_OK)
+			{
+				delete pModel;
+				pModel = NULL;
+			}
+
+			pRequest->m_pFile->Release();
+			return pModel;
+		}
 	}
 
 	return NULL;
@@ -906,14 +806,10 @@ DRESULT ME_LoadChildFn(ModelLoadRequest *pRequest, Model **ppModel)
 //this is the thread main function that handles the loading of an LTA file. The parameter
 //is a stucture containing a handle to an ifstream, and a pointer to where the model
 //will be stored.
-void LoadLTAThreadMain( void* pUser )
+DWORD WINAPI LoadLTAThreadMain( LPVOID pUser )
 {
 	//get the parameters
 	CLoadLTAThreadParams* pParams = (CLoadLTAThreadParams*)pUser;
-
-	//verify the parameters are valid
-	ASSERT(pParams);
-	ASSERT(pParams->m_pAllocCount);
 
 	//load up the model
 	if( pParams->m_bChildLoad)
@@ -922,13 +818,13 @@ void LoadLTAThreadMain( void* pUser )
 	}
 	else
 	{
-		pParams->m_pModel = ltaModelLoad(pParams->m_Filename.c_str(), *(pParams->m_pAllocCount));
+		pParams->m_pModel = ltaModelLoad(*pParams->m_pInFile, *(pParams->m_pAllocCount));
 	}
 
 	//tell the dialog we are done, and that it can exit
 	CLoadLTADlg::SetLoadThreadDone(TRUE);
 
-	return;
+	return 0;
 }
 
 // ------------------------------------------------------------------------
@@ -941,53 +837,90 @@ BOOL CModelEditDlg::DoLoadModel(char *pFilename, BOOL bMessage)
 	Model *pModel;
 	ModelLoadRequest request;
 	DWORD i;
+	ILTStream *pFile;
+	LTRESULT err;
+	char msg[256];
+	float mag;
 
 	// Stop any animations...
 	StopAllPlayback();
 
-	BeginWaitCursor();
-
-	// check for lta file. if so call ltaModelLoad 
-	// else bomb out.
-	if( IsFilenameLTAExt(pFilename )  )
+	if( IsFilenameLTAExt(pFilename) )
 	{
-		// zap all the textures before loading up something new.
-		m_RenderWnd.ReleaseAllTextures() ;
+		pModel = load_LTA_Using_FeedBackDialog( pFilename );
 
-		pModel = load_LTA_Using_FeedBackDialog( pFilename  );
-
+		// talon: RETAIL BUG: no return here; a failed LTA load goes on with
+		// a NULL model and DoLoadModel dereferences it.
 		if( pModel == NULL )
 		{
 			MessageBox("Failed to load lta file","load error");
 		}
 	}
-	else 
+	else
 	{
-		// huh? don't know that extention ...
-		MessageBox( "unknown extension... " , "load model error", MB_OK);
-		EndWaitCursor();
-		return FALSE;
+		pFile = streamsim_Open(pFilename, "rb");
+		if (!pFile)
+		{
+			if (bMessage)
+				MessageBox("Could not open file", "File Error", MB_OK|MB_ICONEXCLAMATION);
+
+			return FALSE;
+		}
+
+		try
+		{
+			request.m_pFile = pFile;
+			request.m_LoadChildFn = ME_LoadChildFn;
+			request.m_pLoadFnUserData = pFilename;
+			// talon: RETAIL BUG: nothing ever deletes this (a leak per load).
+			request.m_pLoadedSet = new ChildModelRemap;
+
+			m_AllocCount.ClearCounts();
+			pModel = new Model(&m_AllocCount);
+
+			err = pModel->Load(&request);
+			if (err != LT_OK)
+			{
+				if (pModel)
+					delete pModel;
+
+				pFile->Release();
+
+				if (bMessage)
+				{
+					sprintf(msg, "error number %d on load ", err);
+					MessageBox(msg, "File Error", MB_OK|MB_ICONEXCLAMATION);
+				}
+
+				return FALSE;
+			}
+		}
+		catch(CLithException &exc)
+		{
+			pFile->Release();
+
+			if (bMessage)
+				MessageBox("Model file is invalid", "File Error", MB_OK|MB_ICONEXCLAMATION);
+
+			return FALSE;
+		}
+
+		pFile->Release();
 	}
 	
 	// Get rid of the old one.
-	if( pModel != NULL )
-	{
-		DeleteModel();
-		m_pModel = pModel;
-		m_strFilename = pFilename;
-	}
-	else
-		return FALSE;
+	DeleteModel();
+	m_pModel = pModel;
+	m_strFilename = pFilename;
 
-	//check and make sure animation dimensions are valid now
-	CheckValidAnimationDims();
+	SortPiecesByTexture();
 
 	// init dialog controls
 	FillAnimList();
 	FillNodeList();
 	FillSocketList();
 	FillChildModelList();
-	FillPieceList( &m_PieceList, m_pModel );
+	FillPieceList();
 
 	m_AnimList.SetItemState(0, LVIS_SELECTED, LVIS_SELECTED);
 	for (i = 1; i < (DWORD)m_AnimList.GetItemCount(); i++)
@@ -1017,44 +950,28 @@ BOOL CModelEditDlg::DoLoadModel(char *pFilename, BOOL bMessage)
 	titleText.FormatMessage(IDS_TITLE_TEXT, pFilename);
 	SetWindowText((LPCTSTR)titleText);
 
-	m_pModel->SetFilename( pFilename );
-
-	DVector temp;
-	float mag;
-
 	if (m_pModel->m_Anims > 0)
 	{
-		float fov = MATH_DEGREES_TO_RADIANS(m_RenderWnd.m_DrawStruct.m_FOV);
-		
-		static const float kfMaxFOV = 89.99f;
-
-		//make sure that we never go beyond a valid FOV
-		if( m_RenderWnd.m_DrawStruct.m_FOV > kfMaxFOV )
-		{
-			m_RenderWnd.m_DrawStruct.m_FOV = kfMaxFOV;
-		}
-		
-		mag = m_pModel->m_GlobalRadius ;
+		mag = m_pModel->GetAnimInfo(0)->m_vDims.Mag();
 
 		m_RenderWnd.m_Scale = mag / 200.0f;
-		m_RenderWnd.m_Camera.Reset();
-		m_RenderWnd.m_Camera.m_Position.z = ((mag) / (float)tan( fov ))  ; 
-		m_RenderWnd.m_Camera.m_Position.z = (m_pModel->GetAnimInfo(0)->m_vDims.Mag() * 2);
-
-		m_RenderWnd.m_Camera.Update();
+		m_RenderWnd.m_Locator.Center();
+		m_RenderWnd.m_Locator.m_nDistance = mag * 2;
+		m_RenderWnd.m_Locator.UpdateLocation();
 	}
 	else
 	{
 		m_RenderWnd.m_Scale = 1.0f;
 	}
 
+	m_RenderWnd.ResetLocator();
+
 	UpdateEditFrameString( );
-	UpdateEditFrameTime( );
 
 	ProcessCommandString();
 
-	SetCurrentLOD(0.0f);
-	InitTheScrollBar(GetModelMaxLODDist(m_pModel));
+	SetCurrentLOD(0);
+	InitTheScrollBar(m_pModel->NumLODs() - 1);
 
 	CheckChildModels(&request);
 
@@ -1091,59 +1008,61 @@ BOOL CModelEditDlg::DoLoadModel(char *pFilename, BOOL bMessage)
 					}
 					else 
 					{
-					// Load the attachment
-					if (request.m_pFile = streamsim_Open(csAttachment, "rb"))
-					{
-						MessageBox("SOCKET LOAD CALLED OLD STYLE", "DEPRECATED", MB_OK);
-						request.m_pFile->Release();
-					}
+						// Load the attachment
+						if (request.m_pFile = streamsim_Open(csAttachment, "rb"))
+						{
+							pSocket->m_pAttachment = new Model;
+							pSocket->m_pAttachment->Load(&request);
+							request.m_pFile->Release();
+						}
 					}
 				}
 			}
 		}
 	}
+
+	CRegMgr renderReg;
+	if (renderReg.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "Render", HKEY_CURRENT_USER))
+	{
+		UINT32 dwSize = sizeof(float)*3;
+		float bgColor[3];
 	
-	// get the dep proj dir stuff it into the model db.
-	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER))
-	{
-		CString csOpenDir ;
-		UINT32 dwSize = 256;
-		regMgr.Get("dep_file_location", csOpenDir.GetBufferSetLength(dwSize), dwSize);
-		m_pModel->m_sProjectDir = csOpenDir ;
+		renderReg.Get("bgColor", bgColor, dwSize);
+
+		SetGLMBackgroundColor( m_RenderWnd.GetContext(), bgColor );	
 	}
-
-	{
-	// Ok, now we load up the texture maps, from the tools-info node... 
-	Model::CTextureIndexMapIter it = m_pModel->m_TextureIndexMap.begin();
-	Model::CTextureIndexMapIter end= m_pModel->m_TextureIndexMap.end();
-	// export the index to texture name list
-	for(  ; it != end ;	it++ )
-	{
-		uint32 index = (*it).first;
-		string path = m_pModel->m_sProjectDir ;
-		path += (*it).second;
-
-		// if we fail to load its ok, 
-		SetRenderTexture( path.c_str(), index );
-	}
-
-	}
-
-	// [TMG] Update the dimensions dialog	
-	if (m_pDimensionDlg)
-	{
-		m_pDimensionDlg->m_pModel = m_pModel;
-	}
-
-	EndWaitCursor();
 	
 	return TRUE;// Success !!
+}
+
+
+// ------------------------------------------------------------------------
+// IsLtaFile
+// does this filename have an lta extention, (case insensitive)
+// ------------------------------------------------------------------------
+int IsFilenameLTAExt( const char *filename )
+{
+	CString pathName ;
+
+	// not enough chars in the name  
+	if( strlen( filename ) < 4 )
+		return 0;
+
+	pathName = filename ; 
+	CString szFileExt = pathName.Right(4);
+	szFileExt.MakeLower();
+
+	if( szFileExt == ".lta" )
+		return 1;
+	else
+		return 0;
 }
 
 
 void CModelEditDlg::UpdateMenuChecks()
 {
 	CMenu *pMenu;
+	CRegMgr regMgr;
 
 	pMenu = GetMenu();
 	if (!pMenu)
@@ -1153,15 +1072,13 @@ void CModelEditDlg::UpdateMenuChecks()
 	pMenu = pMenu->GetSubMenu(6);
 	if (!pMenu)
 		return;
- //t.f important
+
 	pMenu->CheckMenuItem(IDC_CAMERA_FOLLOW, MENUCHECK(m_RenderWnd.m_bCameraFollow));
 	pMenu->CheckMenuItem(IDC_WIREFRAME, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bWireframe));
 	pMenu->CheckMenuItem(IDC_DIMS, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDims));
 	pMenu->CheckMenuItem(IDC_ANIM_BOX, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bAnimBox));
 	pMenu->CheckMenuItem(IDC_DRAWSKELETON, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDrawSkeleton));
 	pMenu->CheckMenuItem(ID_OPTIONS_SHOWORIGINALMODEL, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDrawOriginalModel));
-
-	pMenu->CheckMenuItem(ID_SHOW_TEXTURES, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDrawTextures));
 	pMenu->CheckMenuItem(ID_SHOW_SOCKETS, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDrawSockets));
 	pMenu->CheckMenuItem(ID_SHOW_ATTACHMENTS, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDrawAttachments));
 	pMenu->CheckMenuItem(ID_SOLID_ATTACHMENTS, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bSolidAttachments));
@@ -1169,9 +1086,22 @@ void CModelEditDlg::UpdateMenuChecks()
 	pMenu->CheckMenuItem(ID_SHOW_NORMALREF, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bShowNormalRef));
 	pMenu->CheckMenuItem(ID_OPTIONS_PROFILE, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bProfile));
 
-	pMenu->CheckMenuItem(ID_OPTIONS_SHOWVERTEXWEIGHTING, MENUCHECK(m_RenderWnd.m_DrawStruct.m_bDrawVertexWeights));
-
-	pMenu->CheckMenuItem(ID_OPTIONS_LOADCONFIRM, MENUCHECK(m_bConfirmLoadDlg));
+	// talon: 2001 keeps the options in the registry (0x41789d..).
+	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "Render", HKEY_CURRENT_USER))
+	{
+		regMgr.Set("CameraFollow", m_RenderWnd.m_bCameraFollow ? "1" : "0");
+		regMgr.Set("Wireframe", m_RenderWnd.m_DrawStruct.m_bWireframe ? "1" : "0");
+		regMgr.Set("Dims", m_RenderWnd.m_DrawStruct.m_bDims ? "1" : "0");
+		regMgr.Set("AnimBox", m_RenderWnd.m_DrawStruct.m_bAnimBox ? "1" : "0");
+		regMgr.Set("DrawSkeleton", m_RenderWnd.m_DrawStruct.m_bDrawSkeleton ? "1" : "0");
+		regMgr.Set("DrawOriginalModel", m_RenderWnd.m_DrawStruct.m_bDrawOriginalModel ? "1" : "0");
+		regMgr.Set("DrawSockets", m_RenderWnd.m_DrawStruct.m_bDrawSockets ? "1" : "0");
+		regMgr.Set("DrawAttachments", m_RenderWnd.m_DrawStruct.m_bDrawAttachments ? "1" : "0");
+		regMgr.Set("SolidAttachments", m_RenderWnd.m_DrawStruct.m_bSolidAttachments ? "1" : "0");
+		regMgr.Set("Normals", m_RenderWnd.m_DrawStruct.m_bNormals ? "1" : "0");
+		regMgr.Set("ShowNormalRef", m_RenderWnd.m_DrawStruct.m_bShowNormalRef ? "1" : "0");
+		regMgr.Set("Profile", m_RenderWnd.m_DrawStruct.m_bProfile ? "1" : "0");
+	}
 }
 
 
@@ -1223,44 +1153,69 @@ void CModelEditDlg::CheckChildModels(ModelLoadRequest *pRequest)
 }
 
 // fill a piece list with a given models pieces
-void CModelEditDlg::FillPieceList( CLTWinTreeMgr* tree, Model* model )
+// talon: 2001's (0x417b6e): the pieces in texture order.  The name is ours.
+void CModelEditDlg::SortPiecesByTexture()
 {
-	DWORD i;
-	char buf[256];
+	DWORD i, j;
+	ModelPiece *pTemp;
 
-	tree->ClearSelection();
-	tree->DeleteTree();
-
-	if( !model )
+	if (m_pModel->NumPieces() == 0)
 		return;
 
-	for( i = 0; i < model->NumPieces(); i++ )
+	for (i=0; i < m_pModel->NumPieces()-1; i++)
 	{
-		// get the current piece
-		ModelPiece* curPiece = model->GetPiece( i );
-		if( !curPiece )
+		for (j=i; j < m_pModel->NumPieces(); j++)
 		{
-			ASSERT(0);
-			continue;
-		}
-
-		// add the parent to the tree control
-		PieceListItem* item = new PieceListItem( curPiece->GetName() );
-		item->m_LOD = -1;
-		item->m_PieceNum = i;
-		item->SetTextEditable( TRUE );
-		CLTWinTreeKey parent = tree->AddItem( item, NULLITEM, FALSE );
-
-		for( int j = 0; j < curPiece->NumLODs(); j++ )
-		{
-			sprintf( buf, "%.2f", curPiece->m_LODDists[j] );
-			item = new PieceListItem( buf );
-			item->m_LOD = j;
-			item->m_PieceNum = i;
-			item->SetTextEditable( FALSE );
-			tree->AddItem( item, parent, FALSE );
+			if (m_pModel->m_Pieces[j]->m_iTexture < m_pModel->m_Pieces[i]->m_iTexture)
+			{
+				pTemp = m_pModel->m_Pieces[j];
+				m_pModel->m_Pieces[j] = m_pModel->m_Pieces[i];
+				m_pModel->m_Pieces[i] = pTemp;
+			}
 		}
 	}
+}
+
+
+// talon: 2001's piece list is a list view (Build 69's is a tree).
+void CModelEditDlg::FillPieceList()
+{
+	DWORD i;
+
+	m_PieceList.DeleteAllItems();
+
+	if (m_pModel)
+	{
+		for (i=0; i < m_pModel->NumPieces(); i++)
+		{
+			m_PieceList.InsertItem(i, m_pModel->GetPiece(i)->GetName());
+		}
+
+		SetListColumnWidth(&m_PieceList, 0, -1);
+	}
+}
+
+
+// talon: 2001's (0x417c3e): sizes a list view's column to its widest
+// item, leaving out iIgnore.  The name is ours.
+static void SetListColumnWidth(CListCtrl *pList, int width, int iIgnore)
+{
+	CString str;
+	int i, curWidth, maxWidth;
+
+	maxWidth = width;
+	for (i=0; i < pList->GetItemCount(); i++)
+	{
+		if (i != iIgnore)
+		{
+			str = pList->GetItemText(i, 0);
+			curWidth = pList->GetStringWidth(str);
+			if (curWidth > maxWidth)
+				maxWidth = curWidth;
+		}
+	}
+
+	pList->SetColumnWidth(0, maxWidth + 32);
 }
 
 
@@ -1275,8 +1230,6 @@ void CModelEditDlg::FillNodeList()
 	if (!m_pModel)
 		return;
 
-	g_bUpdateNodeFlags = false;
-
 	m_bFillingNodeList = TRUE;
 
 		for (i = 0; i < m_pModel->NumNodes(); i++)
@@ -1287,9 +1240,9 @@ void CModelEditDlg::FillNodeList()
 			m_NodeList.SetCheck((int)i, !!(pNode->m_Flags & MNODE_ROTATIONONLY));
 		}
 
-	g_bUpdateNodeFlags = true;
-
 	m_bFillingNodeList = FALSE;
+
+	SetListColumnWidth(&m_NodeList, 0, -1);
 }
 
 
@@ -1339,6 +1292,8 @@ void CModelEditDlg::FillAnimList()
 			m_AnimList.SetCheck(i, (m_pModel->GetAnimInfo(i))->GetAnimOwner() == m_pModel);
 		}
 	}
+
+	SetListColumnWidth(&m_AnimList, 0, -1);
 }
 
 
@@ -1364,33 +1319,25 @@ void CModelEditDlg::FillChildModelList()
 }
 
 
-void CModelEditDlg::InitTheScrollBar(float max_dist )
+void CModelEditDlg::InitTheScrollBar(int nLODs)
 {
-	
-	m_LODSlider.m_ScrollBar       = (CScrollBar*)GetDlgItem(IDC_LOD_SCROLL);
-
-	m_LODSlider.m_CurrentValue = (CMyEdit*)GetDlgItem(IDC_CURRENT_DIST);
-	m_LODSlider.m_MaxDist          = GetDlgItem(IDC_MAX_DIST);
-	m_LODSlider.m_MinDist          = GetDlgItem(IDC_MIN_DIST);
-
+	CScrollBar *pScrollBar;
 	SCROLLINFO info;
 
-	if (m_LODSlider.m_ScrollBar)
+	pScrollBar = (CScrollBar*)GetDlgItem(IDC_LOD_SCROLL);
+	if (pScrollBar)
 	{
 		info.cbSize = sizeof(info);
 		info.fMask = SIF_ALL;
 		info.nMin = 0;
-		info.nMax = (int)max_dist ;
+		info.nMax = nLODs;
 		info.nPage = 1;
 		info.nPos = info.nTrackPos = 0;
 		
-		m_LODSlider.m_ScrollBar->SetScrollInfo(&info);
+		pScrollBar->SetScrollInfo(&info);
 	}
 
-	m_LODSlider.SetMinDist(0);
-	m_LODSlider.SetMaxDist(max_dist);
-	m_LODSlider.SetCurrentValue(0);
-
+	SetLODText(0);
 }
 
 
@@ -1446,6 +1393,9 @@ BOOL CModelEditDlg::OnInitDialog()
 	};
 	uint32 i;
 	MEAnimInfo *pInfo;
+	CRegMgr regMgr;
+	char buf[32];
+	UINT32 dwSize;
 
 
 	// Run in a low-priority thread so we're friendly in the background..
@@ -1462,9 +1412,9 @@ BOOL CModelEditDlg::OnInitDialog()
 	m_NodeList.InsertColumn(0, "Nodes", LVCFMT_LEFT, rect.Width() -17);
 
 	// Set up the piece view
-	m_PieceList.SubclassDlgItem( IDC_PIECES, this );
-	m_PieceList.EnableMultiSelect( TRUE );
-	m_PieceList.EnableEditText( TRUE );
+	m_PieceList.SetExtendedStyle(LVS_EX_FULLROWSELECT);
+	m_PieceList.GetWindowRect(&rect);
+	m_PieceList.InsertColumn(0, "Pieces", LVCFMT_LEFT, rect.Width() -17);
 
 	// Set up the animation list
 	m_AnimList.SetDropNotify(this, (FDragListCallback)OnDropAnimList);
@@ -1479,9 +1429,6 @@ BOOL CModelEditDlg::OnInitDialog()
 	AddTracker(this, RGB(255,0,0), IDC_SOCKETPOSRIGHT, RT_POSITION, 0);
 	AddTracker(this, RGB(0,255,0), IDC_SOCKETPOSUP, RT_POSITION, 1);
 	AddTracker(this, RGB(0,0,255), IDC_SOCKETPOSFORWARD, RT_POSITION, 2);
-	AddTracker(this, RGB(255,0,0), IDC_SOCKETSCLRIGHT, RT_SCALE, 0);
-	AddTracker(this, RGB(0,255,0), IDC_SOCKETSCLUP, RT_SCALE, 1);
-	AddTracker(this, RGB(0,0,255), IDC_SOCKETSCLFORWARD, RT_SCALE, 2);
 
 
 	if (pButton = GetTransformEdit(IDC_SOCKET_EDIT))
@@ -1528,30 +1475,87 @@ BOOL CModelEditDlg::OnInitDialog()
 		EndDialog (-1);
 	}
 
-	/*
-	m_RenderWnd.SetWireframe (IsDlgButtonChecked (IDC_WIREFRAME));
-	m_RenderWnd.SetCameraFollow (IsDlgButtonChecked (IDC_CAMERA_FOLLOW));
-	m_RenderWnd.DrawDims (IsDlgButtonChecked (IDC_DIMS));
-	m_RenderWnd.DrawModelBox (IsDlgButtonChecked (IDC_MODEL_BOX));
-	m_RenderWnd.DrawAnimBox (IsDlgButtonChecked (IDC_ANIM_BOX));
-	*/
+	// talon: 2001 reads the options back from the registry (UpdateMenuChecks
+	// writes them).
+	if (!regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "Render", HKEY_CURRENT_USER))
+	{
+		m_RenderWnd.m_bCameraFollow = TRUE;
+		m_RenderWnd.m_DrawStruct.m_bWireframe = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bNormals = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bDims = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bAnimBox = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bDrawOriginalModel = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bDrawSockets = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bDrawAttachments = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bSolidAttachments = TRUE;
+		m_RenderWnd.m_DrawStruct.m_bShowNormalRef = FALSE;
+		m_RenderWnd.m_DrawStruct.m_bProfile = FALSE;
+	}
+	else
+	{
+		dwSize = sizeof(buf);
 
-	// t.f important
-	m_RenderWnd.m_bCameraFollow = TRUE;
-	m_RenderWnd.m_DrawStruct.m_bWireframe = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bNormals = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bDims = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bAnimBox = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bDrawOriginalModel = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bDrawVertexWeights = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bMovementEncoding = false;
+		if (regMgr.Get("CameraFollow", buf, dwSize))
+			m_RenderWnd.m_bCameraFollow = buf[0] == '1';
+		else
+			m_RenderWnd.m_bCameraFollow = TRUE;
 
-	m_RenderWnd.m_DrawStruct.m_bDrawTextures = TRUE;
-	m_RenderWnd.m_DrawStruct.m_bDrawSockets = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bDrawAttachments = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bSolidAttachments = TRUE;
-	m_RenderWnd.m_DrawStruct.m_bShowNormalRef = FALSE;
-	m_RenderWnd.m_DrawStruct.m_bProfile = FALSE;
+		if (regMgr.Get("Wireframe", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bWireframe = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bWireframe = FALSE;
+
+		if (regMgr.Get("Dims", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bDims = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bDims = FALSE;
+
+		if (regMgr.Get("AnimBox", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bAnimBox = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bAnimBox = FALSE;
+
+		if (regMgr.Get("DrawSkeleton", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bDrawSkeleton = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bDrawSkeleton = FALSE;
+
+		if (regMgr.Get("DrawOriginalModel", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bDrawOriginalModel = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bDrawOriginalModel = FALSE;
+
+		if (regMgr.Get("DrawSockets", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bDrawSockets = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bDrawSockets = FALSE;
+
+		if (regMgr.Get("DrawAttachments", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bDrawAttachments = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bDrawAttachments = FALSE;
+
+		if (regMgr.Get("SolidAttachments", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bSolidAttachments = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bSolidAttachments = TRUE;
+
+		if (regMgr.Get("Normals", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bNormals = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bNormals = FALSE;
+
+		if (regMgr.Get("ShowNormalRef", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bShowNormalRef = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bShowNormalRef = FALSE;
+
+		if (regMgr.Get("Profile", buf, dwSize))
+			m_RenderWnd.m_DrawStruct.m_bProfile = buf[0] == '1';
+		else
+			m_RenderWnd.m_DrawStruct.m_bProfile = FALSE;
+	}
+
 	UpdateMenuChecks();
 
 	m_RenderWnd.m_DrawStruct.m_FOV = CalcFOV();
@@ -1610,12 +1614,6 @@ BOOL CModelEditDlg::OnInitDialog()
 	m_cWinIdle.NextIdle();
 
 	UpdateEditFrameString( );
-	UpdateEditFrameTime( );
-
-	// Create the import string keys dialog
-
-	m_pImportStringKeyDlg = new CImportStringKeysDlg;
-	m_pImportStringKeyDlg->Create(IDD_IMPSTRINGKEYS, this);	
 
 	return TRUE;  // return TRUE  unless you set the focus to a control
 }
@@ -1675,13 +1673,13 @@ void CModelEditDlg::OnLoadModel()
 		csOpenDir.ReleaseBuffer(-1);
 	}
 
-	csOpenDir += "*.lta;*.ltc";
+	if (csOpenDir.Find('.') == -1)
+		csOpenDir.Empty();
 
 	// get the filename
-	CString sFilter;
-	sFilter.LoadString(IDS_LOADMODELFILTER);
+	char szFilter[] = "Model Files (*.abc)|*.abc|Model Files (*.lta)|*.lta|All Files (*.*)|*.*||";
 
-	CFileDialog dlg (TRUE, "lta", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, sFilter, this);
+	CFileDialog dlg (TRUE, "abc", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
 
 	if (dlg.DoModal() != IDOK)
 	{ 
@@ -1690,206 +1688,14 @@ void CModelEditDlg::OnLoadModel()
 
 	// Store the open directory in the registry
 	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength());
+	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength()) + "*.abc";
 	regMgr.Set("Model", (LPCTSTR)csOpenDir);
 	
-	CString pathName = dlg.GetPathName() ;
-
-	m_sModelPath = pathName;
-	DoLoadModel((char*)(LPCTSTR)pathName);
+	DoLoadModel((char*)(LPCTSTR)dlg.GetPathName());
 }
 
 
 // import custom lods from another model file
-void CModelEditDlg::OnImportLODs()
-{
-	if( !m_pModel )
-	{
-		DoMessageBox( "A model must be loaded before attempting to import LODs.", MB_OK|MB_ICONERROR );
-		return;
-	}
-
-	IdleChanger idle( &m_cWinIdle, IDLE_DIALOG_DELAY );
-
-	// Look up the open directory in the registry
-	CRegMgr regMgr;
-	CString openDir;
-	if( regMgr.Init( szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER ) )
-	{
-		UINT32 dwSize = 256;
-		regMgr.Get( "Model", openDir.GetBufferSetLength( dwSize ), dwSize );
-		openDir.ReleaseBuffer( -1 );
-	}
-	openDir += "*.lta;*.ltc";
-
-	// get the filename
-	CString filter;
-	filter.LoadString(IDS_LOADMODELFILTER);
-	CFileDialog fileDlg( TRUE, "lta", (openDir.GetLength()) ? (LPCTSTR)openDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, filter, this );
-	if( fileDlg.DoModal() != IDOK )
-		return;
-	CString pathName = fileDlg.GetPathName() ;
-
-	// load the model
-	Model* model;
-	CLTAReader inFile;
-
-	BeginWaitCursor();
-
-	inFile.Open( (char*)(LPCSTR)pathName, CLTAUtil::IsFileCompressed( (char*)(LPCSTR)pathName ) );
-	
-	if( inFile.IsValid() )
-	{
-		model = ltaModelLoad( inFile, m_AllocCount, false );
-
-		if( !model )
-		{
-			DoMessageBox( "Error loading model.", MB_OK|MB_ICONERROR );
-			return;
-		}
-	}
-
-	EndWaitCursor();
-
-	// launch the import lods dialog
-	CImportLODDlg dlg;
-
-	dlg.m_ImportModel = model;
-	dlg.m_CurrentModel = m_pModel;
-	dlg.m_ModelEditDlg = this;
-
-	if( dlg.DoModal() != IDOK )
-	{
-		delete model;
-		return;
-	}
-
-	// process the selected import LODs
-	const vector<PieceLODInfo>& selection = dlg.m_Selection;
-	int numSelected = selection.size();
-
-	int numGoodAdds = 0;		// number of imported LODs that were added successfully
-	int numBadMatches = 0;		// number of imported LODs that don't match an existing piece by name
-	int numBadVA = 0;			// number of imported LODs that don't match piece types (VA->Skel/Skel->VA)
-	int numBadNodes = 0;		// number of imported LODs that failed to find matching nodes
-	int numBadAdds = 0;			// number of imported LODs that failed to import for some other reason
-
-	for( int i = 0; i < numSelected; i++ )
-	{
-		ASSERT( selection[i].m_ModelPiece && selection[i].m_PieceLOD );
-
-		// find the matching piece by name
-		char* pieceName = selection[i].m_ModelPiece->GetName();
-		ModelPiece* curPiece = m_pModel->FindPiece( pieceName );
-
-		// didn't find a matching piece by name
-		if( !curPiece )
-		{
-			numBadMatches++;
-			continue;
-		}
-
-		// pieces don't match animation types
-		if( curPiece->m_isVA != selection[i].m_ModelPiece->m_isVA )
-		{
-			numBadVA++;
-			continue;
-		}
-
-		// create a new LOD and isolate its vertex weights
-		PieceLOD newLOD;
-		newLOD = *(selection[i].m_PieceLOD);
-
-		for( int curVert = 0; curVert < newLOD.m_Verts; curVert++ )
-		{
-			int numWeights = newLOD.m_Verts[curVert].m_nWeights;
-
-			if( numWeights > 0 )
-			{
-				newLOD.m_Verts[curVert].m_Weights = new NewVertexWeight[numWeights];
-				for( int curWeight = 0; curWeight < numWeights; curWeight++ )
-				{
-					newLOD.m_Verts[curVert].m_Weights[curWeight] = selection[i].m_PieceLOD->m_Verts[curVert].m_Weights[curWeight];
-				}
-			}
-		}
-
-		// attemp to remap the node indices on the imported LOD
-		if( !newLOD.RemapNodeIndices( m_pModel ) )
-		{
-			numBadNodes++;
-			continue;
-		}
-
-		newLOD.m_pModel = m_pModel;
-
-		// attempt to add the LOD
-		float dist = selection[i].m_ModelPiece->GetLODDist( selection[i].m_LODNum );
-
-		uint32 addSuccess = curPiece->AddLOD( newLOD, dist );
-
-		if( addSuccess == 0 )
-		{
-			numBadAdds++;
-			continue;
-		}
-
-		numGoodAdds++;
-	}
-
-	delete model;
-
-	if( numSelected == 0 )
-		return;
-
-	// report on the import operation
-	CString importReport;
-	CString tmpReport;
-
-	tmpReport.Format( "Successfully added %d Piece LOD%s to the model.", numGoodAdds, (numGoodAdds == 1) ? "" : "s" );
-	importReport += tmpReport;
-
-	if( numBadMatches > 0 )
-	{
-		tmpReport.Format( "\nFailed to add %d Piece LOD%s because no pieces matched by name.", numBadMatches, (numBadMatches == 1) ? "" : "s" );
-		importReport += tmpReport;
-	}
-
-	if( numBadVA > 0 )
-	{
-		tmpReport.Format( "\nFailed to add %d Piece LOD%s because they didn't have matching animation types.", numBadVA, (numBadVA == 1) ? "" : "s" );
-		importReport += tmpReport;
-	}
-
-	if( numBadNodes > 0 )
-	{
-		tmpReport.Format( "\nFailed to add %d Piece LOD%s because matching nodes couldn't be found.", numBadNodes, (numBadNodes == 1) ? "" : "s" );
-		importReport += tmpReport;
-	}
-
-	if( numBadAdds > 0 )
-	{
-		ASSERT(0);
-		tmpReport.Format( "\nFailed to add %d Piece LOD%s for an unknown reason.", numBadAdds, (numBadAdds == 1) ? "" : "s" );
-		importReport += tmpReport;
-	}
-
-	// update the piece list if any LODs were added
-	if( numGoodAdds > 0 )
-	{
-		// reload the piece tree
-		FillPieceList( &m_PieceList, m_pModel);
-
-		// adjust the LOD slider
-		float maxLODDist = GetModelMaxLODDist( m_pModel );
-		InitTheScrollBar( maxLODDist );
-		SetCurrentLOD( 0.0f );
-
-		SetChangesMade();
-	}
-
-	DoMessageBox( importReport, MB_OK );
-}
 
 
 // ------------------------------------------------------------------------
@@ -1901,44 +1707,21 @@ void CModelEditDlg::OnImportLODs()
 void CModelEditDlg::OnImport() 
 {
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-	UVImportDlg uvImportDlg;
-	char msg[256];
-	DWORD i, nFound;
-    uint32 j;
-	ModelAnim *pNewAnim, *pImportAnim;
+	UVImportDlg uvDlg;
+	Model model;
 	ModelLoadRequest request;
-	AnimInfo *pAnimInfo, *pOtherAnimInfo;
-	ModelSocket *pSocket, *pOtherSocket;
-	WeightSet *pWeightSet, *pOtherWeightSet;
-	uint32 iWeightSetIndex;
-	BuildLODRequest LODRequest;
-//	LODRequestInfo LODInfo;
-
-	// Make sure we have a model loaded
-
-	if (!m_pModel)
-	{
-		int nRet = AfxMessageBox("No model currently loaded, load one ?", MB_YESNO | MB_ICONEXCLAMATION);
-		if (nRet == IDYES)
-		{
-			// Let the user load a model
-			
-			OnLoadModel();
-
-			if (!m_pModel)
-			{
-				// No model loaded
-				
-				return;
-			}
-
-			AfxMessageBox("Model loaded, continuing to Import");
-		}
-		else
-		{
-			return;
-		}
-	}
+	BuildLODRequest lodRequest;
+	LODRequestInfo lodInfo;
+	ILTStream *pFile;
+	Model *pLtaModel;
+	AnimInfo *pInfo, *pFoundInfo;
+	ModelAnim *pAnim, *pFoundAnim;
+	ModelSocket *pSocket, *pNewSocket, *pFoundSocket;
+	ModelNode *pNode;
+	WeightSet *pSet, *pNewSet;
+	uint32 iNode, iAnim, iSet;
+	DWORD i, k, count;
+	char msg[256];
 
 	// Look up the open directory in the registry
 	CRegMgr regMgr;
@@ -1950,306 +1733,303 @@ void CModelEditDlg::OnImport()
 		csOpenDir.ReleaseBuffer(-1);
 	}
 
-	//load strings needed for the open file dialog
-	CString sImportFilter;
-	sImportFilter.LoadString(IDS_IMPORTFILTER);
+	char szFilter[] = "Model Files (*.abc)|*.abc|Model Files (*.lta)|*.lta|All Files (*.*)|*.*||";
 
-	CString sImportDefExt;
-	sImportDefExt.LoadString(IDS_IMPORTDEFEXT);
+	CImportAnimation dlg (TRUE, "abc", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
 
-	// Strip the extension...
-	char* pExt = _tcsrchr(csOpenDir,'.'); 
-	if (pExt) 
-	{ 
-		csOpenDir.TrimRight(pExt); 
-	}
-	csOpenDir += "*.lta;*.ltc";
-
-	// get the filename
-
-	CImportAnimation dlg(TRUE, sImportDefExt, (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY | OFN_ALLOWMULTISELECT, sImportFilter, this);
 	if (dlg.DoModal() != IDOK)
-	{
+	{ 
 		return;
-	}
-
-	POSITION startPos = dlg.GetStartPosition();
-
-	if (m_pImportStringKeyDlg)
-	{
-		m_pImportStringKeyDlg->Clear();
-		m_pImportStringKeyDlg->ShowWindow(SW_SHOW);
 	}
 
 	// Store the open directory in the registry
 	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left( csOpenDir.GetLength() - dlg.GetFileName().GetLength() );
+	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength()) + "*.abc";
 	regMgr.Set("Model", (LPCTSTR)csOpenDir);
 
-	while (startPos)
+	CWaitCursor waitCursor;
+
+	if (IsFilenameLTAExt(dlg.GetPathName()))
 	{
-//		Model import;
-		Model *pModel ;			
+		pLtaModel = load_LTA_Using_FeedBackDialog(dlg.GetPathName());
+		model.CopyModel(pLtaModel);
+		if (pLtaModel)
+			delete pLtaModel;
+	}
+	else
+	{
+		if (!(pFile = streamsim_Open(dlg.GetPathName(), "rb")))
+		{
+			MessageBox("Could not open file", "File Error", MB_OK|MB_ICONEXCLAMATION);
+			return;
+		}
 
-		bool bSuccessfulLoad = false;
-
-		CString sFileName = dlg.GetNextPathName(startPos);
-
-		m_pImportStringKeyDlg->AddMsg("----------------------------------------\r\n", 128, 0, 0);
-		CString sMsg;
-		sMsg.Format("Loading %s\r\n", (char *)(LPCSTR)sFileName);
-		m_pImportStringKeyDlg->AddMsg(sMsg, 0, 0, 0);
-		
-		// Test to see whether file is an LTA.
-
-		if (IsFilenameLTAExt(sFileName))
-		{		
-			CLTAReader InFile;
-			InFile.Open((char *)(LPCSTR)sFileName, CLTAUtil::IsFileCompressed((char *)(LPCSTR)sFileName));
-
-			if (InFile.IsValid())
+		try
+		{
+			request.m_pFile = pFile;
+			if (model.Load(&request) != LT_OK)
 			{
-				pModel = ltaModelLoad(InFile, m_AllocCount, false);
-
-				//pModel = ltaModelLoad("", NULL);
-				if (pModel)
-				{
-					bSuccessfulLoad = true;
-					//pModel = load_LTA_Using_FeedBackDialog((char*)(LPCTSTR)sFileName);
-			//		import.CopyModel( pModel );
-			//		delete pModel;
-				}
+				MessageBox("Model file is incorrect version", "File Error", MB_OK|MB_ICONEXCLAMATION);
+				return;
 			}
 		}
-		else  
+		catch(CLithException &exc)
 		{
-			// Load the ABC
-			MessageBox("ABC LOAD ATTEMPTED IN ON_IMPORT()", "ERROR " , MB_OK );	
+			MessageBox("Model file is invalid", "File Error", MB_OK|MB_ICONEXCLAMATION);
+			return;
 		}
-		
-		if (bSuccessfulLoad)
+
+		pFile->Release();
+	}
+
+	if (dlg.m_bImportKeystrings)
+	{
+		count = 0;
+		for (i=0; i < model.m_Anims; i++)
 		{
-			Model& import = *pModel;
-
-			// these import options require matching models
-			if( !VerifyModels( m_pModel, &import ) )
+			pInfo = &model.m_Anims[i];
+			if (pInfo)
 			{
-				if (m_pImportStringKeyDlg)
-				{
-					CString sMsg;
-					sMsg.Format("%s model geometry does not match, cannot import.\r\n");
-					m_pImportStringKeyDlg->AddMsg(msg, 0, 0, 0);
-				}
+				pFoundInfo = m_pModel->FindAnimInfo(pInfo->m_pAnim->GetName(), m_pModel);
+				if (pFoundInfo && ImportKeyStrings(pFoundInfo, pInfo))
+					count++;
+			}
+		}
 
-				//MessageBox ("Model geometry does not match.  Cannot import from model.", "Error", MB_OK | MB_ICONEXCLAMATION);
-				//return;
+		if (count)
+		{
+			m_bChangesMade = TRUE;
+			ResetAnimInfos();
+			OnSelChangeAnimList();
+		}
+
+		sprintf(msg, "Imported keystrings from %d animations.", count);
+		MessageBox(msg, "ModelEdit");
+	}
+
+	if (dlg.m_bImportUserDims)
+	{
+		count = 0;
+		for (i=0; i < model.m_Anims; i++)
+		{
+			pInfo = &model.m_Anims[i];
+			pFoundInfo = m_pModel->FindAnimInfo(pInfo->m_pAnim->GetName(), m_pModel);
+			if (pFoundInfo)
+			{
+				pFoundInfo->m_vDims = pInfo->m_vDims;
+				count++;
+			}
+		}
+
+		sprintf(msg, "Imported user dims from %d animations.", count);
+		MessageBox(msg, "ModelEdit");
+	}
+
+	if (dlg.m_bImportSockets)
+	{
+		count = 0;
+		for (i=0; i < model.NumSockets(); i++)
+		{
+			pSocket = model.GetSocket(i);
+			pFoundSocket = m_pModel->FindSocket(pSocket->GetName());
+			if (pFoundSocket)
+			{
+				pFoundSocket->m_Pos = pSocket->m_Pos;
+				pFoundSocket->m_Rot = pSocket->m_Rot;
+				count++;
 			}
 			else
 			{
-				// now allocate new array for anims
-				if ( dlg.m_bImportAnimations )
+				if (m_pModel->FindNode(model.GetNode(pSocket->m_iNode)->GetName(), &iNode))
 				{
-					for (i=0; i < import.m_Anims; i++)
-					{
-						pNewAnim = new ModelAnim(m_pModel);
-						pImportAnim = import.GetAnim(i);
+					pNewSocket = new ModelSocket;
+					pNewSocket->m_iNode = iNode;
+					pNewSocket->SetName(pSocket->GetName());
+					pNewSocket->m_Pos = pSocket->m_Pos;
+					pNewSocket->m_Rot = pSocket->m_Rot;
 
-						pNewAnim->CopyAnim(pImportAnim);
-						m_pModel->AddAnimToSelf(pNewAnim);
-					}
-
-
-					// add the animations to the listbox
-					FillAnimList();
-
-
-					// re-allocate the tagged array
-					InitTaggedArrays();
-
-					// let the user know
-
-//					if (import.m_Anims > 1)
-//					{
-//						MessageBox ("New animations have been added to end of listbox", "Model Editor", MB_OK | MB_ICONINFORMATION);
-//					}
-//					else
-//					{
-//						MessageBox ("New animation has been added to end of listbox", "Model Editor", MB_OK | MB_ICONINFORMATION);
-//					}
-
-					if (m_pImportStringKeyDlg)
-					{
-						CString sMsg;
-						sMsg.Format("Anims from %s imported\r\n", (char *)(LPCSTR)sFileName);
-						m_pImportStringKeyDlg->AddMsg(sMsg, 0, 0, 0);
-					}
-
-					m_bChangesMade = TRUE;
-				}
-
-				if ( dlg.m_bUseUVCoords )
-				{
-					if (m_pModel->CopyUVs(&import))
-					{
-						if (m_pImportStringKeyDlg)
-						{
-							CString sMsg;
-							sMsg.Format("UV's from %s imported\r\n", (char *)(LPCSTR)sFileName);
-							m_pImportStringKeyDlg->AddMsg(sMsg, 0, 0, 0);
-						}
-
-//						MessageBox ("UV Coordinates imported.", "Model Editor", MB_OK | MB_ICONINFORMATION);
-					}
+					if (m_pModel->AddSocket(pNewSocket))
+						count++;
 					else
-					{
-						if (m_pImportStringKeyDlg)
-						{
-							m_pImportStringKeyDlg->AddMsg("Geometry does not match, cannot import UV's\r\n", 0, 0, 0);
-						}
-
-//						MessageBox ("Model geometry does not match.  Cannot import UV coords.", "Error", MB_OK | MB_ICONEXCLAMATION);
-					}
-				}
-
-				if (dlg.m_bImportTranslations)
-				{
-					BeginWaitCursor();
-
-					nFound = 0;
-					for (i=0; i < import.m_Anims; i++)
-					{
-						pAnimInfo = import.GetAnimInfo(i);
-						pOtherAnimInfo = m_pModel->FindAnimInfo(pAnimInfo->m_pAnim->GetName(), m_pModel);
-
-						if (pOtherAnimInfo)
-						{
-							++nFound;
-							pOtherAnimInfo->m_vTranslation = pAnimInfo->m_vTranslation;
-						}
-					}
-
-					sprintf(msg, "Imported translations from %d animations.\r\n", nFound);
-//					MessageBox(msg, "ModelEdit", MB_OK);
-					if (m_pImportStringKeyDlg)
-					{
-						m_pImportStringKeyDlg->AddMsg(msg, 0, 0, 0);
-					}
-
-					EndWaitCursor();
-				}
-
-				// Import the weight sets
-				if (dlg.m_bImportWeightSets)
-				{
-					BeginWaitCursor();
-					nFound = 0;
-					for (i=0; i < import.NumWeightSets(); i++)
-					{
-						pWeightSet = import.GetWeightSet(i);
-						pOtherWeightSet = m_pModel->FindWeightSet(pWeightSet->GetName(), &iWeightSetIndex);
-
-						if (pOtherWeightSet)
-							m_pModel->RemoveWeightSet(iWeightSetIndex);
-						pOtherWeightSet = new WeightSet(m_pModel);
-						if (!pOtherWeightSet)
-							continue;
-						pOtherWeightSet->SetName(pWeightSet->GetName());
-						if (!(pOtherWeightSet->m_Weights.CopyArray(pWeightSet->m_Weights)))
-						{
-							delete pOtherWeightSet;
-							continue;
-						}
-						if (!m_pModel->AddWeightSet(pOtherWeightSet))
-						{
-							delete pOtherWeightSet;
-							continue;
-						}
-						++nFound;
-					}
-
-					sprintf(msg, "Imported %d weight sets.\r\n", nFound);
-					if (m_pImportStringKeyDlg)
-					{
-						m_pImportStringKeyDlg->AddMsg(msg, 0, 0, 0);
-					}
-//					MessageBox(msg, "ModelEdit", MB_OK);
-					
-					EndWaitCursor();
+						delete pNewSocket;
 				}
 			}
+		}
 
-			// Import user dims (doesn't matter if models don't match).
-			if (dlg.m_bImportUserDims)
+		if (count)
+			FillSocketList(TRUE);
+
+		sprintf(msg, "Imported %d sockets.", count);
+		MessageBox(msg, "ModelEdit");
+	}
+
+	if (!VerifyModels(m_pModel, &model))
+	{
+		MessageBox("Model geometry does not match.  Cannot import from model.", "Error", MB_OK|MB_ICONEXCLAMATION);
+		return;
+	}
+
+	if (dlg.m_bImportLODs)
+	{
+		lodRequest.m_pModel = m_pModel;
+		count = 0;
+		lodRequest.m_PieceWeights.SetSizeInit2(m_pModel->NumPieces(), 1.0f);
+		for (i=0; i < model.NumPieces(); i++)
+		{
+			lodRequest.m_PieceWeights[i] = model.GetPiece(i)->m_LODWeight;
+			m_pModel->GetPiece(i)->m_LODWeight = lodRequest.m_PieceWeights[i];
+		}
+
+		for (i=0; i < model.NumLODs(); i++)
+		{
+			if (i)
 			{
-				BeginWaitCursor();
-
-				nFound = 0;
-				for (i=0; i < import.m_Anims; i++)
-				{
-					pAnimInfo = import.GetAnimInfo(i);
-					pOtherAnimInfo = m_pModel->FindAnimInfo(pAnimInfo->m_pAnim->GetName(), m_pModel);
-
-					if (pOtherAnimInfo)
-					{
-						++nFound;
-						pOtherAnimInfo->m_vDims = pAnimInfo->m_vDims;
-					}
-				}
-
-				sprintf(msg, "Imported user dims from %d animations.\r\n", nFound);
-				if (m_pImportStringKeyDlg)
-				{
-					m_pImportStringKeyDlg->AddMsg(msg, 0, 0, 0);
-				}
-//				MessageBox(msg, "ModelEdit", MB_OK);
-
-				EndWaitCursor();
+				lodInfo.m_Dist = GetModelLODInfo(&model, i)->m_Dist;
+				lodInfo.m_nTris = (m_pModel->CalcNumTris(0) * model.CalcNumTris(i)) / model.CalcNumTris(0);
+				lodRequest.m_LODInfos.Append(lodInfo);
+				count++;
 			}
+		}
 
-			// Import sockets (doesn't matter if models don't match)
-			if (dlg.m_bImportSockets)
+		if (!BuildLODs(&lodRequest))
+		{
+			MessageBox("Unable to build LOD's (% too small?)");
+		}
+
+		SetCurrentLOD(0);
+		InitTheScrollBar(m_pModel->NumLODs() - 1);
+
+		sprintf(msg, "Imported %d LODs.", count);
+		MessageBox(msg, "ModelEdit");
+	}
+
+	if (dlg.m_bImportAnimations)
+	{
+		for (i=0; i < model.m_Anims; i++)
+		{
+			pAnim = new ModelAnim(m_pModel);
+			pAnim->CopyAnim(model.m_Anims[i].m_pAnim);
+			m_pModel->AddAnimToSelf(pAnim);
+		}
+
+		FillAnimList();
+		InitTaggedArrays();
+		MessageBox(model.m_Anims < 2 ? "New animation has been added to end of listbox" : "New animations have been added to end of listbox", "Model Editor", MB_OK|MB_ICONINFORMATION);
+		m_bChangesMade = TRUE;
+	}
+
+	if (dlg.m_bUseUVCoords)
+	{
+		if (m_pModel->CopyUVs(&model))
+			MessageBox("UV Coordinates imported.", "Model Editor", MB_OK|MB_ICONINFORMATION);
+		else
+			MessageBox("Model geometry does not match.  Cannot import UV coords.", "Error", MB_OK|MB_ICONEXCLAMATION);
+	}
+
+	if (dlg.m_bImportTranslations)
+	{
+		count = 0;
+		for (i=0; i < model.m_Anims; i++)
+		{
+			pAnim = model.m_Anims[i].m_pAnim;
+			pFoundAnim = m_pModel->FindAnim(pAnim->GetName(), &iAnim);
+			if (pFoundAnim && pFoundAnim->NumKeyFrames() == pAnim->NumKeyFrames())
 			{
-				BeginWaitCursor();
-				nFound = 0;
-				for (i=0; i < import.NumSockets(); i++)
+				count++;
+				for (k=0; k < pAnim->NumKeyFrames(); k++)
 				{
-					pSocket = import.GetSocket(i);
-					pOtherSocket = m_pModel->FindSocket(pSocket->GetName());
-					
-					if (pOtherSocket)
-					{
-						++nFound;
-						pOtherSocket->m_Pos = pSocket->m_Pos;
-						pOtherSocket->m_Rot = pSocket->m_Rot;
-					}
-					else if (m_pModel->FindNode(import.GetNode(pSocket->m_iNode)->GetName(), &j))
-					{
-						pOtherSocket = new ModelSocket;
-						pOtherSocket->m_iNode = j;
-						pOtherSocket->SetName(pSocket->GetName());
-						pOtherSocket->m_Pos = pSocket->m_Pos;
-						pOtherSocket->m_Rot = pSocket->m_Rot;
-						if (m_pModel->AddSocket(pOtherSocket))
-							++nFound;
-						else
-							delete pOtherSocket;											
-					}
+					pFoundAnim->GetRootNode()->m_KeyFrames[k].m_Translation = pAnim->GetRootNode()->m_KeyFrames[k].m_Translation;
 				}
-				if (nFound)
-					FillSocketList(TRUE);
-				sprintf(msg, "Imported %d sockets.\r\n", nFound);
-				if (m_pImportStringKeyDlg)
-				{
-					m_pImportStringKeyDlg->AddMsg(msg, 0, 0, 0);
-				}
-//				MessageBox(msg, "ModelEdit", MB_OK);
+			}
+		}
 
-				EndWaitCursor();
+		sprintf(msg, "Imported translations from %d animations.", count);
+		MessageBox(msg, "ModelEdit");
+	}
+
+	if (dlg.m_bImportWeightSets)
+	{
+		count = 0;
+		for (i=0; i < model.NumWeightSets(); i++)
+		{
+			pSet = model.GetWeightSet(i);
+			if (m_pModel->FindWeightSet(pSet->GetName(), &iSet))
+				m_pModel->RemoveWeightSet(iSet);
+
+			pNewSet = new WeightSet(m_pModel);
+			if (pNewSet)
+			{
+				pNewSet->SetName(pSet->GetName());
+				if (!pNewSet->m_Weights.CopyArray(pSet->m_Weights) || !m_pModel->AddWeightSet(pNewSet))
+				{
+					delete pNewSet;
+				}
+				else
+				{
+					count++;
+				}
+			}
+		}
+
+		sprintf(msg, "Imported %d weight sets.", count);
+		MessageBox(msg, "ModelEdit");
+	}
+}
+
+
+// talon: 2001's (0x4197d1): copies pSrc's keyframe strings onto pDest's
+// keyframes at the same times, adding keyframes where pDest has none.
+// The name is ours.
+static BOOL ImportKeyStrings(AnimInfo *pDest, AnimInfo *pSrc)
+{
+	ModelAnim *pDestAnim, *pSrcAnim;
+	AnimKeyFrame *pSrcKey, *pDestKey;
+	int iSrc, iDest;
+	DWORD t0;
+
+	iDest = 0;
+	if (!pDest || !pSrc)
+		return FALSE;
+
+	pSrcAnim = pSrc->m_pAnim;
+	pDestAnim = pDest->m_pAnim;
+	for (iSrc=0; iSrc < (int)pSrcAnim->m_KeyFrames.GetSize(); iSrc++)
+	{
+		if (iDest >= (int)pDestAnim->m_KeyFrames.GetSize())
+			break;
+
+		pSrcKey = &pSrcAnim->m_KeyFrames[iSrc];
+		if (pSrcKey->m_pString && pSrcKey->m_pString[0])
+		{
+			pDestKey = NULL;
+			for (; iDest < (int)pDestAnim->m_KeyFrames.GetSize(); iDest++)
+			{
+				pDestKey = &pDestAnim->m_KeyFrames[iDest];
+				if (pDestKey->m_Time >= pSrcKey->m_Time)
+				{
+					if (pDestKey->m_Time != pSrcKey->m_Time)
+					{
+						t0 = pDestAnim->m_KeyFrames[iDest-1].m_Time;
+						if (!CreateKeyframe(pDestAnim, iDest-1, iDest,
+							(float)(pSrcKey->m_Time - t0) / (float)(pDestKey->m_Time - t0)))
+						{
+							return FALSE;
+						}
+
+						pDestKey = &pDestAnim->m_KeyFrames[iDest];
+					}
+					break;
+				}
 			}
 
-			delete pModel;
+			if (!pDestKey)
+				return FALSE;
+
+			pDestKey->m_pString = pDest->GetAnimOwner()->AddString(pSrcKey->m_pString);
 		}
 	}
+
+	return TRUE;
 }
 
 
@@ -2259,292 +2039,15 @@ void CModelEditDlg::OnImport()
 // user asked to change the project dir.
 // set the new project dir in the registry for later.
 // ------------------------------------------------------------------------
-void CModelEditDlg::OnSetProjectDir()
-{
-	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-//
-	//// Look up the open directory in the registry
-	CRegMgr regMgr;
-	CString csOpenDir;
-//	
-	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER)) 
-	{
-		UINT32 dwSize = 256;
-		regMgr.Get("dep_file_location", csOpenDir.GetBufferSetLength(dwSize), dwSize);
-		csOpenDir.ReleaseBuffer(-1); 
-
-	}
-
-	CDirDialog dlg;
-
-	dlg.m_strTitle = "Select Project Directory";
-	dlg.m_strSelDir = csOpenDir ;
-
-	if( dlg.DoBrowse() )
-	{
-		csOpenDir = dlg.m_strPath ;
-		// make sure the project path ends with a backslash
-		if( csOpenDir.GetLength() )
-		{
-			if( csOpenDir[csOpenDir.GetLength()-1] != '\\' )
-				csOpenDir += '\\';
-		}
-		regMgr.Set("dep_file_location", csOpenDir );
-		m_szCurProjectPath = csOpenDir;
-
-		// change the window title.. 
-		CString titleText;
-		if( m_pModel )
-		titleText.FormatMessage("ModelEdit: %1!s! %2!s!", m_pModel->GetFilename(),m_szCurProjectPath);
-		else{
-		titleText.FormatMessage("ModelEdit - %1!s! ",m_szCurProjectPath);
-		}
-		SetWindowText((LPCTSTR)titleText);
-	}
-	else// canceled..
-	{
-		// just set it what's in the registry
-		m_szCurProjectPath = csOpenDir;
-	}
-}
 
 
 // ------------------------------------------------------------------------
 // Save, then call external packer with d3d bound args
 // ------------------------------------------------------------------------
-void CModelEditDlg::OnSaveAndCompile()
-{
-	CompileD3D( true );
-}
 
 // ------------------------------------------------------------------------
 // Call external packer with d3d bound args
 // ------------------------------------------------------------------------
-void CModelEditDlg::OnCompile()
-{
-	CompileD3D( false );
-}
-
-
-
-
-void CModelEditDlg::CompileD3D( bool saveBeforeCompile )
-{
-	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-	
-	bool	bForceCustomTransform = false;
-	uint32	iMaxBonesPerVert = 4;
-	uint32	iMaxBonesPerTri  = 4;
-	float fMinBoneWeight;
-
-	// default to the currently opened models filename with an .ltb extension
-	CString csOpenDir = m_strFilename;
-	int extPos = csOpenDir.ReverseFind( '.' );
-	if( extPos >= 0 )
-		csOpenDir = csOpenDir.Left( extPos ) + ".ltb";
-
-	// Get the filename
-	char szFilter[] = "LTB Files (*.ltb)|*.ltb|All Files (*.*)|*.*||";
-	CExportD3D_Dlg dlg (FALSE, "ltb", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
-	
-	
-	dlg.m_bUseMatrixPalettes	= bForceCustomTransform;
-	dlg.m_iMaxBonesPerVert		= iMaxBonesPerVert;
-	dlg.m_bMaxBonesPerVert		= true;
-	dlg.m_iMaxBonesPerTri		= iMaxBonesPerTri;
-	dlg.m_bMaxBonesPerTri		= false;
-	dlg.m_fMinBoneWeight		= 0.05f;
-	dlg.m_bPauseAfterCompile	= false;
-	// get the next values from the model database.
-	dlg.m_bExcludeGeometry      = (m_pModel)?m_pModel->m_bExcludeGeom:false;
-	dlg.m_CompressionType      = (CExportD3D_Dlg::EAnimCompressionType)((m_pModel)?m_pModel->m_CompressionType:2);
-	
-	if (dlg.DoModal() != IDOK) 
-		{ return; }
-
-	// get user input.
-	if(m_pModel)
-	{
-		m_pModel->m_CompressionType = dlg.m_CompressionType ;
-		m_pModel->m_bExcludeGeom    = dlg.m_bExcludeGeometry;
-	}
-
-	if( saveBeforeCompile )
-		OnSave();
-
-	
-	bForceCustomTransform					= dlg.m_bUseMatrixPalettes;
-	
-	iMaxBonesPerVert						= dlg.m_iMaxBonesPerVert;
-	if (!dlg.m_bMaxBonesPerVert) 
-		iMaxBonesPerVert = 99;
-	
-	iMaxBonesPerTri							= dlg.m_iMaxBonesPerTri;
-	if (!dlg.m_bMaxBonesPerTri)  
-		iMaxBonesPerTri = 99;
-
-	fMinBoneWeight		= dlg.m_fMinBoneWeight;
-
-	// get the path from the dialog
-	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left( csOpenDir.GetLength() - dlg.GetFileName().GetLength() );
-	
-	// Export the file...
-	LithTry {
-		// Save off a TEMP LTA File...
-		CString szTmpFileName = csOpenDir; 
-
-		//make sure it has a trailing slash
-		if(!szTmpFileName.IsEmpty() && (szTmpFileName[szTmpFileName.GetLength() - 1] != '\\'))
-			szTmpFileName += '\\';
-
-		szTmpFileName += "TMP_ModelEditLTAFile.lta";
-		if( !DoSave(szTmpFileName) )
-		{
-			MessageBox( "Error: Could not save intermediate lta file", "File Error", MB_OK | MB_ICONEXCLAMATION );
-			return;
-		}
-
-		// check for a model_packer in the launch directory
-		CString szRun = g_szStartPath;
-		szRun += "\\Model_Packer.exe";
-		CFileStatus fileStatus;
-		if( !CFile::GetStatus( szRun, fileStatus ) )
-		{
-			// couldn't find it there, check the directory that modeledit is in
-			szRun = g_szExePath;
-			szRun += "\\Model_Packer.exe";
-			if( !CFile::GetStatus( szRun, fileStatus ) )
-			{
-				MessageBox( "Error: Could not locate Model_Packer.exe\nCheck that Model_Packer.exe is located in\nthe ModelEdit launch dir,\nor in the same directory as ModelEdit.exe", "File Error", MB_OK | MB_ICONEXCLAMATION );
-				return;
-			}
-		}
-
-		// Call the Model_Packer to convert it to LTB...
-		CString szProcessCmd = "d3d";
-		CString szInput1  = "-input";
-		CString szInput2  = '\"' + szTmpFileName + '\"';
-		CString szOutput1 = "-output";
-		CString szOutput2 = '\"' + csOpenDir + dlg.GetFileName() + '\"';
-		CString szMaxBonesPerVert1 = "-MaxBonesPerVert";
-		CString szVerbose = "-verbose";
-		char szMaxBonesPerVert2[8]; sprintf(szMaxBonesPerVert2,"%d",iMaxBonesPerVert);
-		CString szMaxBonesPerTri1  = "-MaxBonesPerTri";
-		char szMaxBonesPerTri2[8];  sprintf(szMaxBonesPerTri2,"%d",iMaxBonesPerTri);
-		CString szForceCustomTransform1 = "-UseMatrixPalettes";
-		char szForceCustomTransform2[8]; sprintf(szForceCustomTransform2,"%d",bForceCustomTransform?1:0);
-		CString szStall = "";
-		if( dlg.m_bPauseAfterCompile )
-			szStall = "-stall";
-		CString szNoGeom = "";
-		if( dlg.m_bExcludeGeometry )
-			szNoGeom = "-nogeom";
-
-		// [TMG] [10/31/2000] Added min bone weight
-		
-		CString szMinBoneWeight1 = "-MinBoneWeight";
-		char szMinBoneWeight2[16];
-		sprintf(szMinBoneWeight2, "%4.4f", fMinBoneWeight);
- 
-		CString szCompressionType ;
-		switch(dlg.m_CompressionType){
-			case CExportD3D_Dlg::NONE : szCompressionType = "-ac0"; break;
-			case CExportD3D_Dlg::RELEVANT : szCompressionType = "-ac1" ; break ;
-			case CExportD3D_Dlg::RELEVANT_16bit : szCompressionType = "-ac2" ; break ;
-			case CExportD3D_Dlg::REL_PV16 : szCompressionType = "-acpv" ; break ;
-			default : szCompressionType =  "-ac0" ;
-		}
-
-		char szStream0OptionsBuffer[256];
-		memset(szStream0OptionsBuffer, 0, 256);
-
-		if(dlg.m_bStreamOptionsPosition)
-		{
-			strcat(szStream0OptionsBuffer, "position ");
-		}
-
-		if(dlg.m_bStreamOptionsNormal)
-		{
-			strcat(szStream0OptionsBuffer, "normal ");
-		}
-
-		if(dlg.m_bStreamOptionsColor)
-		{
-			strcat(szStream0OptionsBuffer, "color ");
-		}
-
-		if(dlg.m_bStreamOptionsTangent)
-		{
-			strcat(szStream0OptionsBuffer, "basisvectors ");
-		}
-
-		if(dlg.m_bStreamOptionsUV1)
-		{
-			strcat(szStream0OptionsBuffer, "uv1 ");
-		}
-	
-		if(dlg.m_bStreamOptionsUV2)
-		{
-			strcat(szStream0OptionsBuffer, "uv2 ");
-		}
-
-		if(dlg.m_bStreamOptionsUV3)
-		{
-			strcat(szStream0OptionsBuffer, "uv3 ");
-		}
-
-		if(dlg.m_bStreamOptionsUV4)
-		{
-			strcat(szStream0OptionsBuffer, "uv4 ");
-		}
-
-		char szStream0Options[512];
-
-		if(szStream0OptionsBuffer[0] != '\0')
-		{
-
-			sprintf(szStream0Options, "-stream0 %s", szStream0OptionsBuffer);
-
-		}
-
-
-		if (_spawnl(_P_WAIT,szRun,"Model_Packer.exe",
-					szProcessCmd,
-					szInput1,
-					szInput2,
-					szOutput1,
-					szOutput2,
-					szMaxBonesPerVert1,
-					szMaxBonesPerVert2,
-					szMaxBonesPerTri1,
-					szMaxBonesPerTri2,
-					szForceCustomTransform1,
-					szForceCustomTransform2,
-					szMinBoneWeight1,
-					szMinBoneWeight2,
-					szVerbose,
-					szCompressionType,
-					szNoGeom,
-					szStream0Options,
-					szStall,
-					
-					NULL) < 0) 
-		{
-			MessageBox ("Error: Could not launch Model_Packer.exe", "File Error", MB_OK | MB_ICONEXCLAMATION);
-			return; 
-		} 
-
-	
-
-		DeleteFile(szTmpFileName);			// Delete that temp LTA file...
-	}
-	LithCatch(CLithException &exception) {
-		exception = exception;
-		MessageBox ("Error: Could not export file", "File Error", MB_OK | MB_ICONEXCLAMATION);
-		return; }
-
-}
 
 
 int CModelEditDlg::DoMessageBox(UINT idString, int style)
@@ -2566,7 +2069,7 @@ int CModelEditDlg::DoMessageBox(LPCTSTR pStr, int style)
 }
 
 
-BOOL CModelEditDlg::GetEditAnimInfo(DWORD *pAnimIndex, DWORD *pKeyframeIndex, bool bAllowChildAnims)
+BOOL CModelEditDlg::GetEditAnimInfo(DWORD *pAnimIndex, DWORD *pKeyframeIndex)
 {
 	DWORD iAnim, iKeyframe;
 
@@ -2577,7 +2080,7 @@ BOOL CModelEditDlg::GetEditAnimInfo(DWORD *pAnimIndex, DWORD *pKeyframeIndex, bo
 	if(iAnim >= m_pModel->NumAnims())
 		return FALSE;
 
-	if(!bAllowChildAnims && !m_pModel->GetAnimInfo(iAnim)->IsParentModel())
+	if(!m_pModel->GetAnimInfo(iAnim)->IsParentModel())
 		return FALSE;
 
 	iKeyframe = m_AnimInfos[0].CurKeyframe();
@@ -2597,19 +2100,16 @@ BOOL CModelEditDlg::GetEditAnimInfo(DWORD *pAnimIndex, DWORD *pKeyframeIndex, bo
 // DoSave( filename )
 // save out file 
 // ------------------------------------------------------------------------
-bool CModelEditDlg::DoSave(const char *pFilename)
+void CModelEditDlg::DoSave(const char *pFilename)
 {
+	CString str;
 	DWORD i, j, nParentAnims;
 	ModelAnim *pAnim, *pTest;
-//	DStream *pStream;
-	CString str;
 	int ret;
+	ILTStream *pStream;
 
 	if (!m_pModel)
-		return false;
-
-	//make sure that the artists have valid dimensions
-	CheckValidAnimationDims();
+		return;
 
 	// Look for duplicate animation names. These can cause problems.
 	m_pModel->ForceAnimOrder();
@@ -2632,7 +2132,7 @@ bool CModelEditDlg::DoSave(const char *pFilename)
 				ret = DoMessageBox(str, MB_YESNOCANCEL);
 				if(ret == IDCANCEL)
 				{
-					return false;
+					return;
 				}
 				else if(ret == IDYES)
 				{
@@ -2641,47 +2141,31 @@ bool CModelEditDlg::DoSave(const char *pFilename)
 			}
 		}
 	}
- 
-	extern bool ltaSave( const char *, Model *, CLTATranslStatus &);
 
-	// check if we are trying to save an lta type file...
-	if( pFilename )
+	// talon: 2001 saves .abc (an .lta name is saved as .abc).
+	CString filename = pFilename;
+	filename.MakeLower();
+	filename.Replace(".lta", ".abc");
+
+	pStream = streamsim_Open(filename, "wb");
+	if (!pStream)
 	{
-		if( IsFilenameLTAExt( pFilename ) )
-		{
-			BeginWaitCursor();
-			CLTATranslStatus status ;
-			m_pModel->m_sProjectDir = m_szCurProjectPath;
-			bool retVal = ltaSave( pFilename, m_pModel, status );
-
-			//make sure that the file saved correctly. If not, odds are it was
-			//a read only file, and we should inform the user of it -JohnO
-			if(status != CLTATranslStatus::OK)
-			{
-				char pszError[128];
-				sprintf(pszError, "Error opening %s, The file may be read only", pFilename);
-				status.OnError(pszError);
-			}
-
-			EndWaitCursor();
-
-			return retVal;
-		}
-		else
-		{
-			DoMessageBox( "Unrecognized file extension.  Save failed.", MB_OK );
-			return false;
-		}
+		MessageBox("Could not open file for writing.  Check to see that the file is not read-only.", "File Error", MB_OK|MB_ICONEXCLAMATION);
 	}
+	else
+	{
+		if (!m_pModel->Save(*pStream))
+			MessageBox("Error saving.");
 
-	return false;
+		pStream->Release();
+		m_bChangesMade = FALSE;
+	}
 }
 
 
 void CModelEditDlg::OnSave() 
 {
-	if( DoSave(m_strFilename) )
-		m_bChangesMade = false;
+	DoSave(m_strFilename);
 }
 
 // ------------------------------------------------------------------------
@@ -2700,16 +2184,11 @@ void CModelEditDlg::OnSaveAs()
 		regMgr.Get("Model", csOpenDir.GetBufferSetLength(dwSize), dwSize);
 		csOpenDir.ReleaseBuffer(-1);
 	}
-	// Strip the extension...
-	char* pExt = _tcsrchr(csOpenDir,'.'); 
-	if (pExt) { csOpenDir.TrimRight(pExt); }
-	csOpenDir += "*.lta";
 
 	// get a filename from the user
-	CString sFilter;
-	sFilter.LoadString(IDS_SAVEASFILTER);
+	char szFilter[] = "Model Files (*.abc)|*.abc|All Files (*.*)|*.*||";
 
-	CFileDialog dlg (FALSE, "lta", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY, sFilter, this);
+	CFileDialog dlg (FALSE, "abc", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
 	if (dlg.DoModal() != IDOK)
 	{
 		return;
@@ -2717,18 +2196,11 @@ void CModelEditDlg::OnSaveAs()
 	
 	// Store the model directory in the registry
 	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength());
+	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength()) + "*.abc";
 	regMgr.Set("Model", (LPCTSTR)csOpenDir);
 	
-	if( DoSave( dlg.GetPathName() ) )
-	{
-		m_strFilename = dlg.GetPathName();
-		CString titleText;
-		titleText.FormatMessage( IDS_TITLE_TEXT, m_strFilename );
-		SetWindowText( (LPCTSTR)titleText );
-		m_pModel->SetFilename( m_strFilename );
-		m_bChangesMade = false;
-	}
+	m_strFilename = dlg.GetPathName();
+	DoSave(m_strFilename);
 }
 
 // ------------------------------------------------------------------------
@@ -2738,18 +2210,13 @@ void CModelEditDlg::OnCancel()
 {
 	if (m_bChangesMade)
 	{
-		int nAnswer = MessageBox ("Save changes before exiting?", "Model Editor", MB_YESNOCANCEL | MB_ICONQUESTION);
-		
-		//determine if the user wanted to not exit
-		if(nAnswer == IDCANCEL)
-		{
-			return;
-		}
-
-		//see if they wanted to save
-		if (nAnswer == IDYES)
+		if (MessageBox ("Save changes before exiting?", "Model Editor", MB_YESNO | MB_ICONQUESTION) == IDYES)
 		{
 			OnSave();
+
+			// Still not saved?
+			if (m_bChangesMade)
+				return;
 		}
 	}
 
@@ -2800,7 +2267,6 @@ void CModelEditDlg::OnPlayForward()
 	}
 
 	UpdateEditFrameString( );
-	UpdateEditFrameTime( );
 }
 
 void CModelEditDlg::OnNextKeyframe() 
@@ -2892,7 +2358,7 @@ void CModelEditDlg::StartTracker(uint32 iTracker, CPoint centerPt)
 // Moves selected animations up or down, depending on dir.
 void CModelEditDlg::MoveAnims(int dir)
 {
-	int i, j, iTemp, nItems, items[100], nSelection, nDest;
+	int i, j, iTemp, nItems, items[1024], nSelection, nDest;
 	CString strSelection;
 	AnimInfo temp;
 	BOOL bChecked;
@@ -2900,7 +2366,7 @@ void CModelEditDlg::MoveAnims(int dir)
 	if ((!m_pModel) || (!dir))
 		return;
 		
-	nItems = GetSelectedParentAnims(items, 100);
+	nItems = GetSelectedParentAnims(items, 1024);
 	if (nItems == -1)
 		return;
 
@@ -2952,19 +2418,75 @@ void CModelEditDlg::MoveAnims(int dir)
 	}
 }
 
+
+// talon: 2001's (0x41a2e9): moves the selected pieces up or down the piece
+// list.  The name is ours.
+void CModelEditDlg::MovePieces(int dir)
+{
+	CString str;
+	int i, j, nItems, items[128], iSrc, iDest;
+
+	if (m_pModel)
+	{
+		nItems = 0;
+		for (i=0; i < m_PieceList.GetItemCount(); i++)
+		{
+			if (nItems >= 128)
+				break;
+
+			if (m_PieceList.GetItemState(i, LVIS_SELECTED))
+				items[nItems++] = i;
+		}
+
+		if (nItems > 0)
+		{
+			for (i=0; i < nItems; i++)
+			{
+				iSrc = items[i];
+				iDest = iSrc + dir;
+				if (iDest >= 0 && iDest < (int)m_pModel->NumPieces())
+				{
+					str = m_PieceList.GetItemText(iSrc, 0);
+					m_PieceList.DeleteItem(iSrc);
+					m_PieceList.InsertItem(iDest, str);
+
+					for (j=i+1; j < nItems; j++)
+					{
+						if (items[j] >= iDest)
+							break;
+
+						items[j]--;
+					}
+
+					m_PieceList.SetItemState(iDest, LVIS_SELECTED, LVIS_SELECTED);
+					m_pModel->SwapPieces(iSrc, iDest);
+				}
+			}
+
+			m_bChangesMade = TRUE;
+		}
+	}
+}
+
 void CModelEditDlg::OnAnimMoveDown() 
 {
-	MoveAnims(1);
+	if (!m_bMovePieces)
+		MoveAnims(1);
+	else
+		MovePieces(1);
 }
 
 void CModelEditDlg::OnAnimMoveUp() 
 {
-	MoveAnims(-1);
+	if (!m_bMovePieces)
+		MoveAnims(-1);
+	else
+		MovePieces(-1);
 }
 
 void CModelEditDlg::OnAnimDelete() 
 {
-	int i, nItems, items[100], iTemp;
+	int i, nItems, items[1024], iTemp;
 
 	if (!m_pModel) 
 		return;
@@ -3020,6 +2542,8 @@ void CModelEditDlg::OnAnimDelete()
 				pChild->m_AnimOffset--;
 		}
 	}
+
+	SetListColumnWidth(&m_AnimList, 0, -1);
 
 	// Select the first item.
 	m_AnimList.SetItemState(0, LVIS_SELECTED, LVIS_SELECTED);
@@ -3285,13 +2809,6 @@ void CModelEditDlg::OnShowSockets()
 }
 
 
-void CModelEditDlg::OnShowTextures()
-{
-	 m_RenderWnd.m_DrawStruct.m_bDrawTextures = !m_RenderWnd.m_DrawStruct.m_bDrawTextures;
-	UpdateMenuChecks();
-}
-
-
 void CModelEditDlg::OnShowAttachments() 
 {
 	 m_RenderWnd.m_DrawStruct.m_bDrawAttachments = !m_RenderWnd.m_DrawStruct.m_bDrawAttachments;
@@ -3327,20 +2844,10 @@ void CModelEditDlg::OnProfile()
 }
 
 
-void CModelEditDlg::OnMovementEncoding()
-{
-	CButton* checkBox = (CButton*)GetDlgItem( IDC_MOVEMENT_ENCODING );
-	 m_RenderWnd.m_DrawStruct.m_bMovementEncoding = checkBox->GetCheck() != 0;
-}
-
-
 void CModelEditDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar) 
 {
 	CScrollBar *pItem;
 	int pos;
-	DWORD newLOD;
-
-	uint32 max_dist = 1000 ;
 
 	if (!m_pModel)
 		return;
@@ -3354,11 +2861,11 @@ void CModelEditDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 		{
 			if (nSBCode == SB_PAGELEFT || nSBCode == SB_LINELEFT)
 			{
-				pos = CLAMP(pScrollBar->GetScrollPos() - 1, 0, (int)(max_dist - 1));
+				pos = CLAMP(pScrollBar->GetScrollPos() - 1, 0, (int)(m_pModel->NumLODs() - 1));
 			}
 			else if (nSBCode == SB_PAGERIGHT || nSBCode == SB_LINERIGHT)
 			{
-				pos = CLAMP(pScrollBar->GetScrollPos() + 1, 0, (int)(max_dist - 1));
+				pos = CLAMP(pScrollBar->GetScrollPos() + 1, 0, (int)(m_pModel->NumLODs() - 1));
 			}
 			else
 			{
@@ -3367,11 +2874,10 @@ void CModelEditDlg::OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar)
 
 			pScrollBar->SetScrollPos(pos);
 
-			newLOD = pos;
-			//if (newLOD != m_nCurrentLOD)
+			if ((DWORD)pos != m_nCurrentLOD)
 			{
-				m_LODSlider.SetCurrentValue((float)newLOD);
-				SetCurrentLOD((float)newLOD);
+				SetCurrentLOD(pos);
+				SetLODText(m_nCurrentLOD);
 				m_RenderWnd.Draw();
 			}
 		}
@@ -3392,215 +2898,61 @@ void CModelEditDlg::SetLODText(int nLOD)
 }
 
 
-void SetGNModelText(char *pText)
+void CModelEditDlg::OnBuildLODs() 
 {
-}
-
-
-void CModelEditDlg::OnPieceRemoveLODs()
-{
-	unsigned numNotRemoved = 0;
-
-	vector<PieceLODInfo> selection;
-	int numSelected = GetSelectedPieceLODs( &m_PieceList, m_pModel, selection );
-
-	if( !numSelected || (DoMessageBox( "Are you sure you wish to delete the selected LODs?", MB_OKCANCEL ) != IDOK) )
-		return;
-
-	// go over list back to front to make sure we never remove the highest lod
-	for( int i = selection.size() - 1; i >= 0; i-- )
-	{
-		// don't remove any LODs from a piece that has only one LOD left
-		if( selection[i].m_ModelPiece->NumLODs() <= 1 )
-		{
-			numNotRemoved++;
-			continue;
-		}
-
-		bool removeSuccess = selection[i].m_ModelPiece->RemoveLOD( selection[i].m_LODNum );
-		ASSERT( removeSuccess );
-	}
-
-	if( numNotRemoved > 0 )
-	{
-		CString notRemovedStr;
-		notRemovedStr.Format( "%d LODs not removed as they are the only LODs in a piece.", numNotRemoved );
-		DoMessageBox( notRemovedStr, MB_OK );
-	}
-
-	// reload the piece tree
-	FillPieceList( &m_PieceList, m_pModel);
-
-	// adjust the LOD slider
-	float maxLODDist = GetModelMaxLODDist( m_pModel );
-	InitTheScrollBar( maxLODDist );
-	SetCurrentLOD( 0.0f );
-
-	SetChangesMade();
-}
-
-
-void CModelEditDlg::OnPieceBuildLODs() 
-{
+	CString str;
+	CGenLodDlg dlg;
+	BuildLODRequest request;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-	CPieceLODGenDlg dlg;
-	CRegMgr regMgr;
+	LODRequestInfo info;
+	char oldText[256];
+	DWORD i;
 
-	// default values
-	CString distance = "100.0";
-	CString maxEdgeLen = "1000.0";
-	CString percent = "50.0";
-	unsigned minNumTris = 8;
-
-	// get the current piece lod selections
-	vector<PieceLODInfo> selection;
-	int numSelected = GetSelectedPieceLODs( &m_PieceList, m_pModel, selection, true );
-	if( !numSelected )
-	{
-		MessageBox( "At least one piece LOD needs to be selected.", MB_OK );
-		return;
-	}
-
-	// get the lod settings from the registry
-	if( regMgr.Init( szRegKeyCompany, szRegKeyApp, szRegKeyVer, "LODGeneration", HKEY_CURRENT_USER ) )
-	{
-		unsigned bufSize = 256;
-		regMgr.Get( "Distance", distance.GetBufferSetLength( bufSize ), bufSize );
-		distance.ReleaseBuffer();
-		dlg.m_Distance = (float)atof( distance );
-
-		bufSize = 256;
-		regMgr.Get( "MaxEdgeLen", maxEdgeLen.GetBufferSetLength( bufSize ), bufSize );
-		maxEdgeLen.ReleaseBuffer();
-		dlg.m_MaxEdgeLen = (float)atof( maxEdgeLen );
-
-		bufSize = 256;
-		regMgr.Get( "Percent", percent.GetBufferSetLength( bufSize ), bufSize );
-		percent.ReleaseBuffer();
-		dlg.m_Percent = (float)atof( percent );
-
-		dlg.m_MinNumTris = regMgr.Get( "MinNumTris", minNumTris );
-	}
-
-	if( dlg.DoModal() != IDOK )
+	if (!m_pModel)
 		return;
 
-	// store the lod settings in the registry
-	if( regMgr.Init( szRegKeyCompany, szRegKeyApp, szRegKeyVer, "LODGeneration", HKEY_CURRENT_USER ) )
+	request.m_pModel = m_pModel;
+	dlg.m_pRequest = &request;
+
+	request.m_PieceWeights.SetSizeInit2(m_pModel->NumPieces(), 1.0f);
+	for (i=0; i < m_pModel->NumPieces(); i++)
 	{
-		distance.Format( "%f", dlg.m_Distance );
-		regMgr.Set( "Distance", distance );
-
-		maxEdgeLen.Format( "%f", dlg.m_MaxEdgeLen );
-		regMgr.Set( "MaxEdgeLen", maxEdgeLen );
-
-		percent.Format( "%f", dlg.m_Percent );
-		regMgr.Set( "Percent", percent );
-
-		regMgr.Set( "MinNumTris", dlg.m_MinNumTris );
+		request.m_PieceWeights[i] = m_pModel->GetPiece(i)->m_LODWeight;
 	}
 
-	// initialize the piece LOD builder
-	int numBadLODs = 0;
-	int numBadLODsVA = 0;
-
-	BeginWaitCursor();
-
-	// loop through each selected source piece LOD
-	for( int i = 0; i < selection.size(); i++ )
+	for (i=0; i < m_pModel->NumLODs(); i++)
 	{
-		// can't generate LODs for vertex animated pieces
-		if( selection[i].m_ModelPiece->m_isVA )
+		if (i)
 		{
-			numBadLODs++;
-			numBadLODsVA++;
-			continue;
+			info.m_Dist = GetModelLODInfo(m_pModel, i)->m_Dist;
+			info.m_nTris = m_pModel->CalcNumTris(i);
+			request.m_LODInfos.Append(info);
+		}
+	}
+
+	if (dlg.DoModal() == IDOK)
+	{
+		GetWindowText(oldText, sizeof(oldText));
+		SetWindowText("Building LODs");
+
+		for (i=0; i < m_pModel->NumPieces(); i++)
+		{
+			m_pModel->GetPiece(i)->m_LODWeight = request.GetPieceWeight(i);
 		}
 
-		CBuildPieceLOD* buildLOD = new CBuildPieceLOD;
-
-		buildLOD->m_Distance = dlg.m_Distance;
-		buildLOD->m_MaxEdgeLen = dlg.m_MaxEdgeLen;
-		buildLOD->m_Percent = dlg.m_Percent;
-		buildLOD->m_MinNumTris = dlg.m_MinNumTris;
-
-		buildLOD->m_Model = m_pModel;
-		buildLOD->m_ModelPiece = selection[i].m_ModelPiece;
-		buildLOD->m_LODNum = selection[i].m_LODNum;
-		// the lod pointer may be bogus after adding LODs to a piece, so get a fresh one
-		buildLOD->m_PieceLOD = buildLOD->m_ModelPiece->GetLOD( (uint32)selection[i].m_LODNum );
-
-		// generate new piece LOD from currend piece LOD
-		if( !buildLOD->BuildLOD() )
-			numBadLODs++;
-
-		delete buildLOD;
-	}
-
-	EndWaitCursor();
-
-	// sort the piece lods
-	for( i = 0; i < m_pModel->NumPieces(); i++ )
-	{
-		// get the current piece
-		ModelPiece* curPiece = m_pModel->GetPiece( i );
-		if( !curPiece )
+		if (!BuildLODs(&request))
 		{
-			ASSERT(0);
-			continue;
+			MessageBox("Unable to build LOD's (% too small?)");
 		}
-		curPiece->SortLODs();
-	}
 
-	// reload the piece tree
-	FillPieceList( &m_PieceList, m_pModel );
-
-	// adjust the LOD slider
-	float maxLODDist = GetModelMaxLODDist( m_pModel );
-	InitTheScrollBar( maxLODDist );
-	SetCurrentLOD( 0.0f );
-
-	SetChangesMade();
-
-	// inform the user of errors
-	if( numBadLODs || numBadLODsVA )
-	{
-		CString errMessage;
-		errMessage.Format( "%d LODs didn't generate correctly.\n%d of these failed due to being vertex animated.", numBadLODs, numBadLODsVA );
-		DoMessageBox( errMessage, MB_OK | MB_ICONERROR );
+		SetWindowText(oldText);
+		SetCurrentLOD(0);
+		InitTheScrollBar(m_pModel->NumLODs() - 1);
+		m_bChangesMade = TRUE;
 	}
 }
 
 
-void CModelEditDlg::OnPieceMerge( void )
-{
-	// get the selected pieces
-	vector<ModelPiece*> selection;
-	int numSelected = GetSelectedPieces( &m_PieceList, m_pModel, selection );
-	int numNewPieces = 0;
-
-	BeginWaitCursor();
-
-	// merge the pieces if possible
-	CPieceMerge mergePieces( m_pModel, selection );
-	numNewPieces = mergePieces.Merge();
-
-	EndWaitCursor();
-
-	// set the dirty bit if anything actually happened
-	ASSERT( numNewPieces <= numSelected );
-	if( numNewPieces != numSelected )
-		SetChangesMade();
-
-	// reload the piece tree
-	FillPieceList( &m_PieceList, m_pModel );
-	m_RenderWnd.AllocSelections( m_pModel->NumPieces(), m_pModel->NumNodes());
-
-	// tell the user what happened
-	CString completedMessage;
-	completedMessage.Format( "Merged %d pieces into %d pieces.", numSelected, numNewPieces );
-	DoMessageBox( completedMessage, MB_OK );
-}
 
 
 void CModelEditDlg::OnKeyDown(UINT nChar, UINT nRepCnt, UINT nFlags) 
@@ -3639,75 +2991,18 @@ void CModelEditDlg::OnCommandString()
 
 void CModelEditDlg::OnDimensions() 
 {
+	CDimensionsDlg dlg;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 	
-	if (!m_pModel)
-		return;
-
-	if(m_pDimensionDlg == NULL)
+	if (m_pModel && GetAnimList(dlg.m_Anims, sizeof(dlg.m_Anims), dlg.m_nAnims, FALSE))
 	{
-		m_pDimensionDlg = new CDimensionsDlg( this );
-		
-		//make sure the memory was allocated properly
-		if(m_pDimensionDlg == NULL)
-		{
-			return;
-		}
-
-		//load the list of animations into the dialog
-		if (!GetAnimList(	m_pDimensionDlg->m_Anims, 
-							sizeof(m_pDimensionDlg->m_Anims), 
-							m_pDimensionDlg->m_nAnims, FALSE))
-		{
-			return;		
-		}
-
-		m_pDimensionDlg->m_pModel = m_pModel;
-
-		//create the dialog
-		m_pDimensionDlg->Create(CDimensionsDlg::IDD,this);
-		
-		m_pDimensionDlg->ShowWindow(SW_SHOW);
-	}
-	else
-	{
-		//load the list of animations into the dialog
-		if (!GetAnimList(	m_pDimensionDlg->m_Anims, 
-							sizeof(m_pDimensionDlg->m_Anims), 
-							m_pDimensionDlg->m_nAnims, FALSE))
-		{
-			return;		
-		}
-		m_pDimensionDlg->ShowWindow(SW_SHOW);
+		dlg.m_pModel = m_pModel;
+		dlg.DoModal();
 	}
 }
 
 //this will run through each animation in the model, looking for animations that have the X and Z
 //dimensions of the animation not equal. It will then prompt them for how to fix.
-void CModelEditDlg::CheckValidAnimationDims()
-{
-	//we need a model
-	if(!m_pModel)
-		return;
-
-	//now run through all animations and for each, make sure that they match
-	for(uint32 nCurrAnim = 0; nCurrAnim < m_pModel->m_Anims.GetSize(); nCurrAnim++)
-	{
-		AnimInfo* pCurrAnim = &m_pModel->m_Anims[nCurrAnim];
-
-		if(pCurrAnim->IsParentModel() && fabs(pCurrAnim->m_vDims.x - pCurrAnim->m_vDims.z) > 0.1f)
-		{
-			//we have a descrepincy here, have the user resolve it
-			CInvalidAnimDimsDlg Dlg(this);
-			Dlg.m_pAnimInfo = pCurrAnim;
-			if(Dlg.DoModal() == IDOK)
-			{
-				//this should set a modified flag some how
-			}
-
-		}
-	}
-}
 
 
 void CModelEditDlg::OnAnimationFramerate() 
@@ -3716,6 +3011,7 @@ void CModelEditDlg::OnAnimationFramerate()
 	char str[20];
 	DWORD i, iAnim;
 	float theRate;
+	int iItem, nSelected;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 	
 	if (m_pModel)
@@ -3729,14 +3025,6 @@ void CModelEditDlg::OnAnimationFramerate()
 			// Grab the currently playing animation index
 			iAnim = m_AnimInfos[0].CurAnimIndex();
 
-			// grab the tagged keyframes
-			CMoArray<BOOL>& taggedKeysOrig = m_AnimInfos[0].m_Wnd.m_Tagged;
-			vector<bool> taggedKeys( taggedKeysOrig );
-			for( i = 0; i < taggedKeysOrig; i++ )
-			{
-				taggedKeys[i] = !!(taggedKeysOrig[i]);
-			}
-
 			// Stop playing
 			ResetAnimInfos();
 
@@ -3746,15 +3034,31 @@ void CModelEditDlg::OnAnimationFramerate()
 			{
 				for (i=0; i < m_pModel->m_Anims; i++)
 				{
-					model_SetAnimFramerate(m_pModel, i, (float)(1.0f / theRate), NULL);
+					model_SetAnimFramerate(m_pModel, i, (float)(1.0f / theRate));
 				}
 			}
 			else
 			{
-				if (iAnim < m_pModel->m_Anims && 
-					m_pModel->GetAnimInfo(iAnim)->IsParentModel())
+				// talon: 2001 sets the selected animations' rate, or the
+				// current one's when none is selected.
+				nSelected = 0;
+				for (iItem=0; iItem < m_AnimList.GetItemCount(); iItem++)
 				{
-					model_SetAnimFramerate(m_pModel, iAnim, (float)(1.0f / theRate), &taggedKeys);
+					if (m_AnimList.GetItemState(iItem, LVIS_SELECTED) && 
+						m_pModel->GetAnimInfo(iItem)->IsParentModel())
+					{
+						model_SetAnimFramerate(m_pModel, iItem, (float)(1.0f / theRate));
+						nSelected++;
+					}
+				}
+
+				if (nSelected < 1)
+				{
+					if (iAnim < m_pModel->m_Anims && 
+						m_pModel->GetAnimInfo(iAnim)->IsParentModel())
+					{
+						model_SetAnimFramerate(m_pModel, iAnim, (float)(1.0f / theRate));
+					}
 				}
 			}
 		
@@ -3763,6 +3067,243 @@ void CModelEditDlg::OnAnimationFramerate()
 			// Update the animation list
 			OnSelChangeAnimList();
 		}
+	}
+}
+
+
+// ------------------------------------------------------------------------
+// talon: 2001's Animation Cleanup (Animation > Remove extra frames), from
+// the image (0x41b413..0x41bad3).  The names are ours.
+// ------------------------------------------------------------------------
+
+// The error at keyframe iKey of pNode and its children if the keyframe
+// were removed (interpolated at t between its neighbours instead).
+static float CalcRemovalError(BOOL bRotation, DWORD iKey, float t, AnimNode *pNode,
+	LTMatrix *pParent, LTMatrix *pInterpParent)
+{
+	LTMatrix mat, global, interpGlobal;
+	LTRotation rot, interpRot;
+	LTVector scaled, interpPos, diff, pos, interp;
+	NodeKeyFrame *pPrev, *pNext;
+	float error, dot;
+	DWORD i;
+
+	pNode->m_KeyFrames[iKey].ConvertToMatrix(mat);
+	MatMul(&global, pParent, &mat);
+	pos.x = global.m[0][3];
+	pos.y = global.m[1][3];
+	pos.z = global.m[2][3];
+	quat_ConvertFromMatrix(rot.m_Quat, global.m);
+
+	pPrev = &pNode->m_KeyFrames[iKey-1];
+	pNext = &pNode->m_KeyFrames[iKey+1];
+	quat_Slerp(interpRot.m_Quat, pPrev->m_Quaternion.m_Quat, pNext->m_Quaternion.m_Quat, t);
+
+	interp = pPrev->m_Translation;
+	interp.Init(pNext->m_Translation.x - interp.x, pNext->m_Translation.y - interp.y, pNext->m_Translation.z - interp.z);
+	scaled.Init(interp.x * t, interp.y * t, interp.z * t);
+	interpPos.Init(scaled.x + pPrev->m_Translation.x, scaled.y + pPrev->m_Translation.y, scaled.z + pPrev->m_Translation.z);
+
+	quat_ConvertToMatrix(interpRot.m_Quat, mat.m);
+	mat.SetTranslation(interpPos.x, interpPos.y, interpPos.z);
+	MatMul(&interpGlobal, pInterpParent, &mat);
+	interp.x = interpGlobal.m[0][3];
+	interp.y = interpGlobal.m[1][3];
+	interp.z = interpGlobal.m[2][3];
+	quat_ConvertFromMatrix(interpRot.m_Quat, interpGlobal.m);
+
+	diff.Init(pos.x - interp.x, pos.y - interp.y, pos.z - interp.z);
+	error = diff.Mag();
+
+	if (bRotation)
+	{
+		dot = rot.m_Quat[1]*interpRot.m_Quat[1] + rot.m_Quat[2]*interpRot.m_Quat[2] + 
+			rot.m_Quat[3]*interpRot.m_Quat[3] + interpRot.m_Quat[0]*rot.m_Quat[0];
+		if (dot <= 0.0001f)
+			dot = 0.0001f;
+
+		error = (1.0f - dot + error) / dot;
+	}
+
+	for (i=0; i < pNode->NumChildren(); i++)
+	{
+		error += CalcRemovalError(bRotation, iKey, t, pNode->GetChild(i), &global, &interpGlobal);
+	}
+
+	return error;
+}
+
+
+// Where keyframe iKey sits between its neighbours.
+// talon: RETAIL BUG: the divisor is prev - next, so this is negative.
+static float GetKeyframePercent(ModelAnim *pAnim, DWORD iKey)
+{
+	AnimKeyFrame *pKey = &pAnim->m_KeyFrames[iKey];
+	DWORD prevTime = pAnim->m_KeyFrames[iKey-1].m_Time;
+	DWORD nextTime = pAnim->m_KeyFrames[iKey+1].m_Time;
+
+	if (prevTime == nextTime)
+		return 0.0f;
+
+	return (float)(pKey->m_Time - prevTime) / (float)(prevTime - nextTime);
+}
+
+
+// Finds the keyframe of pAnim whose removal costs the most error under
+// maxVariance.  Fills in *pVariance with the error (or the least error
+// of any keyframe, or -1, when none qualifies).
+static BOOL FindRemovableKeyframe(ModelAnim *pAnim, float maxVariance, BOOL bRotation,
+	DWORD *piKey, float *pVariance)
+{
+	LTMatrix ident;
+	BOOL bFound;
+	float minVariance, variance;
+	DWORD i;
+
+	if (pAnim->NumKeyframes() < 2)
+		return FALSE;
+
+	bFound = FALSE;
+	minVariance = 1000000.0f;
+	*pVariance = 0.0f;
+	for (i=1; i < pAnim->NumKeyframes()-1; i++)
+	{
+		ident.Identity();
+		variance = CalcRemovalError(bRotation, i, GetKeyframePercent(pAnim, i), pAnim->GetRootNode(), &ident, &ident);
+
+		if (variance <= minVariance)
+			minVariance = variance;
+
+		if (variance > *pVariance && variance < maxVariance)
+		{
+			bFound = TRUE;
+			*piKey = i;
+			*pVariance = variance;
+		}
+	}
+
+	if (!bFound)
+	{
+		if (pAnim->NumKeyframes() > 2)
+			*pVariance = minVariance;
+		else
+			*pVariance = -1.0f;
+	}
+
+	return bFound;
+}
+
+
+void CModelEditDlg::OnAnimationCleanup() 
+{
+	char str[12], msg[256];
+	DWORD i, j, iKey;
+	ModelAnim *pAnim;
+	CKeyframeWnd *pWnd;
+	char *pString;
+	float maxVariance, curVariance, variance, nextVariance;
+	BOOL bRotation;
+	int nRemoved;
+
+	if (!m_pModel)
+		return;
+
+	CAnimCleanupDlg dlg;
+	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
+
+	for (i=0; i < NUM_ANIM_INFOS; i++)
+		m_AnimInfos[i].ResetTime();
+
+	dlg.m_bPreserveRot = FALSE;
+	sprintf(str, "%f", 0.1);
+	dlg.m_VarianceString = str;
+
+	if (dlg.DoModal() != IDOK)
+		return;
+
+	maxVariance = (float)atof(dlg.m_VarianceString);
+	bRotation = dlg.m_bPreserveRot;
+	nRemoved = 0;
+	nextVariance = -1.0f;
+
+	BeginWaitCursor();
+
+	for (i=0; i < (DWORD)m_AnimList.GetItemCount(); i++)
+	{
+		pWnd = NULL;
+
+		if (m_AnimList.GetItemState(i, LVIS_SELECTED) && 
+			m_pModel->GetAnimInfo(i)->IsParentModel())
+		{
+			pAnim = m_pModel->GetAnimInfo(i)->m_pAnim;
+
+			for (j=0; j < NUM_ANIM_INFOS; j++)
+			{
+				if (GetAnimInfo(j)->CurAnim() == pAnim)
+				{
+					pWnd = &GetAnimInfo(j)->m_Wnd;
+					break;
+				}
+			}
+
+			curVariance = maxVariance;
+			if (FindRemovableKeyframe(pAnim, maxVariance, bRotation, &iKey, &variance))
+			{
+				do
+				{
+					pString = pAnim->m_KeyFrames[iKey].m_pString;
+					if (!pString || !pString[0])
+					{
+						if (pWnd && iKey < pWnd->m_Tagged.GetSize())
+						{
+							if (pWnd->m_Tagged[iKey])
+								goto Tagged;
+
+							pWnd->m_Tagged.Remove(iKey);
+						}
+
+						pAnim->RemoveKeyFrame(iKey);
+						nRemoved++;
+					}
+					else
+					{
+Tagged:;
+						curVariance = variance;
+					}
+				}
+				while (FindRemovableKeyframe(pAnim, curVariance, bRotation, &iKey, &variance));
+			}
+
+			if (nextVariance <= 0.0f || variance <= maxVariance)
+				nextVariance = variance;
+			else if (variance <= nextVariance)
+				nextVariance = variance;
+		}
+	}
+
+	EndWaitCursor();
+
+	if (nextVariance >= 0.0f)
+	{
+		sprintf(msg, "Removed %d keys.  Next removal at variance of %0.2f.", nRemoved, nextVariance);
+	}
+	else
+	{
+		if (!nRemoved)
+		{
+			MessageBox("No applicable animations selected.", "Try again", MB_OK|MB_ICONINFORMATION);
+			return;
+		}
+
+		sprintf(msg, "Removed %d keys.  No more available keys found.", nRemoved);
+	}
+
+	MessageBox(msg, "Hooray!", MB_OK|MB_ICONINFORMATION);
+	if (nRemoved)
+	{
+		m_bChangesMade = TRUE;
+		ResetAnimInfos();
+		OnSelChangeAnimList();
 	}
 }
 
@@ -3812,6 +3353,7 @@ void CModelEditDlg::OnAnimationInterpolation()
 {
 	CKeyframeTimeDlg dlg;
 	DWORD iAnim;
+	int i;
 	ModelAnim *pAnim;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 	
@@ -3835,7 +3377,15 @@ void CModelEditDlg::OnAnimationInterpolation()
 		return;
 	}
 
-	pAnim->m_InterpolationMS = dlg.m_nNewTime;
+	// talon: 2001 sets it on every selected animation of this model.
+	for (i=0; i < m_AnimList.GetItemCount(); i++)
+	{
+		if (m_AnimList.GetItemState(i, LVIS_SELECTED) && 
+			m_pModel->GetAnimInfo(i)->IsParentModel())
+		{
+			m_pModel->GetAnim(i)->m_InterpolationMS = dlg.m_nNewTime;
+		}
+	}
 
 	SetChangesMade();
 }
@@ -3844,10 +3394,9 @@ void CModelEditDlg::UpdateEditFrameTime( )
 {
 	MEAnimInfo *pInfo;
 	
-	UpdateEditFrameTimeEnabled();
-
 	if(!m_pModel)
 	{
+		m_EditFrameTime.EnableWindow(FALSE);
 		return;
 	}
 
@@ -3856,52 +3405,28 @@ void CModelEditDlg::UpdateEditFrameTime( )
 	
 	TempVarSetter<BOOL> setter(&m_bInStringChange, TRUE);
 	SetDlgItemInt( IDC_FRAMETIME, pInfo->CurAnimTime(), FALSE );
-}
-
-void CModelEditDlg::UpdateEditFrameTimeEnabled()
-{
-	bool bEnabled = true;
-
-	if( !m_pModel ||
-		m_AnimInfos[ANIMINFO_MAIN].IsAnimPlaying() ||
-		(m_SelectedAnims.GetSize() != 1) ||
-		(m_pModel->GetAnim(m_SelectedAnims[0])->GetModel() != m_pModel))
-	{
-		bEnabled = false;
-	}
-
-	m_EditFrameTime.EnableWindow( bEnabled );
-}
-
-void CModelEditDlg::UpdateEditFrameStringEnabled()
-{
-	bool bEnabled = true;
-
-	if( !m_pModel ||
-		m_AnimInfos[ANIMINFO_MAIN].IsAnimPlaying() ||
-		(m_SelectedAnims.GetSize() != 1) ||
-		(m_pModel->GetAnim(m_SelectedAnims[0])->GetModel() != m_pModel))
-	{
-		bEnabled = false;
-	}
-
-	m_EditFrameString.EnableWindow( bEnabled );
+	m_EditFrameTime.EnableWindow(TRUE);
 }
 
 void CModelEditDlg::UpdateEditFrameString( )
 {
 	DWORD iAnim, iKeyframe;
 	char *pStr;
+	BOOL bEnabled;
 
-	UpdateEditFrameStringEnabled();
-
-	if(!GetEditAnimInfo(&iAnim, &iKeyframe, true))
+	if(!GetEditAnimInfo(&iAnim, &iKeyframe))
 		return;
 
 	pStr = m_pModel->GetAnim(iAnim)->m_KeyFrames[iKeyframe].m_pString;
+	bEnabled = FALSE;
 	
 	TempVarSetter<BOOL> setter(&m_bInStringChange, TRUE);
 	SetDlgItemText( IDC_FRAMESTRING, pStr );
+
+	if (!m_AnimInfos[ANIMINFO_MAIN].IsAnimPlaying())
+		bEnabled = TRUE;
+
+	m_EditFrameString.EnableWindow(bEnabled);
 }
 
 void CModelEditDlg::SetEditFrameTime() 
@@ -3924,57 +3449,25 @@ void CModelEditDlg::SetEditFrameString()
 }
 
 
-void CModelEditDlg::SetCurrentAnimTime( uint32 iAnimInfo, DWORD dwAnimTime )
-{
-	Model *pModel;
-	MEAnimInfo *pInfo;
-
-	if(iAnimInfo >= NUM_ANIM_INFOS)
-		return;
-
-	pInfo = &m_AnimInfos[iAnimInfo];
-	pModel = pInfo->GetModel();
-	if(!pModel)
-		return;
-
-	trk_SetCurTime(&m_AnimInfos[iAnimInfo].m_Tracker, dwAnimTime, FALSE);
-	UpdateEditFrameTime( );
-}
-
-
 BOOL CModelEditDlg::SetRenderTexture(const char *pFilename, DWORD nTexture)
 {
-	DStream *pStream;
+	ILTStream *pStream;
 	TextureData *pTexture;
 	BOOL bRet;
-	DRESULT dResult;
 
 
 	bRet = FALSE;
 	pStream = streamsim_Open(pFilename, "rb");
 	if (pStream)
 	{
-		dResult = dtx_Create(pStream, &pTexture, TRUE);
-		if (dResult == LT_OK)
+		if (dtx_Create(pStream, &pTexture, FALSE) == LT_OK)
 		{
-			bRet = m_RenderWnd.SetTexture( pTexture , nTexture );
-			//bRet = SetGLMTexture(m_RenderWnd.GetContext(), pTexture, nTexture);
-			if (bRet)
-			{
-				//m_RenderWnd.m_DrawStruct.m_bDrawBright = TRUE;
-			}
-
+			bRet = SetGLMTexture(m_RenderWnd.GetContext(), pTexture, nTexture);
 			dtx_Destroy(pTexture);
-
-			// if we've sucessfuly gotten the picture we keep its name/index values.
-			m_pModel->AddTextureName( nTexture, pFilename );
 		}
 
 		pStream->Release();
 	}
-
-
-
 
 	return bRet;
 }
@@ -4058,7 +3551,6 @@ void CModelEditDlg::ProcessCommandString()
 		return;
 	
 	// Set its skins.
-	/*** DEPRECATED T.F 
 	parse.Init(m_pModel->m_CommandString);
 	while (parse.ParseFind("ModelEditTexture", FALSE, nToken))
 	{
@@ -4069,7 +3561,6 @@ void CModelEditDlg::ProcessCommandString()
 		SetRenderTexture(parse.m_Args[1], nTexture);
 		nToken++;
 	}
-	***/ 
 
 	// Setup socket attachment models.
 	DeleteSocketAttachments();
@@ -4086,20 +3577,24 @@ void CModelEditDlg::ProcessCommandString()
 			
 			if( IsFilenameLTAExt( filename ) )
 			{
+				Model *pModel = load_LTA_Using_FeedBackDialog( filename, false  );
+				if( pModel == NULL )
+					continue;
 
-					Model *pModel = load_LTA_Using_FeedBackDialog( filename, false  );
-					if( pModel != NULL )
-					{
-						pSocket->m_pAttachment = pModel ;
-						// Save this attachment in the registry
-						regMgr.Set(pSocket->GetName(), parse.m_Args[2]);
-					}
+				pSocket->m_pAttachment = pModel ;
 			}
 			else
 			{
-				MessageBox("ProcessCommandString error, trying to load bin abc file", "ERROR",MB_OK);
-			
+				if (!(request.m_pFile = streamsim_Open(parse.m_Args[2], "rb")))
+					continue;
+
+				pSocket->m_pAttachment = new Model;
+				pSocket->m_pAttachment->Load(&request);
+				request.m_pFile->Release();
 			}
+
+			// Save this attachment in the registry
+			regMgr.Set(pSocket->GetName(), parse.m_Args[2]);
 		}
 	}
 }
@@ -4134,9 +3629,6 @@ void CModelEditDlg::OffsetDims(DVector vec)
 		m_pModel->GetAnimInfo(i)->m_vDims += vec;
 	}
 
-	if( m_pDimensionDlg )
-		m_pDimensionDlg->UpdateControls();
-
 	SetChangesMade();
 }
 
@@ -4158,13 +3650,13 @@ void CModelEditDlg::OnTranslationButton()
 	AnimInfo *pAnimInfo;
 	NodeKeyFrame *pKeyframe;
 	DVector newTrans, offset;
-	int items[100], i, iAnim, nItems;
+	int items[1024], i, iAnim, nItems;
 	DWORD iEditAnim;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 	
 
 
-	if(!GetEditAnimInfo(&iEditAnim, NULL, false))
+	if(!GetEditAnimInfo(&iEditAnim, NULL))
 		return;
 
 	if (!GetAnimList(items, sizeof(items), nItems, FALSE))
@@ -4205,7 +3697,7 @@ void CModelEditDlg::OnRotationButton()
 {
 	RotationDlg dlg;
 	DVector vRot;
-	int items[100], i, iAnim, nItems;
+	int items[1024], i, iAnim, nItems;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 	
 	
@@ -4267,7 +3759,7 @@ void CModelEditDlg::OnZadd()
 
 void CModelEditDlg::OnNumberAnim() 
 {
-	int i, nItems, items[100], iTemp, nSelection;
+	int i, nItems, items[1024], iTemp, nSelection;
 	DWORD insertAt, nTempAnims, nListItems;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 
@@ -4359,18 +3851,10 @@ void CModelEditDlg::OnDuplicateAnim()
 	char newName[300];
 	AnimInfo *pSrcAnimInfo, *pAnimInfo;
 	DVector srcDims;
-	DVector srcTranslation;
 
 	nItems = m_AnimList.GetItemCount();
 	if (!nItems)
 		return;
-
-	// allocate a vector that will store the animation indices of duplicated animations
-	std::vector<int> duplicatedIndices;
-	duplicatedIndices.reserve( nItems );
-
-	// the number of animations that originally existed
-	int numOriginalAnimations = m_pModel->CalcNumParentAnims();
 
 	// Add the duplicated ones.
 	for (i=0; i < (DWORD)nItems; i++)
@@ -4379,27 +3863,7 @@ void CModelEditDlg::OnDuplicateAnim()
 			continue;
 
 		pSrcAnimInfo = m_pModel->GetAnimInfo(i);
-	
-		// if the file version between the child and parent are different quit operation.
-		// right now, if file versions are different ModelEdit will crash.
-		if( m_pModel->GetFileVersion() != pSrcAnimInfo->m_pAnim->GetModel()->GetFileVersion() ) 
-		{
-			int iChildFileVersion       = pSrcAnimInfo->m_pAnim->GetModel()->GetFileVersion();
-			const char *childFileName   = pSrcAnimInfo->m_pChildInfo->m_pFilename ;
-			const char *parentName      = m_pModel->GetFilename() ;
-
-			char msg[2048];
-			sprintf(msg, "%s\nParent %s version : %d\nChild (%s) version : %d\n",
-					"Cannot Copy Animations from Child Models of Different Version",
-					parentName, m_pModel->GetFileVersion(),		
-					childFileName,iChildFileVersion);		
-
-			MessageBox(msg, "Anim Copy Error", MB_OK|MB_ICONEXCLAMATION);
-			return ;
-		}
-		
 		srcDims = pSrcAnimInfo->m_vDims;
-		srcTranslation = pSrcAnimInfo->m_vTranslation;
 
 		sprintf(newName, "%s_copy", pSrcAnimInfo->m_pAnim->GetName());
 
@@ -4415,31 +3879,13 @@ void CModelEditDlg::OnDuplicateAnim()
 		}
 
 		pAnimInfo->m_vDims = srcDims;
-		pAnimInfo->m_vTranslation = srcTranslation;
 
 		pNewAnim->SetName(newName);
 
-		duplicatedIndices.push_back( i );
-	}
-
-	// move the duplicated animations immediately below their original
-	int curIndex = 0;
-	for( std::vector<int>::iterator it = duplicatedIndices.begin(); it != duplicatedIndices.end(); it++ )
-	{
-		// stop moving animations if they are in child models
-		if( *it >= numOriginalAnimations )
-			break;
-
-		AnimInfo curAnimInfo = m_pModel->m_Anims[numOriginalAnimations + curIndex];
-
-		for( i = numOriginalAnimations + curIndex; i > (*it + curIndex); i-- )
-		{
-			m_pModel->m_Anims[i] = m_pModel->m_Anims[i-1];
-		}
-
-		m_pModel->m_Anims[*it+1+curIndex] = curAnimInfo;
-
-		curIndex++;
+		// talon: 2001 selects the copy in place of the original.
+		m_AnimList.InsertItem(m_pModel->m_Anims.GetSize() + i, pNewAnim->GetName());
+		m_AnimList.SetItemState(m_pModel->m_Anims.GetSize() + i, LVIS_SELECTED, LVIS_SELECTED);
+		m_AnimList.SetItemState(i, 0, LVIS_SELECTED);
 	}
 
 	InitTaggedArrays();
@@ -4451,67 +3897,11 @@ void CModelEditDlg::OnDuplicateAnim()
 // FillAnimDataFromTransformNodeData()
 // basically take the bind pose and put it in the animation hierarchy.
 // ------------------------------------------------------------------------
-static void FillAnimDataFromTransformNodeData( AnimNode *pAnimNode )
-{
-	ModelNode *pNode = pAnimNode->m_pNode ;
-	LTMatrix mat ;
-	LTVector pos;
-	LTRotation rot ;
-	
-	mat = pNode->GetLocalTransform();
-
-	// get components
-	mat.GetTranslation(pos);
-	quat_ConvertFromMatrix( rot.m_Quat, mat.m );
-	
-	// pass it to anim data.
-	for( int kfcnt = 0 ; kfcnt < pAnimNode->m_KeyFrames.GetSize() ;kfcnt++) 
-	{
-		pAnimNode->m_KeyFrames[kfcnt].m_Translation = pos ;
-		pAnimNode->m_KeyFrames[kfcnt].m_Quaternion  = rot ;	
-	}
-
-	// recurse through the heirarchy.
-	for( int childcnt = 0 ; childcnt < pAnimNode->m_Children.GetSize() ; childcnt++)
-	{
-		FillAnimDataFromTransformNodeData( pAnimNode->m_Children[childcnt]);
-	}
-}
 
 
 // ------------------------------------------------------------------------
 // create an animation from the bind pose 
 // ------------------------------------------------------------------------
-void CModelEditDlg::OnCreateAnimFromBindPose()
-{
-	char *szAnimName = "bind_pose";
-
-	m_pModel->AddDummyAnimation( szAnimName );
-
-	AnimInfo* pInfo;
-	uint32 nAnimIndex;
-	ModelAnim *pAnim = m_pModel->FindAnim( szAnimName, &nAnimIndex, &pInfo );
-
-	if( pAnim )
-	{
-		for( int kfcnt = 0 ; kfcnt < pAnim->m_KeyFrames.GetSize() ;kfcnt++) 
-			pAnim->m_KeyFrames[kfcnt].m_pString = pAnim->GetModel()->AddString("");
-		
-		// fill anim. got down model hierarchy & anim 
-		FillAnimDataFromTransformNodeData( pAnim->GetRootNode());
-
-		// setup the dims for the binding pose
-		if(pInfo)
-		{
-			LTVector vDims;
-			if(CDimensionsDlg::FindAnimDims(m_pModel, nAnimIndex, 0, vDims))
-				pInfo->m_vDims = vDims;
-		}
-
-		// tell model edit about it.
-		FillAnimList();
-	}
-}
 
 void CModelEditDlg::OnRenameNode() 
 {
@@ -4579,7 +3969,7 @@ void UnrotateNodes(Model *pModel, DWORD transformIndex, int *items, int nItems, 
 
 void CModelEditDlg::OnUnrotateTopNode() 
 {
-	int status, nLevels, nItems, items[100];
+	int status, nLevels, nItems, items[1024];
 	char msg[256];
 
 
@@ -4607,19 +3997,6 @@ void CModelEditDlg::OnUnrotateTopNode()
 
 BOOL CModelEditDlg::PreTranslateMessage(MSG* pMsg) 
 {
-	// check if the user is editing something in a tree control
-	// see knowledge base Q167960 for an explanation (basically, tree controls and dialogs don't mix)
-	if( pMsg->message == WM_KEYDOWN && (pMsg->wParam == VK_RETURN || pMsg->wParam == VK_ESCAPE) )
-	{
-		// check the piece list
-		CEdit* edit = m_PieceList.GetEditControl();
-		if( edit )
-		{
-			edit->SendMessage( WM_KEYDOWN, pMsg->wParam, pMsg->lParam );
-			return TRUE;
-		}
-	}
-
 	TranslateAccelerator(m_hWnd, m_hAccel, pMsg);
 	
 	return CDialog::PreTranslateMessage(pMsg);
@@ -4638,7 +4015,7 @@ void CModelEditDlg::OnGenerateVertexNormals()
 
 void CModelEditDlg::OnReverseAnimation()
 {
-	int items[100], nItems, i, j;
+	int items[1024], nItems, i, j;
 	ModelAnim *pAnim, *pFrame1, *pFrame2;
 	DWORD nKeyFrames, iKeyframe1, iKeyframe2, oldAnimTime;
 
@@ -4730,16 +4107,12 @@ void CModelEditDlg::OnRemoveNode()
 void CModelEditDlg::OnSetTexture()
 {
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-	DWORD nTexture = 0;
+	DWORD i, nTexture;
+	ModelPiece *pPiece;
 
-	// if we don't have a model loaded bomb out.
-	if( m_pModel == NULL )
-	{
-		MessageBox("Must have a model to set textures.","WARNING", MB_ICONWARNING);
-		return ;
-	}
+	nTexture = 0;
 
-	// Look up the open directory in the registry
+	// Look up the texture directory in the registry
 	CRegMgr regMgr;
 	CString csOpenDir;
 	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER))
@@ -4749,305 +4122,112 @@ void CModelEditDlg::OnSetTexture()
 		csOpenDir.ReleaseBuffer(-1);
 	}
 
-	// Strip the extension...
-	char* pExt = _tcsrchr(csOpenDir,'.'); 
-	if (pExt) { csOpenDir.TrimRight(pExt); }
-	csOpenDir += "*.dtx";
+	if (csOpenDir.Find('.') == -1)
+		csOpenDir.Empty();
 
 	char szFilter[] = "Texture Files (*.dtx)|*.dtx|All Files (*.*)|*.*||";
-	CFileDialog dlg (TRUE, "dtx", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
-	if (dlg.DoModal() != IDOK)
-	{
-		return;
-	}
 
-	// Store the open directory in the registry
+	CFileDialog dlg (TRUE, "dtx", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
+
+	if (dlg.DoModal() != IDOK)
+		return;
+
+	// Store the texture directory in the registry
 	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength());
+	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength()) + "*.dtx";
 	regMgr.Set("Texture", (LPCTSTR)csOpenDir);
 
-	//  checking for errors while setting the texture
-	bool textureSetSuccessful = true;
-
-	// Find the selected texture in the piece list
+	// talon: 2001 sets the texture of the first selected piece.
 	if (m_pModel)
 	{
-		vector<PieceLODInfo> selection;
-		int numSelected = GetSelectedPieceLODs( &m_PieceList, m_pModel, selection );
-
-		// grab the indices we need to set
-		set<int> indices;
-		indices.clear();
-
-		for( int i = 0; i < selection.size(); i++ )
+		for (i=0; i < (DWORD)m_PieceList.GetItemCount(); i++)
 		{
-			indices.insert( selection[i].m_PieceLOD->m_iTextures[0] );
-		}
-
-		// set the texture indices
-		set<int>::iterator it;
-
-		for( it = indices.begin(); it != indices.end(); it++ )
-		{
-			if( !SetRenderTexture( dlg.GetPathName(), *it ) )
-				textureSetSuccessful = false;
+			if (m_PieceList.GetItemState(i, LVIS_SELECTED) && (pPiece = m_pModel->GetPiece(i)))
+			{
+				nTexture = pPiece->m_iTexture;
+				break;
+			}
 		}
 	}
 
-	if( !textureSetSuccessful )
+	if (!SetRenderTexture(dlg.GetPathName(), nTexture))
 	{
-		MessageBox( "Unable to load or set texture", "ModelEdit", MB_OK );
+		MessageBox("Unable to load or set texture", "ModelEdit");
 	}
-	/*
-	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-	DWORD nTexture = 0;
-
-	// if we don't have a model loaded bomb out.
-	if( m_pModel == NULL )
-	{
-		MessageBox("Must have a model to set textures.","WARNING", MB_ICONWARNING);
-		return ;
-	}
-
-	// if we don't have a model loaded bomb out.
-	if( m_pModel == NULL )
-	{
-		MessageBox("Must have a model to set textures.","WARNING", MB_ICONWARNING);
-		return ;
-	}
-
-	// Look up the open directory in the registry
-	CRegMgr regMgr;
-	CString csOpenDir;
-	if (regMgr.Init(szRegKeyCompany, szRegKeyApp, szRegKeyVer, "OpenDir", HKEY_CURRENT_USER))
-	{
-		UINT32 dwSize = 256;
-		regMgr.Get("Texture", csOpenDir.GetBufferSetLength(dwSize), dwSize);
-		csOpenDir.ReleaseBuffer(-1);
-	}
-
-	// Strip the extension...
-	char* pExt = _tcsrchr(csOpenDir,'.'); 
-	if (pExt) { csOpenDir.TrimRight(pExt); }
-	csOpenDir += "*.dtx";
-
-	char szFilter[] = "Texture Files (*.dtx)|*.dtx|All Files (*.*)|*.*||";
-	CFileDialog dlg (TRUE, "dtx", (csOpenDir.GetLength()) ? (LPCTSTR)csOpenDir : NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
-	if (dlg.DoModal() != IDOK)
-	{
-		return;
-	}
-
-	// Store the open directory in the registry
-	csOpenDir = dlg.GetPathName();
-	csOpenDir = csOpenDir.Left(csOpenDir.GetLength() - dlg.GetFileName().GetLength());
-	regMgr.Set("Texture", (LPCTSTR)csOpenDir);
-
-	//  checking for errors while setting the texture
-	bool textureSetSuccessful = true;
-
-	// Find the selected texture in the piece list
-	
-	for (i = 0; i < (DWORD)m_PieceList.GetItemCount(); i++)
-	{
-		vector<PieceLODInfo> selection;
-		int numSelected = GetSelectedPieceLODs( &m_PieceList, m_pModel, selection );
-
-		// grab the indices we need to set
-		set<int> indices;
-		indices.clear();
-
-		for( int i = 0; i < selection.size(); i++ )
-		{
-			indices.insert( selection[i].m_PieceLOD->m_iTextures[0] );
-		}
-
-		// set the texture indices
-		set<int>::iterator it;
-
-		for( it = indices.begin(); it != indices.end(); it++ )
-		{
-			if( !SetRenderTexture( dlg.GetPathName(), *it ) )
-				textureSetSuccessful = false;
-		}
-	}
-
-	if( !textureSetSuccessful )
-	{
-		MessageBox( "Unable to load or set texture", "ModelEdit", MB_OK );
-	}
-	*/
 }
 
 
 void CModelEditDlg::OnAddChildModel()
 {
-	CString sDefExtension;
-	sDefExtension.LoadString(IDS_ADDCHILDMODELEXT);
-	CString sDefFilter;
-	sDefFilter.LoadString(IDS_ADDCHILDMODELFILTER);
-
-	CAddChildModelDlg dlg(TRUE, sDefExtension, NULL, OFN_FILEMUSTEXIST, sDefFilter);
-
-	CString curFilename, str;
+	CAddChildModelDlg dlg(NULL);
+	CString sUnused, str;
 	ModelLoadRequest request;
-	Model *pChild = NULL;
-	ChildInfo *pInfo;
-	char errStr[2048];
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
-
+	char szList[2048], szFilename[2048], dirName[1024], newFilename[2048], errStr[4096];
+	char *pToken, *pFilename;
+	Model *pChild;
+	ChildInfo *pInfo;
 
 	if (!m_pModel)
 		return;
 
-	if (dlg.DoModal() == IDOK)
+	dlg.m_bAllowLetters = dlg.m_bAllowNumbers = dlg.m_bAllowOthers = TRUE;
+	if (dlg.DoModal(IDS_MODELEDIT_CAPTION, IDS_ADDCHILDMODEL) != IDOK)
+		return;
+
+	strcpy(szList, dlg.m_EnteredText.GetBuffer(0));
+	// talon: RETAIL BUG: the file name is the whole list, not the token, so
+	// with more than one child model each one loads from a bad file name.
+	strcpy(szFilename, szList);
+
+	pToken = strtok(szList, "; ");
+	while (pToken)
 	{
-		if (m_pModel->FindChildModelByFilename((char*)(LPCTSTR)dlg.GetFileName()))
+		if (m_pModel->FindChildModelByFilename(pToken))
 		{
 			DoMessageBox(IDS_NODUPLICATECHILDMODELNAMES, MB_OK);
 		}
 		else
 		{
-			char dirName[1024];
-			char newFilename[2048];
-
-
-			request.m_bLoadChildModels = FALSE;
-		//	pChild = LoadChildModel(&request, (char*)(LPCTSTR)m_strFilename, pChildFilename);
-
-			// begin ----------------------------------------------------
-			// I'm inlining the child model loading here.
-			// we need the current alloc from the model and other data that's relevant.
-			
-			
-
-			CString sFilepath = dlg.GetPathName();
-
 			CHelpers::ExtractNames(m_strFilename, dirName, NULL, NULL, NULL);
 			if (dirName[0] == 0)
 			{
-				sprintf(newFilename, "%s", (LPCTSTR)dlg.GetFileName());
+				sprintf(newFilename, "%s", szFilename);
 			}
 			else
 			{
-				sprintf(newFilename, "%s\\%s", dirName, (LPCTSTR)dlg.GetFileName());
+				sprintf(newFilename, "%s\\\\%s", dirName, szFilename);
 			}
 
-			sprintf(newFilename, "%s", sFilepath);
-	
-			int base_is_lta = IsFilenameLTAExt( m_strFilename ) ;
-			int child_is_lta= IsFilenameLTAExt( (LPCTSTR)dlg.GetFileName() );
-
-			if( base_is_lta && child_is_lta )
+			IsFilenameLTAExt(m_strFilename);
+			if (IsFilenameLTAExt(szFilename))
 			{
-				// Load up the shared anims.
-
-				pChild = load_LTA_Using_FeedBackDialog( newFilename, true );
-				//pChild = ltaLoadChildModel( newFilename , (LAllocCount*)m_pModel->GetAlloc() );			
-
+				pChild = load_LTA_Using_FeedBackDialog(newFilename, true);
 			}
-			else 
+			else
 			{
-				MessageBox("ABC LOAD ATTEMPT IN  ON_ADD_CHILD_MODEL", "ERROR", MB_OK);
-
+				pFilename = pToken;
+				request.m_bLoadChildModels = FALSE;
+				pChild = LoadChildModel(&request, (char*)(LPCTSTR)m_strFilename, pToken);
 			}
-
-			// end -------------------------------------------------------
 
 			if (!pChild)
 			{
- 				str.FormatMessage(IDS_CANTLOADCHILDMODEL, (LPCTSTR)dlg.GetFileName());
+				str.FormatMessage(IDS_CANTLOADCHILDMODEL, pFilename);
 				DoMessageBox(str, MB_OK);
 				return;
 			}
 
-			// Build the correct filename right here people....
-
-			char sSrc1[1024];
-			char sSrc2[1024];
-
-			char *sSrc, *sDst;
-
-			sprintf(sSrc1, "%s", m_strFilename);
-			sprintf(sSrc2, "%s", (char *)(LPCSTR)dlg.GetPathName());
-
-			// Compare strings until they differ....
-
-			int szSrc1 = strlen(sSrc1);
-			int szSrc2 = strlen(sSrc2);
-			char sDstFilename[1024];
-			memset(sDstFilename, 0, 1024);
-
-			bool bUseNewFilename = false;
-			
-			if (szSrc1 && szSrc2)
-			{			
-				int nCount = 0;
-				int nSize = szSrc1 > szSrc2 ? szSrc1 : szSrc2;
-
-				while (nCount < nSize)
-				{
-					if ((sSrc1[nCount] != sSrc2[nCount]) && (nCount))
-					{
-						// This is where the change occurs, last character should be a 
-						// backslash
-
-						if (sSrc1[nCount - 1] == '\\')
-						{
-							sSrc = sSrc1 + nCount;
-							sDst = sSrc2 + nCount;
-
-							// Now, count how many backslashes there are....
-
-							int nSave = nCount;
-							int nBackSlashes = 0;
-							
-							while (nCount < szSrc1)
-							{
-								if (sSrc1[nCount] == '\\')
-								{
-									nBackSlashes ++;
-								}
-
-								nCount ++;
-							}
-
-							nCount = nSave;
-
-							for (int i = 0; i < nBackSlashes; i ++)
-							{
-								strcat(sDstFilename, "..\\");
-							}
-
-							char *sOut = sSrc2 + nCount;
-
-							strcat(sDstFilename, sOut);
-							strcat(sDstFilename, "\0");
-
-							nCount = nSize;
-							bUseNewFilename = true;
-						}
-					}
-
-					nCount ++;
-				}
-			}
-
-			CString sFileName = bUseNewFilename ? sDstFilename : (char *)(LPCSTR)dlg.GetFileName();
-//			if (pInfo = m_pModel->AddChildModel(pChild, (char*)((LPCTSTR)dlg.GetFileName()), errStr, dlg.m_bScaleSkeleton))
-			if (pInfo = m_pModel->AddChildModel(pChild, (char *)(LPCSTR)sFileName, errStr, dlg.m_bScaleSkeleton ? true : false))
+			if (pInfo = m_pModel->AddChildModel(pChild, pFilename, errStr, dlg.m_bScaleSkeleton))
 			{
-				// Update bounding radii.
 				pInfo->m_SaveIndex = pChild->GetSaveIndex();
 
-				// Update other stuff.
-				str.FormatMessage(IDS_ADDEDCHILDSUCCESSFULLY, (LPCTSTR)dlg.GetFileName());
+				str.FormatMessage(IDS_ADDEDCHILDSUCCESSFULLY, pFilename);
 				DoMessageBox(str, MB_OK);
 
 				FillChildModelList();
 				FillAnimList();
 				InitTaggedArrays();
-
 				SetChangesMade();
 			}
 			else
@@ -5057,6 +4237,8 @@ void CModelEditDlg::OnAddChildModel()
 				DoMessageBox(str, MB_OK);
 			}
 		}
+
+		pToken = strtok(NULL, "; ");
 	}
 }
 
@@ -5337,19 +4519,12 @@ void CModelEditDlg::OnMouseMove(UINT nFlags, CPoint point)
 	case RT_POSITION:
 		sprintf( buf, "Translation: %.1f", GetPosAmount(m_TotalDelta) );
 		break;
-	case RT_SCALE:
-		if( IsButtonSelected(IDC_SOCKET_EDIT) && GetSelectedSocket() )
-			sprintf( buf, "Scale: %.2f", GetScaleAmount(m_TotalDelta) );
-		else
-			sprintf( buf, "Scale not supported on transforms." );
-		break;
 	}
 
 	// Do socket/relation specific stuff.
-	// note: this includes scale, but we treat scale separately.
 	if (IsButtonSelected(IDC_SOCKET_EDIT) && (pSocket = GetSelectedSocket()))
 	{
-		pSocket->ConvertToMatrixNoScale(mSocket);
+		pSocket->ConvertToMatrix(mSocket);
 
 		// Setup the transforms..
 		if(!m_RenderWnd.SetupTransformMaker(&tMaker))
@@ -5392,15 +4567,9 @@ void CModelEditDlg::OnMouseMove(UINT nFlags, CPoint point)
 
 		mFinal = ~mOldTransform * (mOffset * mNewTransform);
 
-		pSocket->ConvertFromMatrixNoScale(mFinal);
-
-		// scale is a special case: we don't want to include it in the other transforms...
-		if( pTracker->m_Type == RT_SCALE )
-		{
-			pSocket->m_Scale[pTracker->m_Axis] = GetScaleAmount(m_TotalDelta );
-		}
+		pSocket->ConvertFromMatrix(mFinal);
 	}
-	else if( pTracker->m_Type != RT_SCALE )// else change the transformation (if it isn't a scale)
+	else
 	{
 		// Find the first selected animation
 		pAnimInfo = NULL;
@@ -5647,17 +4816,6 @@ void CModelEditDlg::OnCalcInternalRadius()
 	SetChangesMade();
 }
 
-void CModelEditDlg::OnReCalcOBBExtent()
-{
-	if(!m_pModel)
-		return ;
-
-	
-	void model_CreateDefaultOBB(Model*);
-	model_CreateDefaultOBB(	m_pModel );
-
-}
-
 
 void CModelEditDlg::OnEditWeights()
 {
@@ -5675,122 +4833,75 @@ void CModelEditDlg::OnEditWeights()
 }
 
 
-void CModelEditDlg::SetCurrentLOD(float fLOD)
+void CModelEditDlg::SetCurrentLOD(DWORD iLOD)
 {
-	m_CurrentLODDist = fLOD;
-	m_RenderWnd.SetLOD(fLOD);
+	m_nCurrentLOD = iLOD;
+	m_RenderWnd.SetLOD(iLOD);
 }
 
 //this will create a NULL piece LOD at the specified distance from the camera
-void CModelEditDlg::OnCreateNullLOD()
-{
-	// grab the selected piece LODs
-	vector<ModelPiece*> selection;
-	int numSelected = GetSelectedPieces( &m_PieceList, m_pModel, selection );
-
-	if( !numSelected )
-		return;
-
-	CStringDlg Dlg;
-	Dlg.m_bAllowNumbers = TRUE;
-
-	if(Dlg.DoModal(IDS_ENTER_NULL_LOD_DISTANCE_CAPTION, IDS_ENTER_NULL_LOD_DISTANCE) != IDOK)
-	{
-		return;
-	}
-
-	float fDist = (float)atof(Dlg.m_EnteredText);
-
-	//alright, time to create the NULL lod at the specified distance
-	for(uint32 nCurrSel = 0; nCurrSel < selection.size(); nCurrSel++)
-	{
-	
-		//add it to the piece
-		ModelPiece* pPiece = selection[nCurrSel];
-
-		//sanity check
-		assert(pPiece);
-
-		//add this LOD to the list
-		pPiece->AddNullLOD(fDist);
-	}
-	
-	// reload the piece tree
-	FillPieceList( &m_PieceList, m_pModel );
-
-	// adjust the LOD slider
-	float maxLODDist = GetModelMaxLODDist( m_pModel );
-	InitTheScrollBar( maxLODDist );
-	SetCurrentLOD( 0.0f );
-
-	//flag changes for save
-	SetChangesMade();
-}
 
 
 void CModelEditDlg::OnPieceInfo()
 {
 	int i;
+	ModelPiece *pPiece, *pOther;
 	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 
-	// grab the selected piece LODs
-	vector<PieceLODInfo> selection;
-
-	int numSelected = GetSelectedPieceLODs( &m_PieceList, m_pModel, selection );
-
-	if( !numSelected )
-		return;
-
-	// launch the piece info dialog
-	CPieceMaterialDlg dlg( selection );
-	if( dlg.DoModal() == IDOK )
+	// talon: 2001's Piece Info dialog edits the first selected piece and
+	// copies what changed to the other selected pieces.
+	for (i=0; i < m_PieceList.GetItemCount(); i++)
 	{
-		// check if any lod dists changed
-		if( dlg.m_LODDistChanged )
+		if (m_PieceList.GetItemState(i, LVIS_SELECTED))
+			break;
+	}
+
+	if (i < m_PieceList.GetItemCount() && i < (int)m_pModel->NumPieces())
+	{
+		pPiece = m_pModel->GetPiece(i);
+		CPieceInfoDlg dlg(pPiece);
+		if (dlg.DoModal() == IDOK)
 		{
-			// sort the piece lods
-			for( i = 0; i < m_pModel->NumPieces(); i++ )
+			// talon: RETAIL BUG: <= lets i reach NumPieces().
+			while (++i < m_PieceList.GetItemCount() && i <= (int)m_pModel->NumPieces())
 			{
-				// get the current piece
-				ModelPiece* curPiece = m_pModel->GetPiece( i );
-				if( !curPiece )
+				if (m_PieceList.GetItemState(i, LVIS_SELECTED))
 				{
-					ASSERT(0);
-					continue;
+					pOther = m_pModel->GetPiece(i);
+
+					if (dlg.m_ChangedFlags & 1)
+						pOther->m_SpecularPower = pPiece->m_SpecularPower;
+
+					if (dlg.m_ChangedFlags & 2)
+						pOther->m_SpecularScale = pPiece->m_SpecularScale;
+
+					if (dlg.m_ChangedFlags & 4)
+						pOther->m_iTexture = pPiece->m_iTexture;
 				}
-				curPiece->SortLODs();
 			}
 
-			// reload the piece tree
-			FillPieceList( &m_PieceList, m_pModel );
-
-			// adjust the LOD slider
-			float maxLODDist = GetModelMaxLODDist( m_pModel );
-			InitTheScrollBar( maxLODDist );
-			SetCurrentLOD( 0.0f );
+			m_bChangesMade = TRUE;
 		}
-
-		SetChangesMade();
 	}
 }
 
 
-void CModelEditDlg::OnPieceSelectNone( void )
+// talon: stand-in: 2001's OnPieceMerge (0x41ec5d..0x41f530, 2259 bytes:
+// merges the selected pieces' coincident vertices, "Finished.\nRemoved %d
+// vertices\nMerged %d vertices", then rebuilds the LODs) is not written
+// yet.  This only reports what the 2001 one says when there is nothing to
+// merge.
+void CModelEditDlg::OnPieceMerge()
 {
-	m_PieceList.ClearSelection();
-}
+	IdleChanger idle(&m_cWinIdle, IDLE_DIALOG_DELAY);  	
 
+	if (!m_pModel || !m_pModel->NumPieces())
+	{
+		MessageBox("No pieces are loaded.", "What's the big idea?", MB_OK|MB_ICONINFORMATION);
+		return;
+	}
 
-void CModelEditDlg::OnPieceExpandAll( void )
-{
-	m_PieceList.ExpandAll();
-}
-
-
-void CModelEditDlg::OnPieceCollapseAll( void )
-{
-	m_PieceList.CollapseAll();
-	m_PieceList.ClearSelection();
+	MessageBox("No pieces were found to merge.", "Try again", MB_OK|MB_ICONINFORMATION);
 }
 
 
@@ -5809,79 +4920,60 @@ void CModelEditDlg::OnEndlabeleditNodeList(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CModelEditDlg::OnItemChangedNodeList(NMHDR* pNMHDR, LRESULT* pResult) 
 {
+	static BOOL bInChange = FALSE;
 	NM_LISTVIEW* pNMListView = (NM_LISTVIEW*)pNMHDR;
 	ModelNode *pNode;
-	unsigned char newFlags;
+	DWORD iIndex;
+	BOOL bSelected, bCheck;
+	POSITION pos;
+	int i;
+
+	*pResult = 0;
+
+	if (bInChange || m_bFillingNodeList || !m_pModel || !m_RenderWnd.GetSelectedNodesSize())
+		return;
+
+	iIndex = (DWORD)pNMListView->iItem;
+	if (iIndex >= (DWORD)m_NodeList.GetItemCount() || iIndex >= (DWORD)m_RenderWnd.GetSelectedNodesSize())
+		return;
 
 	// Refresh the selection state array entry
-	// t.f important	
-	
-	if (m_pModel && m_RenderWnd.GetSelectedNodesSize() ) //m_SelectedNodes)
+	bSelected = m_NodeList.GetItemState((int)iIndex, LVIS_SELECTED) != 0;
+	m_RenderWnd.m_SelectedNodes[iIndex] = bSelected;
+
+	bCheck = m_NodeList.GetCheck((int)iIndex);
+	pNode = m_pModel->GetNode(iIndex);
+
+	// Has the check changed?
+	if (bCheck ? !(pNode->m_Flags & MNODE_ROTATIONONLY) : (pNode->m_Flags & MNODE_ROTATIONONLY))
 	{
-		DWORD iIndex = (DWORD)pNMListView->iItem;
-
-		if (m_NodeList.GetItemState((int)iIndex, LVIS_SELECTED))
+		if (bSelected)
 		{
-			int bSelect = m_NodeList.GetCheck((int)iIndex) ? true : false;
-
-			m_RenderWnd.m_SelectedNodes[iIndex] = TRUE;
-
-			for (int nCount = 0; nCount < m_NodeList.GetItemCount(); nCount ++)
+			// Check all the selected nodes the same.
+			pos = m_NodeList.GetFirstSelectedItemPosition();
+			while (pos)
 			{
-				if (m_NodeList.GetItemState((int)nCount, LVIS_SELECTED))
-				{
-					m_NodeList.SetCheck(nCount, bSelect);
+				i = m_NodeList.GetNextSelectedItem(pos);
+				if (bCheck)
+					m_pModel->GetNode(i)->m_Flags |= MNODE_ROTATIONONLY;
+				else
+					m_pModel->GetNode(i)->m_Flags &= ~MNODE_ROTATIONONLY;
 
-					pNode = m_pModel->GetNode(iIndex);
-
-					if (g_bUpdateNodeFlags)
-					{
-						newFlags = pNode->m_Flags;
-
-						if (m_NodeList.GetCheck(nCount))
-							newFlags |= MNODE_ROTATIONONLY;
-						else
-							newFlags &= ~MNODE_ROTATIONONLY;
-
-						if (newFlags != pNode->m_Flags)
-						{
-							pNode->m_Flags = newFlags;
-						}			
-					}
-
-					SetChangesMade();
-				}
+				bInChange = TRUE;
+				m_NodeList.SetCheck(i, bCheck);
+				bInChange = FALSE;
 			}
 		}
 		else
 		{
-
-			DWORD iIndex = (DWORD)pNMListView->iItem;
-			if ((iIndex < (DWORD)m_NodeList.GetItemCount()) && (iIndex < m_RenderWnd.GetSelectedNodesSize()))
-				m_RenderWnd.m_SelectedNodes[iIndex] = m_NodeList.GetItemState((int)iIndex, LVIS_SELECTED) != 0;
-
-			pNode = m_pModel->GetNode(iIndex);
-
-			if (g_bUpdateNodeFlags)
-			{
-				newFlags = pNode->m_Flags;
-
-				if (m_NodeList.GetCheck(pNMListView->iItem))
-					newFlags |= MNODE_ROTATIONONLY;
-				else
-					newFlags &= ~MNODE_ROTATIONONLY;
-
-				if (newFlags != pNode->m_Flags)
-				{
-					pNode->m_Flags = newFlags;
-				
-				}
-			}
-			 SetChangesMade();
+			if (bCheck)
+				pNode->m_Flags |= MNODE_ROTATIONONLY;
+			else
+				pNode->m_Flags &= ~MNODE_ROTATIONONLY;
 		}
+
+		SetChangesMade();
 	}
-	
-	*pResult = 0;
 }
 
 void CModelEditDlg::OnDestroy() 
@@ -5893,220 +4985,47 @@ void CModelEditDlg::OnDestroy()
 }
 
 // one of the tree controls has had its selection changed
-LRESULT CModelEditDlg::OnTreeSelChanged( WPARAM wParam, LPARAM lParam )
-{
-	CLTWinTreeMgr* tree = (CLTWinTreeMgr*)wParam;
-
-	switch( tree->GetDlgCtrlID() )
-	{
-	case IDC_PIECES:		// handle the piece tree control
-		PieceSelChanged( tree );
-		break;
-	default:
-		ASSERT(0);			// unhandled tree control
-		break;
-	}
-
-	return 0;
-}
 
 // a new piece has been selected
-void CModelEditDlg::PieceSelChanged( CLTWinTreeMgr* tree )
+void CModelEditDlg::OnItemChangedPieceList(NMHDR* pNMHDR, LRESULT* pResult) 
 {
-	// t.f important	
-	
-	if( !m_pModel || !m_RenderWnd.GetSelectedPiecesSize() )
-		return;
+	NM_LISTVIEW* pNMListView = (NM_LISTVIEW*)pNMHDR;
+	DWORD iIndex;
 
-	PieceListItem* item;
-
-	// get the root iterator
-	CLTWinTreeItemIter* iter = tree->CreateIter();
-	if( !iter )
-		return;
-
-	// visit each piece
-	for( ; iter->IsMore(); iter->Next() )
+	if (m_pModel && m_RenderWnd.GetSelectedPiecesSize())
 	{
-		item = (PieceListItem*)iter->Current();
-		int curPiece = item->m_PieceNum;
-
-		bool selected = item->IsSelected() != 0;
-
-		// check the children if the parent isn't selected
-		if( !selected )
-		{
-			CLTWinTreeItemIter* childIter = item->CreateChildIter();
-
-			for( ; !selected && childIter->IsMore(); childIter->Next() )
-			{
-				item = (PieceListItem*)childIter->Current();
-				selected = item->IsSelected() != 0;
-			}
-
-			delete childIter;
-		}
-
-		if( curPiece < m_RenderWnd.GetSelectedPiecesSize() )
-		{
-			m_RenderWnd.m_SelectedPieces[curPiece] = selected;
-		}
-		else
-			ASSERT(0);
+		iIndex = (DWORD)pNMListView->iItem;
+		if (iIndex < (DWORD)m_PieceList.GetItemCount() && iIndex < (DWORD)m_RenderWnd.GetSelectedPiecesSize())
+			m_RenderWnd.m_SelectedPieces[iIndex] = m_PieceList.GetItemState((int)iIndex, LVIS_SELECTED) != 0;
 	}
 
-	delete iter;
-	
+	*pResult = 0;
 }
 
 // one of the tree controls has had its selection edited
-LRESULT CModelEditDlg::OnTreeEditText( WPARAM wParam, LPARAM lParam )
-{
-	CLTWinTreeMgr* tree = (CLTWinTreeMgr*)wParam;
-	PieceListItem* item = (PieceListItem*)lParam;
-
-	switch( tree->GetDlgCtrlID() )
-	{
-	case IDC_PIECES:		// handle the piece tree control
-		PieceEditText( tree, item );
-		break;
-	default:
-		ASSERT(0);			// unhandled tree control
-		break;
-	}
-
-	return 0;
-}
 
 // a piece has had its name changed
-void CModelEditDlg::PieceEditText( CLTWinTreeMgr* tree, PieceListItem* item )
+void CModelEditDlg::OnEndLabelEditPieceList(NMHDR* pNMHDR, LRESULT* pResult) 
 {
-	m_pModel->GetPiece( item->m_PieceNum )->SetName( item->GetText() );
+	LV_DISPINFO* pDispInfo = (LV_DISPINFO*)pNMHDR;
 
+	// Update the piece's name
+	if ((pDispInfo->item.mask & LVIF_TEXT) != 0)
+		m_pModel->GetPiece(pDispInfo->item.iItem)->SetName(pDispInfo->item.pszText);
+	
 	SetChangesMade();
+
+	*pResult = TRUE;
 }
 
 
 // retrieve a list of the selected pieces (returns number of selected pieces)
 // this does not iterate through children, the piece itself must be explicitly selected in order to be returned
-int CModelEditDlg::GetSelectedPieces( CLTWinTreeMgr* tree, Model* model, vector<ModelPiece*>& selection )
-{
-	int numSelected = 0;
-	selection.clear();
-
-	if( !model )
-		return numSelected;
-
-	// get the root iterator
-	CLTWinTreeItemIter* iter = tree->CreateIter();
-	if( !iter )
-		return numSelected;
-
-	// visit each piece
-	for( ; iter->IsMore(); iter->Next() )
-	{
-		PieceListItem* item = (PieceListItem*)iter->Current();
-
-		if( item->IsSelected() )
-		{
-			ModelPiece* curPiece = model->GetPiece( item->m_PieceNum );
-			ASSERT( curPiece );
-			selection.push_back( curPiece );
-			numSelected++;
-		}
-	}
-
-	delete iter;
-
-	return numSelected;
-}
 
 
 // retrieve a list of the selected piece LODs (returns number of selected LODs)
 // if firstIfParentOnly is true, then only the 0th lod will be returned if only the parent piece is selected
 // otherwise all lods will be returned for the selected piece
-int CModelEditDlg::GetSelectedPieceLODs( CLTWinTreeMgr* tree, Model* model, vector<PieceLODInfo>& selection, bool firstIfParentOnly )
-{
-	PieceLODInfo pieceLOD;
-	int numSelected = 0;
-	selection.clear();
-
-	if( !model )
-		return numSelected;
-
-	// get the root iterator
-	CLTWinTreeItemIter* iter = tree->CreateIter();
-	if( !iter )
-		return numSelected;
-
-	// visit each piece
-	for( ; iter->IsMore(); iter->Next() )
-	{
-		PieceListItem* item = (PieceListItem*)iter->Current();
-		int curPiece = item->m_PieceNum;
-
-		// check if any children are selected first
-		bool childSelected = false;
-
-		CLTWinTreeItemIter* childIter = item->CreateChildIter();
-
-		for( ; childIter->IsMore(); childIter->Next() )
-		{
-			PieceListItem* childItem = (PieceListItem*)childIter->Current();
-			if( childItem->IsSelected() )
-			{
-				// found a selected pieceLOD, add it to the selection list
-				childSelected = true;
-				pieceLOD.m_ModelPiece = model->GetPiece( curPiece );
-				pieceLOD.m_LODNum = childItem->m_LOD;
-				pieceLOD.m_PieceLOD = pieceLOD.m_ModelPiece->GetLOD( (uint32)pieceLOD.m_LODNum );
-				ASSERT( pieceLOD.m_PieceLOD );
-				selection.push_back( pieceLOD );
-				numSelected++;
-			}
-		}
-
-		// no children are selected, check if the parent is selected
-		if( !childSelected )
-		{
-			if( item->IsSelected() )
-			{
-				ModelPiece* mainPiece = model->GetPiece( curPiece );
-
-				// parent is selected
-				if( firstIfParentOnly )
-				{
-					// add only the first child LOD to selection
-					pieceLOD.m_ModelPiece = mainPiece;
-					pieceLOD.m_LODNum = 0;
-					pieceLOD.m_PieceLOD = mainPiece->GetLOD( (uint32)0 );
-					ASSERT( pieceLOD.m_PieceLOD );
-					selection.push_back( pieceLOD );
-					numSelected++;
-				}
-				else
-				{
-					// add all child LODs to selection
-					for( uint32 i = 0; i < mainPiece->NumLODs(); i++ )
-					{
-						pieceLOD.m_ModelPiece = mainPiece;
-						pieceLOD.m_LODNum = i;
-						pieceLOD.m_PieceLOD = mainPiece->GetLOD( i );
-						ASSERT( pieceLOD.m_PieceLOD );
-						selection.push_back( pieceLOD );
-						numSelected++;
-					}
-				}
-			}
-		}
-
-		delete childIter;
-	}
-
-	delete iter;
-
-	return numSelected;
-}
 
 BOOL CModelEditDlg::UpdateSelectedAnimList()
 {
@@ -6158,6 +5077,8 @@ void CModelEditDlg::OnSelChangeAnimList()
 	DWORD i;
 	MEAnimInfo *pInfo;
 	
+	m_bMovePieces = FALSE;
+
 	if(!m_pModel)
 		return;
 
@@ -6193,25 +5114,11 @@ void CModelEditDlg::OnSelChangeAnimList()
 		else if(m_SelectedAnims[i] != pInfo->m_Tracker.m_TimeRef.m_Cur.m_iAnim)
 		{
 			pInfo->m_Wnd.SetAnim(m_pModel->GetAnim(m_SelectedAnims[i]));
-			trk_SetCurAnim(&pInfo->m_Tracker, m_SelectedAnims[i], pInfo->IsAnimPlaying() ? true : false);
-
-			// Update the frame string and time....
-
-			UpdateEditFrameString();
-			UpdateEditFrameTime();
+			trk_SetCurAnim(&pInfo->m_Tracker, m_SelectedAnims[i], pInfo->IsAnimPlaying());
 		}
 
-		ModelAnim *pAnim = pInfo->CurAnim();
-
-		pInfo->m_Tracker.m_TimeRef.m_Cur.m_iWeightSet = pAnim ? (pAnim->m_ModelEditWeightSet) : 0;
+		pInfo->m_Tracker.m_TimeRef.m_Cur.m_iWeightSet = pInfo->CurAnim()->m_ModelEditWeightSet;
 	}
-
-	if(m_SelectedAnims.GetSize() == 0)
-	{
-		UpdateEditFrameString();
-		UpdateEditFrameTime();
-	}
-
 
 
 	// Set button labels.
@@ -6219,25 +5126,17 @@ void CModelEditDlg::OnSelChangeAnimList()
 	{
 		pInfo = &m_AnimInfos[i];
 		
-		ModelAnim *pAnim = pInfo->CurAnim();
-
-		if (pAnim)
+		if(pInfo->m_Wnd.IsActive())
 		{
-			if(pInfo->m_Wnd.IsActive())
-			{
-				::EnableWindow(::GetDlgItem(m_hWnd, pInfo->m_AnimButtonID), TRUE);
-				SetDlgItemText(pInfo->m_AnimButtonID, pAnim->GetName());
-			}
-			else
-			{
-				::EnableWindow(::GetDlgItem(m_hWnd, pInfo->m_AnimButtonID), FALSE);
-				SetDlgItemText(pInfo->m_AnimButtonID, "NONE");
-			}
+			::EnableWindow(::GetDlgItem(m_hWnd, pInfo->m_AnimButtonID), TRUE);
+			SetDlgItemText(pInfo->m_AnimButtonID, pInfo->CurAnim()->GetName());
+		}
+		else
+		{
+			::EnableWindow(::GetDlgItem(m_hWnd, pInfo->m_AnimButtonID), FALSE);
+			SetDlgItemText(pInfo->m_AnimButtonID, "NONE");
 		}
 	}
-
-	UpdateEditFrameStringEnabled();
-	UpdateEditFrameTimeEnabled();
 }
 
 
@@ -6256,6 +5155,9 @@ void CModelEditDlg::OnEndLabelEditAnimList(NMHDR* pNMHDR, LRESULT* pResult)
 		(m_pModel->GetAnim(pDispInfo->item.iItem))->SetName(pDispInfo->item.pszText);
 	
 	SetChangesMade();
+
+	// talon: 2001 resizes the column for the new name.
+	SetListColumnWidth(&m_AnimList, m_AnimList.GetStringWidth(pDispInfo->item.pszText), pDispInfo->item.iItem);
 
 	*pResult = TRUE;
 }
@@ -6304,25 +5206,12 @@ void CModelEditDlg::OnContextMenu(CWnd* pWnd, CPoint point)
 	if (pWnd->m_hWnd == m_AnimList.m_hWnd)
 	{
 		VERIFY(menu.LoadMenu(IDR_MENU_ANIMLIST));
-	}
-	else if( pWnd->m_hWnd == m_NodeList.m_hWnd )
-	{
-		VERIFY(menu.LoadMenu(IDR_NODE_EDIT));
-	}
-	else if( pWnd->m_hWnd == m_PieceList.m_hWnd )
-	{
-		VERIFY(menu.LoadMenu(IDR_PIECE_EDIT));
-	}
-	else if( pWnd->m_hWnd == m_SocketList.m_hWnd )
-	{
-		VERIFY(menu.LoadMenu(IDR_SOCKET_EDIT));
-	}
-	else return;
 
-	CMenu* pPopup = menu.GetSubMenu(0);
-	ASSERT(pPopup != NULL);
+		CMenu* pPopup = menu.GetSubMenu(0);
+		ASSERT(pPopup != NULL);
 
-	pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, point.x, point.y, this);	
+		pPopup->TrackPopupMenu(TPM_LEFTALIGN | TPM_RIGHTBUTTON, point.x, point.y, this);	
+	}
 }
 
 
@@ -6421,16 +5310,12 @@ void CModelEditDlg::OnDblClkSocketList()
 
 		// Set up the dialog
 		dlg.m_Name = pSocket->GetName();
-		dlg.m_NodeName= m_pModel->GetNode( pSocket->m_iNode )->GetName();
 		dlg.m_PosX = pSocket->m_Pos.x;
 		dlg.m_PosY = pSocket->m_Pos.y;
 		dlg.m_PosZ = pSocket->m_Pos.z;
 		dlg.m_RotX = angles.x * 180.0f / MATH_PI;
 		dlg.m_RotY = angles.y * 180.0f / MATH_PI;
 		dlg.m_RotZ = angles.z * 180.0f / MATH_PI;
-		dlg.m_SclX = pSocket->m_Scale.x ;
-		dlg.m_SclY = pSocket->m_Scale.y ;
-		dlg.m_SclZ = pSocket->m_Scale.z ;
 
 		dlg.m_Attachment = csAttachment;
 
@@ -6450,8 +5335,6 @@ void CModelEditDlg::OnDblClkSocketList()
 		angles.z = dlg.m_RotZ * MATH_PI / 180.0f;
 		pSocket->m_Rot = Eul_ToQuat(angles);
 
-		// Change the scale 
-		pSocket->m_Scale.Init( dlg.m_SclX, dlg.m_SclY, dlg.m_SclZ);
 
 		// Change the name
 		if (dlg.m_Name.CompareNoCase(pSocket->GetName()) != 0)
@@ -6491,8 +5374,18 @@ void CModelEditDlg::OnDblClkSocketList()
 				}
 				else // else we're loading abcs
 				{
-					MessageBox("OnDblClkSocketList error, trying to load bin abc file", "ERROR",MB_OK);
-
+					// talon: 2001 loads the .abc.
+					ModelLoadRequest request;
+					if (request.m_pFile = streamsim_Open(dlg.m_Attachment, "rb"))
+					{
+						pSocket->m_pAttachment = new Model;
+						pSocket->m_pAttachment->Load(&request);
+						request.m_pFile->Release();
+					}
+					else
+					{
+						dlg.m_Attachment = csAttachment;
+					}
 				}
 			
 			}
@@ -6620,7 +5513,7 @@ void CModelEditDlg::IncKeyframe(BOOL bForward)
 		pInfo = GetAnimInfo(i);
 
 		// if the animation slot is active AND valid 
-		if( (dwActive[i] & (PA_ACTIVE | PA_VALID)) == (PA_ACTIVE | PA_VALID ))
+		if( dwActive[i] & (PA_ACTIVE | PA_VALID) )
 		{
 			if(bForward)
 			{
@@ -6714,17 +5607,6 @@ void CModelEditDlg::OnFrameStringChange()
 }
 
 
-void CModelEditDlg::OnFrameTimeChange()
-{
-	if(m_bInStringChange)
-		return;
-
-	TempVarSetter<BOOL> setter(&m_bInStringChange, TRUE);
-
-	SetEditFrameTime();
-}
-
-
 void CModelEditDlg::OnNewBgColor() 
 {
 	extern void SetGLMBackgroundColor( GLM_CONTEXT hContext, COLORREF win_color );
@@ -6749,22 +5631,7 @@ void CModelEditDlg::OnNewBgColor()
 
 	}
 	// set the bg color for m_RenderWnd->GLMContext.
-	m_RenderWnd.SetBackgroundColor( ms_color );
-}
-
-
-void CModelEditDlg::OnLoadConfirm()
-{
-	m_bConfirmLoadDlg = !m_bConfirmLoadDlg;
-
-	// store this setting in the registry
-	CRegMgr regMgr;
-	if( regMgr.Init( szRegKeyCompany, szRegKeyApp, szRegKeyVer, "Options", HKEY_CURRENT_USER ) )
-	{
-		regMgr.Set( "confirm_load", m_bConfirmLoadDlg ? 1 : 0 );
-	}
-
-	UpdateMenuChecks();
+	SetGLMBackgroundColor( m_RenderWnd.GetContext(), ms_color );
 }
 
 
@@ -6775,582 +5642,36 @@ void CModelEditDlg::OnOptionsShoworiginalmodel()
 }
 
 
-void CModelEditDlg::OnChangeFov() 
+// talon: 2001's (0x4207c9): makes a keyframe between iPrev and iNext, at
+// fPercent of the way.  KeyframeWnd's Create Keyframe and ImportKeyStrings
+// call it.  The name is ours.
+BOOL CreateKeyframe(ModelAnim *pAnim, int iPrev, int iNext, float fPercent)
 {
-	// TODO: Add your command handler code here
-	m_RenderWnd.OpenFOVDlg();	
-}
+	ModelAnim *pFrame;
 
-//------------------------------------------------------------------
-//
-//   FUNCTION : OnExportModelStringKeys()
-//
-//   PURPOSE  : Exports string keys from a given model
-//
-//------------------------------------------------------------------
+	if (!pAnim->NumKeyframes())
+		return FALSE;
 
-void CModelEditDlg::OnExportModelStringKeys()
-{
-	if (!m_pModel)
+	if (iPrev < 0 || iPrev > (int)pAnim->NumKeyframes())
+		return FALSE;
+
+	if (iNext < 0 || iNext > (int)pAnim->NumKeyframes())
+		return FALSE;
+
+	if (fPercent < 0.001f || fPercent > 0.999f)
+		return FALSE;
+
+	pFrame = pAnim->CopyKeyFrame(iPrev);
+	if (!pFrame)
+		return FALSE;
+
+	if (!pAnim->PasteKeyFrame(pFrame, iNext))
 	{
-		AfxMessageBox("No model currently loaded !!");
-
-		return;
+		delete pFrame;
+		return FALSE;
 	}
 
-	char szFilter[] = "MSK Files (*.msk)|*.msk|All Files (*.*)|*.*||";
-	CFileDialog dlg(FALSE, "msk", NULL, OFN_OVERWRITEPROMPT | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
-
-	if (dlg.DoModal() == IDOK)
-	{
-		CString sFile = dlg.GetPathName();
-
-		FILE *fp = fopen(sFile, "wb");
-		if (!fp)
-		{
-			CString sError;
-			sError.Format("Error opening/creating %s", sFile);
-			AfxMessageBox(sError, MB_ICONEXCLAMATION);
-
-			return;
-		}
-
-		// Write out the user radius for this model
-
-		float fRadius = m_pModel->m_GlobalRadius;
-		fwrite(&fRadius, sizeof(float), 1, fp);
-
-		// Write out the number of animations
-
-		int nAnims = m_pModel->NumAnims();
-		fwrite(&nAnims, sizeof(int), 1, fp);
-		
-		for (int i = 0; i < nAnims; i ++)
-		{
-			ModelAnim *pAnim = m_pModel->GetAnim(i);
-
-			// Write out the name of the animation
-			
-			char *sName = pAnim->GetName();				
-			int nLen = strlen(sName);
-
-			// Write out the total length of the animation
-
-			uint32 nAnimLen = pAnim->GetAnimTime();
-			float fRatio = 1.0f;
-			if (nAnimLen)
-			{
-				fRatio = 1.0f / (float)nAnimLen;
-			}
-			
-			fwrite(&nLen, sizeof(int), 1, fp);
-			fwrite(sName, nLen, 1, fp);
-
-			// Write out the dims of the animation
-
-			AnimInfo *pInfo = m_pModel->GetAnimInfo(i);
-			float fDimsX = pInfo->m_vDims.x;
-			float fDimsY = pInfo->m_vDims.y;
-			float fDimsZ = pInfo->m_vDims.z;
-
-			fwrite(&fDimsX, sizeof(float), 1, fp);
-			fwrite(&fDimsY, sizeof(float), 1, fp);
-			fwrite(&fDimsZ, sizeof(float), 1, fp);
-
-			
-			// Write out all the string keys
-
-			for (int j = 0; j < (int)pAnim->NumKeyFrames(); j ++)
-			{
-				AnimKeyFrame *pKey = &pAnim->m_KeyFrames[j];
-
-				if ((pKey->m_pString) && (strcmp(pKey->m_pString, "")))
-				{
-					// Write out marker
-					
-					char bMarker = 1;
-					fwrite(&bMarker, sizeof(char), 1, fp);
-
-					// Write out time at which this string occurs
-
-					float fTime = (float)pKey->m_Time * fRatio;
-					fwrite(&fTime, sizeof(uint32), 1, fp);
-
-					// Write out the string itself
-
-					nLen = strlen(pKey->m_pString);
-					fwrite(&nLen, sizeof(int), 1, fp);
-					fwrite(pKey->m_pString, nLen, 1, fp);
-				}
-			}
-
-			// Write out the end marker
-
-			char nDone = -1;
-			fwrite(&nDone, sizeof(char), 1, fp);
-		}
-
-		fclose(fp);
-	}
+	delete pFrame;
+	pAnim->InterpolateKeyFrame(iNext, iPrev, iNext+1, fPercent);
+	return TRUE;
 }
-
-//------------------------------------------------------------------
-//
-//   FUNCTION : OnImportModelStringKeys()
-//
-//   PURPOSE  : Imports model string keys from a .msk file
-//
-//------------------------------------------------------------------
-void CModelEditDlg::OnImportModelStringKeys()
-{
-	if (!m_pModel)
-	{
-		AfxMessageBox("No model currently loaded !!");
-
-		return;
-	}
-
-	char szFilter[] = "MSK Files (*.msk)|*.msk|All Files (*.*)|*.*||";
-	CFileDialog dlg(TRUE, "msk", NULL, OFN_FILEMUSTEXIST | OFN_HIDEREADONLY, szFilter, this);
-
-	if (dlg.DoModal() == IDOK)
-	{
-		CString sFile = dlg.GetPathName();
-
-		char sTmp[1024];
-		
-		FILE *fp = fopen(sFile, "rb");
-		if (!fp)
-		{
-			CString sError;
-			sError.Format("Error opening/creating %s", sFile);
-			AfxMessageBox(sError, MB_ICONEXCLAMATION);
-
-			return;
-		}
-
-		CEdit *pEdit = (CEdit *)m_pImportStringKeyDlg->GetDlgItem(IDC_PROGRESS);
-		pEdit->SetWindowText("");
-		m_pImportStringKeyDlg->ShowWindow(SW_SHOW);
-
-		// Read in the global radius
-
-		float fRadius;
-		fread(&fRadius, sizeof(float), 1, fp);
-
-		sprintf(sTmp, "Setting Global Radius to %4.2f\n", fRadius);
-		m_pImportStringKeyDlg->AddMsg(sTmp, 255, 0, 0);
-
-		m_pModel->m_GlobalRadius = fRadius;
-
-		// Read in the number of animations....
-
-		int nAnims;
-		fread(&nAnims, sizeof(int), 1, fp);
-
-		for (int i = 0; i < nAnims; i ++)
-		{
-			// Read in the name of this animation....
-
-			int nLen;
-			char sAnimName[4096];
-
-			fread(&nLen, sizeof(int), 1, fp);
-			fread(sAnimName, nLen, 1, fp);
-			sAnimName[nLen] = 0;
-
-			// Read in the dims of the animation
-
-			float fDimsX;
-			float fDimsY;
-			float fDimsZ;
-
-			fread(&fDimsX, sizeof(float), 1, fp);
-			fread(&fDimsY, sizeof(float), 1, fp);
-			fread(&fDimsZ, sizeof(float), 1, fp);
-			
-			// Attempt to locate this animation....
-
-			ModelAnim *pAnim = m_pModel->FindAnim(sAnimName);
-			if (pAnim)
-			{
-				uint32 dwIndex;
-				AnimInfo *pInfo = m_pModel->FindAnimInfo(sAnimName, m_pModel, &dwIndex);
-
-				if (pInfo)
-				{
-					sprintf(sTmp, "Setting Animation [%s] Dims to [%f4.2, %f4.2, %f4.2]\n", sAnimName, fDimsX, fDimsY, fDimsZ);
-					m_pImportStringKeyDlg->AddMsg(sTmp, 255, 0, 0);
-
-					// Set the dims...
-
-					pInfo->m_vDims.x = fDimsX;
-					pInfo->m_vDims.y = fDimsY;
-					pInfo->m_vDims.z = fDimsZ;
-				}
-			}
-
-			// Read the model keys....
-
-			bool bReading = true;
-
-			while (bReading)
-			{
-				char bMarker;
-				fread(&bMarker, sizeof(char), 1, fp);
-
-				if (bMarker == -1)
-				{
-					// End of animation marker
-					
-					bReading = false;
-				}
-				else
-				{
-					char sName[2048];
-
-					// Read the keyframe time...
-
-					float fTime;
-					fread(&fTime, sizeof(uint32), 1, fp);
-					
-					// Read the string key...
-					
-					fread(&nLen, sizeof(int), 1, fp);
-					fread(sName, nLen, 1, fp);
-					sName[nLen] = 0;
-
-					if (pAnim)
-					{
-						int nTime = (int)(fTime * (float)pAnim->GetAnimTime());
-
-						// Attempt to locate the correct keyframe....
-
-						for (int j = 0; j < (int)pAnim->NumKeyFrames(); j ++)
-						{
-							AnimKeyFrame *pKey = &pAnim->m_KeyFrames[j];
-
-							if (pKey->m_Time >= (uint32)nTime)
-							{
-								char sTmp[2048];
-
-								if (pKey->m_Time - nTime < 5)
-								{
-									sprintf(sTmp, "SUCCESS !! Anim [%s] - Added \"%s\" at exactly %d ms\r\n", pAnim->GetName(), sName, nTime);
-									m_pImportStringKeyDlg->AddMsg(sTmp, 0, 0, 0);
-								}
-								else
-								{
-									sprintf(sTmp, "WARNING !! Anim [%s] - Added \"%s\" at time %d ms (out by %d ms, could not locate exact keyframe)\r\n", pAnim->GetName(), sName, pKey->m_Time, pKey->m_Time - nTime);
-									m_pImportStringKeyDlg->AddMsg(sTmp, 0, 0, 0);
-								}
-								
-								// This is the key, fill out the string....
-
-								pKey->m_pString = m_pModel->AddString(sName);
-
-								j = pAnim->NumKeyFrames();
-							}
-						}
-					}
-					else
-					{
-						sprintf(sTmp, "ERROR !! Anim %s missing for string key \"%s\"\r\n", sAnimName, sName);
-						m_pImportStringKeyDlg->AddMsg(sTmp, 0, 0, 0);
-					}
-				}
-			}
-		}
-
-		// Close file...
-
-		fclose(fp);
-
-		ModelAnim *pAnim = m_AnimInfos[0].CurAnim();
-		if (pAnim)
-		{
-			int nKeyFrame = m_AnimInfos[0].m_Wnd.ForceNearestKeyframe();
-
-			if (nKeyFrame < (int)pAnim->NumKeyFrames())
-			{
-				char *sTitle = pAnim->m_KeyFrames[nKeyFrame].m_pString;
-
-				GetDlgItem(IDC_FRAMESTRING)->SetWindowText(sTitle);
-			}
-		}
-	}
-}
-
-void CModelEditDlg::OnItemclickNodelist(NMHDR* pNMHDR, LRESULT* pResult) 
-{
-	HD_NOTIFY *phdn = (HD_NOTIFY *) pNMHDR;
-	// TODO: Add your control notification handler code here
-	
-	*pResult = 0;
-}
-
-void CModelEditDlg::OnOptionsShowVertexWeighting() 
-{
-		m_RenderWnd.m_DrawStruct.m_bDrawVertexWeights = !m_RenderWnd.m_DrawStruct.m_bDrawVertexWeights;
-	UpdateMenuChecks();
-}
-
-void CModelEditDlg::OnNodeeditEditobb() 
-{
-	// find the first selected node 
-	if (!m_pModel)
-		return;
-
-	int selection = m_NodeList.GetSelectionMark();
-
-	if( selection > -1 )
-	{
-		ModelNode *pNode = m_pModel->m_FlatNodeList[selection];
-		CEditOBBDlg dlg(pNode);
-
-		dlg.DoModal();	
-	}
-}
-
-void CModelEditDlg::OnNodeEditRename() 
-{
-	OnRenameNode();
-}
-
-void CModelEditDlg::OnNodeEditLookAt()
-{
-	if( !m_pModel )
-		return;
-
-	int selection = m_NodeList.GetSelectionMark();
-
-	if( selection <= -1 )
-		return;
-
-	LTMatrix* mat = m_pModel->GetTransform( selection );
-	ASSERT( mat );
-
-	LTVector pos;
-	mat->GetTranslation( pos );
-	pos.z *= -1.0f;
-
-	m_RenderWnd.m_Camera.LookAtPoint( pos );
-}
-
-void CModelEditDlg::OnSocketEditLookAt()
-{
-	if( !m_pModel )
-		return;
-
-	int selection = m_SocketList.GetCurSel();
-
-	if( (selection < 0) || (selection >= (int)m_pModel->NumSockets()) )
-		return;
-
-	LTMatrix xform;
-	ModelSocket* socket = m_pModel->GetSocket( selection );	
-	if( !m_pModel->GetSocketTransform( socket, &xform ) )
-	{
-		ASSERT( 0 );
-		return;
-	}
-
-	LTVector pos;
-	xform.GetTranslation( pos );
-	pos.z *= -1.0f;
-
-	m_RenderWnd.m_Camera.LookAtPoint( pos );
-}
-
-
-//------------------------------------------------------------------
-//
-//   FUNCTION : OnExportWeightSets()
-//
-//   PURPOSE  : Exports weight sets for this model
-//
-//------------------------------------------------------------------
-
-void CModelEditDlg::OnExportWeightSets() 
-{
-	if (!m_pModel) return;
-
-	CFileDialog dlg(FALSE, "", "*.wst");
-
-	if (dlg.DoModal() == IDOK)
-	{
-		CString sFile = dlg.GetPathName();
-
-		// Create the file and export the weight sets
-
-		CLTAWriter writer;
-		CString sName = dlg.GetPathName();
-
-		if (writer.Open(dlg.GetPathName(), false))
-		{
-			writer.BeginNode();
-
-			for (int i = 0; i < m_pModel->NumWeightSets(); i ++)
-			{
-				WeightSet *pSet = m_pModel->GetWeightSet(i);
-
-				// Write the weight set
-
-				writer.BeginNode();
-
-				writer.Write(pSet->GetName());
-
-				writer.BeginNode();
-
-				for (int j = 0; j < pSet->m_Weights.GetSize(); j ++)
-				{
-					CString sTxt;
-					sTxt.Format("%4.2f", pSet->m_Weights[j]);
-
-					writer.Write(sTxt);
-					writer.BreakLine();
-				}
-
-				writer.EndNode();
-
-				writer.EndNode();
-			}
-
-			writer.EndNode();
-		
-			writer.Close();
-		}
-	}
-}
-
-//------------------------------------------------------------------
-//
-//   FUNCTION : OnImportWeightSets()
-//
-//   PURPOSE  : Imports weight sets for this model
-//
-//------------------------------------------------------------------
-
-void CModelEditDlg::OnImportWeightSets() 
-{
-	if (!m_pModel) return;
-
-	CFileDialog dlg(TRUE, "*.wst");
-
-	if (dlg.DoModal() == IDOK)
-	{
-		CLTADefaultAlloc *pAlloc = new CLTADefaultAlloc;
-
-		CLTANode *pRoot = pAlloc->AllocateNode();
-
-		CString sFile = dlg.GetPathName();
-
-		if (CLTANodeReader::LoadEntireFile(sFile, false, pRoot, pAlloc))
-		{
-			// Read in the weight sets
-
-			if (pRoot->IsList())
-			{
-				for (int i = 0; i < pRoot->GetNumElements(); i ++)
-				{
-					CLTANode *pWeightSet = pRoot->GetElement(i);
-
-					for (int k = 0; k < pWeightSet->GetNumElements(); k ++)
-					{
-						WeightSet *pSet = new WeightSet(m_pModel);
-						bool bRead = false;
-
-						// Name should be the first child
-						
-						CLTANode *pChild = pWeightSet->GetElement(k);
-
-						if (pChild->IsList())
-						{
-							int nChildren = pChild->GetNumElements();
-							
-							if (nChildren == 2)
-							{
-								CLTANode *pName = pChild->GetElement(0);
-								if (pName->IsAtom())
-								{
-									CString sName = pName->GetValue();
-
-									strcpy(pSet->m_Name, (char *)(LPCSTR)sName);
-
-									CLTANode *pWeightList = pChild->GetElement(1);
-
-									if (pWeightList->IsList())
-									{
-										int nElem = pWeightList->GetNumElements();
-
-										if (nElem != m_pModel->NumNodes())
-										{
-											// Error....
-
-											AfxMessageBox("Weight list doesn't correspond to node list, cannot import", MB_ICONEXCLAMATION);
-
-											delete pSet;
-
-											pAlloc->FreeNode(pRoot);
-
-											delete pAlloc;
-
-											return;
-										}
-										
-										// Read the weights
-
-										for (int j = 0; j < pWeightList->GetNumElements(); j ++)
-										{
-											CLTANode *pWeight = pWeightList->GetElement(j);
-
-											if (pWeight->IsAtom())
-											{
-												float fWeight = (float)atof(pWeight->GetValue());
-
-												// Add the weight to the list
-
-												pSet->m_Weights.Add(fWeight);
-
-												bRead = true;
-											}
-										}
-									}
-								}
-							}
-						}
-					
-						if (!bRead)
-						{
-							delete pSet;
-						}
-						else
-						{
-							m_pModel->AddWeightSet(pSet);
-							SetChangesMade();
-						}					
-					}				
-				}
-			}
-		}
-
-		pAlloc->FreeNode(pRoot);
-
-		delete pAlloc;
-	}
-}
-
-
-// Hook Stdlith's base allocators.
-void* DefStdlithAlloc(uint32 size)
-{
-        return malloc(size);
-}
-
-void DefStdlithFree(void *ptr)
-{
-        free(ptr);
-}
-
-
-
