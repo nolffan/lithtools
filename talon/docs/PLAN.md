@@ -403,38 +403,28 @@ version 85). `progress/Processor-avp2-map.md` is the map.
     calls (the "Build 69 only" group) and Build 69's LTA library
     (ME_LTAMgr.dsp, a stand-in for the lost 2001 parse-node reader). As
     it stands: 1,001 identical.
-  - [ ] Bring it back to 2001, in seven parts by image range (for parallel
-    work; near and todo as `make progress` counts them on 2026-10-30):
-    1. 0x401000..0x4035cd, the small dialogs A..G, animtracker, DragList,
-       LTEulerAngles, GenLodDlg: near 22, todo 3. AddChildModelDlg is
-       2001's modal list dialog; animtracker the LT2 tracker's.
-    2. 0x4035cd..0x409b6c, gl_modelrender, ImportAnimation, the keyframe
-       dialogs and KeyframeWnd, loadltadlg, LODEdit: near 52, todo 4.
-    3. 0x409b6c..0x415fc9, the LTA importer: the 2001 parse-node reader
-       to write from the image (three modules before ltaModel, one after:
-       the lexer, ILTAStream, CParseNode; smmempnproc.cpp names their
-       interface), ltaModel and ltaScene brought back to it, ltquatbase;
-       then ME_LTAMgr goes: near 116, todo 27.
-    4. 0x415fc9..0x421612, ModelEdit and ModelEditDlg (46 KB: list views,
-       not Build 69's tree control; .abc open and save; no D3D export,
-       OBBs, piece LODs, FOV dialog...; as its features go, the "Build 69
-       only" files go), and resource.h in 2001's numbering: near 166,
-       todo 10.
-    5. 0x421612..0x428866, ModelInfoDlg to win_idle: newgenlod, the Piece
-       Info dialog (2001's, to write), RenderWnd, smmempnproc (needs part
-       3's headers), SocketEdit (no scale, no node name), the small
-       dialogs: near 103, todo 8.
-    6. 0x428866..0x42f746, conparse, dtxmgr (ModelEdit's has
-       dtx_SetupDTXFormat; the shared copy is the processor's),
-       genltstream, geomroutines, model.cpp (the 2001 model, its command
-       string keys): near 148, todo 2.
-    7. 0x42f746..0x437170, model_cleanup, model_load (2001's .abc loader,
-       to write: nolfsrc's cmodelload.cpp reads the same format),
-       model_ops, model_save (the .abc writer), modelallocations,
-       pixelformat, simple_dalloc, streamsim, transformmaker, RegMgr,
-       StdLith: near 70, todo 10.
-    Parts 1-7 share the model headers (tools/shared/model/model.h,
-    ltaScene.h): part 6 owns model.h, part 3 ltaScene.h; the others ask.
+  - [~] Bring it back to 2001. First round (2026-10-30, seven agents by
+    image range): 1,664 identical of 1,891 (85.1% of the bytes), from
+    1,001. Written from the image: the 2001 LTA parse-node reader (lexer,
+    parse nodes, finders; ltaBuildTree a stand-in for its dead-stripped
+    module), LVEditList, the Piece Info dialog, the .abc loader
+    (model_load), the callback list, the LT counter, the Command String
+    and Add Child Model dialogs, Animation Cleanup and the renderer's
+    subdivision. Back to 2001: model.h's layouts (LTBOOL throughout),
+    ltaModel/ltaScene on the reader, the main dialog (layout, message map,
+    list views, .abc open and save), the render window, the transform
+    maker and the model writer. The "Build 69 only" files and ME_LTAMgr
+    are gone. Found: Dinkumware's patched <xstring>
+    (src/LT2/tools/ModelEdit/stlpatch), <string> through precompile.h.
+    Stand-ins: ltaBuildTree.cpp, CModelEditDlg::OnPieceMerge (2259 bytes,
+    to write).
+  - [ ] What's left: OnPieceMerge; about 45 near (the main dialog's
+    OnImport, DoLoadModel, OnInitDialog, OnMouseMove and Animation Cleanup;
+    Model::Load and the LTA loader's ltaModelLoad, ParseTreeToModel and
+    cmd_ApplyAddChildModels; the transform maker's blends; the lexer's
+    analize_stream; ParseShapeNode); the guarded-atexit initializers at
+    three module starts (0x40243f, 0x4160b8, 0x436849) our objects emit
+    last; string pooling (probably /Gf).
 - [ ] **DEdit.exe** (573 KB). Its RTTI names its classes (101 type
   descriptors); the shared libraries inside it (ButeMgr, StdLith, RegMgr,
   DibMgr: 0x4835a0..0x48ba82) match the AvP2 source release's prebuilt

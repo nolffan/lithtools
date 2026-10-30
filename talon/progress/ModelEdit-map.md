@@ -14,14 +14,17 @@ Processor Pack: `toolchains/msvc-6.00-9044`), 86 C++ objects of 8569 (MFC
 8047, 40 masm 7299, 3 AliasObj; and 6 C++ and 1 C of 8168, 1 C of 8447:
 our link of the same toolchain's libraries has the same rows), cvtres 1735,
 link 6.00. No row of 8966: the 73 objects of 9044 are all Monolith's, the
-LT2 libraries' included. Our link has 94 (the Build 69 only files and the
-LTA library stand-in among them).
+LT2 libraries' included.
 
 - **cl 9044, `/O1`**: functions are unaligned (0x40101d, 0x401020, ...) and
   have the /O1 shapes; Build 69's sources compiled so match 1,001 of the
   image's functions as they stand (identical, `make progress`).
-- **No `/GF`**: literals are in `.data`, one copy per object
-  ("AmbientLight" is there twice, CommandStringDlg's and model.cpp's).
+- **Literals in `.data`, pooled across objects**: probably `/Gf`, not
+  `/GF` (read-only) or none: "*.abc" (0x48927c), "abc" (0x48dc50) and the
+  model filter (0x48dc58) are one copy each, used by AddChildModelDlg,
+  ModelEditDlg and SocketEdit. (The second "AmbientLight" is
+  CommandStringDlg's key table, char arrays, not a literal.) Our build
+  doesn't pool yet; it moves data, not code.
 - **No `/GR`**: the only Monolith class with a type descriptor is StdLith's
   CLithException (thrown); the rest are MFC's, VC6's C++ library's and the
   old iostreams' (169 type descriptors: 135 `.?AV` classes, 23 `.?AU`
@@ -37,8 +40,8 @@ LTA library stand-in among them).
   the **allocator-override build** (`STDLITH_ALLOC_OVERRIDE`, the
   `StdLith_alloc.lib` stdlith.h names): l_allocator.obj's code runs from
   LAllocCount::ClearCounts (0x436cf0) straight on to LAllocCount::Alloc
-  (0x436d10), without the DefStdlithAlloc and DefStdlithFree the
-  processors' StdLith has; ModelEditDlg.cpp defines them. No ButeMgr,
+  (0x436d10); DefStdlithAlloc and DefStdlithFree (0x436c30, 0x436c50) come
+  first in l_allocator, StdLith's own in 2001. No ButeMgr,
   DibMgr or zlib: libscan finds none of their functions, and nothing of
   theirs is named.
 - **Imports**: OPENGL32 and GLU32 (the renderer), WINMM (timeGetTime),
@@ -46,8 +49,15 @@ LTA library stand-in among them).
   DirDialog, SHBrowseForFolder, is not there) and no Direct3D.
 
 `src/LT2/tools/ModelEdit/ModelEdit.dsw` builds it so: build.mk's
-ENV_/CL_/LINK_ModelEdit (and LT2_StdLith_alloc, LT2_RegMgr_Talon,
-ME_LTAMgr) are msvc-6.00-9044's, with its headers, MFC and runtime.
+ENV_/CL_/LINK_ModelEdit (and LT2_StdLith_alloc, LT2_RegMgr_Talon) are
+msvc-6.00-9044's, with its headers, MFC and runtime. Its `std::string` is
+compiled from Dinkumware's patched `<xstring>` (25 May 1998, no reference
+counting; Jupiter Build 69 ships it in WONAPI's VC_STL_Header_Patches),
+`src/LT2/tools/ModelEdit/stlpatch/` (string `_Tidy` 0x409e80); the rest of
+the C++ library is 9044's. Every module that includes precompile.h opens
+with `<xlocale>`'s ctype<unsigned short>::id initializer: 2001's
+precompile.h included `<string>` (AboutDlg, model.cpp and transformmaker
+have none).
 
 ## Layout (libscan.py)
 
@@ -176,9 +186,14 @@ What the modules are, where Build 69 doesn't say:
   modules before ltaModel: A (0x409b6c, mostly the `std::` iostream and
   locale code it instantiates first), B (0x40b173, a three-guard
   initializer) and the lexer (0x40b3de: "unterminated or too-large string",
-  "undefined character scanned"); one after it (0x41215b, CParseNode?). No
-  source of any of it survives: Build 69 replaced it with ltamgr's
-  CLTANode, which `ME_LTAMgr.dsp` links as a stand-in.
+  "undefined character scanned"); one after it (0x41215b..0x41266d,
+  CParseNode). No source of any of it survives: Build 69 replaced it with
+  ltamgr's CLTANode. Written from the image (2026-10-30): cstream.cpp
+  (0x40210d, LTAStreamFrom_istream), ltaBuildTree.cpp (A: a stand-in;
+  BuildParseTree and PrettyPrint were dead-stripped, so it only
+  instantiates the stream code A placed), ltaFindPN.cpp (B), ltalex.cpp,
+  ltaParseNode.cpp; the file names are ours. ltaScene starts at
+  0x41266d.
 - **ltaModel, ltaScene**: the importer, written against the parse nodes
   (Build 69's is against CLTANode); the same commands and messages.
 - **ModelEditDlg** is 2001's main dialog: list views for nodes, pieces and
@@ -191,12 +206,17 @@ What the modules are, where Build 69 doesn't say:
   newgenlod and RenameDlg by name. Not taken: Build 69's is a different
   dialog.
 - **smmempnproc** (0x4260a7) is in, with the `std::map<string,
-  CLTACommand*>` code of its command table; it needs the parser's headers
-  to compile, so it isn't built yet.
+  CLTACommand*>` code of its command table, built on the 2001 reader.
 - **StdAfx** (0x427ad8) is its initializer alone.
-- **(0x428b4c, 0x429636, 0x436849)**: small shared modules between
-  conparse and dtxmgr, geomroutines and model, and after transformmaker;
-  unnamed. bdefs.cpp compiles to nothing that matches.
+- **(0x428b4c, 0x429636, 0x436849)**: 0x428b4c is the final-build LT
+  counter (counter.cpp, between conparse and dtxmgr); 0x429636 is
+  model.cpp's start (_TransformsLtoG, _TransformsGtoL,
+  DefaultLoadChildFn); 0x436849 is unnamed. 0x428866, before conparse, is
+  bdefs.cpp's module, `<xlocale>`'s initializer alone (ModelEdit has its
+  own bdefs.cpp, including `<string>`).
+- **LVEditList (0x415ee9..0x415fc9)**: a CListCtrl that starts label
+  editing on F2, between ltquatbase and ModelEdit by name (ours); CDragList
+  and the main dialog's piece and node lists derive from it.
 - **model_load (0x42fd4d..0x431e78)**: 2001's `.abc` loader (the chunk names
   "Header", "Pieces", "Nodes", "ChildModels", "Animation", "Sockets",
   "AnimBindings"; "Model file is incorrect version"); Build 69's tools
@@ -363,10 +383,9 @@ the weight set per frame locator). The resource ids are 2001's own (dialog
 project's ModelEdit.rc is the image's, numbered, and resource.h is still
 Build 69's.
 
-The "Build 69 only" group of ModelEdit.dsp holds what is linked only
-because Build 69's ModelEditDlg and CRenderWnd call it: DirDialog,
-EditOBBDlg, ExportD3D_Dlg, ImportLODDlg, ImportStringKeysDlg,
-InvalidAnimDimsDlg, ltaSave, ltwintreeitem, ltwintreeitemiter,
-ltwintreemgr, PieceLODGen, PieceLODGenDlg, PieceMaterialDlg, SetFOVDlg,
-and debug, estring and exportsys (called by nothing). With ME_LTAMgr they
-are most of the 489 unplaced functions.
+Build 69's later code that its ModelEditDlg and CRenderWnd called
+(DirDialog, EditOBBDlg, ExportD3D_Dlg, ImportLODDlg, ImportStringKeysDlg,
+InvalidAnimDimsDlg, ltaSave, the ltwintree classes, PieceLODGen,
+PieceLODGenDlg, PieceMaterialDlg, PieceMerge, SetFOVDlg; debug, estring
+and exportsys, called by nothing) left the project once those were
+brought back to 2001 (2026-10-30), and with them Build 69's LTA library.
