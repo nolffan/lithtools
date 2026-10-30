@@ -2,10 +2,10 @@
 #define __PROCESSOROPTIONS_DECL_H__
 
 // talon: the "Processing Options" dialog (resource dialog 130), from the
-// shipped Processor.exe (AvP2 v1.0). The class, member and control names
-// are ours; the dialog's title and its controls' captions are the
-// resource's. The app (0x42f900) makes one on its stack, points m_pGlobs
-// at the processor's globals (0x42fba3) and runs DoModal.
+// shipped Processor.exe (NOLF Tools 001). The class, member and control
+// names are ours; the dialog's title and its controls' captions are the
+// resource's. The app makes one on its stack, points m_pGlobs at the
+// processor's globals and runs DoModal.
 
 // The controls (dialog 130's IDs; the names are ours, from the captions).
 #define IDD_PROCESSINGOPTIONS			130
@@ -25,18 +25,14 @@
 #define IDC_PO_LAMBERTIAN				1027	// "Lambertian Lightmaps"
 #define IDC_PO_REPLACETEXTURES			1029	// "Replace Textures"
 #define IDC_PO_TEXTUREFLAGS				1030	// "Import Texture Flags"
-#define IDC_PO_SLIDERREF				1031	// the static after "Slider Reference:"
-#define IDC_PO_SLIDERLEFT				1032	// "<"
-#define IDC_PO_AIVOLUMES				1033	// "Import AI and Music Vol."
-#define IDC_PO_SLIDERRIGHT				1034	// ">"
 
 // The string table's 104: "Processing Options for %1!s!.ed".
 #define IDS_PO_TITLE					104
 
 class CProcessorGlobs;
 
-// 0x7b8 bytes: CDialog's 0x5c, then ours. The constructor (0x442e30)
-// builds the controls in this order; DoDataExchange (0x443090) ties them
+// 0x77c bytes: CDialog's 0x5c, then ours. The constructor (0x452820)
+// builds the controls in this order; DoDataExchange (0x453520) ties them
 // to their IDs.
 class CProcessingOptionsDlg : public CDialog
 {
@@ -46,33 +42,22 @@ public:
 	enum { IDD = IDD_PROCESSINGOPTIONS };
 
 	// The helpers (the names are ours).
-	void				UpdateControls();								// 0x443260
-	void				SetArgs(char *pCmdLine);						// 0x443880
-	void				SaveControls();									// 0x443980
-	void				InitSlider();									// 0x443b60
-	void				BuildCommandLine(CString &cmdLine, CString &extra);	// 0x443c60
+	void				UpdateControls();								// 0x452b10
+	void				SetArgs(char *pCmdLine);						// 0x452d60
+	void				BuildCommandLine(CString &cmdLine, CString &extra);	// 0x452de0
+	void				SaveControls();									// 0x453010
+	void				InitControls();									// 0x453260
 
-	virtual void		DoDataExchange(CDataExchange* pDX);				// 0x443090
-	virtual LRESULT		WindowProc(UINT message, WPARAM wParam, LPARAM lParam);	// 0x4431e0
-	virtual BOOL		OnInitDialog();									// 0x443e60
-	virtual void		OnOK();											// 0x444470
+	virtual void		DoDataExchange(CDataExchange* pDX);				// 0x453520
+	virtual BOOL		OnInitDialog();									// 0x453670
+	virtual void		OnOK();											// 0x453a20
 
-	afx_msg void		OnReplaceTextures();							// 0x4440c0
-	afx_msg void		OnImportGeometry();								// 0x4440f0
-	afx_msg void		OnTextureFlags();								// 0x444120
-	afx_msg void		OnIgnoreHidden();								// 0x444150
-	afx_msg void		OnFixTJunc();									// 0x444180
-	afx_msg void		OnLight();										// 0x4441b0
-	afx_msg void		OnLightAnims();									// 0x4441e0
-	afx_msg void		OnShadows();									// 0x444210
-	afx_msg void		OnVerticesOnly();								// 0x444240
-	afx_msg void		OnLambertian();									// 0x444270
-	afx_msg void		OnOptimize();									// 0x4442a0
-	afx_msg void		OnFast();										// 0x4442d0
-	afx_msg void		OnSliderLeft();									// 0x444330
-	afx_msg void		OnSliderRight();								// 0x4443d0
-	afx_msg void		OnLButtonUp(UINT nFlags, CPoint point);			// 0x4445d0
-	afx_msg void		OnPaint();										// 0x4445e0
+	afx_msg void		OnPaint();										// 0x453c30
+	afx_msg void		OnReplaceTextures();							// 0x453cb0
+	afx_msg void		OnLButtonUp(UINT nFlags, CPoint point);			// 0x453d00
+	afx_msg void		OnOptimize();									// 0x453d20
+	afx_msg void		OnLight();										// 0x453d70
+	afx_msg void		OnImportGeometry();								// 0x453dc0
 	DECLARE_MESSAGE_MAP()
 
 public:

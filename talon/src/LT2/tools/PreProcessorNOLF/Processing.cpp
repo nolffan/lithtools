@@ -84,10 +84,6 @@ uint32 DoRaySelect(CPreMainWorld *pMainWorld, CEditRegion *pRegion);
 // the name is ours).
 void CheckRegion(CEditRegion *pRegion);
 
-// Copies the region's objects (without the hidden ones, with
-// bIgnoreHidden) into objects (0x40f2e0).
-void CopyRegionObjects(CMoArray<CBaseEditObj*> &regionObjects, CMoArray<CBaseEditObj*> &objects, BOOL bIgnoreHidden);
-
 // ReplaceTextures (0x445700).
 int ReplaceTextures(CEditRegion *pRegion, CPreMainWorld *pWorld);
 
@@ -832,6 +828,8 @@ BOOL AddWorldModels(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels
 
 void GetWorldStats(CPreMainWorld *pMainWorld);
 
+BOOL SaveDATFile(CPreMainWorld *pMainWorld);
+
 BOOL ImportGeometry(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels, CPreMainWorld *pMainWorld)
 {
 	uint32			i, nSelected;
@@ -841,6 +839,13 @@ BOOL ImportGeometry(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels
 	if(worldModels.GetSize() == 0)
 	{
 		DrawStatusText("Must have at least one brush!");
+		return FALSE;
+	}
+
+	// talon: NOLF's has the objects from the DAT file (DoProcessing, 0x44f67f).
+	if(g_InputRegion->m_Objects.GetSize() != pMainWorld->m_Objects.GetSize())
+	{
+		DrawStatusText("ERROR: world object counts don't match!");
 		return FALSE;
 	}
 
@@ -910,6 +915,10 @@ BOOL ImportGeometry(CEditRegion *pRegion, CMoArray<CWorldModelDef*> &worldModels
 	if(g_bMinimizeTCoords)
 		pMainWorld->MinimizeSurfaceTCoords();
 
+	// talon: NOLF's saves the DAT file here as well (0x44f9f3).
+	if(!SaveDATFile(pMainWorld))
+		return FALSE;
+
 	GetWorldStats(pMainWorld);
 	g_pGlobs->m_bMakingWorldModel = FALSE;
 	return TRUE;
@@ -976,8 +985,8 @@ void OpenLogFile();
 void CloseLogFile();
 BOOL LoadEDFile();
 void RemoveDetailBrushes(CEditRegion *pRegion);
-BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded, BOOL bLoadObjects);
-BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly);
+BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded);
+BOOL SaveDATFile(CPreMainWorld *pMainWorld);
 void ShowStatusText(DWORD startTime, DWORD endTime);
 BOOL SavePortalFile(CPreMainWorld *pMainWorld, const char *pFilename);
 void WriteVisibleLeaves(CPreLeafList *pList, uint32 *pBit, CNode *pNode, FILE *fp);
@@ -1015,53 +1024,64 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 	DrawStatusText("Using %d threads.", g_pGlobs->m_nThreads);
 	DrawStatusText("Max detail level: %d.", g_pGlobs->m_MaxDetail);
 
+	g_InputRegion->m_pStringHolder = &g_StringHolder;
+	bLoaded = FALSE;
+
 	try
 	{
 		try
 		{
-			g_InputRegion->m_pStringHolder = &g_StringHolder;
-			bLoaded = FALSE;
-
+			// talon: NOLF's loads in stages (0x44fe90): the ED file's
+			// objects and the DAT file's world first, then, for each stage
+			// asked for, what it needs. bLoaded says the DAT file is loaded
+			// (or not needed: the ED file's objects are in).
 			DrawStatusText("Getting objects from ED file.");
-			if(!LoadEDFile())
-				goto Done;
-
-			if(g_pGlobs->m_bRemoveProblemObjects)
+			if(LoadEDFile())
 			{
-				DrawStatusText("");
-				DrawStatusText("---------------");
-				DrawStatusText("Removing problem objects");
-				DrawStatusText("---------------");
-				SaveEDFile();
-				goto Done;
-			}
-
-			if(g_pGlobs->m_bBsp || g_pGlobs->m_bReplaceTextures ||
-				g_pGlobs->m_bLight || g_pGlobs->m_bOptimize)
-			{
-				DrawStatusText("Loading DAT file.");
-				if(!LoadDATFile(&mainWorld, g_pGlobs->m_bBsp, &bLoaded, FALSE) && !g_pGlobs->m_bBsp)
+				if(g_pGlobs->m_bRemoveProblemObjects)
+				{
+					DrawStatusText("");
+					DrawStatusText("---------------");
+					DrawStatusText("Removing problem objects");
+					DrawStatusText("---------------");
+					SaveEDFile();
 					goto Done;
-			}
+				}
 
-			mainWorld.m_pInfoString = mainWorld.m_StringHolder.AddString(g_InputRegion->m_pInfoString, TRUE);
-			CopyRegionObjects(g_InputRegion->m_Objects, mainWorld.m_Objects, g_pGlobs->m_bIgnoreHidden);
+				if(!LoadDATFile(&mainWorld, TRUE, &bLoaded))
+					mainWorld.Term();
 
-			if(pGlobs->m_bReplaceTextures)
-			{
-				DrawStatusText("Replacing textures...");
-				DrawStatusText("Replaced %d textures", ReplaceTextures((CEditRegion*)g_InputRegion, &mainWorld));
+				CopyRegionObjects(g_InputRegion->m_Objects, mainWorld.m_Objects);
+				mainWorld.m_pInfoString = mainWorld.m_StringHolder.AddString(g_InputRegion->m_pInfoString, TRUE);
 
-				if(pGlobs->m_bTextureFlags)
-					GetTextureFlags(&mainWorld);
+				if(pGlobs->m_bReplaceTextures)
+				{
+					DrawStatusText("Replacing textures...");
+					DrawStatusText("Replaced %d textures", ReplaceTextures((CEditRegion*)g_InputRegion, &mainWorld));
 
-				goto SaveIt;
+					if(pGlobs->m_bTextureFlags)
+						GetTextureFlags(&mainWorld);
+
+					goto SaveIt;
+				}
+
+				bLoaded = TRUE;
 			}
 
 			if(g_pGlobs->m_bBsp)
 			{
 				DrawStatusText("");
 				DrawStatusText("-------------------");
+				DrawStatusText("Loading ED file for BSP.");
+				if(!LoadEDFile())
+					goto Done;
+
+				DrawStatusText("Getting objects from the DAT file.");
+				if(!bLoaded)
+				{
+					if(!LoadDATFile(&mainWorld, TRUE, &bLoaded))
+						goto Done;
+				}
 
 				mainWorld.TermGeometry();
 				g_pGlobs->m_MaxLMSize = GetMaxLMSize(mainWorld.m_pInfoString);
@@ -1072,14 +1092,19 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 				FindWorldModels((CEditRegion*)g_InputRegion, worldModels);
 				if(!ImportGeometry((CEditRegion*)g_InputRegion, worldModels, &mainWorld))
 					goto Done;
-
-				bLoaded = TRUE;
 			}
 
 			if(g_pGlobs->m_bLight)
 			{
 				DrawStatusText("");
 				DrawStatusText("-------------------");
+				DrawStatusText("Loading DAT file for lighting.");
+				if(!bLoaded)
+				{
+					if(!LoadDATFile(&mainWorld, TRUE, &bLoaded))
+						goto Done;
+				}
+
 				DrawStatusText("Lighting world");
 
 				StartProgressStage(1);
@@ -1092,6 +1117,13 @@ void DoProcessing(CProcessorGlobs *pGlobs)
 			{
 				DrawStatusText("");
 				DrawStatusText("-------------------");
+				DrawStatusText("Loading DAT file for PVS generator.");
+				if(!bLoaded)
+				{
+					if(!LoadDATFile(&mainWorld, TRUE, &bLoaded))
+						goto Done;
+				}
+
 				DrawStatusText("Making PVS.");
 				if(!MakeWorldPVS(&mainWorld))
 					goto Done;
@@ -1106,8 +1138,7 @@ SaveIt:
 				SavePortalFile(&mainWorld, g_pGlobs->m_PortalFile);
 			}
 
-			DrawStatusText("Saving DAT file.");
-			if(!SaveDATFile(&mainWorld, !bLoaded))
+			if(!SaveDATFile(&mainWorld))
 				goto Done;
 
 			GetWorldStats(&mainWorld);
@@ -1261,7 +1292,7 @@ void RemoveDetailBrushes(CEditRegion *pRegion)
 
 
 // Loads the DAT file (0x441470). *pbLoaded tells if it could.
-BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded, BOOL bLoadObjects)
+BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded)
 {
 	CMoFileIO	file;
 	uint32		status;
@@ -1277,7 +1308,7 @@ BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded, BOOL bLo
 		return FALSE;
 	}
 
-	status = pMainWorld->LoadFile(file, bLoadObjects);
+	status = pMainWorld->LoadFile(file);
 	if(status != 0)
 	{
 		file.Close();
@@ -1297,102 +1328,41 @@ BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded, BOOL bLo
 
 // Saves the DAT file through a temporary file (0x4415a0). With
 // bObjectsOnly, only the objects in the old DAT file are replaced.
-BOOL SaveDATFile(CPreMainWorld *pMainWorld, BOOL bObjectsOnly)
+// talon: NOLF's writes the DAT file in place (0x44de20): no temporary
+// file and rename, no objects-only save.
+//
+// RETAIL BUG: answering No to "Try again?" returns TRUE (0x44de92), so
+// DoProcessing goes on as if the file had been written.
+BOOL SaveDATFile(CPreMainWorld *pMainWorld)
 {
 	CMoFileIO	outFile;
-	char		tempFileName[200];
-	char		msg[512];
-	uint32		len, response;
+	uint32		response;
 	BOOL		bRet;
 
-	strncpy(tempFileName, g_pGlobs->m_OutputFile, 200);
-	tempFileName[199] = 0;
-
-	len = strlen(tempFileName);
-	if((int)len < 3)
-		len = 5;
-	strcpy(&tempFileName[len-4], ".tmp");
-
-	// talon: while(TRUE), not for(;;): the loop is not rotated, the retry
-	// jumps back to the Open (0x44166a).
 	while(TRUE)
 	{
-		if(outFile.Open(tempFileName, "wb"))
+		if(outFile.Open(g_pGlobs->m_OutputFile, "wb"))
 		{
-			if(!bObjectsOnly)
-			{
-				bRet = pMainWorld->SaveFile(outFile);
-			}
-			else
-			{
-				CMoFileIO inFile;
-
-				if(!inFile.Open(g_pGlobs->m_OutputFile, "rb"))
-				{
-					bRet = FALSE;
-					goto Done;
-				}
-
-				bRet = pMainWorld->SaveObjectsOnly(outFile, inFile);
-			}
-
+			bRet = pMainWorld->SaveFile(outFile);
 			if(!bRet)
 				DrawStatusText("ERROR IN CPreWorld::SaveFile!");
-			break;
+
+			return bRet;
 		}
 
 		response = AskQuestion("Error opening output file.  Try again?", QUES_YES|QUES_NO|QUES_CANCEL);
 		if(response == QUES_CANCEL)
-		{
-			bRet = FALSE;
-			break;
-		}
+			return FALSE;
 		else if(response == QUES_NO)
-		{
-			// RETAIL BUG: bRet is not set on this path (0x44170d loads its
-			// stack slot, never written), so whether the rename below is
-			// tried and what the caller is told is whatever was there.
-			break;
-		}
+			return TRUE;
 	}
-
-Done:
-	outFile.Close();
-
-	if(bRet)
-	{
-		do
-		{
-			if(remove(g_pGlobs->m_OutputFile) != 0)
-			{
-				_snprintf(msg, sizeof(msg), "Could not remove \"%s\", %s.",
-					g_pGlobs->m_OutputFile, _sys_errlist[errno]);
-				msg[sizeof(msg)-1] = 0;
-			}
-
-			if(rename(tempFileName, g_pGlobs->m_OutputFile) == 0)
-				break;
-
-			// RETAIL BUG: msg is only set if the remove failed, so a failed
-			// rename after a good remove prints the stack's garbage first;
-			// and each retry puts the last message in front of the new one
-			// (msg is formatted into itself, 0x4417c5).
-			_snprintf(msg, sizeof(msg), "%s\nCould not rename \"%s\" to \"%s\", %s.\nTry again?\n(If you answer no, output file left as \"%s\".)",
-				msg, tempFileName, g_pGlobs->m_OutputFile, _sys_errlist[errno], tempFileName);
-			msg[sizeof(msg)-1] = 0;
-
-			response = AskQuestion(msg, QUES_YES|QUES_NO);
-			DrawStatusText("%s  %s", msg, (response == QUES_NO) ? "No." : "Yes.");
-		}
-		while(response != QUES_NO);
-	}
-
-	return bRet;
 }
 
 
 void ShowStatusText(DWORD startTime, DWORD endTime)
 {
+	uint32 k = 1024;
+
 	DrawStatusText("Done in %.2f minutes", ((endTime - startTime) / 1000.0f) / 60.0f);
 	
 	DrawStatusText("");
@@ -1422,7 +1392,7 @@ void ShowStatusText(DWORD startTime, DWORD endTime)
 	DrawStatusText("");
 
 	DrawStatusText("Light table size (from LightTableRes): %dM %dk",
-		g_pGlobs->m_LightTableSize >> 20, ((g_pGlobs->m_LightTableSize & 0xFFFFF) + 512) >> 10);
+		g_pGlobs->m_LightTableSize / (k*k), ((g_pGlobs->m_LightTableSize % (k*k)) + 512) / k);
 
 	DrawStatusText("");
 }
