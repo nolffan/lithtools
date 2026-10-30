@@ -142,6 +142,13 @@
 
 	inline void sb_Free(StructBank *pBank, void *pObj)
 	{
+		// talon: the NOLF processor's copies (0x4321d0) test pObj alone
+		if (!pObj)
+		{
+			ASSERT(FALSE);
+			return;
+		}
+
 		StructLink *pLink = (StructLink*)pObj;
 
 		#ifdef _DEBUG
