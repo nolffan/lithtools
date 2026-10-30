@@ -1,0 +1,385 @@
+
+#include "bdefs.h"
+#include "dtxmgr.h"
+
+
+uint32 g_ValidTextureSizes[] = { 1024, 512, 256, 128, 64, 32, 16, 8 };
+
+
+// --------------------------------------------------------------------------------- //
+// TextureMipData.
+// --------------------------------------------------------------------------------- //
+
+TextureMipData::TextureMipData()
+{
+	m_Width = 0;
+	m_Height = 0;
+	m_Pitch = 0;
+	m_Data = LTNULL;
+	m_pPlane2 = LTNULL;
+	m_Plane2Pitch = 0;
+}
+
+
+// --------------------------------------------------------------------------------- //
+// TextureData functions.
+// --------------------------------------------------------------------------------- //
+
+TextureData::TextureData()
+{
+	m_pDataBuffer = LTNULL;
+}
+
+
+TextureData::~TextureData()
+{
+	uint32 i;
+	DtxSection *pCur, *pNext;
+
+	if(m_Header.m_IFlags & DTX_MIPSALLOCED)
+	{
+		for(i=0; i < m_Header.m_nMipmaps; i++)
+		{
+			if(m_Mips[i].m_Data)
+				dfree(m_Mips[i].m_Data);
+		}
+	}
+
+	if(m_pDataBuffer)
+		delete m_pDataBuffer;
+
+	// Free the sections;
+	pCur = m_pSections;
+	while(pCur)
+	{
+		pNext = pCur->m_pNext;
+		dfree(pCur);
+		pCur = pNext;
+	}
+}
+
+
+void TextureData::SetupPFormat(PFormat *pFormat)
+{
+	dtx_SetupDTXFormat2(m_Header.GetBPPIdent(), pFormat);
+}
+
+
+// --------------------------------------------------------------------------------- //
+// dtx_ functions.
+// --------------------------------------------------------------------------------- //
+
+// Based on the value of bSkip, it either memset()s the memory to 0 or reads it from the file.
+static void dtx_ReadOrSkip(
+	LTBOOL bSkip,
+	ILTStream *pStream,
+	void *pData,
+	uint32 dataLen)
+{
+	if(bSkip)
+	{
+		memset(pData, 0, dataLen);
+		pStream->SeekTo(pStream->GetPos() + dataLen);
+	}
+	else
+	{
+		pStream->Read(pData, dataLen);
+	}
+}
+
+
+uint32 dtx_NumValidTextureSizes()
+{
+	return sizeof(g_ValidTextureSizes) / sizeof(g_ValidTextureSizes[0]);
+}
+
+
+LTBOOL dtx_IsTextureSizeValid(uint32 size)
+{
+	uint32 i, nSizes;
+
+	nSizes = dtx_NumValidTextureSizes();
+	for(i=0; i < nSizes; i++)
+	{
+		if(size == g_ValidTextureSizes[i])
+			return LTTRUE;
+	}
+
+	return LTFALSE;
+}
+
+
+// talon: the 2001 one (0x40d100): Build 69's with a seventh argument: when it is set, each mip
+// gets a second plane of one byte a pixel after its pixels (its pointer and
+// pitch at 0x10 and 0x14). dtx_Create passes 0 (0x40d3a3). The stores are
+// in nolfsrc's order for the engine's copy (m_AllocSize after m_pSections),
+// and the second loop's pitch is an if-chain.
+TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32 nMipmaps,
+	uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2)
+{
+	TextureData *pRet;
+	TextureMipData *pMip;
+	uint32 i, size, width, height;
+	uint32 textureDataSize;
+	uint8 *pOutData;
+
+	width = baseWidth;
+	height = baseHeight;
+	textureDataSize = 0;
+	for(i=0; i < nMipmaps; i++)
+	{
+		size = CalcImageSize(bpp, width, height);
+		if(bPlane2)
+			size += width * height;
+		textureDataSize += size;
+
+		width >>= 1;
+		height >>= 1;
+	}
+
+	pRet = new TextureData;
+	if(!pRet)
+		return LTNULL;
+
+	pRet->m_pDataBuffer = new uint8[textureDataSize];
+	if(!pRet->m_pDataBuffer)
+	{
+		delete pRet;
+		return LTNULL;
+	}
+
+	pRet->m_ResHeader.m_Type = LT_RESTYPE_DTX;
+	pRet->m_Header.m_ResType = LT_RESTYPE_DTX;
+	pRet->m_Header.m_IFlags = DTX_SECTIONSFIXED;
+	pRet->m_Header.m_UserFlags = 0;
+	pRet->m_Header.m_nMipmaps = (uint16)nMipmaps;
+	pRet->m_Header.m_BaseWidth = (uint16)baseWidth;
+	pRet->m_Header.m_BaseHeight = (uint16)baseHeight;
+	pRet->m_Header.m_Version = CURRENT_DTX_VERSION;
+	pRet->m_Header.m_CommandString[0] = 0;
+	pRet->m_Link.m_pData = pRet;
+	pRet->m_pSections = LTNULL;
+	pRet->m_AllocSize = sizeof(TextureData) + textureDataSize;
+	pRet->m_Header.m_nSections = 0;
+	pRet->m_Header.m_ExtraLong[2] = 0;
+	pRet->m_Header.m_ExtraLong[1] = 0;
+	pRet->m_Header.m_ExtraLong[0] = 0;
+	pRet->m_Header.SetBPPIdent(bpp);
+	pRet->m_pSharedTexture = LTNULL;
+	pRet->m_Unknown_c4 = 0;
+
+	// Setup the mipmap structures.
+	width = baseWidth;
+	height = baseHeight;
+	pOutData = pRet->m_pDataBuffer;
+	for(i=0; i < nMipmaps; i++)
+	{
+		pMip = &pRet->m_Mips[i];
+
+		pMip->m_Width = width;
+		pMip->m_Height = height;
+		pMip->m_Data = pOutData;
+
+		if(bpp == BPP_32)
+			pMip->m_Pitch = (int32)width * sizeof(uint32);
+		else if(bpp == BPP_32P)
+			pMip->m_Pitch = width;
+		else
+			pMip->m_Pitch = 0;
+
+		pOutData += CalcImageSize(bpp, width, height);
+
+		if(bPlane2)
+		{
+			pMip->m_pPlane2 = pOutData;
+			pMip->m_Plane2Pitch = width;
+			pOutData += width * height;
+		}
+
+		width >>= 1;
+		height >>= 1;
+	}
+
+	if(pAllocSize) *pAllocSize = pRet->m_AllocSize;
+	if(pTextureDataSize) *pTextureDataSize = textureDataSize;
+
+	return pRet;
+}
+
+
+// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection, dtx_SetupDTXFormat or
+// dtx_BuildMipmaps (dtxmgr.h).
+
+void
+dtx_RevRGBOrder (uint32 *pData, uint32 nElems) {
+	uint32 hold;
+	for (uint32 i=0; i<nElems; i++, pData++) {
+		hold    = ((*pData>>24) & 0xFF)<<24; 		// ALPHA
+		hold   |= (((*pData>>16) & 0xFF));		// RED
+		hold   |= (((*pData>>8)  & 0xFF))<<8;	// GREEN
+		hold   |= (((*pData)     & 0xFF))<<16;	// BLUE
+		/*
+		hold    = ((*pData>>24) & 0xFF)<<24; 		// ALPHA
+		hold   |= (((*pData>>16) & 0xFF)>>1);		// RED
+		hold   |= (((*pData>>8)  & 0xFF)>>1)<<8;	// GREEN
+		hold   |= (((*pData)     & 0xFF)>>1)<<16;	// BLUE
+		*/
+		*pData = hold;
+	}
+}
+
+
+// talon: the 2001 one, 0x40d2d0..0x40d5e2 (786 bytes: the function table's 0x40d417 row is its
+// own tail, the target of the allocation test's jne at 0x40d3d6, not a
+// function). Build 69's, with the 2001 mip records and dtx_Alloc's seventh
+// argument; m_pSharedTexture is cleared before the header is copied.
+LTRESULT dtx_Create(ILTStream *pStream,
+	TextureData **ppOut,
+	LTBOOL bLoadSections,
+	LTBOOL bSkipImageData)
+{
+	DtxHeader hdr;
+	TextureData *pRet;
+	uint32 i, allocSize, textureDataSize;
+	SectionHeader sectionHeader;
+	DtxSection *pSection;
+	uint32 iMipmap;
+	TextureMipData *pMip;
+	uint32 y, size;
+
+
+
+	STREAM_READ(hdr);
+	if(hdr.m_ResType != LT_RESTYPE_DTX)
+		RETURN_ERROR(1, dtx_Create, LT_INVALIDDATA);
+
+	// Correct version and valid data?
+	if(hdr.m_Version != CURRENT_DTX_VERSION)
+		RETURN_ERROR(1, dtx_Create, LT_INVALIDVERSION);
+
+	// talon: retail bug (0x40d380): up to 15 mipmaps pass, but a texture has
+	// eight mip records (MAX_DTX_MIPMAPS), so a header with 9..15 makes
+	// dtx_Alloc and the reads below write past the 0x18c-byte TextureData.
+	if(hdr.m_nMipmaps == 0 || hdr.m_nMipmaps > 15)
+		RETURN_ERROR(1, dtx_Create, LT_INVALIDDATA);
+
+	// Allocate it.
+	pRet = dtx_Alloc(hdr.GetBPPIdent(), hdr.m_BaseWidth, hdr.m_BaseHeight, hdr.m_nMipmaps,
+		&allocSize, &textureDataSize, LTFALSE);
+
+	if(!pRet)
+		RETURN_ERROR(1, dtx_Create, LT_OUTOFMEMORY);
+
+	pRet->m_pSharedTexture = LTNULL;
+	memcpy(&pRet->m_Header, &hdr, sizeof(DtxHeader));
+
+	// Read in mipmap data.
+	for(iMipmap=0; iMipmap < hdr.m_nMipmaps; iMipmap++)
+	{
+		pMip = &pRet->m_Mips[iMipmap];
+
+		if(hdr.GetBPPIdent() == BPP_32)
+		{
+			for(y=0; y < pMip->m_Height; y++)
+			{
+				// Read the line.
+				dtx_ReadOrSkip(
+					bSkipImageData,
+					pStream,
+					&pMip->m_Data[y*pMip->m_Pitch],
+					pMip->m_Width * sizeof(uint32));
+			}
+		}
+		else
+		{
+			size = CalcImageSize(hdr.GetBPPIdent(), pMip->m_Width, pMip->m_Height);
+			dtx_ReadOrSkip(
+				bSkipImageData,
+				pStream,
+				pMip->m_Data,
+				size);
+		}
+	}
+
+	// Read in the sections?
+	if(hdr.m_IFlags & DTX_SECTIONSFIXED)
+	{
+		if(bLoadSections)
+		{
+			for(i=0; i < hdr.m_nSections; i++)
+			{
+				STREAM_READ(sectionHeader);
+				pSection = (DtxSection*)dalloc((unsigned long)((sizeof(DtxSection)-1) + sectionHeader.m_DataLen));
+				memcpy(&pSection->m_Header, &sectionHeader, sizeof(pSection->m_Header));
+				pStream->Read(pSection->m_Data, sectionHeader.m_DataLen);
+				pSection->m_pNext = pRet->m_pSections;
+				pRet->m_pSections = pSection;
+			}
+		}
+	}
+	else
+	{
+		// Fix it...
+		pRet->m_Header.m_IFlags |= DTX_SECTIONSFIXED;
+		pRet->m_Header.m_nSections = 0;
+	}
+
+	// Check the error status.
+	if(pStream->ErrorStatus() != LT_OK)
+	{
+		dtx_Destroy(pRet);
+		RETURN_ERROR(1, dtx_Create, LT_INVALIDDATA);
+	}
+
+	*ppOut = pRet;
+
+	return LT_OK;
+}
+
+
+void dtx_Destroy(TextureData *pData)
+{
+	if(pData)
+	{
+		delete pData;
+	}
+}
+
+
+
+DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType)
+{
+	DtxSection *pCur;
+
+	for(pCur=pData->m_pSections; pCur; pCur=pCur->m_pNext)
+	{
+		if(strcmp(pCur->m_Header.m_Type, pSectionType) == 0)
+		{
+			return pCur;
+		}
+	}
+
+	return LTNULL;
+}
+
+
+
+
+
+
+void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat)
+{
+	if(bpp == BPP_32)
+	{
+		pFormat->InitPValueFormat();
+	}
+	else
+	{
+		pFormat->Init(bpp, 0, 0, 0, 0);
+	}
+}
+
+
+
+
+
