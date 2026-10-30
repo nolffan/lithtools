@@ -28,7 +28,7 @@ they are re-implemented.
 
 | Binary | | Byte-identical functions | Byte-identical code | | Unwritten | Unplaced |
 |---|---|--:|--:|---|--:|--:|
-| `DEdit.exe` | world editor (Talon, Update 1/2) | 2,499 / 4,471 | 223,686 / 578,068 bytes | `███████░░░░░░░░░░░░░` 38.6% | 115 | 1,194 |
+| `DEdit.exe` | world editor (Talon, Update 1/2) | 3,855 / 4,402 | 462,911 / 577,837 bytes | `████████████████░░░░` 80.1% | 58 | 64 |
 | `ModelEdit.exe` | model editor (Talon, Update 1/2) | 1,664 / 1,891 | 189,480 / 222,641 bytes | `█████████████████░░░` 85.1% | 8 | 94 |
 | `Processor.exe (AvP2)` | world processor, AvP2 (v1.0) | 1,396 / 1,504 | 267,337 / 339,492 bytes | `███████████████░░░░░` 78.7% | 3 | 2 |
 | `Processor.exe (NOLF)` | world processor, NOLF (Tools 001) | 1,297 / 2,587 | 176,270 / 414,841 bytes | `████████░░░░░░░░░░░░` 42.4% | 459 | 61 |
@@ -52,7 +52,7 @@ they are re-implemented.
 | `MayaModelExport40.mll` | Maya model exporter for Maya 4 (Update 2) | 264 / 401 | 48,151 / 49,702 bytes | `███████████████████░` 96.8% | 0 | 2 |
 | `MayaWorldExport30.mll` | Maya world exporter for Maya 3 (Update 2) | 501 / 707 | 113,215 / 115,652 bytes | `███████████████████░` 97.8% | 0 | 2 |
 | `MayaWorldExport40.mll` | Maya world exporter for Maya 4 (Update 2) | 501 / 707 | 113,215 / 115,652 bytes | `███████████████████░` 97.8% | 0 | 2 |
-| **All** | | **10,904 / 24,026** | **1,542,376 / 3,119,214 bytes** | `█████████░░░░░░░░░░░` **49.4%** | **8,236** | **1,367** |
+| **All** | | **12,260 / 23,957** | **1,781,601 / 3,118,983 bytes** | `███████████░░░░░░░░░` **57.1%** | **8,179** | **237** |
 <!-- progress:end -->
 
 A function is *identical* when our object's code is the shipped code byte
