@@ -1238,7 +1238,7 @@ static bool RecurseAndSynchronize(CRegionDoc *pDoc, CEditRegion *pRegion, CWorld
 				DEditInternal* pDEditInternal = pVar->m_pDEditInternal;
 				if(pDEditInternal && (pVar->m_PropFlags & PF_STATICLIST))
 				{
-					_ASSERT(pProp->m_Type == LT_PT_STRING);
+					_ASSERT(pProp->m_Type == PT_STRING);
 
 					const char* szString = ((CStringProp*)pProp)->m_String;
 					bool bMatch = false;

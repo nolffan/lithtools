@@ -50,7 +50,7 @@ BOOL CRVTrackerCurveEdit::OnStart()
 		for(iTangent=0; iTangent < 2; iTangent++)
 		{
 			propFlags = (iTangent == 0) ? PF_BEZIERPREVTANGENT : PF_BEZIERNEXTTANGENT;
-			pProp = (CVectorProp*)pObj->m_PropList.GetPropByFlagsAndType(propFlags, LT_PT_VECTOR, (unsigned int*)&iCtrlProp);
+			pProp = (CVectorProp*)pObj->m_PropList.GetPropByFlagsAndType(propFlags, PT_VECTOR, (unsigned int*)&iCtrlProp);
 			if(!pProp)
 				continue;
 
@@ -103,7 +103,7 @@ BOOL CRVTrackerCurveEdit::OnUpdate(const CUIEvent &cEvent)
 		return FALSE;
 
 	pProp = (CVectorProp*)pObj->m_PropList.m_Props[m_iCurProp];
-	if(pProp->m_Type != LT_PT_VECTOR)
+	if(pProp->m_Type != PT_VECTOR)
 		return FALSE;
 
 	if(!m_pView->EditGrid().IntersectRay(4, m_pView->ViewDef()->MakeRayFromScreenPoint(m_cCurPt), newPos))

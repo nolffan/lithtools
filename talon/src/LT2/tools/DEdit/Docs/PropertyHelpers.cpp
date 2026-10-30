@@ -147,7 +147,7 @@ void ReadPropertiesIntoSelections(CRegionDoc *pDoc)
 						// need to be reset so the drawing functions know to reread this prop...
 						if( pNode->GetType( ) == Node_Object )
 						{
-							if (pDestProp->m_Type == LT_PT_STRING || pDestProp->m_Type == LT_PT_VECTOR)
+							if (pDestProp->m_Type == PT_STRING || pDestProp->m_Type == PT_VECTOR)
 							{
 								((CBaseEditObj * )pNode)->SetSearchForDims(TRUE);
 								bRedrawViews=TRUE;
@@ -209,7 +209,7 @@ void ReadPropertyIntoSelections( CRegionDoc *pDoc, CBaseProp *pMainProp )
 					// need to be reset so the drawing functions know to reread this prop...
 					if( pNode->GetType( ) == Node_Object )
 					{
-						if (pDestProp->m_Type == LT_PT_STRING || pDestProp->m_Type == LT_PT_VECTOR)
+						if (pDestProp->m_Type == PT_STRING || pDestProp->m_Type == PT_VECTOR)
 						{
 							((CBaseEditObj * )pNode)->SetSearchForDims(TRUE);						
 							bRedrawViews=TRUE;

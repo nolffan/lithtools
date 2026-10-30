@@ -281,34 +281,34 @@ BOOL CObjectImporter::UpdateObjectProperties(CWorldNode *pObject, CString sButeT
 		// Handle each type differently
 		switch (pProp->GetType())
 		{		
-		case LT_PT_STRING:		// String property
+		case PT_STRING:		// String property
 			{
 				UpdateStringProperty((CStringProp *)pProp, sButeTag);
 				break;
 			}
-		case LT_PT_VECTOR:		// Vector property
+		case PT_VECTOR:		// Vector property
 			{
 				UpdateVectorProperty((CVectorProp *)pProp, sButeTag);
 				break;
 			}
-		case LT_PT_COLOR:		// Color property
+		case PT_COLOR:		// Color property
 			{
 				UpdateColorProperty((CColorProp *)pProp, sButeTag);
 				break;
 			}		
-		case LT_PT_FLAGS:		// Flags property
-		case LT_PT_LONGINT:	// Integer property
-		case LT_PT_REAL:		// Real property
+		case PT_FLAGS:		// Flags property
+		case PT_LONGINT:	// Integer property
+		case PT_REAL:		// Real property
 			{
 				UpdateRealProperty((CRealProp *)pProp, sButeTag);
 				break;
 			}			
-		case LT_PT_BOOL:		// Bool property
+		case PT_BOOL:		// Bool property
 			{
 				UpdateBoolProperty((CBoolProp *)pProp, sButeTag);
 				break;
 			}			
-		case LT_PT_ROTATION:	// Rotation property
+		case PT_ROTATION:	// Rotation property
 			{
 				UpdateRotationProperty((CRotationProp *)pProp, sButeTag);
 				break;

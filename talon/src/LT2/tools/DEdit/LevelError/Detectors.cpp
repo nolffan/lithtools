@@ -8,7 +8,7 @@ static bool GetBoolProp(CPropList* pList, const char* pPropName, bool bDefault =
 
 	CBaseProp* pProp = pList->GetProp(pPropName);
 
-	if((pProp == NULL) || (pProp->GetType() != LT_PT_BOOL))
+	if((pProp == NULL) || (pProp->GetType() != PT_BOOL))
 		return bDefault;
 
 	return ((CBoolProp*)pProp)->m_Value ? true : false;
@@ -23,7 +23,7 @@ static CReal GetRealProp(CPropList* pList, const char* pPropName, CReal fDefault
 	if(pProp == NULL)
 		return fDefault;
 
-	if((pProp->GetType() == LT_PT_REAL) || (pProp->GetType() == LT_PT_LONGINT))
+	if((pProp->GetType() == PT_REAL) || (pProp->GetType() == PT_LONGINT))
 		return ((CRealProp*)pProp)->m_Value;
 
 	//not a valid type
@@ -39,7 +39,7 @@ static LTVector GetVectorProp(CPropList* pList, const char* pPropName, LTVector 
 	if(pProp == NULL)
 		return vDefault;
 
-	if(pProp->GetType() == LT_PT_VECTOR)
+	if(pProp->GetType() == PT_VECTOR)
 		return ((CVectorProp*)pProp)->m_Vector;
 
 	//not a valid type
@@ -64,7 +64,7 @@ static ELightType GetLightingType(CEditBrush* pBrush)
 	if(!pProp)
 		return keDefLightType;
 
-	if(pProp->GetType() != LT_PT_STRING)
+	if(pProp->GetType() != PT_STRING)
 		return keDefLightType;
 
 	const char* pszStr = ((CStringProp*)pProp)->m_String;
@@ -104,7 +104,7 @@ static EBrushType GetBrushType(CEditBrush* pBrush)
 	if(!pProp)
 		return keDefBrushType;
 
-	if(pProp->GetType() != LT_PT_STRING)
+	if(pProp->GetType() != PT_STRING)
 		return keDefBrushType;
 
 	const char* pszStr = ((CStringProp*)pProp)->m_String;

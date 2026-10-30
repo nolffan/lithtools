@@ -116,28 +116,28 @@ static CString	PropToString(CBaseProp* pProp)
 
 	switch(pProp->GetType())
 	{
-	case LT_PT_STRING:
+	case PT_STRING:
 		sRV = ((CStringProp*)pProp)->GetString();
 		break;
-	case LT_PT_LONGINT:
+	case PT_LONGINT:
 		sRV.Format("%d", (int32)(((CRealProp*)pProp)->m_Value));
 		break;
-	case LT_PT_REAL:
+	case PT_REAL:
 		sRV.Format("%.2f", ((CRealProp*)pProp)->m_Value);
 		break;
-	case LT_PT_VECTOR:
+	case PT_VECTOR:
 		sRV.Format("%.2f %.2f %.2f", VEC_EXPAND(((CVectorProp*)pProp)->m_Vector));
 		break;
-	case LT_PT_COLOR:
+	case PT_COLOR:
 		sRV.Format("%.0f %.0f %.0f", VEC_EXPAND(((CVectorProp*)pProp)->m_Vector));
 		break;
-	case LT_PT_ROTATION:
+	case PT_ROTATION:
 		sRV.Format("%.2f %.2f %.2f", VEC_EXPAND(((CRotationProp*)pProp)->GetEulerAngles()));
 		break;
-	case LT_PT_BOOL:
+	case PT_BOOL:
 		sRV = (((CBoolProp*)pProp)->m_Value) ? "True" : "False";
 		break;
-	case LT_PT_FLAGS:
+	case PT_FLAGS:
 		sRV.Format("%d", (int32)(((CRealProp*)pProp)->m_Value));
 		break;
 	default:
@@ -155,28 +155,28 @@ static const char*	PropTypeToString(CBaseProp* pProp)
 
 	switch(pProp->GetType())
 	{
-	case LT_PT_STRING:
+	case PT_STRING:
 		return "String";
 		break;
-	case LT_PT_LONGINT:
+	case PT_LONGINT:
 		return "Integer";
 		break;	
-	case LT_PT_REAL:
+	case PT_REAL:
 		return "Real";
 		break;	
-	case LT_PT_VECTOR:
+	case PT_VECTOR:
 		return "Vector";
 		break;	
-	case LT_PT_COLOR:
+	case PT_COLOR:
 		return "Color";
 		break;	
-	case LT_PT_ROTATION:
+	case PT_ROTATION:
 		return "Rotation";
 		break;	
-	case LT_PT_BOOL:
+	case PT_BOOL:
 		return "Bool";
 		break;	
-	case LT_PT_FLAGS:
+	case PT_FLAGS:
 		return "Flags";
 		break;	
 	default:
@@ -417,7 +417,7 @@ void CObjectSearchDlg::OnButtonSearch()
 bool CObjectSearchDlg::EditProperty(int nIndex, CBaseProp* pProp, SSearchResult* pResult)
 {
 	//see if this property is a string
-	if(pProp->GetType() == LT_PT_STRING)
+	if(pProp->GetType() == PT_STRING)
 	{
 		CStringProp* pStringProp = (CStringProp*)pProp;
 

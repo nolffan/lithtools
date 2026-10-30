@@ -18,7 +18,7 @@ static bool GetRealProp(CWorldNode* pNode, const char* pPropName, CReal& fVal)
 	if(pProp == NULL)
 		return false;
 
-	if((pProp->GetType() == LT_PT_REAL) || (pProp->GetType() == LT_PT_LONGINT))
+	if((pProp->GetType() == PT_REAL) || (pProp->GetType() == PT_LONGINT))
 		fVal = ((CRealProp*)pProp)->m_Value;
 	else
 		return false;
@@ -36,7 +36,7 @@ static bool GetStringProp(CWorldNode* pNode, const char* pPropName, CString& sSt
 	if(pProp == NULL)
 		return false;
 
-	if(pProp->GetType() == LT_PT_STRING)
+	if(pProp->GetType() == PT_STRING)
 		sStr = ((CStringProp*)pProp)->m_String;
 	else
 		return false;

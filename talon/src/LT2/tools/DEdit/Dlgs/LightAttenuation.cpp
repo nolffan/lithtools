@@ -83,25 +83,25 @@ CLightAttenuationDlg::CLightAttenuationDlg( CPropList* m_pPropList, CWnd* pParen
 	if( m_pPropList )
 	{
 		// load the radius of the light
-		if( (baseProp = m_pPropList->GetProp( "LightRadius", true )) && baseProp->GetType() == LT_PT_REAL )
+		if( (baseProp = m_pPropList->GetProp( "LightRadius", true )) && baseProp->GetType() == PT_REAL )
 			m_LightRadius = ((CRealProp*)baseProp)->m_Value;
 
 		// load the inner color of the light
-		if( (baseProp = m_pPropList->GetProp( "LightColor", false )) && baseProp->GetType() == LT_PT_COLOR )
+		if( (baseProp = m_pPropList->GetProp( "LightColor", false )) && baseProp->GetType() == PT_COLOR )
 			m_InnerColor = ((CColorProp*)baseProp)->m_Vector;
-		else if( (baseProp = m_pPropList->GetProp( "InnerColor", true )) && baseProp->GetType() == LT_PT_COLOR )
+		else if( (baseProp = m_pPropList->GetProp( "InnerColor", true )) && baseProp->GetType() == PT_COLOR )
 			m_InnerColor = ((CColorProp*)baseProp)->m_Vector;
 
 		// load the attenuation coefficients
-		if( (baseProp = m_pPropList->GetProp( "AttCoefs", true )) && baseProp->GetType() == LT_PT_VECTOR )
+		if( (baseProp = m_pPropList->GetProp( "AttCoefs", true )) && baseProp->GetType() == PT_VECTOR )
 			m_Coefs = ((CVectorProp*)baseProp)->m_Vector;
 
 		// load the attenuation exponents
-		if( (baseProp = m_pPropList->GetProp( "AttExps", true )) && baseProp->GetType() == LT_PT_VECTOR )
+		if( (baseProp = m_pPropList->GetProp( "AttExps", true )) && baseProp->GetType() == PT_VECTOR )
 			m_Exps = ((CVectorProp*)baseProp)->m_Vector;
 
 		// load the attenuation type
-		if( (baseProp = m_pPropList->GetProp( "AttType", true )) && baseProp->GetType() == LT_PT_STRING )
+		if( (baseProp = m_pPropList->GetProp( "AttType", true )) && baseProp->GetType() == PT_STRING )
 			strcpy( m_Type, ((CStringProp*)baseProp)->m_String );
 	}
 }
@@ -138,21 +138,21 @@ void CLightAttenuationDlg::OnOK( void )
 	if( m_pPropList )
 	{
 		// save the attenuation coefficients
-		if( (baseProp = m_pPropList->GetProp( "AttCoefs", true )) && baseProp->GetType() == LT_PT_VECTOR )
+		if( (baseProp = m_pPropList->GetProp( "AttCoefs", true )) && baseProp->GetType() == PT_VECTOR )
 		{
 			((CVectorProp*)baseProp)->m_Vector = m_Coefs;
 			ReadPropertyIntoSelections( doc, baseProp );
 		}
 
 		// save the attenuation exponents
-		if( (baseProp = m_pPropList->GetProp( "AttExps", true )) && baseProp->GetType() == LT_PT_VECTOR )
+		if( (baseProp = m_pPropList->GetProp( "AttExps", true )) && baseProp->GetType() == PT_VECTOR )
 		{
 			((CVectorProp*)baseProp)->m_Vector = m_Exps;
 			ReadPropertyIntoSelections( doc, baseProp );
 		}
 
 		// save the attenuation type
-		if( (baseProp = m_pPropList->GetProp( "AttType", true )) && baseProp->GetType() == LT_PT_STRING )
+		if( (baseProp = m_pPropList->GetProp( "AttType", true )) && baseProp->GetType() == PT_STRING )
 		{
 			strcpy( ((CStringProp*)baseProp)->m_String, m_Type );
 			ReadPropertyIntoSelections( doc, baseProp );

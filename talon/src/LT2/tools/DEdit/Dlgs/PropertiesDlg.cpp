@@ -345,7 +345,7 @@ void CPropertiesControls::CreateControls()
 		{
 			switch( pProp->m_Type )
 			{
-				case LT_PT_STRING:
+				case PT_STRING:
 				{
 					if ( (pProp->m_PropFlags & PF_STATICLIST) || (pProp->m_PropFlags & PF_DYNAMICLIST) )
 					{
@@ -416,9 +416,9 @@ void CPropertiesControls::CreateControls()
 					break;
 				}
 
-				case LT_PT_REAL:
-				case LT_PT_LONGINT:
-				case LT_PT_FLAGS:
+				case PT_REAL:
+				case PT_LONGINT:
+				case PT_FLAGS:
 				{
 					pEdit = new CEdit;
 					pEdit->Create( ES_AUTOHSCROLL | WS_CHILD | WS_VISIBLE | WS_BORDER | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i );
@@ -429,7 +429,7 @@ void CPropertiesControls::CreateControls()
 					break;
 				}
 
-				case LT_PT_ROTATION:
+				case PT_ROTATION:
 				{
 					pButton = new CButton;
 					pButton->Create( "...", WS_CHILD | WS_VISIBLE | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i );
@@ -438,7 +438,7 @@ void CPropertiesControls::CreateControls()
 					break;
 				}
 
-				case LT_PT_VECTOR:
+				case PT_VECTOR:
 				{
 					pButton = new CVectorButton;
 					pButton->Create( "...", WS_CHILD | WS_VISIBLE | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i );
@@ -447,7 +447,7 @@ void CPropertiesControls::CreateControls()
 					break;
 				}
 
-				case LT_PT_COLOR:
+				case PT_COLOR:
 				{
 					CColorWell *pColor;
 					pColor = new CColorWell;
@@ -457,7 +457,7 @@ void CPropertiesControls::CreateControls()
 					break;
 				}
 
-				case LT_PT_BOOL:
+				case PT_BOOL:
 				{
 					pButton = new CButton;
 					pButton->Create("True", WS_CHILD | WS_VISIBLE | WS_TABSTOP, rect, this, PROPDLG_ID_BASE+i);
@@ -786,7 +786,7 @@ void CPropertiesControls::ReadControlValues()
 
 		switch( pProp->m_Type )
 		{
-			case LT_PT_BOOL:
+			case PT_BOOL:
 			{
 				if(((CBoolProp*)pProp)->m_Value)
 					m_Controls[i]->SetWindowText("True");
@@ -796,7 +796,7 @@ void CPropertiesControls::ReadControlValues()
 				break;
 			}
 
-			case LT_PT_STRING:
+			case PT_STRING:
 			{
 				if (pProp)
 				{
@@ -852,8 +852,8 @@ void CPropertiesControls::ReadControlValues()
 				break;
 			}
 
-			case LT_PT_LONGINT:
-			case LT_PT_FLAGS:
+			case PT_LONGINT:
+			case PT_FLAGS:
 			{
 				// don't update a group button
 				if( !(pProp->m_PropFlags & PF_GROUPOWNER) )
@@ -864,14 +864,14 @@ void CPropertiesControls::ReadControlValues()
 				break;
 			}
 
-			case LT_PT_REAL:
+			case PT_REAL:
 			{
 				sprintf( str, "%.3f", ((CRealProp*)pProp)->m_Value );
 				m_Controls[i]->SetWindowText( str );
 				break;
 			}
 			
-			case LT_PT_VECTOR:
+			case PT_VECTOR:
 			{
 				CVectorButton *pButton;
 				pVec = &((CVectorProp*)pProp)->m_Vector;
@@ -882,7 +882,7 @@ void CPropertiesControls::ReadControlValues()
 				break;
 			}
 
-			case LT_PT_COLOR:
+			case PT_COLOR:
 			{
 				pVec = &((CColorProp*)pProp)->m_Vector;
 				(( CColorWell * )m_Controls[i] )->m_red = (UINT)pVec->x;
@@ -933,7 +933,7 @@ static void PosVectorUpdateCallback(const LTVector& vPos, void* pUser)
 		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
 		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pVecProp->GetName());
 
-		if(pProp && (pProp->GetType() == LT_PT_VECTOR))
+		if(pProp && (pProp->GetType() == PT_VECTOR))
 		{
 			((CVectorProp*)pProp)->SetVector(vPos);
 
@@ -974,7 +974,7 @@ bool CPropertiesControls::HandlePosVectorProp(CVectorProp* pVecProp)
 	{
 		CBaseProp* pProp = pRegion->m_Selections[nCurrSel]->GetPropertyList()->GetProp(pVecProp->GetName());
 
-		if(pProp && (pProp->GetType() == LT_PT_VECTOR))
+		if(pProp && (pProp->GetType() == PT_VECTOR))
 			OldVal[nCurrSel] = ((CVectorProp*)pProp)->m_Vector;
 	}
 
@@ -986,7 +986,7 @@ bool CPropertiesControls::HandlePosVectorProp(CVectorProp* pVecProp)
 		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
 		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pVecProp->GetName());
 
-		if(pProp && (pProp->GetType() == LT_PT_VECTOR))
+		if(pProp && (pProp->GetType() == PT_VECTOR))
 			((CVectorProp*)pProp)->SetVector(OldVal[nCurrSel]);
 
 		//see if the object should search for its dims when it is rendered
@@ -1023,7 +1023,7 @@ static void RotationUpdateCallback(const LTVector& vEuler, void* pUser)
 		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
 		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pRotProp->GetName());
 
-		if(pProp && (pProp->GetType() == LT_PT_ROTATION))
+		if(pProp && (pProp->GetType() == PT_ROTATION))
 		{
 			((CRotationProp*)pProp)->SetEulerAngles(vEuler);
 		}
@@ -1059,7 +1059,7 @@ bool CPropertiesControls::HandleRotationProp(CRotationProp* pRotProp)
 	{
 		CBaseProp* pProp = pRegion->m_Selections[nCurrSel]->GetPropertyList()->GetProp(pRotProp->GetName());
 
-		if(pProp && (pProp->GetType() == LT_PT_ROTATION))
+		if(pProp && (pProp->GetType() == PT_ROTATION))
 			OldVal[nCurrSel] = ((CRotationProp*)pProp)->GetEulerAngles();
 	}
 
@@ -1071,7 +1071,7 @@ bool CPropertiesControls::HandleRotationProp(CRotationProp* pRotProp)
 		CWorldNode* pSel = pRegion->m_Selections[nCurrSel];
 		CBaseProp* pProp = pSel->GetPropertyList()->GetProp(pRotProp->GetName());
 
-		if(pProp && (pProp->GetType() == LT_PT_ROTATION))
+		if(pProp && (pProp->GetType() == PT_ROTATION))
 			((CRotationProp*)pProp)->SetEulerAngles(OldVal[nCurrSel]);
 	}
 
@@ -1203,7 +1203,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 			{
 				switch( pProp->m_Type )
 				{
-					case LT_PT_BOOL:
+					case PT_BOOL:
 					{
 						if(notifyCode == BN_CLICKED)
 						{
@@ -1222,7 +1222,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 						break;
 					}
 					
-					case LT_PT_STRING:
+					case PT_STRING:
 					{
 						if( notifyCode == BN_CLICKED )
 						{
@@ -1388,9 +1388,9 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 						break;
 					}
 
-					case LT_PT_REAL:
-					case LT_PT_LONGINT:
-					case LT_PT_FLAGS:
+					case PT_REAL:
+					case PT_LONGINT:
+					case PT_FLAGS:
 					{
 						pEdit = (CEdit*)m_Controls[offset];
 						pEdit->GetWindowText( str, 256 );
@@ -1419,7 +1419,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 									str[i-moveBack] = str[i];
 									++moveBack;
 								}
-								else if(pProp->m_Type == LT_PT_LONGINT && str[i] == '.')
+								else if(pProp->m_Type == PT_LONGINT && str[i] == '.')
 								{
 									str[i-moveBack] = str[i];
 									++moveBack;
@@ -1466,7 +1466,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 						break;
 					}
 
-					case LT_PT_COLOR:
+					case PT_COLOR:
 					{
 						if( notifyCode == BN_CLICKED )
 						{
@@ -1499,7 +1499,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 						break;
 					}
 
-					case LT_PT_VECTOR:
+					case PT_VECTOR:
 					{
 						if( notifyCode == BN_CLICKED )
 						{
@@ -1531,7 +1531,7 @@ BOOL CPropertiesControls::OnCommand(WPARAM wParam, LPARAM lParam)
 						break;
 					}
 
-					case LT_PT_ROTATION:
+					case PT_ROTATION:
 					{
 						if(notifyCode == BN_CLICKED)
 						{
@@ -1778,7 +1778,7 @@ void CPropertiesControls::PlaceControls( )
 		iControl++;
 
 		// Special case the string controls
-		if( pProp->m_Type == LT_PT_STRING )
+		if( pProp->m_Type == PT_STRING )
 		{
 			if ( (pProp->m_PropFlags & PF_STATICLIST) || (pProp->m_PropFlags & PF_DYNAMICLIST) )
 			{

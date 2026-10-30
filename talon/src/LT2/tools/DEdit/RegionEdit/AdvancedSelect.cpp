@@ -206,7 +206,7 @@ BOOL CAdvancedSelect::IsPassNameCriteria(CWorldNode *pNode)
 	else
 	{
 		CBaseProp *pProp = pNode->m_PropList.GetProp(g_NameName, FALSE);
-		if(pProp && pProp->m_Type == LT_PT_STRING)
+		if(pProp && pProp->m_Type == PT_STRING)
 		{
 			sName=((CStringProp*)pProp)->m_String;
 		}				
@@ -294,42 +294,42 @@ BOOL CAdvancedSelect::IsPassPropertyCriteria(CWorldNode *pNode)
 				{
 				switch (pProp->GetType()) 
 				{				
-				case LT_PT_STRING:
+				case PT_STRING:
 					{
 					if (((CStringProp*)pProp)->SameAs((CStringProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_REAL:
+				case PT_REAL:
 					{
 					if (((CRealProp*)pProp)->SameAs((CRealProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_LONGINT:
+				case PT_LONGINT:
 					{
 					if (((CRealProp*)pProp)->SameAs((CRealProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_FLAGS:
+				case PT_FLAGS:
 					{
 					if (((CRealProp*)pProp)->SameAs((CRealProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_VECTOR:
+				case PT_VECTOR:
 					{
 					if (((CVectorProp*)pProp)->SameAs((CVectorProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_ROTATION:
+				case PT_ROTATION:
 					{
 					if (((CRotationProp*)pProp)->SameAs((CRotationProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_COLOR:
+				case PT_COLOR:
 					{
 					if (((CColorProp*)pProp)->SameAs((CColorProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;
 					}
-				case LT_PT_BOOL:
+				case PT_BOOL:
 					{
 					if (((CBoolProp*)pProp)->SameAs((CBoolProp*)pNode->GetPropertyList()->GetAt(j)))  return true;
 					break;

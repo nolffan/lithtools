@@ -192,7 +192,7 @@ static void AddNameToChild(const SInstantiateParams &sParams, CWorldNode *pNode)
 	for (uint32 nCurProp = 0; nCurProp < (uint32)pPropList->GetSize(); ++nCurProp)
 	{
 		CBaseProp *pProp = pPropList->GetAt(nCurProp);
-		if (pProp->GetType() != LT_PT_STRING)
+		if (pProp->GetType() != PT_STRING)
 			continue;
 
 		CStringProp *pStringProp = (CStringProp*)pProp;

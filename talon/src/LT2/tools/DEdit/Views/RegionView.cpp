@@ -1437,7 +1437,7 @@ bool CRegionView::CreateBrushesFromScene(CEditRegion *pRegion, CObjInterface *pS
 
 			// Set NoSnap to TRUE.
 			if((pNoSnap = (CBoolProp*)pBrush->m_PropList.GetProp("NoSnap")) && 
-				pNoSnap->m_Type == LT_PT_BOOL)
+				pNoSnap->m_Type == PT_BOOL)
 			{
 				pNoSnap->m_Value = TRUE;
 			}
@@ -1450,7 +1450,7 @@ bool CRegionView::CreateBrushesFromScene(CEditRegion *pRegion, CObjInterface *pS
 			}
 
 			if((pNoSnap = (CBoolProp*)pBrush->m_PropList.GetProp("Subdivide")) && 
-				pNoSnap->m_Type == LT_PT_BOOL)
+				pNoSnap->m_Type == PT_BOOL)
 			{
 				pNoSnap->m_Value = FALSE;
 			}

@@ -293,35 +293,35 @@ CString	AdvancedSelectDlg::GetFormattingText()
 	// Determine the formatting text
 	switch (GetPropertyTypeFromIndex(m_nPropType))
 	{
-	case LT_PT_STRING:
+	case PT_STRING:
 		{
 			return "";
 		}
-	case LT_PT_REAL:
+	case PT_REAL:
 		{
 			return "";
 		}
-	case LT_PT_LONGINT:
+	case PT_LONGINT:
 		{
 			return "";
 		}
-	case LT_PT_FLAGS:
+	case PT_FLAGS:
 		{
 			return "";
 		}
-	case LT_PT_VECTOR:
+	case PT_VECTOR:
 		{
 			return "x y z";
 		}
-	case LT_PT_ROTATION:
+	case PT_ROTATION:
 		{
 			return "yaw pitch roll";
 		}
-	case LT_PT_COLOR:
+	case PT_COLOR:
 		{
 			return "red green blue";
 		}
-	case LT_PT_BOOL:
+	case PT_BOOL:
 		{
 			return "true/false";
 		}
@@ -342,35 +342,35 @@ int	AdvancedSelectDlg::GetPropertyTypeFromIndex(int nIndex)
 	{
 	case 0:
 		{
-			return LT_PT_BOOL;
+			return PT_BOOL;
 		}
 	case 1:
 		{
-			return LT_PT_COLOR;
+			return PT_COLOR;
 		}
 	case 2:
 		{
-			return LT_PT_FLAGS;
+			return PT_FLAGS;
 		}
 	case 3:
 		{
-			return LT_PT_LONGINT;
+			return PT_LONGINT;
 		}
 	case 4:
 		{
-			return LT_PT_REAL;
+			return PT_REAL;
 		}
 	case 5:
 		{
-			return LT_PT_ROTATION;
+			return PT_ROTATION;
 		}
 	case 6:
 		{
-			return LT_PT_STRING;
+			return PT_STRING;
 		}
 	case 7:
 		{
-			return LT_PT_VECTOR;
+			return PT_VECTOR;
 		}
 	default:
 		{
@@ -389,15 +389,15 @@ bool AdvancedSelectDlg::IsValueStringValid()
 	// Determine the formatting text
 	switch (GetPropertyTypeFromIndex(m_nPropType))
 	{
-	case LT_PT_STRING:
+	case PT_STRING:
 		{
 			// Any string is always valid
 			return TRUE;
 			break;
 		}		
-	case LT_PT_REAL:
-	case LT_PT_LONGINT:
-	case LT_PT_FLAGS:
+	case PT_REAL:
+	case PT_LONGINT:
+	case PT_FLAGS:
 		{			
 			// Check to see if we can get a number from the string
 			float fNumber=0;
@@ -411,9 +411,9 @@ bool AdvancedSelectDlg::IsValueStringValid()
 			}
 			break;
 		}
-	case LT_PT_VECTOR:
-	case LT_PT_ROTATION:
-	case LT_PT_COLOR:
+	case PT_VECTOR:
+	case PT_ROTATION:
+	case PT_COLOR:
 		{
 			// Make sure that the vector/rotation/color is in the correct format
 			float fX, fY, fZ;
@@ -427,7 +427,7 @@ bool AdvancedSelectDlg::IsValueStringValid()
 			}
 			break;
 		}
-	case LT_PT_BOOL:
+	case PT_BOOL:
 		{
 			// Convert the string to uppercase for comparison reasons
 			CString sUpperValue=m_sPropValue;
@@ -476,7 +476,7 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 
 	switch (GetPropertyTypeFromIndex(m_nPropType))
 	{
-	case LT_PT_STRING:
+	case PT_STRING:
 		{
 			// Allocate the property
 			pProperty=new CStringProp(m_sPropName);
@@ -485,7 +485,7 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CStringProp *)pProperty)->SetString(m_sPropValue);
 			break;
 		}
-	case LT_PT_REAL:
+	case PT_REAL:
 		{
 			// Allocate the property
 			pProperty=new CRealProp(m_sPropName);
@@ -494,7 +494,7 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CRealProp *)pProperty)->SetValue(atof(m_sPropValue));
 			break;
 		}
-	case LT_PT_LONGINT:
+	case PT_LONGINT:
 		{
 			// Allocate the property			
 			pProperty=new CRealProp(m_sPropName);
@@ -503,10 +503,10 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CRealProp *)pProperty)->SetValue(atof(m_sPropValue));
 
 			// Set the property type
-			pProperty->m_Type=LT_PT_LONGINT;
+			pProperty->m_Type=PT_LONGINT;
 			break;
 		}
-	case LT_PT_FLAGS:
+	case PT_FLAGS:
 		{
 			// Allocate the property			
 			pProperty=new CRealProp(m_sPropName);
@@ -515,10 +515,10 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CRealProp *)pProperty)->SetValue(atof(m_sPropValue));
 
 			// Set the property type
-			pProperty->m_Type=LT_PT_FLAGS;
+			pProperty->m_Type=PT_FLAGS;
 			break;
 		}
-	case LT_PT_VECTOR:
+	case PT_VECTOR:
 		{
 			// Allocate the property
 			pProperty=new CVectorProp(m_sPropName);
@@ -529,7 +529,7 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CVectorProp *)pProperty)->SetVector(v);
 			break;
 		}
-	case LT_PT_ROTATION:
+	case PT_ROTATION:
 		{
 			// Allocate the property
 			pProperty=new CRotationProp(m_sPropName);
@@ -544,7 +544,7 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CRotationProp *)pProperty)->SetEulerAngles(rotation);
 			break;
 		}
-	case LT_PT_COLOR:
+	case PT_COLOR:
 		{
 			// Allocate the property
 			pProperty=new CColorProp(m_sPropName);
@@ -555,7 +555,7 @@ CBaseProp *AdvancedSelectDlg::AllocPropertyFromData()
 			((CVectorProp *)pProperty)->SetVector(vColor);
 			break;
 		}
-	case LT_PT_BOOL:
+	case PT_BOOL:
 		{
 			// Allocate the property
 			pProperty=new CBoolProp(m_sPropName);
