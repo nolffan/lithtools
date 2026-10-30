@@ -278,6 +278,19 @@ SOURCE=.\RaySelecter.cpp
 # Begin Source File
 
 SOURCE=..\sharedNOLF\engine\streamsim.cpp
+# talon: a stand-in. The shipped icl inlines nothing into a function with an
+# EH frame (ILTStream's 13-byte constructor is called out of line, 0x456ab0)
+# and inlines as usual elsewhere; ours (4.0, build 99100) inlines into both.
+# /Ob0 here gives the EH-framed constructors, destructors and streamsim_*
+# (14 rows) and loses four that inline (SSMemStream::SeekTo, ::Write, ::GetLen,
+# SSBufStream::Write).
+
+!IF  "$(CFG)" == "Processor - Win32 Release"
+
+# ADD CPP /Ob0
+
+!ENDIF 
+
 # End Source File
 # Begin Source File
 
