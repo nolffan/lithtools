@@ -420,7 +420,7 @@ bool ModelStringList::SetAlloc(LAlloc *pAlloc)
 // AnimTimeRef.
 // ------------------------------------------------------------------------ //
 
-bool AnimTimeRef::IsValid()
+LTBOOL AnimTimeRef::IsValid()
 {
 	return m_pModel && 
 		m_Prev.m_iAnim < m_pModel->m_Anims && 

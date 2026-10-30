@@ -7,7 +7,7 @@
 extern int32 g_CV_ModelTransitionMS;
 
 
-bool AnimTimeRef::SetKeyframePosition(
+LTBOOL AnimTimeRef::SetKeyframePosition(
 	uint32 iAnim,
 	uint32 iFrame1, 
 	uint32 iFrame2, 
@@ -231,7 +231,7 @@ static void trk_ProcessKey(LTAnimTracker *pTracker, ModelAnim *pAnim, uint32 iFr
 		// Is there a string for this key?
 		if(pFrame->m_pString[0] != 0 && pTracker->m_StringKeyCallback != NULL)
 		{
-			pTracker->m_StringKeyCallback(pTracker, pFrame);
+			pTracker->m_StringKeyCallback(pTracker, pFrame, LTNULL, LTFALSE);
 		}
 		
 		pNextPosition = trk_NextPositionFrame(pTracker, iFrame+1, iNextPosition);

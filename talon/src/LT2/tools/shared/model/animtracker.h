@@ -46,7 +46,7 @@
 	// Inlines.
 	// ------------------------------------------------------------ //
 	
-	inline bool LTAnimTracker::IsValid()
+	inline LTBOOL LTAnimTracker::IsValid()
 	{
 		if(!GetModel())
 			return FALSE;
@@ -91,7 +91,7 @@
 		return &GetPrevAnim()->m_KeyFrames[m_TimeRef.m_Prev.m_iFrame];
 	}
 
-	inline bool LTAnimTracker::AllowInvalid()
+	inline LTBOOL LTAnimTracker::AllowInvalid()
 	{
 		return (m_Flags & AT_ALLOWINVALID) != 0;
 	}

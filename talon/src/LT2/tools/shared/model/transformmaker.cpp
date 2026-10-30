@@ -45,7 +45,7 @@ bool TransformMaker::IsValid()
 		// Make sure the weight set is valid.
 		if(i != 0)
 		{
-			if(pAnim->m_iWeightSet >= pModel->NumWeightSets())
+			if(pAnim->m_Cur.m_iWeightSet >= pModel->NumWeightSets())
 				return false;
 		}
 	}
@@ -258,7 +258,7 @@ void TransformMaker::BlendTransform(uint32 iAnim, uint32 iNode)
 	float fPercent;
 
 	// Can we be lazy?
-	fPercent = m_pModel->GetWeightSet(m_Anims[iAnim].m_iWeightSet)->m_Weights[iNode];
+	fPercent = m_pModel->GetWeightSet(m_Anims[iAnim].m_Cur.m_iWeightSet)->m_Weights[iNode];
 	if(fPercent == 0.0f)
 	{
 		return;

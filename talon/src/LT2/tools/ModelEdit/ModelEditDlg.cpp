@@ -6203,7 +6203,7 @@ void CModelEditDlg::OnSelChangeAnimList()
 
 		ModelAnim *pAnim = pInfo->CurAnim();
 
-		pInfo->m_Tracker.m_TimeRef.m_iWeightSet = pAnim ? (pAnim->m_ModelEditWeightSet) : 0;
+		pInfo->m_Tracker.m_TimeRef.m_Cur.m_iWeightSet = pAnim ? (pAnim->m_ModelEditWeightSet) : 0;
 	}
 
 	if(m_SelectedAnims.GetSize() == 0)
