@@ -705,7 +705,7 @@ static inline PReal GetSelectorWeight(SplitSelector *pSplit, uint32 nLevel)
 	return addedPolyFactor + diffFactor;
 }
 
-static inline int GetQuickSide(const CPrePlane *pPlane, const CPrePoly *pPoly)
+static inline int GetQuickSide(CPrePlane *pPlane, const CPrePoly *pPoly)
 {
 	// Handle an obviously front/back side polygon
 	PReal centerDist = pPlane->DistTo(pPoly->GetCenter());
@@ -1106,11 +1106,13 @@ void FilterPolyIntoBSP(
 
 	sides[0] = sides[1] = NULL;
 
-	side = GetPolySide(pRoot->m_pPlane, pPoly, &splitStruct);
+	// talon: NOLF's LTPlane::DistTo isn't const and Node.h's m_pPlane is
+	// (the 2001 one likely wasn't): a cast
+	side = GetPolySide((CPrePlane*)pRoot->m_pPlane, pPoly, &splitStruct);
 	if(side == Intersect)
 	{
 		// Split it.
-		::SplitPoly(pRoot->m_pPlane, pPoly, sides, &splitStruct);
+		::SplitPoly((CPrePlane*)pRoot->m_pPlane, pPoly, sides, &splitStruct);
 		ASSERT(sides[0]->NumVerts() >= 3);
 		ASSERT(sides[1]->NumVerts() >= 3);
 		

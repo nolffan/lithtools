@@ -366,7 +366,7 @@ static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 	GPOS pos1, pos2;
 	TempPoly *pPoly1, *pPoly2;
 	CPrePlane *pPlane1, *pPlane2;
-	BOOL bOutside;
+	bool bOutside;
 	uint32 i, k;
 	PVector vEdge, vEdgeNormal;
 	PReal dist;
@@ -377,7 +377,7 @@ static BOOL DoBrushesIntersect(TempBrush *pBrush1, TempBrush *pBrush2)
 		pPoly1 = pBrush1->m_Polies.GetNext(pos1);
 		pPlane1 = pPoly1->GetPlane();
 
-		bOutside = TRUE;
+		bOutside = true;
 		for(pos2=pBrush2->m_Polies; pos2 && bOutside; )
 		{
 			pPoly2 = pBrush2->m_Polies.GetNext(pos2);
@@ -416,7 +416,7 @@ NotInside:;
 			{
 				if(DIST_TO_PLANE(pPoly2->Pt(i), *pPlane1) <= 0.1)
 				{
-					bOutside = FALSE;
+					bOutside = false;
 					break;
 				}
 			}
@@ -459,7 +459,7 @@ static void MergeIntersecters(CMoArray<TempBrush*> &brushes)
 		for(j=0; j < pBrush->m_nIntersecters; j++)
 		{
 			iOther = pBrush->m_Intersecters[j]->m_Index;
-			g_bEarlierBrush = iOther < i;
+			g_bEarlierBrush = i > iOther;
 			ClipBrush(brushes[iOther], pBrush->m_pTree);
 		}
 

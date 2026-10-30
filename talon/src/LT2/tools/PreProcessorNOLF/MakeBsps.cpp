@@ -155,18 +155,19 @@ BOOL MakeWorldModelBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pW
 // Takes the polies on SURF_TERRAINOCCLUDER surfaces out of the world's
 // list (0x40bad0). They are not freed. Through GenList: the shipped calls
 // are virtual.
+// talon: through pWorld->m_Polies each time, no reference: 0x40fa60
+// recomputes the list's address for every call
 void RemoveTerrainOccluderPolies(CPreWorld *pWorld)
 {
-	GenList<CPrePoly*>	&polies = pWorld->m_Polies;
 	GenListPos			pos, curPos;
 	CPrePoly			*pPoly;
 
-	for(pos=polies.GenBegin(); polies.GenIsValid(pos); )
+	for(pos=pWorld->m_Polies.GenBegin(); pWorld->m_Polies.GenIsValid(pos); )
 	{
 		curPos = pos;
-		pPoly = polies.GenGetNext(pos);
+		pPoly = pWorld->m_Polies.GenGetNext(pos);
 		if(pPoly->GetSurfaceFlags() & SURF_TERRAINOCCLUDER)
-			polies.GenRemoveAt(curPos);
+			pWorld->m_Polies.GenRemoveAt(curPos);
 	}
 }
 
@@ -227,7 +228,7 @@ void GetBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrush
 
 
 void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> &polies);
-void SplitPolyList(const CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2]);
+void SplitPolyList(CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2]);
 
 // talon: a GenList's GDeleteAndRemoveElements. Not known to be in the
 // source: as an inline (and its own block-scoped GenListPos), it gives
@@ -313,7 +314,9 @@ void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> 
 
 	pSides[0] = &sides[0];
 	pSides[1] = &sides[1];
-	SplitPolyList(pNode->m_pPlane, polies, newPolies, pSides);
+	// talon: casts, as below: NOLF's LTPlane::DistTo isn't const and Node.h's
+	// m_pPlane is (the 2001 one likely wasn't)
+	SplitPolyList((CPrePlane*)pNode->m_pPlane, polies, newPolies, pSides);
 
 	if(pNode->m_Sides[BackSide] == NODE_OUT && sides[BackSide].GetSize() > 0)
 	{
@@ -335,7 +338,7 @@ void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> 
 // pieces into both, and the pieces into newPolies too.
 // talon, retail bug: SplitPoly's result is not looked at (0x40c5fb), so a
 // poly it gave up on (more than two edge splits) still goes on in pieces.
-void SplitPolyList(const CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2])
+void SplitPolyList(CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2])
 {
 	SplitStruct		splitStruct;
 	CPrePoly		*sides[2];
@@ -413,14 +416,14 @@ BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP)
 
 
 // Empties each leaf's poly list (0x40c8d0; the calls are virtual).
+// talon: through pWorld->m_Leaves each time, as 0x411100 has it
 void ClearLeafPolies(CPreWorld *pWorld)
 {
-	GenList<CPreLeaf*>	&leaves = pWorld->m_Leaves;
 	GenListPos			pos;
 
-	for(pos=leaves.GenBegin(); leaves.GenIsValid(pos); )
+	for(pos=pWorld->m_Leaves.GenBegin(); pWorld->m_Leaves.GenIsValid(pos); )
 	{
-		leaves.GenGetNext(pos)->m_Polies.GenRemoveAll();
+		pWorld->m_Leaves.GenGetNext(pos)->m_Polies.GenRemoveAll();
 	}
 }
 
@@ -467,14 +470,14 @@ void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode)
 	if(!IsValidNode(pNode))
 		return;
 
-	side = GetPolySide(pNode->m_pPlane, pPoly, &splitStruct);
+	side = GetPolySide((CPrePlane*)pNode->m_pPlane, pPoly, &splitStruct);
 
 	if(pNode->m_pLeaf && side != BackSide)
 		pNode->m_pLeaf->m_Polies.GenAppend(pOriginal);
 
 	if(side == Intersect)
 	{
-		if(!SplitPoly(pNode->m_pPlane, pPoly, sides, &splitStruct))
+		if(!SplitPoly((CPrePlane*)pNode->m_pPlane, pPoly, sides, &splitStruct))
 			return;
 
 		for(i=0; i < 2; i++)
