@@ -35,16 +35,14 @@ CFG=ModelEdit - Win32 Release
 # (progress/ModelEdit-map.md), which the link keeps: the project's own
 # folder, in name order (with animtracker, the LTA importer, ltquatbase and
 # smmempnproc among them), then the shared engine and model code, in name
-# order. Not here yet: the 2001 LTA parser (ltalex, ltaParseNode: no source
-# survives), PieceInfoDlg (the "Piece Info" dialog, Build 69's
-# PieceMaterialDlg's forebear) and smmempnproc.cpp (taken, but it needs the
-# parser's headers).
+# order. The 2001 LTA parse-node reader (cstream, ltaBuildTree, ltaFindPN,
+# ltalex, ltaParseNode) and LVEditList have no surviving source: written
+# from the image, their file names are ours.
 #
-# talon: the "Build 69 only" group is Build 69's code the 2001 image doesn't
-# have, linked only because Build 69's ModelEditDlg and CRenderWnd call it
-# (or, for debug, estring and exportsys, nothing does); last, so that it
-# doesn't shift the 2001 modules. Each file goes when its caller is brought
-# back to 2001.
+# talon: /I "stlpatch": Dinkumware's patched <xstring> (25 May 1998, no
+# reference counting; Jupiter Build 69 ships it in WONAPI's
+# VC_STL_Header_Patches), which the image's std::string code is compiled
+# from (_Tidy 0x409e80). Only that header: its std::map is cl 9044's own.
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -67,8 +65,8 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\..\built\Release\tools\ModelEdit"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
-# ADD BASE CPP /nologo /MT /W3 /GX /O1 /I "." /I "..\shared\engine" /I "..\shared\model" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\..\Engine\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WINVER=0x500" /D "MODEL_STANDALONE" /D "BDEFS_SIM" /D "LT15_COMPAT" /D "NO_PRAGMA_LIBS" /D "BDEFS_WINDOWS_H" /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O1 /I "." /I "..\shared\engine" /I "..\shared\model" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /I "..\..\..\Engine\libs\ltamgr" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WINVER=0x500" /D "MODEL_STANDALONE" /D "BDEFS_SIM" /D "LT15_COMPAT" /D "NO_PRAGMA_LIBS" /D "BDEFS_WINDOWS_H" /FD /c
+# ADD BASE CPP /nologo /MT /W3 /GX /O1 /I "." /I "stlpatch" /I "..\shared\engine" /I "..\shared\model" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WINVER=0x500" /D "MODEL_STANDALONE" /D "BDEFS_SIM" /D "LT15_COMPAT" /D "NO_PRAGMA_LIBS" /D "BDEFS_WINDOWS_H" /FD /c
+# ADD CPP /nologo /MT /W3 /GX /O1 /I "." /I "stlpatch" /I "..\shared\engine" /I "..\shared\model" /I "..\..\sdk\inc" /I "..\..\lithshared\stdlith" /I "..\..\lithshared\regmgr" /I "..\..\lithshared\lith" /I "..\..\lithshared\incs" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "WINVER=0x500" /D "MODEL_STANDALONE" /D "BDEFS_SIM" /D "LT15_COMPAT" /D "NO_PRAGMA_LIBS" /D "BDEFS_WINDOWS_H" /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
@@ -130,6 +128,10 @@ SOURCE=.\ContinuousDlg.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\shared\model\cstream.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=.\DimensionsDlg.cpp
 # End Source File
 # Begin Source File
@@ -174,7 +176,23 @@ SOURCE=.\LODEdit.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\shared\model\ltaBuildTree.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\model\ltaFindPN.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\model\ltalex.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\model\ltaModel.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\model\ltaParseNode.cpp
 # End Source File
 # Begin Source File
 
@@ -183,6 +201,10 @@ SOURCE=..\shared\model\ltaScene.cpp
 # Begin Source File
 
 SOURCE=..\..\sdk\inc\ltquatbase.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\LVEditList.cpp
 # End Source File
 # Begin Source File
 
@@ -206,7 +228,7 @@ SOURCE=.\newgenlod.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=.\PieceMerge.cpp
+SOURCE=.\PieceInfoDlg.cpp
 # End Source File
 # Begin Source File
 
@@ -223,6 +245,10 @@ SOURCE=.\RenderWnd.cpp
 # Begin Source File
 
 SOURCE=.\RotationDlg.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\model\smmempnproc.cpp
 # End Source File
 # Begin Source File
 
@@ -270,7 +296,7 @@ SOURCE=.\win_idle.cpp
 # PROP Default_Filter "cpp;c"
 # Begin Source File
 
-SOURCE=..\shared\engine\bdefs.cpp
+SOURCE=.\bdefs.cpp
 # End Source File
 # Begin Source File
 
@@ -278,7 +304,11 @@ SOURCE=..\shared\engine\conparse.cpp
 # End Source File
 # Begin Source File
 
-SOURCE=..\shared\engine\dtxmgr.cpp
+SOURCE=..\shared\engine\counter.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=.\dtxmgr.cpp
 # End Source File
 # Begin Source File
 
@@ -298,6 +328,10 @@ SOURCE=..\shared\model\model_cleanup.cpp
 # End Source File
 # Begin Source File
 
+SOURCE=..\shared\model\model_load.cpp
+# End Source File
+# Begin Source File
+
 SOURCE=..\shared\model\model_ops.cpp
 # End Source File
 # Begin Source File
@@ -307,6 +341,10 @@ SOURCE=..\shared\model\model_save.cpp
 # Begin Source File
 
 SOURCE=..\shared\model\modelallocations.cpp
+# End Source File
+# Begin Source File
+
+SOURCE=..\shared\model\modelcallbacks.cpp
 # End Source File
 # Begin Source File
 
@@ -323,78 +361,6 @@ SOURCE=..\shared\engine\streamsim.cpp
 # Begin Source File
 
 SOURCE=..\shared\model\transformmaker.cpp
-# End Source File
-# End Group
-# Begin Group "Build 69 only"
-
-# PROP Default_Filter "cpp;c"
-# Begin Source File
-
-SOURCE=.\DirDialog.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\EditOBBDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ExportD3D_Dlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ImportLODDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ImportStringKeysDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\InvalidAnimDimsDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\model\ltaSave.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ltwintreeitem.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ltwintreeitemiter.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\ltwintreemgr.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PieceLODGen.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PieceLODGenDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\PieceMaterialDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=.\SetFOVDlg.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\model\debug.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\model\estring.cpp
-# End Source File
-# Begin Source File
-
-SOURCE=..\shared\model\exportsys.cpp
 # End Source File
 # End Group
 # Begin Group "Resource Files"

@@ -56,7 +56,6 @@ TARGETS = [
          # screened out (progress/ModelEdit-screen-exclude.csv)
          built="src/LT2/built/Release/tools/ModelEdit/ModelEdit.exe", optional=True,
          partial_objs=["src/LT2/built/Release/tools/ModelEdit/*.obj",
-                       "src/LT2/built/Release/tools/ModelEdit/ltamgr/ltamgr.lib",
                        "src/LT2/lithshared/built/Release/Lib_StdLith_alloc/Lib_StdLith.lib",
                        "src/LT2/lithshared/built/ReleaseTalon/RegMgr/regmgr.lib"],
          app=[(0x00401000, 0x00437170)]),

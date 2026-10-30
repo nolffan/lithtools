@@ -30,18 +30,6 @@ Package=<4>
 
 ###############################################################################
 
-Project: "ME_LTAMgr"=.\ME_LTAMgr.dsp - Package Owner=<4>
-
-Package=<5>
-{{{
-}}}
-
-Package=<4>
-{{{
-}}}
-
-###############################################################################
-
 Project: "ModelEdit"=.\ModelEdit.dsp - Package Owner=<4>
 
 Package=<5>
@@ -55,9 +43,6 @@ Package=<4>
     End Project Dependency
     Begin Project Dependency
     Project_Dep_Name LT2_RegMgr_Talon
-    End Project Dependency
-    Begin Project Dependency
-    Project_Dep_Name ME_LTAMgr
     End Project Dependency
 }}}
 

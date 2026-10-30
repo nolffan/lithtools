@@ -147,7 +147,7 @@ LINK_ProcessorNOLF := $(VC6SP3)/BIN/link.exe
 ENV_VC6PP := WINEPREFIX=$(PFX) WINEPATH='$(call ws,$(VC6PP))\BIN' \
     INCLUDE='$(call ws,$(VC6PP))\INCLUDE;$(call ws,$(VC6PP))\MFC\INCLUDE' \
     LIB='$(call ws,$(VC6PP))\LIB;$(call ws,$(VC6PP))\MFC\LIB'
-$(foreach p,ModelEdit ME_LTAMgr LT2_StdLith_alloc LT2_RegMgr_Talon,$(eval ENV_$(p) := $$(ENV_VC6PP))$(eval CL_$(p) := $$(VC6PP)/BIN/cl.exe)\
+$(foreach p,ModelEdit LT2_StdLith_alloc LT2_RegMgr_Talon,$(eval ENV_$(p) := $$(ENV_VC6PP))$(eval CL_$(p) := $$(VC6PP)/BIN/cl.exe)\
     $(eval LINK_$(p) := $$(VC6PP)/BIN/link.exe)$(eval LIBEXE_$(p) := $$(VC6PP)/BIN/lib.exe))
 
 # The prefix: made the first time, then only checked; every tool run waits
