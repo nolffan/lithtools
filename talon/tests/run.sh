@@ -2,7 +2,8 @@
 # Behaviour tests: run the shipped tools and ours on the same inputs and
 # compare what they write (tests/README.md).
 #
-#   tests/run.sh [suite...]     every suite (tests/*.sh but this and lib.sh),
+#   tests/run.sh [suite...]     every suite (tests/*.sh but this and lib.sh,
+#                               less the pending ones, tests/pending.txt),
 #                               or the ones named (processor-avp2, ...)
 #
 # Runs inside the build container, from the talon directory (`make test`
@@ -15,7 +16,10 @@ cd "$(dirname "$0")/.."
 suites=("$@")
 if [ ${#suites[@]} -eq 0 ]; then
     for f in tests/*.sh; do
-        case "$(basename "$f")" in run.sh|lib.sh) ;; *) suites+=("$(basename "$f" .sh)") ;; esac
+        n=$(basename "$f" .sh)
+        case "$n" in run|lib) continue ;; esac
+        grep -qx "$n" tests/pending.txt 2>/dev/null && { log "(skipping $n: pending, tests/pending.txt)"; continue; }
+        suites+=("$n")
     done
 fi
 

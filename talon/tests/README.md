@@ -29,6 +29,10 @@ processor's physics BSP vertex colours (`datcmp.py`).
 | Suite | What it runs | Inputs |
 |---|---|---|
 | `processor-avp2` | `Processor.exe <world.ed> -skipdialog` (default options), shipped (AvP2 v1.0) and ours | the seven sample worlds of the AvP2 Editing Tools v1.0 |
+| `processor-nolf` (pending) | `Processor.exe <world>` with `processor.opt` (`-skipdialog`): DEdit's default options, and with lighting and full visibility; shipped (NOLF Tools 001) and ours | the six sample worlds of the NOLF Tools 001 (from NOLFTOOLS001.REZ) |
+
+A suite listed in `pending.txt` is one ours doesn't pass yet: `make test` skips it
+and `make test TESTS=<suite>` runs it. It leaves the list when it passes.
 
 ## Adding a suite
 
