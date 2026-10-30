@@ -32,6 +32,9 @@ void LAllocCount::ClearCounts()
 
 // Default allocator functions (declared extern in l_allocator.h; the
 // LT2-era lib defines them here — NULL for zero-size, plain malloc/free).
+// talon: not in the allocator-override build (StdLith_alloc.lib,
+// Lib_StdLith_alloc.dsp), whose application defines them.
+#ifndef STDLITH_ALLOC_OVERRIDE
 void* DefStdlithAlloc(DWORD size)
 {
 	if(size == 0)
@@ -45,6 +48,7 @@ void DefStdlithFree(void *ptr)
 	if(ptr)
 		free(ptr);
 }
+#endif
 
 
 void* LAllocCount::Alloc(DWORD size)
