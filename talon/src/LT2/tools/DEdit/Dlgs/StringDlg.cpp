@@ -104,7 +104,7 @@ void CStringDlg::OnChangeEnteredtext()
 
 	for( i=0; i < sText.GetLength(); i++ )
 	{
-		bool bAddChar = FALSE;
+		BOOL bAddChar = FALSE;
 
 		// Filter out invalid characters based on the flags
 		bAddChar |= (m_bAllowLetters) && isalpha(sText[i]);

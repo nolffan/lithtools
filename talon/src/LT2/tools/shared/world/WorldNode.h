@@ -95,8 +95,19 @@ class CWorldNode : public CGLLNode
 		// virtual in 2001: the vtable (0x475d00) has five slots, the scalar
 		// deleting destructor, Term, AllocateSameKind, DoCopy and
 		// GetUpperLeftCornerPos (0x44e870).
+#ifdef DIRECTEDITOR_BUILD
+		// talon: by value in DEdit (2001, 0x46f282: `ret $0xc`).
+		void					SetPos(LTVector v);				// Sets the position
+#else
 		void					SetPos(const LTVector &v);		// Sets the position
+#endif
+#ifdef DIRECTEDITOR_BUILD
+		// talon: by reference in DEdit (2001, 0x46f2a9: no hidden return
+		// pointer), as GetPos.
+		LTVector&				GetOr();						// Returns the rotation
+#else
 		LTVector				GetOr();						// Returns the rotation
+#endif
 		void					SetOr(const LTVector &v);		// Sets the rotation
 
 		// Rotate this node about a point using a rotation matrix
@@ -150,8 +161,10 @@ class CWorldNode : public CGLLNode
 		//notification that all properties have been changed
 		void					RefreshAllProperties( const char *pModifiers );
 
-		// Notification that a property of this object has changed
-		virtual void			OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const char *pModifiers ) {}
+		// talon: stand-in: Build 69's notification that a property has
+		// changed, for the rest of DEdit until it is brought back to 2001:
+		// not virtual (the 2001 vtable is the five slots above) and empty.
+		void					OnPropertyChanged(CBaseProp* pProperty, bool bNotifyGame, const char *pModifiers ) {}
 
 #endif // DIRECTEDITOR_BUILD
 

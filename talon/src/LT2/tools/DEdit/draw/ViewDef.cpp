@@ -55,17 +55,17 @@ void CViewDef::InitNav(	CReal posX, CReal posY, CReal posZ,
 //------------------------------------------------------------------------------------------
 
 
+// talon: near (0x465679): the same code but for the scheduling of the
+// last sum's stores against the copy into the returned ray.
 CEditRay CParallelViewDef::MakeRayFromScreenPoint( CPoint point )
 {
 	CReal pointX = (CReal)point.x;
 	CReal pointY = (CReal)point.y;
 	CEditRay ray;
 
-
 	ray.m_Pos = m_Nav.Pos() + 
-				(m_Nav.Right() * ((pointX - m_pInfo->m_fHalfWidth) / m_Magnify)) + 
-				(m_Nav.Up()    * ((m_pInfo->m_fHalfHeight - pointY) / m_Magnify));
-
+				(m_Nav.Right() * ((pointX - m_pInfo->m_fHalfWidth) / m_Magnify) * m_pInfo->m_fPixelScaleX) + 
+				(m_Nav.Up()    * ((m_pInfo->m_fHalfHeight - pointY) / m_Magnify) * m_pInfo->m_fPixelScaleY);
 	ray.m_Dir = m_Nav.Forward();
 
 	return ray;
@@ -103,55 +103,19 @@ void CParallelViewDef::SetupFrustumPlanes( CPlane *pPlanes )
 
 	pPlanes[4].m_Normal.Init( 0.0f, 0.0f, 1.0f );		// Near.
 	pPlanes[4].m_Dist = m_NearZ;
-
+	
 	pPlanes[5].m_Normal.Init( 0.0f, 0.0f, -1 );		// Far.
 	pPlanes[5].m_Dist = -m_FarZ;
 }
+
 
 
 //------------------------------------------------------------------------------------------
 // CPerspectiveViewDef
 //------------------------------------------------------------------------------------------
 
-CPerspectiveViewDef::CPerspectiveViewDef()
-{
-	m_nViewType = PERSPECTIVE_VIEWTYPE;
-}
-
-//used to set the projection for the camera, this will calculate the
-//vertical FOV from the aspect ratio
-void CPerspectiveViewDef::SetupCamera(CReal fVertFOV, bool bUseAspect)
-{
-	m_fVertFOV = fVertFOV;
-
-	m_fHorzFOV = fVertFOV;
-
-	//validity checks on the FOV's
-	m_fVertFOV = LTMAX(0.1f, LTMIN(MATH_PI - 0.1f, m_fVertFOV));
-
-	//now we need to calculate the horizontal and vertical scalars
-	m_fProjScale = m_pInfo->m_fHeight / (CReal)tan(m_fVertFOV / (CReal)2);
-
-	if(bUseAspect)
-	{
-		m_fHorzFOV *= m_pInfo->m_fHeight / LTMAX(1, m_pInfo->m_fWidth);
-		m_fAspectProjScale = m_fProjScale;
-	}
-	else
-	{
-		m_fAspectProjScale = m_fProjScale * m_pInfo->m_fWidth / LTMAX(1, m_pInfo->m_fHeight);
-	}
-
-	//now inidicate that we are using the aspect ratio
-	m_bUseAspectRatio = bUseAspect;
-}
-
-void CPerspectiveViewDef::UpdateSize()
-{
-	//recompute the scalars
-	SetupCamera(m_fVertFOV, IsUseAspect());
-}
-
+// talon: 2001's perspective is a fixed 90 degrees: the projection scale is
+// the half size (0x4658d4..0x465b37).
 CEditRay CPerspectiveViewDef::MakeRayFromScreenPoint( CPoint point )
 {
 	CReal		aspect;
@@ -160,90 +124,53 @@ CEditRay CPerspectiveViewDef::MakeRayFromScreenPoint( CPoint point )
 	CEditRay	ray;
 
 	aspect = m_pInfo->m_fWidth / m_pInfo->m_fHeight;
-
 	ray.m_Pos = m_Nav.Pos();
+	ray.m_Dir = m_Nav.Forward() * m_pInfo->m_fHalfWidth + m_Nav.Right() * (pointX - m_pInfo->m_fHalfWidth) - m_Nav.Up() * aspect * (pointY - m_pInfo->m_fHalfHeight);
 
-	//first off, map the x and y to -1, 1
-	CReal fX = (pointX - m_pInfo->m_fHalfWidth);
-	CReal fY = (pointY - m_pInfo->m_fHalfHeight);
-
-	//skew X if needed
-	if(!IsUseAspect())
-	{
-		fX /= m_fAspectProjScale / m_fProjScale;
-	}
-
-	//now that they range from -1 to 1, we need to convert that into a ray
-	LTVector vX = (m_Nav.Right() * fX);
-	LTVector vY = -(m_Nav.Up() * fY);
-
-	ray.m_Dir = vX + vY + m_Nav.Forward() * m_fProjScale;
-	
 	return ray;
 }
+
 
 void CPerspectiveViewDef::ProjectPt( CVector &in, CPoint &out )
 {
 	CReal oneOverZ = 1.0f / in.z;
-	out.x = (int)(m_pInfo->m_fProjectHalfWidth  + ((in.x * m_fAspectProjScale) * oneOverZ));
-	out.y = (int)(m_pInfo->m_fProjectHalfHeight - ((in.y * m_fProjScale) * oneOverZ));
+
+	out.x = (int)(m_pInfo->m_fProjectHalfWidth  + ((m_pInfo->m_fProjectHalfWidth * in.x) * oneOverZ));
+	out.y = (int)(m_pInfo->m_fProjectHalfHeight - ((in.y * m_pInfo->m_fProjectHalfHeight) * oneOverZ));
 }
 
 
 void CPerspectiveViewDef::ProjectPt( CVector &in, CVector &out )
 {
 	CReal oneOverZ = 1.0f / in.z;
-	out.x = m_pInfo->m_fProjectHalfWidth  + ((in.x * m_fAspectProjScale) * oneOverZ);
-	out.y = m_pInfo->m_fProjectHalfHeight - ((in.y * m_fProjScale) * oneOverZ);
+
+	out.x = m_pInfo->m_fProjectHalfWidth  + ((m_pInfo->m_fProjectHalfWidth * in.x) * oneOverZ);
+	out.y = m_pInfo->m_fProjectHalfHeight - ((in.y * m_pInfo->m_fProjectHalfHeight) * oneOverZ);
 	out.z = in.z;
 }
 
-LTVector PlaneNormal(const LTVector& v1, const LTVector& v2)
-{
-	LTVector vRV = v1.Cross(v2);
-	vRV.Norm();
-	return vRV;
-}
 
 void CPerspectiveViewDef::SetupFrustumPlanes( CPlane *pPlanes )
 {
-	if(IsUseAspect())
-	{
-		LTVector		vCorner[4];
+	CReal			cosAngle = (CReal)cos(MATH_PI / 4.0f);
+	CReal			sinAngle = (CReal)sin(MATH_PI / 4.0f);
 
-		vCorner[0].Init(-m_pInfo->m_fHalfWidth,  m_pInfo->m_fHalfHeight, m_fProjScale);
-		vCorner[1].Init( m_pInfo->m_fHalfWidth,  m_pInfo->m_fHalfHeight, m_fProjScale);
-		vCorner[2].Init( m_pInfo->m_fHalfWidth, -m_pInfo->m_fHalfHeight, m_fProjScale);
-		vCorner[3].Init(-m_pInfo->m_fHalfWidth, -m_pInfo->m_fHalfHeight, m_fProjScale);
-			
-		// Setup the clipping planes.
-		pPlanes[0].m_Normal = PlaneNormal(vCorner[3], vCorner[0]);
-		pPlanes[1].m_Normal = PlaneNormal(vCorner[0], vCorner[1]);
-		pPlanes[2].m_Normal = PlaneNormal(vCorner[1], vCorner[2]);
-		pPlanes[3].m_Normal = PlaneNormal(vCorner[2], vCorner[3]);
-	}
-	else
-	{
-		CReal			cosAngle = (CReal)cos(m_fHorzFOV / (CReal)2);
-		CReal			sinAngle = (CReal)sin(m_fVertFOV / (CReal)2);
-
-		// Setup the clipping planes.
-		pPlanes[0].m_Normal.Init( cosAngle, 0.0f, sinAngle );		// Left.
-		pPlanes[1].m_Normal.Init( 0.0f, -cosAngle, sinAngle );		// Top.
-		pPlanes[2].m_Normal.Init( -cosAngle, 0.0f, sinAngle );		// Right.
-		pPlanes[3].m_Normal.Init( 0.0f, cosAngle, sinAngle );		// Bottom.
-	}
-
+	// Setup the clipping planes.
+	pPlanes[0].m_Normal.Init( cosAngle, 0.0f, sinAngle );		// Left.
 	pPlanes[0].m_Dist = 0.0f;
+
+	pPlanes[1].m_Normal.Init( 0.0f, -cosAngle, sinAngle );		// Top.
 	pPlanes[1].m_Dist = 0.0f;
+
+	pPlanes[2].m_Normal.Init( -cosAngle, 0.0f, sinAngle );		// Right.
 	pPlanes[2].m_Dist = 0.0f;
+
+	pPlanes[3].m_Normal.Init( 0.0f, cosAngle, sinAngle );		// Bottom.
 	pPlanes[3].m_Dist = 0.0f;
 
 	pPlanes[4].m_Normal.Init( 0.0f, 0.0f, 1.0f );				// Near.
 	pPlanes[4].m_Dist = m_NearZ;
-
+	
 	pPlanes[5].m_Normal.Init( 0.0f, 0.0f, -1 );					// Far.
 	pPlanes[5].m_Dist = -m_FarZ;
 }
-
-

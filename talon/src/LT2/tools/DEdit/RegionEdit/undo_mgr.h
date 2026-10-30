@@ -30,7 +30,7 @@
 						CUndoMgr();
 						~CUndoMgr();
 
-			bool		Init(CRegionDoc *pDoc, uint32 nUndos, uint32 nRedos);
+			BOOL		Init(CRegionDoc *pDoc, uint32 nUndos, uint32 nRedos);
 			void		Term();
 
 			// Call before you do an action.. this will add an undo for the action.
@@ -38,7 +38,7 @@
 
 			// You can consider one undo/redo as a list of actions.  They will be 
 			// executed in the reverse order that they're in the list.
-			void		PreActions(PreActionList *pActions, bool bClearList=FALSE);
+			void		PreActions(PreActionList *pActions, BOOL bClearList=FALSE);
 			
 			void		Undo();
 			void		Redo();
@@ -61,18 +61,9 @@
 			CMoArray<EditActionList*>	m_Redos;
 			uint32						m_nRedos;
 
-			bool						m_bCanAddActions;
-
-			uint32						m_nWorldNodeCount; // number of World Nodes currently in the Undo buffer
-			bool						m_bShowNodeCountWarning;  // do we want to show warning dialogs?
-
-		private:
-
-			void						DoNodeCountWarning();
-
-			bool						m_bAlwaysClearUndo;		  // do we always clear the undo list when the limit is reached?
-			uint32						m_nNextNodeCountWarning;  // how many nodes we need before the next warning
-			bool						m_bShowingWarningDialog;  // necessary for odd thread sync issues
+			// talon: 2001's CUndoMgr is 0x38 bytes (CRegionDoc's m_UndoMgr at 0x2e4,
+			// the next member at 0x31c): no node count or warning (Build 69's).
+			BOOL						m_bCanAddActions;
 	};
 
 

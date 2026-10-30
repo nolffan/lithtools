@@ -86,15 +86,14 @@ protected:
 
 	DWORD	m_dwButton;
 	CPoint	m_cPos;
-	int32	m_nWheelDelta;
 
 public:
 
-	CUIMouseEvent(int iEvent = UIEVENT_MOUSEDOWN, DWORD dwButton = UI_MOUSENONE, DWORD uX = 0, DWORD uY = 0, int32 nWheelDelta = 0) : 
-			CUIEvent(iEvent), m_dwButton(dwButton), m_cPos(uX, uY), m_nWheelDelta(nWheelDelta) {};
+	CUIMouseEvent(int iEvent = UIEVENT_MOUSEDOWN, DWORD dwButton = UI_MOUSENONE, DWORD uX = 0, DWORD uY = 0) : 
+			CUIEvent(iEvent), m_dwButton(dwButton), m_cPos(uX, uY) {};
 
-	CUIMouseEvent(int iEvent, DWORD dwButton, CPoint cPos, int32 nWheelDelta = 0) : 
-			CUIEvent(iEvent), m_dwButton(dwButton), m_cPos(cPos), m_nWheelDelta(nWheelDelta) {};
+	CUIMouseEvent(int iEvent, DWORD dwButton, CPoint cPos) : 
+			CUIEvent(iEvent), m_dwButton(dwButton), m_cPos(cPos) {};
 
 	virtual ~CUIMouseEvent() {};
 	virtual CUIEvent *Clone() const { return new CUIMouseEvent(GetType(), GetButton(), GetPos()); };
@@ -108,8 +107,6 @@ public:
 	virtual CPoint	GetPos() const				{ return m_cPos; };
 	virtual void	SetPos(CPoint cPos)			{ m_cPos = cPos; };
 
-	virtual int32	GetWheelDelta() const		{ return m_nWheelDelta;	};
-	virtual void	SetWheelDelta(int32 nDelta)	{ m_nWheelDelta = nDelta; };
 };
 
 #endif //__UIEVENT_H__

@@ -15,12 +15,20 @@
 
 #include "resource.h"
 
+// talon: the 2001 dialog (resource 189) has one edit box, "Rotation
+// (y/p/r):", id 1020, which the 2001 resource.h names nothing we have.
+#ifndef IDC_ROTATIONTEXT
+#define IDC_ROTATIONTEXT	1020
+#endif
 
-typedef void (*TRotationEditUpdateCallback)(const LTVector& vEuler, void* pUserData);
 
 /////////////////////////////////////////////////////////////////////////////
 // CRotationEdit dialog
 
+// talon: 2001's CRotationEdit (0x45f76a..0x4600b5): three scroll bars, the
+// angles' titles and a "y p r" edit box, no copy/paste, no auto-apply, no
+// callback.  The layout is the constructor's (0x45f76a): the bars at 0x5c,
+// 0x98, 0xd4, the strings at 0x110..0x11c, the angles at 0x120.
 class CRotationEdit : public CDialog
 {
 // Construction
@@ -30,7 +38,13 @@ public:
 // Dialog Data
 	//{{AFX_DATA(CRotationEdit)
 	enum { IDD = IDD_ROTATIONEDIT };
-		// NOTE: the ClassWizard will add data members here
+	CScrollBar	m_YawBar;
+	CScrollBar	m_RollBar;
+	CScrollBar	m_PitchBar;
+	CString	m_PitchText;
+	CString	m_RollText;
+	CString	m_YawText;
+	CString	m_RotationText;
 	//}}AFX_DATA
 
 
@@ -43,32 +57,15 @@ public:
 
 public:
 	LTVector	m_EulerAngles;
-	CScrollBar	*m_pYawBar, *m_pPitchBar, *m_pRollBar;
-	BOOL		m_bAutoApply;
 
 	void UpdateScrollTexts();
+	void UpdateRotationText();
 	void DrawGraphical();
 	void DrawAngleToWnd(CWnd *pWnd, float radians);
-	void SetUserCallback(TRotationEditUpdateCallback CallbackFn, void* pUserData);
+	void TrimZeros(CString &str);
 
 // Implementation
 protected:
-
-	TRotationEditUpdateCallback		m_UserCallback;
-	void*							m_pUserData;
-
-	void DoCallback();
-
-	//icons for the buttons
-	HICON		m_hCopyIcon;
-	HICON		m_hPasteIcon;
-
-	//this boolean is used to indicate that we do not want to listen to the changes
-	//being made to the edit boxes (probably because we are making the changes)
-	bool	m_bIgnoreEditChanges;
-
-	//given the ID of an edit control, it will get its floating point value
-	float	GetEditValue(DWORD nID);
 
 	// Generated message map functions
 	//{{AFX_MSG(CRotationEdit)
@@ -76,10 +73,7 @@ protected:
 	afx_msg void OnHScroll(UINT nSBCode, UINT nPos, CScrollBar* pScrollBar);
 	virtual void OnOK();
 	afx_msg void OnPaint();
-	afx_msg void OnEditAngleChanged();
-	afx_msg void OnCopy();
-	afx_msg void OnPaste();
-	afx_msg void OnAutoApply();
+	afx_msg void OnChangeRotationText();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 };

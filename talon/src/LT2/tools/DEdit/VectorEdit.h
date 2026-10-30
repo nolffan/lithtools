@@ -12,28 +12,25 @@
 // VectorEdit.h : header file
 //
 
-typedef void (*TVectorEditUpdateCallback)(const LTVector& vVec, void* pUserData);
-
 /////////////////////////////////////////////////////////////////////////////
 // CVectorEdit dialog
 
+// talon: 2001's CVectorEdit (0x465289..0x4654e2): one "x y z" edit box
+// (resource 182), the string at 0x5c and the vector at 0x60; no spin
+// controls, increment, copy/paste, auto-apply or callback, and no
+// destructor of its own.
 class CVectorEdit : public CDialog
 {
 // Construction
 public:
 	CVectorEdit(CWnd* pParent = NULL);   // standard constructor
 
-	void SetCallback(TVectorEditUpdateCallback pCallback, void* pUserData);
-
 // Dialog Data
 	//{{AFX_DATA(CVectorEdit)
 	enum { IDD = IDD_VECTOR_EDIT };
-	CString	m_sVecX;
-	CString	m_sVecY;
-	CString	m_sVecZ;
-	CString m_sIncrement;
-	BOOL	m_bAutoApply;
+	CString	m_sVector;
 	//}}AFX_DATA
+
 
 // Overrides
 	// ClassWizard generated virtual function overrides
@@ -47,15 +44,8 @@ protected:
 
 	// Generated message map functions
 	//{{AFX_MSG(CVectorEdit)
-	afx_msg void OnChangeVectorEdit();
-	afx_msg void OnChangeIncrement();
-	afx_msg void OnCopy();
-	afx_msg void OnPaste();
-	afx_msg void OnAutoApply();
 	virtual BOOL OnInitDialog();
-	afx_msg void OnSpinX(NMHDR * pNotifyStruct, LRESULT * result);
-	afx_msg void OnSpinY(NMHDR * pNotifyStruct, LRESULT * result);
-	afx_msg void OnSpinZ(NMHDR * pNotifyStruct, LRESULT * result);
+	afx_msg void OnChangeVectorEdit();
 	//}}AFX_MSG
 	DECLARE_MESSAGE_MAP()
 
@@ -67,25 +57,10 @@ public:
 	CVector	GetVector()				{ return m_vVector; }
 
 protected:
-
 	// This is called to trim the trailing zeros from a floating point number
 	void	TrimZeros(CString &sNumber);
 
-	//handles the spin controls
-	void	HandleSpin(DWORD nField, NMHDR * pNotifyStruct);
-
 protected:
-
-	//user callback data
-	TVectorEditUpdateCallback	m_UserCallback;
-	void*						m_pUserCallbackData;
-
-	float		m_fIncrement;
-
-	//icons for the buttons
-	HICON		m_hCopyIcon;
-	HICON		m_hPasteIcon;
-
 	// The current vector
 	CVector		m_vVector;
 };

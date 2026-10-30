@@ -1,25 +1,33 @@
-
-
 #include "bdefs.h"
 #include "viewrender.h"
 #include "regiondoc.h"
 #include "regionview.h"
 #include "optionsdisplay.h"
 
+// talon: 2001's (0x46d22a..0x46db7a), from the image.
+
+// talon: the plain (non-D3D) draw manager's creator, 0x42b02b: a 2001
+// module of part 4's range (after EditRegion) that the project hasn't got.
+extern DrawMgr* dm_CreateNormalDrawMgr(CRegionView *pView);
+
+// talon: stand-in: Build 69's lighting state (see viewrender.h).
+LTVector	CViewRender::m_vWorldSpaceLight;
+LTVector	CViewRender::m_vCameraSpaceLight;
+CReal		CViewRender::m_fAmbientScale;
+CReal		CViewRender::m_fAmbientLight;
+
 
 CViewRender::CViewRender()
 {
 	InitViewDefs();
-	m_DeviceNum = 0;
-	m_RenderMode = RM_HARDWARE;
-	m_pDrawMgr = NULL;
 
-
-	m_pViewDef = m_ViewDefs[VM_TOP];
+	m_ViewDefInfo.m_fPixelScaleY = 1.0f;
 	m_nViewMode = VM_TOP;
-
-	//setup the number of clipping planes for each view type
-	m_nClipPlanesToUse = (m_pViewDef->ViewType() == PERSPECTIVE_VIEWTYPE) ? 6 : 4;
+	m_DeviceNum = 0;
+	m_ViewDefInfo.m_fPixelScaleX = 1.0f;
+	m_RenderMode = 0;
+	m_DrawType = 0;
+	m_pDrawMgr = NULL;
 }
 
 
@@ -50,15 +58,16 @@ void CViewRender::DrawRect(CRect *pRect)
 }
 
 
-void CViewRender::RestartRender(BOOL bForce, int deviceNum, int renderMode, BOOL bRedraw)
+void CViewRender::RestartRender(BOOL bForce, int drawType, int deviceNum, int renderMode, BOOL bRedraw)
 {
+	if(drawType == -1) drawType = m_DrawType;
 	if(deviceNum == -1) deviceNum = m_DeviceNum;
 	if(renderMode == -1) renderMode = m_RenderMode;
 	
 	// Try to avoid it..
 	if(!bForce)
 	{
-		if((deviceNum == m_DeviceNum) && (renderMode == m_RenderMode))
+		if((drawType == m_DrawType) && (deviceNum == m_DeviceNum) && (renderMode == m_RenderMode))
 			return;
 	}
 	
@@ -68,12 +77,20 @@ void CViewRender::RestartRender(BOOL bForce, int deviceNum, int renderMode, BOOL
 		m_pDrawMgr = NULL;
 	}
 
+	m_DrawType = drawType;
 	m_DeviceNum = deviceNum;
 	m_RenderMode = renderMode;
 
-	m_pDrawMgr = dm_CreateDirect3dDrawMgr(m_pView, &m_DeviceNum, &m_RenderMode);
-	if(!m_pDrawMgr)
-		return;
+	if(drawType == 0)
+	{
+		m_pDrawMgr = dm_CreateNormalDrawMgr(m_pView);
+	}
+	else
+	{
+		m_pDrawMgr = dm_CreateDirect3dDrawMgr(m_pView, &m_DeviceNum, &m_RenderMode);
+		if(!m_pDrawMgr)
+			m_pDrawMgr = dm_CreateNormalDrawMgr(m_pView);
+	}
 
 	if(bRedraw)
 	{
@@ -88,18 +105,34 @@ void CViewRender::SetupInitialDrawMgr()
 	COptionsDisplay *pDisplayOptions=GetApp()->GetOptions().GetDisplayOptions();
 	
 	// Determine if the D3D renderer should be used by default
-	int nDeviceNum	= pDisplayOptions->GetDefaultD3DDevice();
-	int nRenderMode	= pDisplayOptions->GetDefaultD3DMode();
-
-	RestartRender(TRUE, nDeviceNum, nRenderMode, FALSE);
+	if(pDisplayOptions->IsUseD3DAsDefault())
+	{
+		RestartRender(TRUE, 1, pDisplayOptions->GetDefaultD3DDevice(), pDisplayOptions->GetDefaultD3DMode(), FALSE);
+	}
+	else
+	{
+		RestartRender(TRUE, -1, -1, -1, FALSE);
+	}
 }
 
 
 void CViewRender::SetupNewSize(int width, int height)
 {
-	m_ViewDefInfo.SetDims(width, height);
+	m_ViewDefInfo.m_Width		= width;
+	m_ViewDefInfo.m_Height		= height;
+	m_ViewDefInfo.m_fWidth		= (CReal)width;
+	m_ViewDefInfo.m_fHeight		= (CReal)height;
+	m_ViewDefInfo.m_fHalfWidth	= m_ViewDefInfo.m_fWidth * 0.5f;
+	m_ViewDefInfo.m_fHalfHeight	= m_ViewDefInfo.m_fHeight * 0.5f;
+	m_ViewDefInfo.m_fInvHalfWidth	= 1.0f / m_ViewDefInfo.m_fHalfWidth;
+	m_ViewDefInfo.m_fInvHalfHeight	= 1.0f / m_ViewDefInfo.m_fHalfHeight;
 
-	m_PerspectiveView.UpdateSize();
+	m_ViewDefInfo.m_fProjectWidth		= (CReal)(width / m_pView->m_nPixelScale);
+	m_ViewDefInfo.m_fProjectHeight		= (CReal)(height / m_pView->m_nPixelScale);
+	m_ViewDefInfo.m_fProjectHalfWidth	= m_ViewDefInfo.m_fProjectWidth * 0.5f;
+	m_ViewDefInfo.m_fProjectHalfHeight	= m_ViewDefInfo.m_fProjectHeight * 0.5f;
+	m_ViewDefInfo.m_fInvProjectHalfWidth	= 1.0f / m_ViewDefInfo.m_fProjectHalfWidth;
+	m_ViewDefInfo.m_fInvProjectHalfHeight	= 1.0f / m_ViewDefInfo.m_fProjectHalfHeight;
 
 	if(m_pDrawMgr)
 	{
@@ -146,9 +179,7 @@ void CViewRender::InitViewDefs()
 		m_ViewDefs[i]->m_FarZ		= 10000.0f;
 	}
 
-	m_PerspectiveView.m_FarZ = (float)GetApp()->GetOptions().GetDisplayOptions()->GetPerspectiveFarZ();
-	m_PerspectiveView.SetupCamera(	GetApp()->GetOptions().GetDisplayOptions()->GetViewAngle(), 
-									GetApp()->GetOptions().GetDisplayOptions()->IsUseAspectRatio());
+	m_PerspectiveView.m_FarZ = 2000.0f;
 
 	m_pViewDef = &m_PerspectiveView;
 
@@ -192,10 +223,17 @@ void CViewRender::SetViewMode( uint32 nMode )
 	m_pViewDef = m_ViewDefs[nMode];
 	m_nViewMode = nMode;
 
-	RestartRender(TRUE, -1, -1, TRUE);
-	
-	//setup the number of clipping planes for each view type
-	m_nClipPlanesToUse = (m_pViewDef->ViewType() == PERSPECTIVE_VIEWTYPE) ? 6 : 4;
+	//setup the number of clipping planes for each view type; the parallel
+	//views always use the plain draw manager
+	if(m_pViewDef->ViewType() == PERSPECTIVE_VIEWTYPE)
+	{
+		m_nClipPlanesToUse = 6;
+	}
+	else
+	{
+		RestartRender(FALSE, 0, -1, -1, TRUE);
+		m_nClipPlanesToUse = 4;
+	}
 }
 
 
@@ -204,30 +242,8 @@ uint32 CViewRender::GetViewMode()
 	return m_nViewMode;
 }
 
-void CViewRender::InitLighting(const LTVector& vWorldSpaceLight, CReal fAmbient)
-{
-	m_vWorldSpaceLight = vWorldSpaceLight;
-	m_vWorldSpaceLight.Norm();
 
-	//we need to calculate the camera space lighting vector
-	m_vCameraSpaceLight = m_pView->m_Transform * m_vWorldSpaceLight;
-
-	//also subtract the transformed origin to ensure that no odd scales or translations
-	//are messing it up
-	LTVector vTransOrigin = m_pView->m_Transform * LTVector(0, 0, 0);
-
-	m_vCameraSpaceLight = m_vCameraSpaceLight - vTransOrigin;
-
-	//sanity check
-	fAmbient = LTCLAMP(fAmbient, 0.0f, 1.0f);
-
-	m_fAmbientScale = (1.0f - fAmbient) / 2;
-	m_fAmbientLight = fAmbient + m_fAmbientScale;
-
-	m_vCameraSpaceLight.Norm();
-}
-
-BOOL CViewRender::ClipLineToFrustum(TLVertex *pVerts, uint32 nClipMask)
+BOOL CViewRender::ClipLineToFrustum(TLVertex *pVerts)
 {
 	DWORD i;
 	BOOL in[2];
@@ -237,10 +253,6 @@ BOOL CViewRender::ClipLineToFrustum(TLVertex *pVerts, uint32 nClipMask)
 
 	for( i=0; i < m_nClipPlanesToUse; i++ )
 	{
-		//see if this plane is in our clip mask
-		if(!(nClipMask & (1 << i)))
-			continue;
-
 		CPlane &plane = m_ClipPlanes[i];
 
 		dot[0] = DIST_TO_PLANE(pVerts[0].m_Vec, plane);
@@ -248,23 +260,17 @@ BOOL CViewRender::ClipLineToFrustum(TLVertex *pVerts, uint32 nClipMask)
 		in[0] = dot[0] > 0.0f;
 		in[1] = dot[1] > 0.0f;
 
-		//see if they are different
+		// Both out?
+		if(!in[0] && !in[1])
+			return FALSE;
+
 		if( in[0] != in[1] )
 		{
-			//they are different, this needs to be clipped
 			pDest = &pVerts[in[0]];
 
 			t = -dot[0] / (dot[1] - dot[0]);
 			VEC_LERP(pDest->m_Vec, pVerts[0].m_Vec, pVerts[1].m_Vec, t);
 			TLVertex::ClipExtra(pDest, &pVerts[0], &pVerts[1], t);
-		}
-		else
-		{
-			//they are the same...see if one is out (meaning they are both out)
-			if(!in[0])
-			{
-				return FALSE;
-			}
 		}
 	}
 
@@ -286,18 +292,20 @@ BOOL CViewRender::TransformAndProjectInFrustum( CVector &vec, CPoint &point )
 }
 
 
-// This is specifically for the case where a selection box causes the screen to scroll
-// and push items out of the frustum - don't use this if you don't know what you're doing.
-
-BOOL CViewRender::TransformAndProject( CVector &vec, CPoint &point )
+// talon: stand-in: Build 69's lighting, for its DrawBase (not in 2001).
+void CViewRender::InitLighting(const LTVector& vWorldSpaceLight, CReal fAmbient)
 {
-	CVector		transformed;
+	m_vWorldSpaceLight = vWorldSpaceLight;
+	m_vWorldSpaceLight.Norm();
 
-	
-	m_Transform.Apply( vec, transformed );
+	m_vCameraSpaceLight = m_Transform * m_vWorldSpaceLight;
+	LTVector vTransOrigin = m_Transform * LTVector(0, 0, 0);
+	m_vCameraSpaceLight = m_vCameraSpaceLight - vTransOrigin;
 
-	m_pViewDef->ProjectPt( transformed, point );
-	return TRUE;
+	fAmbient = LTCLAMP(fAmbient, 0.0f, 1.0f);
+
+	m_fAmbientScale = (1.0f - fAmbient) / 2;
+	m_fAmbientLight = fAmbient + m_fAmbientScale;
+
+	m_vCameraSpaceLight.Norm();
 }
-
-

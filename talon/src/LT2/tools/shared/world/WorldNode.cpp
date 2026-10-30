@@ -486,15 +486,18 @@ void CWorldNode::SetName(const char *lpszName)
 	if(pProp)
 	{
 		pProp->SetString(lpszName);
-#ifdef DIRECTEDITOR_BUILD
-		OnPropertyChanged(pProp, true, NULL);
-#endif
+		// talon: 2001's DEdit doesn't notify (0x46f242 tail-calls SetString).
 	}
 }
 
 /************************************************************************/
 // Sets the position
+#ifdef DIRECTEDITOR_BUILD
+// talon: by value in 2001's DEdit (0x46f282, ret $0xc).
+void CWorldNode::SetPos(LTVector v)
+#else
 void CWorldNode::SetPos(const LTVector &v)
+#endif
 {
 	CVectorProp *pProp;
 	
@@ -507,7 +510,12 @@ void CWorldNode::SetPos(const LTVector &v)
 
 /************************************************************************/
 // Returns the rotation
+#ifdef DIRECTEDITOR_BUILD
+// talon: by reference in 2001's DEdit (0x46f2a9), like GetPos.
+LTVector& CWorldNode::GetOr()
+#else
 LTVector CWorldNode::GetOr()
+#endif
 { 
 	CRotationProp *pProp;
 	

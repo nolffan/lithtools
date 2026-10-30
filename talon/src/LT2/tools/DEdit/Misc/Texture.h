@@ -47,7 +47,6 @@
 								 // This equals height * width * 2.  Don't use this if 
 								 // you don't want that.
 
-			int		m_MemorySize; // Height * Pitch summed over all Mipmaps (same as dtx file size)
 			
 			DWORD	m_UIMipmapOffset; // From the TextureData..
 			float	m_UIMipmapScale;
@@ -73,16 +72,10 @@
 	void dib_FreeAllTextures();
 	
 
-	BOOL	GetPcxDims( DStream *pStream, DWORD &width, DWORD &height, int &bitsPerPixel, int &planes  );
 	BOOL	SavePcxAsTexture(LoadedBitmap *pPcx, DStream *pStream, DWORD textureFlags);
 	BOOL	SaveDtxAsTga(DStream *pDtxFile, CAbstractIO &pcxFile);
-	BOOL	Write8BitDTX(CAbstractIO &file, TextureData *pData, CString* pFilename, bool retainHeader);
-	BOOL	SaveDtxAs8Bit(DStream *pDtxFile, CAbstractIO &pcxFile, CString* pFilename, bool retainHeader=false);
-	bool	FillTextureWithPcx(LoadedBitmap* pcx, TextureData* dtx);
-	bool	SaveCubeMap( LoadedBitmap* bitmaps, DStream* stream );
-	bool	SaveBumpMap( LoadedBitmap* pBitmap, DStream* stream, uint32 nHeightChannel, bool bLuminance, uint32 nLumChannel, float fHeightScale );
-	bool	SaveNormalMap( LoadedBitmap* pBitmap, DStream* stream, uint32 nHeightChannel, bool bAlpha, uint32 nAlphaChannel, float fHeightScale );
-	int		NumColorsWithAlpha(TextureData *pData, uint8* alpha );
+	BOOL	Write8BitDTX(CAbstractIO &file, TextureData *pData, CString* pFilename);
+	BOOL	SaveDtxAs8Bit(DStream *pDtxFile, CAbstractIO &pcxFile, CString* pFilename);
 
 
 #endif  // __TEXTURE_H__

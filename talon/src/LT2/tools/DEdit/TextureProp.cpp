@@ -307,7 +307,6 @@ void CTextureProp::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_FORMAT_DXT3, m_Format_DXT3);
 	DDX_Control(pDX, IDC_FORMAT_DXT1, m_Format_DXT1);
 	DDX_Control(pDX, IDC_FORMAT_32BIT, m_Format_32Bit);
-	DDX_Control(pDX, IDC_FORMAT_32P, m_Format_32P);
 	//}}AFX_DATA_MAP
 }
 
@@ -315,6 +314,7 @@ void CTextureProp::DoDataExchange(CDataExchange* pDX)
 BEGIN_MESSAGE_MAP(CTextureProp, CDialog)
 	//{{AFX_MSG_MAP(CTextureProp)
 	ON_EN_CHANGE(IDC_TEXTUREPROP_FLAGS, OnTexturePropChange)
+	ON_EN_CHANGE(IDC_LIGHTDEFS_STRING, OnLightDefsChange)
 	ON_EN_CHANGE(IDC_TEXTURE_GROUP, OnGroupChange)
 	ON_EN_CHANGE(IDC_NUMBER_OF_MIPMAPS, OnNumMipmapsChange)
 	ON_EN_CHANGE(IDC_DTX_NONS3TCMIPMAPOFFSET, OnNonS3TCMipmapOffset)
@@ -323,18 +323,15 @@ BEGIN_MESSAGE_MAP(CTextureProp, CDialog)
 	ON_EN_CHANGE(IDC_DETAILTEXTUREANGLE, OnChangeDetailTextureAngle)
 	ON_COMMAND(IDOK, OnOk)
 	ON_BN_CLICKED(IDC_FULLBRITE, OnFullbrite)
-	ON_BN_CLICKED(IDC_32BITSYSCOPY, On32BitSysCopy)
 	ON_BN_CLICKED(IDC_PREFER4444, OnPrefer4444)
 	ON_BN_CLICKED(IDC_PREFER5551, OnPrefer5551)
 	ON_BN_CLICKED(IDC_PREFER16BIT, OnPrefer16Bit)
-	ON_BN_CLICKED(IDC_NOSYSCACHE, OnNoSysCache)
 	ON_EN_CHANGE(IDC_DTX_COMMAND_STRING2, OnChangeDtxCommandString)
 	ON_EN_CHANGE(IDC_TEXTUREPRIORITY, OnChangeTexturePriority)
 	ON_BN_CLICKED(IDC_FORMAT_32BIT, OnFormat32bit)
 	ON_BN_CLICKED(IDC_FORMAT_DXT1, OnFormatDxt1)
 	ON_BN_CLICKED(IDC_FORMAT_DXT3, OnFormatDxt3)
 	ON_BN_CLICKED(IDC_FORMAT_DXT5, OnFormatDxt5)
-	ON_BN_CLICKED(IDC_FORMAT_32P, OnFormat32P)
 	//}}AFX_MSG_MAP
 END_MESSAGE_MAP()
 
@@ -346,16 +343,6 @@ void CTextureProp::SetCheckBox(UINT id, BOOL bCheck)
 	pButton = (CButton*)GetDlgItem(id);
 	if(pButton)
 		pButton->SetCheck(bCheck);
-}
-
-
-void CTextureProp::EnableCheckBox(UINT id, BOOL bEnable)
-{
-	CButton *pButton;
-
-	pButton = (CButton*)GetDlgItem(id);
-	if( pButton )
-		pButton->EnableWindow( bEnable );
 }
 
 
@@ -373,18 +360,10 @@ BOOL CTextureProp::GetCheckBox(UINT id)
 
 void CTextureProp::SetupBPPIdent()
 {
-	// disable checkboxes that can't be converted to from the current format
-	EnableCheckBox(IDC_FORMAT_32BIT, m_BPPIdent != BPP_32P);
-	EnableCheckBox(IDC_FORMAT_DXT1, m_BPPIdent != BPP_32P);
-	EnableCheckBox(IDC_FORMAT_DXT3, m_BPPIdent != BPP_32P);
-	EnableCheckBox(IDC_FORMAT_DXT5, m_BPPIdent != BPP_32P);
-	EnableCheckBox(IDC_FORMAT_32P, m_BPPIdent == BPP_32P);
-
 	SetCheckBox(IDC_FORMAT_32BIT, m_BPPIdent == BPP_32);
 	SetCheckBox(IDC_FORMAT_DXT1, m_BPPIdent == BPP_S3TC_DXT1);
 	SetCheckBox(IDC_FORMAT_DXT3, m_BPPIdent == BPP_S3TC_DXT3);
 	SetCheckBox(IDC_FORMAT_DXT5, m_BPPIdent == BPP_S3TC_DXT5);
-	SetCheckBox(IDC_FORMAT_32P, m_BPPIdent == BPP_32P);
 }
 
 
@@ -414,12 +393,11 @@ BOOL CTextureProp::OnInitDialog()
 	SetDlgItemInt(IDC_TEXTUREPROP_FLAGS, m_TextureFlags);
 
 	SetCheckBox(IDC_PREFER16BIT,	m_bPrefer16Bit);
-	SetCheckBox(IDC_NOSYSCACHE,		m_bNoSysCache);
 	SetCheckBox(IDC_FULLBRITE,		m_bFullBrights);
-	SetCheckBox(IDC_32BITSYSCOPY,	m_b32BitSysCopy);
 	SetCheckBox(IDC_PREFER4444,		m_bPrefer4444);
 	SetCheckBox(IDC_PREFER5551,		m_bPrefer5551);
 	
+	SetDlgItemText(IDC_LIGHTDEFS_STRING, m_LightDefs);
 	SetDlgItemInt(IDC_TEXTURE_GROUP, m_TextureGroup);
 
 	SetDlgItemText(IDC_DTX_COMMAND_STRING2, m_CommandString);
@@ -513,16 +491,20 @@ void CTextureProp::OnOk()
 		m_nMipmaps = atoi(theText);
 		
 		// Make sure they enter a valid range.
-		if(m_nMipmaps <= 0 || m_nMipmaps > MAX_DTX_MIPMAPS)
+		// talon: 2001's limit is four mipmaps (0x4634b6: cmp $5; jb)
+		if(m_nMipmaps <= 0 || m_nMipmaps >= 5)
 		{
 			AppMessageBox(IDS_INVALID_MIPMAP_COUNT, MB_OK);
 			return;
 		}
 	}
 
+	if(GetDlgItemText(IDC_LIGHTDEFS_STRING, theText, 200) == 0)
+		m_LightDefs = "";
+	else
+		m_LightDefs = theText;
+
 	m_bFullBrights = GetCheckBox(IDC_FULLBRITE);
-	m_b32BitSysCopy= GetCheckBox(IDC_32BITSYSCOPY);
-	m_bNoSysCache = GetCheckBox(IDC_NOSYSCACHE);
 	m_bPrefer4444 = GetCheckBox(IDC_PREFER4444);
 	m_bPrefer5551 = GetCheckBox(IDC_PREFER5551);
 	m_bPrefer16Bit = GetCheckBox(IDC_PREFER16BIT);
@@ -558,6 +540,11 @@ void CTextureProp::OnTexturePropChange()
 	SetChange(IDC_TEXTUREPROP_FLAGS_TEXT, TPROP_FLAGS);
 }
 
+void CTextureProp::OnLightDefsChange()
+{
+	SetChange(IDC_LIGHTDEFS_STRING_TEXT, TPROP_LIGHTDEFS);
+}
+
 void CTextureProp::OnGroupChange()
 {
 	SetChange(IDC_TEXTURE_GROUP_TEXT, TPROP_GROUP);
@@ -573,10 +560,6 @@ void CTextureProp::OnFullbrite()
 	SetChange(IDC_FULLBRITE, TPROP_FULLBRITES);
 }
 
-void CTextureProp::On32BitSysCopy() 
-{
-	SetChange(IDC_32BITSYSCOPY, TPROP_32BITSYSCOPY);
-}
 
 void CTextureProp::OnPrefer4444() 
 {
@@ -609,11 +592,6 @@ void CTextureProp::OnPrefer5551()
 void CTextureProp::OnPrefer16Bit()
 {
 	SetChange(IDC_PREFER16BIT, TPROP_PREFER16BIT);
-}
-
-void CTextureProp::OnNoSysCache()
-{
-	SetChange(IDC_NOSYSCACHE, TPROP_NOSYSCACHE);
 }
 
 void CTextureProp::OnChangeDtxCommandString() 
@@ -651,11 +629,6 @@ void CTextureProp::OnFormatDxt5()
 	m_BPPIdent = BPP_S3TC_DXT5;
 	SetupBPPIdent();
 	RedrawPreviewWindow();
-}
-
-void CTextureProp::OnFormat32P()
-{
-	SetupBPPIdent();
 }
 
 void CTextureProp::OnNonS3TCMipmapOffset() 

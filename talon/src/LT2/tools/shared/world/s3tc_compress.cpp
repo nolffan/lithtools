@@ -124,14 +124,15 @@ BOOL ConvertTextureData(TextureData *pData, BPPIdent bpp)
 			return FALSE;
 
 		
+		// talon: 2001's frees the old data before either branch (0x460311).
+		if(pData->m_Header.m_IFlags & DTX_MIPSALLOCED)
+		{
+			delete pMip->m_Data;
+		}
+
 		// Either compress it or just store it.
 		if(bpp == BPP_32)
 		{
-			if(pData->m_Header.m_IFlags & DTX_MIPSALLOCED)
-			{
-				delete pMip->m_Data;
-			}
-
 			pMip->m_Data = (BYTE*)new DWORD[pMip->m_Width * pMip->m_Height * sizeof(DWORD)];
 			if(!pMip->m_Data)
 				return FALSE;
@@ -141,11 +142,6 @@ BOOL ConvertTextureData(TextureData *pData, BPPIdent bpp)
 		}
 		else if(IsBPPCompressed(bpp))
 		{
-			if(pData->m_Header.m_IFlags & DTX_MIPSALLOCED)
-			{
-				delete pMip->m_Data;
-			}
-
 			// Compress.
 			sCompress.m_Format = bpp;
 			sCompress.m_pData = tempBuf.GetArray();

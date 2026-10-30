@@ -17,7 +17,8 @@
 
 // Includes....
 #include "bdefs.h"
-#include "optionsbase.h"		//for the registry utils
+#include "optionsbase.h"
+#include "optionsprimitives.h"		//for the registry utils
 #include "regiondoc.h"
 #include "regionview.h"
 
@@ -26,6 +27,8 @@
 #include "edithelpers.h"
 #include "mainfrm.h"
 #include "stringdlg.h"
+#include "cylinderprimdlg.h"
+#include "sphereprimitivedlg.h"
 #include "texture.h"
 #include "node_ops.h"
 #include "edit_actions.h"
@@ -34,9 +37,7 @@
 #include "de_world.h"
 #include "pregeometry.h"
 #include "geomroutines.h"
-#include "optionsviewports.h"
 #include "converge.h"
-#include "objectselfilterdlg.h"
 
 #include <set>
 #include <vector>
@@ -149,81 +150,45 @@ CPoint CRegionView::GetCurMousePos()
 	return ret;
 }
 
-uint32	CRegionView::GetShadeMode() const
+// talon: 2001's view keeps these flags itself (0x46623c..0x466289).
+int CRegionView::GetShadeMode()
 {
-	return GetApp()->GetOptions().GetViewportOptions()->GetShadeMode(m_nViewID);
+	return m_nShadeMode;
 }
 
 void CRegionView::SetShadeMode( int mode )
 {
-	GetApp()->GetOptions().GetViewportOptions()->SetShadeMode(m_nViewID, mode);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
+	m_nShadeMode = mode;
 }
 
-BOOL CRegionView::IsSelectBackfaces() const
+BOOL CRegionView::IsWalkThroughMovement()
 {
-	return GetApp()->GetOptions().GetViewportOptions()->IsSelectBackfaces(m_nViewID);
+	return m_bWalkThroughMovement;
+}
+
+void CRegionView::SetWalkThroughMovement( BOOL bWalkThrough )
+{
+	m_bWalkThroughMovement = bWalkThrough;
+}
+
+BOOL CRegionView::IsSelectBackfaces()
+{
+	return m_bSelectBackfaces;
 }
 
 void CRegionView::SetSelectBackfaces( BOOL bBackface )
 {
-	GetApp()->GetOptions().GetViewportOptions()->SetSelectBackfaces(m_nViewID, bBackface);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
+	m_bSelectBackfaces = bBackface;
 }
 
-BOOL CRegionView::IsShowNormals() const
+BOOL CRegionView::IsShowNormals()
 {
-	return GetApp()->GetOptions().GetViewportOptions()->IsShowNormals(m_nViewID);
+	return m_bShowNormals;
 }
 
 void CRegionView::SetShowNormals( BOOL bShow )
 {
-	GetApp()->GetOptions().GetViewportOptions()->SetShowNormals(m_nViewID, bShow);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
-}
-
-BOOL CRegionView::IsShowWireframe() const
-{
-	return GetApp()->GetOptions().GetViewportOptions()->IsShowWireframe(m_nViewID);
-}
-
-void CRegionView::SetShowWireframe( BOOL bShow )
-{
-	GetApp()->GetOptions().GetViewportOptions()->SetShowWireframe(m_nViewID, bShow);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
-}
-
-BOOL CRegionView::IsShowGrid() const
-{
-	return GetApp()->GetOptions().GetViewportOptions()->IsShowGrid(m_nViewID);
-}
-
-void CRegionView::SetShowGrid(BOOL bShow)
-{
-	GetApp()->GetOptions().GetViewportOptions()->SetShowGrid(m_nViewID, bShow);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
-}
-
-BOOL CRegionView::IsShowObjects() const
-{
-	return GetApp()->GetOptions().GetViewportOptions()->IsShowObjects(m_nViewID);
-}
-
-void CRegionView::SetShowObjects(BOOL bShow)
-{
-	GetApp()->GetOptions().GetViewportOptions()->SetShowObjects(m_nViewID, bShow);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
-}
-
-BOOL CRegionView::IsShowMarker() const
-{
-	return GetApp()->GetOptions().GetViewportOptions()->IsShowMarker(m_nViewID);
-}
-
-void CRegionView::SetShowMarker(BOOL bShow)
-{
-	GetApp()->GetOptions().GetViewportOptions()->SetShowMarker(m_nViewID, bShow);
-	GetMainFrame()->UpdateAllRegions(REGIONVIEWUPDATE_VIEW(m_nViewID));
+	m_bShowNormals = bShow;
 }
 
 int CRegionView::GetEditMode()
@@ -290,18 +255,14 @@ BOOL CRegionView::GetImmediateVert( CVertRefArray &list )
 
 CBrushRef CRegionView::GetMouseOverBrush( CReal *pDist, CReal rMinDist )
 {
-	CPoint		point = GetCurMousePos();
-	CEditRay	ray;
 	CPolyRef	ref;
 	CBrushRef	brushRef;
-
+	CPoint		point = GetCurMousePos();
+	CEditRay	ray;
 
 	ray = ViewDef()->MakeRayFromScreenPoint( point );
 	ref = CastRayAtPolies( ray, pDist, rMinDist );
-	if( ref.IsValid() )
-		brushRef.Init( ref.m_pBrush );
-	else
-		brushRef.Init( NULL );
+	brushRef.Init( ref.m_pBrush );
 
 	return brushRef;
 }
@@ -347,9 +308,11 @@ BOOL CRegionView::MakeTaggedEdgeList( CEdgeRefArray &list )
 
 typedef CLinkedList<CVertRef> CVertRefList;
 
+// talon: 2001's (0x466501): the rectangle in pixels of the view's pixel
+// scale, word counters, frozen nodes not skipped.
 void CRegionView::TagPointsInRect( CRect &rect )
 {
-	uint32 i, k;
+	uint16 i, k;
 	CPoint point;
 	CRect norm = rect;
 	CEditBrush *pBrush;
@@ -358,6 +321,11 @@ void CRegionView::TagPointsInRect( CRect &rect )
 	
 	norm.NormalizeRect();
 
+	norm.left /= m_nPixelScale;
+	norm.top /= m_nPixelScale;
+	norm.right /= m_nPixelScale;
+	norm.bottom /= m_nPixelScale;
+
 	// Only tag in selected brushes if we're in geometry mode and a brush is selected
 	if ((GetEditMode() == GEOMETRY_EDITMODE) && (GetRegion()->m_Selections.GetSize() != 0))
 	{
@@ -365,11 +333,7 @@ void CRegionView::TagPointsInRect( CRect &rect )
 		{
 			CWorldNode *pNode = GetRegion()->m_Selections[i];
 
-			//don't worry about selecting a brush if it is frozen, hidden, or not a brush 
-			//at all
-			if( pNode->IsFlagSet(NODEFLAG_FROZEN) ||
-				pNode->IsFlagSet(NODEFLAG_HIDDEN) ||
-				(pNode->GetType() != Node_Brush))
+			if( pNode->IsFlagSet(NODEFLAG_HIDDEN) || (pNode->GetType() != Node_Brush))
 				continue;
 
 			// Get the brush pointer...
@@ -399,9 +363,7 @@ void CRegionView::TagPointsInRect( CRect &rect )
 		{
 			pBrush = m_pRegion->m_Brushes.GetNext(pos);
 
-			if(	pBrush->IsFlagSet(NODEFLAG_FROZEN) ||
-				pBrush->IsFlagSet(NODEFLAG_HIDDEN) ||
-				!pBrush->IsVisible())
+			if(	pBrush->IsFlagSet(NODEFLAG_HIDDEN) || !pBrush->IsVisible())
 				continue;
 
 			for( k=0; k < pBrush->m_Points; k++ )
@@ -422,59 +384,28 @@ void CRegionView::TagPointsInRect( CRect &rect )
 }
 
 
-void CRegionView::RecurseAndGetObjectsInRect(CRect &rect, CMoArray< CWorldNode * > &objects, CWorldNode *pRoot, BOOL bFilter)
+// talon: 2001's (0x4666ca): no recursion through the tree and no
+// selection filter, just the region's objects; the rectangle is in pixels
+// of the view's pixel scale.
+void CRegionView::GetObjectsInRect( CRect &rect, CMoArray< CWorldNode * > &objects )
 {
-	if (!pRoot)
-		return;
-
-	if((!pRoot->IsFlagSet(NODEFLAG_HIDDEN)) && (!pRoot->IsFlagSet(NODEFLAG_FROZEN)))
-	{
-		if (pRoot->GetType() == Node_Object)
-		{
-			if(!bFilter || GetObjectSelFilterDlg()->CanSelectObject(pRoot))
-			{
-				CPoint testPt;
-				if( TransformAndProject(pRoot->GetPos(), testPt) )
-				{
-					if( rect.PtInRect(testPt) )
-						objects.Append(pRoot);
-				}
-			}
-		}
-		else if (pRoot->GetType() == Node_PrefabRef)
-		{
-			if(!bFilter || GetObjectSelFilterDlg()->CanSelectObject(pRoot))
-			{
-				LTMatrix mPrefabTrans;
-				gr_SetupMatrixEuler(pRoot->GetOr(), mPrefabTrans.m);
-
-				CPoint testPt;
-				LTVector vPos = pRoot->GetPos() + mPrefabTrans * ((CPrefabRef*)pRoot)->GetPrefabCenter();
-				if( TransformAndProject(vPos, testPt) )
-				{
-					if( rect.PtInRect(testPt) )
-						objects.Append(pRoot);
-				}
-			}
-		}
-	}
-
-	GPOS iCurChild = pRoot->m_Children.GetHeadPosition();
-	while (iCurChild)
-	{
-		CWorldNode *pChild = pRoot->m_Children.GetNext(iCurChild);
-		RecurseAndGetObjectsInRect(rect, objects, pChild, bFilter);
-	}
-}
-
-void CRegionView::GetObjectsInRect( CRect &rect, CMoArray< CWorldNode * > &objects, BOOL bFilter )
-{
-	// Normalize the rectangle
 	CRect norm = rect;
 	norm.NormalizeRect();
 
-	// Send it into the recursive function to get the list
-	RecurseAndGetObjectsInRect(norm, objects, m_pRegion->GetRootNode(), bFilter);
+	norm.left /= m_nPixelScale;
+	norm.top /= m_nPixelScale;
+	norm.right /= m_nPixelScale;
+	norm.bottom /= m_nPixelScale;
+
+	for( uint16 i=0; i < m_pRegion->m_Objects; i++ )
+	{
+		CWorldNode *pObj = m_pRegion->m_Objects[i];
+
+		CVector &vPos = pObj->GetPos();
+		CPoint testPt;
+		if( TransformAndProjectInFrustum(vPos, testPt) && norm.PtInRect(testPt) && !pObj->IsFlagSet(NODEFLAG_HIDDEN) )
+			objects.Append(pObj);
+	}
 }
 
 
@@ -491,9 +422,7 @@ void CRegionView::ToggleVertexTag( CVertRef ref )
 
 BOOL CRegionView::GetClosestPoint( CPoint &point, CVector &vClosest, BOOL bSelectedOnly, CReal *pDist )
 {
-	CWorldNode*		obj;
 	CReal			dist=(CReal)MAX_CREAL, minDist = (CReal)MAX_CREAL;
-	CVector			vClosestPoint;
 	CVertRef		closest;
 	BOOL			bResult = FALSE;
 
@@ -505,11 +434,11 @@ BOOL CRegionView::GetClosestPoint( CPoint &point, CVector &vClosest, BOOL bSelec
 		bResult = TRUE;
 	}
 
-	obj = GetClosestObject( point, bSelectedOnly, &dist );
-	if( obj && dist < minDist )
+	CObjectRef obj = GetClosestObject( point, bSelectedOnly, &dist );
+	if( obj.IsValid() && dist < minDist )
 	{
 		minDist = dist;
-		vClosest = obj->GetPos();
+		vClosest = obj()->GetPos();
 		bResult = TRUE;
 	}
 
@@ -520,7 +449,7 @@ BOOL CRegionView::GetClosestPoint( CPoint &point, CVector &vClosest, BOOL bSelec
 }
 
 
-CVertRef CRegionView::GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *pDist, bool bIgnoreFrozen )
+CVertRef CRegionView::GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *pDist )
 {
 	CWorldNode		*pNode;
 	CEditBrush		*pBrush;
@@ -538,8 +467,7 @@ CVertRef CRegionView::GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *
 		{
 			pBrush = m_pRegion->m_Brushes.GetNext(pos);
 
-			if(	pBrush->IsFlagSet(NODEFLAG_HIDDEN) ||
-				(pBrush->IsFlagSet(NODEFLAG_FROZEN) && bIgnoreFrozen))
+			if(	pBrush->IsFlagSet(NODEFLAG_HIDDEN) )
 			{
 				continue;
 			}
@@ -559,8 +487,7 @@ CVertRef CRegionView::GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *
 		{
 			pNode = GetRegion()->m_Selections[i];
 
-			if(	pNode->IsFlagSet(NODEFLAG_HIDDEN) ||
-				(pNode->IsFlagSet(NODEFLAG_FROZEN) && bIgnoreFrozen))
+			if(	pNode->IsFlagSet(NODEFLAG_HIDDEN) )
 			{
 				continue;
 			}
@@ -588,15 +515,20 @@ CVertRef CRegionView::GetClosestVert( CPoint &point, BOOL bSelectedOnly, CReal *
 }
 
 
+// talon: 2001's (0x4669a3): the point in pixels of the pixel scale, word
+// indices.
 CVertRef CRegionView::GetClosestVert( CEditBrush *pBrush, CPoint point, CReal *pDist )
 {
-	uint32		i, k;
-	uint32		minIndex = BAD_INDEX;
+	uint16		i, k;
+	uint16		minIndex = 0xFFFF;
 	CEditPoly	*pPoly;
 	CPoint		testPt;
 
 	CReal		viewerDist, minViewerDist = (CReal)MAX_CREAL;
 	int32		dist, minDist = MAX_SDWORD;
+
+	point.x /= m_nPixelScale;
+	point.y /= m_nPixelScale;
 
 	for( i=0; i < pBrush->m_Polies; i++ )
 	{
@@ -630,26 +562,30 @@ CVertRef CRegionView::GetClosestVert( CEditBrush *pBrush, CPoint point, CReal *p
 	if( pDist )
 		*pDist = (CReal)minDist;
 
-	if( minIndex == BAD_INDEX )
+	if( minIndex == 0xFFFF )
 		return CVertRef( NULL, minIndex );
 	else
 		return CVertRef( pBrush, minIndex );
 }
 
 
-CVertRef CRegionView::GetClosestVert( CVertRefArray &vertArray, CPoint point, CReal *pDist, bool bIgnoreFrozen )
+// talon: 2001's (0x466b6d): the point is in pixels of the view's pixel
+// scale; word indices; frozen brushes count.
+CVertRef CRegionView::GetClosestVert( CVertRefArray &vertArray, CPoint point, CReal *pDist )
 {
-	uint32		i;
-	uint32		minIndex = BAD_INDEX;
+	uint16		i;
+	uint16		minIndex = 0xFFFF;
 	CPoint		testPt;
 
 	CReal		viewerDist, minViewerDist = (CReal)MAX_CREAL;
 	int32		dist, minDist=MAX_SDWORD;
 
+	point.x /= m_nPixelScale;
+	point.y /= m_nPixelScale;
+
 	for( i=0; i < vertArray.GetSize( ); i++ )
 	{
-		if(	vertArray[i].m_pBrush->IsFlagSet(NODEFLAG_HIDDEN) ||
-			(vertArray[i].m_pBrush->IsFlagSet(NODEFLAG_FROZEN) && bIgnoreFrozen))
+		if(	vertArray[i].m_pBrush->IsFlagSet(NODEFLAG_HIDDEN) )
 		{
 			continue;
 		}
@@ -679,7 +615,7 @@ CVertRef CRegionView::GetClosestVert( CVertRefArray &vertArray, CPoint point, CR
 	if( pDist )
 		*pDist = (CReal)minDist;
 
-	if( minIndex == BAD_INDEX )
+	if( minIndex == 0xFFFF )
 		return CVertRef( NULL, minIndex );
 	else
 		return vertArray[minIndex];
@@ -688,7 +624,7 @@ CVertRef CRegionView::GetClosestVert( CVertRefArray &vertArray, CPoint point, CR
 
 CEdgeRef CRegionView::GetClosestEdge( CPoint &point, BOOL bSelectedOnly )
 {
-	uint32			i;
+	uint16			i;
 	CEditBrush		*pBrush;
 	CEdgeRef		testRef, bestRef;
 	CReal			dist, minDist = (CReal)MAX_CREAL;
@@ -701,7 +637,7 @@ CEdgeRef CRegionView::GetClosestEdge( CPoint &point, BOOL bSelectedOnly )
 		{
 			pBrush = m_pRegion->m_Brushes.GetNext(pos);
 			
-			if(pBrush->IsFlagSet(NODEFLAG_HIDDEN) || pBrush->IsFlagSet(NODEFLAG_FROZEN))
+			if(pBrush->IsFlagSet(NODEFLAG_HIDDEN))
 			{
 				continue;
 			}
@@ -721,7 +657,7 @@ CEdgeRef CRegionView::GetClosestEdge( CPoint &point, BOOL bSelectedOnly )
 		{
 			CWorldNode *pNode = GetRegion()->m_Selections[i];
 
-			if(pNode->IsFlagSet(NODEFLAG_HIDDEN) || pNode->IsFlagSet(NODEFLAG_FROZEN))
+			if(pNode->IsFlagSet(NODEFLAG_HIDDEN))
 			{
 				continue;
 			}
@@ -747,7 +683,7 @@ CEdgeRef CRegionView::GetClosestEdge( CPoint &point, BOOL bSelectedOnly )
 
 CEdgeRef CRegionView::GetClosestEdge( CEditBrush *pBrush, CPoint point, CReal *pDist )
 {
-	uint32			i, k;
+	uint16			i, k;
 	CEditPoly		*pPoly;
 	TLVertex line[2];
 	CVector			points[2];
@@ -755,6 +691,9 @@ CEdgeRef CRegionView::GetClosestEdge( CEditBrush *pBrush, CPoint point, CReal *p
 
 	CReal			dot, maxLineDot, bestLineDot = (CReal)MAX_CREAL;
 	CEdgeRef		bestEdge;
+
+	point.x /= m_nPixelScale;
+	point.y /= m_nPixelScale;
 
 	pointVec.Init( (CReal)point.x, (CReal)point.y, 0.0f );
 
@@ -906,78 +845,89 @@ CPolyRef CRegionView::CastRayAtPolies( CEditBrush *pBrush, CEditRay &ray, CReal 
 }
 
 
-CWorldNode *CRegionView::RecurseAndGetClosestObject(const CPoint &point, BOOL bSelectedOnly, CWorldNode *pRoot, SDWORD &nDistMin, float &fViewMin, BOOL bFilter)
+// talon: 2001's (0x467352): the region's objects (or the selected ones),
+// no tree recursion or filter, the point in pixels of the pixel scale; it
+// returns an object ref.
+CObjectRef CRegionView::GetClosestObject( CPoint point, BOOL bSelectedOnly, CReal *pDist )
 {
-	CWorldNode *pResult = LTNULL;
+	CObjectRef		ret;
+	uint32			i;
+	CPoint			testPt;
+	CReal			viewerDist, minViewerDist = (CReal)MAX_CREAL;
+	int32			dist, minDist = MAX_SDWORD;
 
-	BOOL bMatchType		= ((pRoot->GetType() == Node_Object) || (pRoot->GetType() == Node_PrefabRef));
-	BOOL bMatchState	= (!pRoot->IsFlagSet(NODEFLAG_HIDDEN)) && (!pRoot->IsFlagSet(NODEFLAG_FROZEN));
-	BOOL bMatchSelCrit	= (!bSelectedOnly || pRoot->IsFlagSet(NODEFLAG_SELECTED));
+	point.x /= m_nPixelScale;
+	point.y /= m_nPixelScale;
 
-	// Is this one the closest?
-	if (bMatchType && bMatchSelCrit && bMatchState)
+	if( !bSelectedOnly )
 	{
-		//only do the filtering if the above criteria match since it is more expensive
-		if(!bFilter || GetObjectSelFilterDlg()->CanSelectObject(pRoot))
+		for( i=0; i < m_pRegion->m_Objects; i++ )
 		{
-			LTVector pt = pRoot->GetPos();
+			CBaseEditObj *pObj = m_pRegion->m_Objects[i];
 
-			//we need to override the point for prefabs since they are offset
-			if(pRoot->GetType() == Node_PrefabRef)
+			if( pObj->IsFlagSet(NODEFLAG_HIDDEN) )
+				continue;
+
+			CVector &vPos = pObj->GetPos();
+			if( TransformAndProjectInFrustum(vPos, testPt) )
 			{
-				LTMatrix mPrefabTrans;
-				gr_SetupMatrixEuler(pRoot->GetOr(), mPrefabTrans.m);
-				pt = pRoot->GetPos() + mPrefabTrans * ((CPrefabRef*)pRoot)->GetPrefabCenter();
-			}
-
-			CPoint testPt;
-
-			if( TransformAndProjectInFrustum(pt, testPt) )
-			{
-				int32 dist = SQR(testPt.x - point.x) + SQR(testPt.y - point.y);
-				if( dist == nDistMin )
+				dist = SQR(testPt.x - point.x) + SQR(testPt.y - point.y);
+				if( dist == minDist )
 				{
-					float viewerDist = (pt - Nav().Pos()).Mag();
-					if( viewerDist < fViewMin )
+					viewerDist = (vPos - Nav().Pos()).Mag();
+					if( viewerDist < minViewerDist )
 					{
-						pResult = pRoot;
-						fViewMin = viewerDist;
-						nDistMin = dist;
+						minViewerDist = viewerDist;
+						ret.m_pObject = m_pRegion->m_Objects[i];
+						minDist = dist;
 					}
 				}
-				else if( dist < nDistMin )
+				else if( dist < minDist )
 				{
-					pResult = pRoot;
-					fViewMin = (pt - Nav().Pos()).Mag();
-					nDistMin = dist;
+					ret.m_pObject = m_pRegion->m_Objects[i];
+					minViewerDist = (vPos - Nav().Pos()).Mag();
+					minDist = dist;
+				}
+			}
+		}
+	}
+	else
+	{
+		for( i=0; i < m_pRegion->m_Selections; i++ )
+		{
+			CWorldNode *pNode = m_pRegion->m_Selections[i];
+
+			if( pNode->IsFlagSet(NODEFLAG_HIDDEN) || (pNode->GetType() != Node_Object) )
+				continue;
+
+			CVector &vPos = pNode->GetPos();
+			if( TransformAndProjectInFrustum(vPos, testPt) )
+			{
+				dist = SQR(testPt.x - point.x) + SQR(testPt.y - point.y);
+				if( dist == minDist )
+				{
+					viewerDist = (vPos - Nav().Pos()).Mag();
+					if( viewerDist < minViewerDist )
+					{
+						minViewerDist = viewerDist;
+						ret.m_pObject = (CBaseEditObj*)pNode;
+						minDist = dist;
+					}
+				}
+				else if( dist < minDist )
+				{
+					ret.m_pObject = (CBaseEditObj*)pNode;
+					minViewerDist = (vPos - Nav().Pos()).Mag();
+					minDist = dist;
 				}
 			}
 		}
 	}
 
-	// Try the children
-	GPOS iCurChild = pRoot->m_Children.GetHeadPosition();
-	while (iCurChild)
-	{
-		CWorldNode *pChild = pRoot->m_Children.GetNext(iCurChild);
-		CWorldNode *pChildResult = RecurseAndGetClosestObject(point, bSelectedOnly, pChild, nDistMin, fViewMin, bFilter);
-		if (pChildResult)
-			pResult = pChildResult;
-	}
+	if( pDist )
+		*pDist = (CReal)minDist;
 
-	return pResult;
-}
-
-CWorldNode *CRegionView::GetClosestObject( const CPoint &point, BOOL bSelectedOnly, CReal *pDist, BOOL bFilter )
-{
-	float fMinView = (float)MAX_CREAL;
-	int32 nMinDist = MAX_SDWORD;
-	CWorldNode *pResult = RecurseAndGetClosestObject(point, bSelectedOnly, m_pRegion->GetRootNode(), nMinDist, fMinView, bFilter);
-	if (pResult && pDist)
-	{
-		*pDist = (CReal)nMinDist;
-	}
-	return pResult;
+	return ret;
 }
 
 
@@ -990,7 +940,7 @@ CWorldNode *CRegionView::GetClosestObject( const CPoint &point, BOOL bSelectedOn
 
 BOOL CRegionView::GetCurrentTextureName( char* &pTextureName, BOOL bUseSprites )
 {
-	char szTextureName[MAX_PATH];
+	char szTextureName[256];
 
 	GetProjectBar()->GetCurrentTextureName( szTextureName, bUseSprites );
 	if( strlen( szTextureName ))
@@ -1013,14 +963,13 @@ void CRegionView::GiveMemoryWarning()
 
 void CRegionView::UpdatePlanesOfPolies( CVertRefArray &verts )
 {
-	uint32			i, k;
+	uint16			i, k;
 	CEditBrush		*pBrush;
 	CEditPoly		*pPoly;
 
 	
 	for( i=0; i < verts; i++ )
 	{
-		ASSERT( verts[i].IsValid() );
 		pBrush = verts[i].m_pBrush;
 
 		for( k=0; k < pBrush->m_Polies; k++ )
@@ -1029,16 +978,67 @@ void CRegionView::UpdatePlanesOfPolies( CVertRefArray &verts )
 			if( pPoly->m_Indices.FindElement(verts[i].m_iVert) )
 				pPoly->UpdatePlane();
 		}		
-
 	}
-
-	GetRegion()->UpdateBrushGeometry(pBrush);
 }
 
 
-BOOL CRegionView::GetVertexFromPoint( CPoint point, CVector &vertex, BOOL bSnapToGrid )
+// talon: near (0x467782): 2001's CEditGrid::IntersectRay (0x4230d8) has no
+// bSnapToGrid (EditGrid.h's default still pushes one).
+BOOL CRegionView::GetVertexFromPoint( CPoint point, CVector &vertex )
 {
-	return EditGrid().IntersectRay( GetGridSpacing(), ViewDef()->MakeRayFromScreenPoint(point), vertex, NULL, bSnapToGrid );
+	return EditGrid().IntersectRay( GetGridSpacing(), ViewDef()->MakeRayFromScreenPoint(point), vertex, NULL );
+}
+
+
+// talon: 2001's (0x4677ce): Build 69's CRVTrackerDrawPoly::UpdateDrawPolyVertex
+// in the view; with Ctrl down the point snaps to the immediate vertex.
+void CRegionView::UpdateDrawPolyVertex( CPoint &point )
+{
+	if( IsKeyDown(VK_CONTROL) && IVert().IsValid() )
+	{
+		DrawingBrush().m_Points.Last() = IVert()();
+		return;
+	}
+
+	CVector vIntersection;
+	if( GetVertexFromPoint(point, vIntersection) && (DrawingBrush().m_Points > 0) )
+	{
+		if( !IsPerspectiveViewType() )
+		{
+			LTVector vOffset;
+			vOffset = EditGrid().Forward();
+			vOffset = EditGrid().Forward() * vOffset.Dot( GetRegion()->m_vMarker );
+			vIntersection += vOffset;
+		}
+
+		DrawingBrush().m_Points.Last() = vIntersection;
+	}
+}
+
+
+// talon: 2001's (0x46790a): the same for the split poly's vertex, snapping
+// only to a vertex of the brush being split.
+void CRegionView::UpdateSplitPolyVertex( CPoint &point )
+{
+	if( IsKeyDown(VK_CONTROL) && IVert().IsValid() && (IVert().m_pBrush == m_PolyToSplit.m_pBrush) )
+	{
+		DrawingBrush().m_Points.Last() = IVert()();
+		return;
+	}
+
+	CVector vIntersection;
+	if( GetVertexFromPoint(point, vIntersection) )
+	{
+		if( !IsPerspectiveViewType() )
+		{
+			LTVector vOffset;
+			vOffset = EditGrid().Forward();
+			vOffset = EditGrid().Forward() * vOffset.Dot( GetRegion()->m_vMarker );
+			vIntersection += vOffset;
+		}
+
+		DrawingBrush().m_Points.Last() = vIntersection;
+	}
 }
 
 
@@ -1475,7 +1475,7 @@ void CRegionView::DeleteTaggedEdges( BOOL bRemoveOriginalPolyPoints )
 
 	if( IEdge().IsValid() )
 	{
-		GetRegionDoc()->Modify(new CPreAction(ACTION_MODIFYNODE, IEdge().m_pBrush), TRUE);
+		GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, IEdge().m_pBrush), TRUE);
 
 		if( IEdge().m_pBrush->FindPoliesWithEdge(IEdge().m_Vert1, IEdge().m_Vert2, pPoly1, pPoly2, nContaining) )
 		{
@@ -1662,7 +1662,7 @@ void CRegionView::OffsetTextureForPoly(int nPDirection, int nQDirection, BOOL bG
 	}
 
 	//make the undo for this node
-	GetRegionDoc()->Modify(new CPreAction(ACTION_MODIFYNODE, pPoly->m_pBrush), TRUE);
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pPoly->m_pBrush), TRUE);
 
 	// Figure out the amount to offset the texture by
 	float fOffsetSize=0.0f;
@@ -1718,7 +1718,7 @@ void CRegionView::ScaleTextureForPoly(int nPDirection, int nQDirection)
 	}
 
 	//make the undo for this node
-	GetRegionDoc()->Modify(new CPreAction(ACTION_MODIFYNODE, pPoly->m_pBrush), TRUE);
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_MODIFYNODE, pPoly->m_pBrush), TRUE);
 
 	// Get the width and the height of the texture		
 	float fWidth = (float)pTexture->m_pDib->GetWidth();
@@ -2141,7 +2141,7 @@ void CRegionView::FinishDrawingPoly()
 
 	// Create the new brush and setup an undo.
 	pNewBrush = no_CreateNewBrush(GetRegion(), GetRegion()->GetActiveParentNode());
-	GetRegionDoc()->Modify(new CPreAction(ACTION_ADDEDNODE, pNewBrush), TRUE);
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_ADDEDNODE, pNewBrush), TRUE);
 
 
 	// Ask them for a brush thickness if they're in brush edit mode.
@@ -2595,6 +2595,669 @@ void CRegionView::DoImportTerrainMap( CEditBrush *pBrush, CString &pathName )
 }
 
 
+
+// talon: the primitives: 2001 has them here (0x46ab4c..0x46c079), Build 69
+// in CreatePrimitive.cpp.
+
+// talon: the radius comes back through a float return (the /Op round trip
+// through a temporary at 0x46b9a7, 0x46c00f): 2001's settings have an inline
+// accessor that OptionsPrimitives.h lacks.
+static inline float PrimitiveRadius(CPrimitiveSettings *pSettings)
+{
+	return pSettings->m_fRadius;
+}
+
+
+void CRegionView::OnCreatePrimitiveBox( )
+{
+	CStringDlg		dlg;
+	BOOL			bOk;
+	BOOL			bValidNumber;
+	CReal			thickness;
+
+	dlg.m_bAllowNumbers = TRUE;
+	bOk = TRUE;
+	bValidNumber = FALSE;
+	
+	dlg.m_EnteredText.Format( "%d", 128 );
+
+	while( bOk && !bValidNumber )
+	{
+		if( bOk = ( dlg.DoModal(IDS_NEWBRUSHCAPTION, IDS_ENTERBRUSHTHICKNESS) == IDOK ))
+		{
+			thickness = (CReal)atoi( dlg.m_EnteredText );
+			if( thickness > 0.0f )
+				bValidNumber = TRUE;
+			else
+				AppMessageBox( IDS_ERROR_BRUSH_THICKNESS, MB_OK );
+		}
+	}
+	
+	if( bOk )
+		DoCreatePrimitiveBox( GetRegion( )->m_vMarker, thickness );
+}
+
+
+//------------------------------------------------------------------------------
+//
+//  CRegionView::DoCreatePrimitiveBox
+//
+//	Creates a brush in the shape of a box.
+//
+//------------------------------------------------------------------------------
+void CRegionView::DoCreatePrimitiveBox( CVector &vCenter, CReal fSide )
+{
+	CEditBrush *pNewBrush;
+	CEditPoly *pNewPoly;
+	CReal fHalfSide;
+	CPolyRef polyRef;
+	CVertRefArray newVerts;
+	DWORD i;
+	CEditVert vEditVerts[4];
+
+	fHalfSide = fSide / 2.0f;
+
+	// Setup a new brush and a new starting poly...
+	pNewBrush = no_CreateNewBrush(GetRegion(), GetRegion()->GetActiveParentNode());
+	ASSERT( pNewBrush );
+	if( !pNewBrush )
+		return;
+
+	// Setup an undo.
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_ADDEDNODE, pNewBrush), TRUE);
+
+	pNewPoly = new CEditPoly( pNewBrush );
+	ASSERT( pNewPoly );
+	if( !pNewPoly )
+	{
+		delete pNewBrush;
+		return;
+	}
+
+	pNewBrush->m_Polies.Append( pNewPoly );
+
+	vEditVerts[0].Init( vCenter.x - fHalfSide, vCenter.y + fHalfSide, vCenter.z - fHalfSide );
+	vEditVerts[1].Init( vCenter.x - fHalfSide, vCenter.y + fHalfSide, vCenter.z + fHalfSide );
+	vEditVerts[2].Init( vCenter.x + fHalfSide, vCenter.y + fHalfSide, vCenter.z + fHalfSide );
+	vEditVerts[3].Init( vCenter.x + fHalfSide, vCenter.y + fHalfSide, vCenter.z - fHalfSide );
+
+	// Make top of brush
+	for( i = 0; i < 4; i++ )
+	{
+		pNewPoly->m_Indices.Append( i );
+		pNewBrush->m_Points.Append( vEditVerts[i] );
+	}
+
+	// Set normal...
+	pNewPoly->Normal().Init( 0.0f, 1.0f, 0.0f );
+	pNewPoly->Dist() = pNewPoly->Normal().Dot( pNewPoly->Pt(0) );
+
+	// Extrude...
+	polyRef.Init( pNewBrush, 0 );
+	if( ExtrudePoly( polyRef, newVerts, FALSE, TRUE /*flip all*/) )
+	{
+		CEditVert *pVert;
+		pVert = &newVerts[0]( );
+		for( i = 0; i < 4; i++ )
+		{
+			newVerts[i]() -= polyRef()->Normal() * fSide;
+		}
+
+		for( DWORD j=0; j < pNewBrush->m_Polies; j++ )
+		{
+			pNewBrush->m_Polies[j]->UpdatePlane();
+
+			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
+				pNewBrush->m_Polies[j]->SetupBaseTextureSpace(nCurrTex);
+		}
+	}
+
+	GetRegion()->UpdateBrushGeometry(pNewBrush);
+	GetRegion()->CleanupGeometry();
+
+	// Setup the node stuff.
+//	SetupBrushProperties(pNewBrush, GetRegion());
+
+	// Make the new brush the selection.
+	if( GetMainFrame()->GetNodeSelectionMode() != MULTI_SELECTION )
+		GetRegion()->ClearSelections();
+	
+	GetRegion()->SelectNode( pNewBrush->AsNode() );
+	GetRegionDoc()->NotifySelectionChange();
+
+	GetRegionDoc()->RedrawAllViews();
+
+}
+
+
+void CRegionView::OnCreatePrimitiveCylinder( )
+{
+	CCylinderPrimDlg	dlg;
+
+	dlg.m_sCaption = "Cylinder Primitive";
+	dlg.m_nHeight	= 100;
+	dlg.m_nRadius	= 10;
+	dlg.m_nNumSides = 6;
+
+	if( dlg.DoModal( ) == IDOK )
+		DoCreatePrimitiveCylinder( GetRegion( )->m_vMarker, dlg.m_nNumSides, ( CReal )dlg.m_nHeight, ( CReal )dlg.m_nRadius );
+}
+
+
+//------------------------------------------------------------------------------
+//
+//  CRegionView::DoCreatePrimitiveCylinder
+//
+//	Creates a brush in the shape of a cylinder.
+//
+//------------------------------------------------------------------------------
+void CRegionView::DoCreatePrimitiveCylinder( CVector &vCenter, int nNumSides, CReal fHeight, CReal fRadius )
+{
+	CWorldNode *pParent;
+	CEditBrush *pNewBrush;
+	CEditPoly *pNewPoly;
+	CReal fHalfHeight;
+	CPolyRef polyRef;
+	CVertRefArray newVerts;
+	DWORD i;
+	CEditVert vEditVerts[32];
+	CMatrix matRot;
+	CVector vRotationVector;
+
+	
+	vRotationVector.Init( 0.0f, 1.0f, 0.0f );
+
+	ASSERT( nNumSides >= 3 );
+	ASSERT( nNumSides <= 32 );
+	if( nNumSides < 3 || 32 < nNumSides )
+		return;
+
+	fHalfHeight = fHeight / 2.0f;
+
+	// Setup a new brush and a new starting poly...
+	pNewBrush = no_CreateNewBrush(GetRegion(), GetRegion()->GetActiveParentNode());
+	ASSERT( pNewBrush );
+	if( !pNewBrush )
+		return;
+
+	// Setup an undo.
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_ADDEDNODE, pNewBrush), TRUE);
+
+	pNewPoly = new CEditPoly( pNewBrush );
+	ASSERT( pNewPoly );
+	if( !pNewPoly )
+	{
+		delete pNewBrush;
+		return;
+	}
+
+	pNewBrush->m_Polies.Append( pNewPoly );
+
+	vEditVerts[0].Init( vCenter.x, vCenter.y + fHalfHeight, vCenter.z + fRadius );
+	gr_SetupRotationAroundVector(&matRot, vRotationVector, MATH_CIRCLE / nNumSides);
+	for( i = 1; i < nNumSides; i++ )
+	{
+		vEditVerts[i] = vEditVerts[i-1];
+		vEditVerts[i] -= vCenter;
+		matRot.Apply( vEditVerts[i] );
+		vEditVerts[i] += vCenter;
+	}
+
+
+	// Make top of brush
+	for( i = 0; i < nNumSides; i++ )
+	{
+		pNewPoly->m_Indices.Append( i );
+		pNewBrush->m_Points.Append( vEditVerts[i] );
+	}
+
+	// Set normal...
+	pNewPoly->Normal().Init( 0.0f, 1.0f, 0.0f );
+	pNewPoly->Dist() = pNewPoly->Normal().Dot( pNewPoly->Pt(0) );
+
+	// Extrude...
+	polyRef.Init( pNewBrush, 0 );
+	if( ExtrudePoly( polyRef, newVerts, FALSE, TRUE /*flip all*/) )
+	{
+		CEditVert *pVert;
+		pVert = &newVerts[0]( );
+		for( i = 0; i < nNumSides; i++ )
+		{
+			newVerts[i]() -= polyRef()->Normal() * fHeight;
+		}
+
+		for( DWORD j=0; j < pNewBrush->m_Polies; j++ )
+		{
+			pNewBrush->m_Polies[j]->UpdatePlane();
+			for(uint32 nCurrTex = 0; nCurrTex < CEditPoly::NUM_TEXTURES; nCurrTex++)
+				pNewBrush->m_Polies[j]->SetupBaseTextureSpace(nCurrTex);
+		}
+	}
+
+	GetRegion()->UpdateBrushGeometry(pNewBrush);
+	GetRegion()->CleanupGeometry();
+
+	// Setup the node stuff.
+//	SetupBrushProperties(pNewBrush, GetRegion());
+
+	// Make the new brush the selection.
+	if( GetMainFrame()->GetNodeSelectionMode() != MULTI_SELECTION )
+		GetRegion()->ClearSelections();
+	
+	GetRegion()->SelectNode( pNewBrush->AsNode() );
+	GetRegionDoc()->NotifySelectionChange();
+
+	GetRegionDoc()->RedrawAllViews();
+
+}
+
+
+void CRegionView::OnCreatePrimitivePyramid( )
+{
+	CCylinderPrimDlg	dlg;
+
+	dlg.m_sCaption = "Pyramid Primitive";
+	dlg.m_nHeight	= 128;
+	dlg.m_nRadius	= 64;
+	dlg.m_nNumSides = 6;
+
+	if( dlg.DoModal( ) == IDOK )
+		DoCreatePrimitivePyramid( GetRegion( )->m_vMarker, dlg.m_nNumSides, ( CReal )dlg.m_nHeight, ( CReal )dlg.m_nRadius );
+}
+
+
+//------------------------------------------------------------------------------
+//
+//  CRegionView::DoCreatePrimitivePyramid
+//
+//	Creates a brush in the shape of a pyramid.
+//
+//------------------------------------------------------------------------------
+void CRegionView::DoCreatePrimitivePyramid( CVector &vCenter, int nNumSides, CReal fHeight, CReal fRadius )
+{
+	CWorldNode *pParent;
+	CEditBrush *pNewBrush;
+	CMoArray<CEditPoly *> pNewPoly;
+	CPolyRef polyRef;
+	CVertRefArray newVerts;
+	DWORD i;
+	CMoArray<CEditVert> vEditVerts;
+	CMatrix matRot;
+	CVector vRotationVector;
+
+
+	vRotationVector.Init( 0.0f, 1.0f, 0.0f );
+
+	ASSERT( nNumSides >= 3 );
+	//ASSERT( nNumSides <= 24 );
+	if( nNumSides < 3 )//|| 24 < nNumSides )
+		return;
+
+	pNewPoly.SetSize(nNumSides + 1);
+	vEditVerts.SetSize(nNumSides + 2);
+
+	// Setup a new brush and a new starting poly...
+	pNewBrush = no_CreateNewBrush(GetRegion(), GetRegion()->GetActiveParentNode());
+	ASSERT( pNewBrush );
+	if( !pNewBrush )
+		return;
+
+	// Setup an undo.
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_ADDEDNODE, pNewBrush), TRUE);
+
+	for( i = 0; i <= nNumSides; i++ )
+	{
+		pNewPoly[i] = new CEditPoly( pNewBrush );
+		ASSERT( pNewPoly[i] );
+		if( !pNewPoly[i] )
+		{
+			delete pNewBrush;
+			return;
+		}
+	}
+
+	// Make base points...
+	vEditVerts[0].Init( vCenter.x, vCenter.y - fHeight/2, vCenter.z + fRadius );
+	pNewBrush->m_Points.Append( vEditVerts[0] );
+	gr_SetupRotationAroundVector(&matRot, vRotationVector, -MATH_CIRCLE / nNumSides);
+	for( i = 1; i < nNumSides; i++ )
+	{
+		vEditVerts[i] = vEditVerts[i-1];
+		vEditVerts[i] -= vCenter;
+		matRot.Apply( vEditVerts[i] );
+		vEditVerts[i] += vCenter;
+		pNewBrush->m_Points.Append( vEditVerts[i] );
+	}
+
+	// Make top point...
+	vEditVerts[nNumSides].Init( vCenter.x, vCenter.y + fHeight/2, vCenter.z );
+	pNewBrush->m_Points.Append( vEditVerts[nNumSides] );
+
+	// Make base poly
+	for( i = 0; i < nNumSides; i++ )
+	{
+		pNewPoly[0]->m_Indices.Append( i );
+	}
+
+	// Set normal...
+	pNewPoly[0]->Normal().Init( 0.0f, -1.0f, 0.0f );
+	pNewPoly[0]->Dist() = pNewPoly[0]->Normal().Dot( pNewPoly[0]->Pt(0) );
+	pNewBrush->m_Polies.Append( pNewPoly[0] );
+
+	// Make side poly's
+	for( i = 0; i < nNumSides; i++ )
+	{
+		pNewPoly[i+1]->m_Indices.Append(i );
+		pNewPoly[i+1]->m_Indices.Append(nNumSides );
+		pNewPoly[i+1]->m_Indices.Append(( i + 1 ) % nNumSides );
+		pNewBrush->m_Polies.Append( pNewPoly[i+1] );
+	}
+
+	GetRegion()->UpdateBrushGeometry(pNewBrush);
+	GetRegion()->CleanupGeometry();
+
+	// Setup the node stuff.
+//	SetupBrushProperties(pNewBrush, GetRegion());
+
+	// Make the new brush the selection.
+	if( GetMainFrame()->GetNodeSelectionMode() != MULTI_SELECTION )
+		GetRegion()->ClearSelections();
+	
+	GetRegion()->SelectNode( pNewBrush->AsNode() );
+	GetRegionDoc()->NotifySelectionChange();
+
+	GetRegionDoc()->RedrawAllViews();
+
+}
+
+
+/************************************************************************/
+// The sphere primitive command was called
+// talon: 2001's (0x46b96a) keeps its settings in the primitives options.
+void CRegionView::OnCreatePrimitiveSphere() 
+{
+	// The sphere primitive dialog
+	CSpherePrimitiveDlg dlg;
+
+	COptionsPrimitives *pOptions = GetApp()->GetOptions().GetPrimitivesOptions();
+	if (pOptions)
+	{
+		dlg.m_nSides				= pOptions->GetSphereSettings()->m_nNumSides;
+		dlg.m_nVerticalSubdivisions	= pOptions->GetSphereSettings()->m_nVerticalDivisions;
+		dlg.m_fRadius				= PrimitiveRadius(pOptions->GetSphereSettings());
+	}
+
+	// Create the sphere primitive dialog	
+	if (dlg.DoModal() == IDOK)
+	{
+		DoCreatePrimitiveSphere(GetRegion()->m_vMarker, dlg.m_nSides+1, dlg.m_nVerticalSubdivisions, dlg.m_fRadius, FALSE);
+
+		if (pOptions)
+		{
+			pOptions->GetSphereSettings()->m_nNumSides				= dlg.m_nSides;
+			pOptions->GetSphereSettings()->m_nVerticalDivisions	= dlg.m_nVerticalSubdivisions;
+			pOptions->GetSphereSettings()->m_fRadius				= dlg.m_fRadius;
+		}
+	}
+}
+
+
+/************************************************************************/
+// Create a sphere primitive
+void CRegionView::DoCreatePrimitiveSphere(CVector &vCenter, int nSubdivisionsX, int nSubdivisionsY, CReal fRadius, BOOL bDome)
+{
+	// Do some error checking on the parameters
+	if (nSubdivisionsX <= 0 || nSubdivisionsY <= 0 || fRadius <= 0.0f)
+	{
+		ASSERT(FALSE);
+		return;
+	}
+
+	// Setup a new brush
+	CEditBrush *pNewBrush = no_CreateNewBrush(GetRegion(), GetRegion()->GetActiveParentNode());
+	ASSERT( pNewBrush );
+	if( !pNewBrush )
+	{
+		return;
+	}
+
+	// Setup an undo.
+	GetRegionDoc()->Modify(TRUE, new CPreAction(ACTION_ADDEDNODE, pNewBrush), TRUE);
+
+	// The number of polygons for the center bands
+	int nNumPolies=nSubdivisionsX*(nSubdivisionsY-1);
+
+	// Add the number of polies for the bottom cap
+	if (bDome)
+	{
+		nNumPolies++;
+	}
+	else
+	{
+		nNumPolies+=nSubdivisionsX;
+	}
+
+	// Add the number of polies for the top cap
+	nNumPolies+=nSubdivisionsX;
+
+	CEditPoly **ppNewPoly=new CEditPoly*[nNumPolies];
+
+	int i;
+	for (i=0; i < nNumPolies; i++)
+	{
+		ppNewPoly[i]=new CEditPoly(pNewBrush);
+	}
+	
+	// The height for the middle bands is slightly less (one band worth total) than the radius.
+	// This is so the triangle caps can be added.
+	float fHeight=(fRadius-(fRadius/nSubdivisionsY/2.0f))*2.0f;
+
+	// Initialize the vertices for the strips
+	int nSubY;
+	for (nSubY=0; nSubY < nSubdivisionsY; nSubY++)
+	{
+		// The percentage of the sphere that we are on in the Y direction
+		// For example, the middle subdivision is 0.50
+		float fYPercent;
+
+		// Create the top half of the sphere if we are in dome mode
+		if (bDome)
+		{
+			fYPercent=0.5f+((float)nSubY/(float)(nSubdivisionsY-1)/2.0f);
+		}
+		else
+		{
+			fYPercent=(float)nSubY/(float)(nSubdivisionsY-1);
+		}
+				
+		// Calculate the Y position for this subdivision		
+		float fYPos=(0.0f-(fHeight/2))+(fYPercent*fHeight);		
+
+		// Calculate the radius (girth) for this subdivision
+		float fCurrentRadius=cos(asin(fYPos/fRadius))*fRadius;
+
+		int nSubX;
+		for (nSubX=0; nSubX < nSubdivisionsX; nSubX++)
+		{			
+			// The percentage around the circle
+			float fXPercent=(float)nSubX/(float)(nSubdivisionsX-1);
+
+			// The current angle in radians
+			float theta=fXPercent*3.14159f*2.0f;
+
+			// Calculate the X and Y positions
+			float fXPos=cos(theta)*fCurrentRadius;
+			float fZPos=sin(theta)*fCurrentRadius;
+
+			// Set the vertex
+			CVector vPoint=CVector(fXPos, fYPos, fZPos)+vCenter;
+			pNewBrush->m_Points.Append(vPoint);			
+		}
+	}
+
+	// Add the top point
+	CEditVert v;
+	v.x = vCenter.x;
+	v.y = vCenter.y + fRadius;
+	v.z = vCenter.z;
+
+	pNewBrush->m_Points.Append(v);
+	int nTopPointIndex=pNewBrush->m_Points.GetSize()-1;
+
+	// Add the bottom point if we aren't in dome mode
+	int nBottomPointIndex;
+	if (!bDome)
+	{
+		v.x = vCenter.x;
+		v.y = vCenter.y - fRadius;
+		v.z = vCenter.z;
+
+		pNewBrush->m_Points.Append(v);
+		nBottomPointIndex=pNewBrush->m_Points.GetSize()-1;
+	}
+
+	// Create the polygons for the center bands
+	int nCurrentPoly=0;
+	for (nSubY=0; nSubY < nSubdivisionsY-1; nSubY++)
+	{
+		int nSubX;
+		for (nSubX=0; nSubX < nSubdivisionsX; nSubX++)
+		{				
+			// Calculate the polygon indices
+			int nIndex1=(nSubY*nSubdivisionsX)+nSubX;							// Bottom left
+			int nIndex2=((nSubY+1)*nSubdivisionsX)+nSubX;						// Top left
+			int nIndex3=((nSubY+1)*nSubdivisionsX)+((nSubX+1)%nSubdivisionsX);	// Top right			
+			int nIndex4=(nSubY*nSubdivisionsX)+((nSubX+1)%nSubdivisionsX);		// Bottom right
+			
+			// Add the polygon indices
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex1);
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex2);
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex3);
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex4);
+
+			// Add the polygon			
+			pNewBrush->m_Polies.Append(ppNewPoly[nCurrentPoly]);
+
+			// Go to the next polygon
+			nCurrentPoly++;
+		}
+	}
+
+	// Add the bottom of the sphere
+	if (bDome)
+	{
+		// Dome mode
+		int nSubX;
+		for (nSubX=0; nSubX < nSubdivisionsX; nSubX++)
+		{		
+			// Add the polygon indices
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nSubX);			
+		}
+
+		// Add the polygon			
+		pNewBrush->m_Polies.Append(ppNewPoly[nCurrentPoly]);
+
+		// Go to the next polygon
+		nCurrentPoly++;
+	}
+	else
+	{
+		// Sphere mode
+		int nSubX;
+		for (nSubX=0; nSubX < nSubdivisionsX; nSubX++)
+		{
+			// Calculate the polygon indices
+			int nIndex1=nBottomPointIndex;
+			int nIndex2=nSubX;
+			int nIndex3=(nSubX+1)%nSubdivisionsX;
+
+			// Add the polygon indices
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex1);
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex2);
+			ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex3);
+
+			// Add the polygon			
+			pNewBrush->m_Polies.Append(ppNewPoly[nCurrentPoly]);
+
+			// Go to the next polygon
+			nCurrentPoly++;
+		}
+	}
+
+	// Add the top of the sphere
+	int nTopStartIndex=(nSubdivisionsY-1)*nSubdivisionsX;
+
+	int nSubX;
+	for (nSubX=0; nSubX < nSubdivisionsX; nSubX++)
+	{
+		// Calculate the polygon indices
+		int nIndex1=nTopStartIndex+nSubX;
+		int nIndex2=nTopPointIndex;
+		int nIndex3=nTopStartIndex+((nSubX+1)%nSubdivisionsX);
+
+		// Add the polygon indices
+		ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex1);
+		ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex2);
+		ppNewPoly[nCurrentPoly]->m_Indices.Append(nIndex3);
+
+		// Add the polygon			
+		pNewBrush->m_Polies.Append(ppNewPoly[nCurrentPoly]);
+
+		// Go to the next polygon
+		nCurrentPoly++;
+	}
+
+	// Delete the temp array of poly pointers
+	delete []ppNewPoly;
+	ppNewPoly=NULL;
+
+	GetRegion()->UpdateBrushGeometry(pNewBrush);
+	GetRegion()->CleanupGeometry();
+
+	// Make the new brush the selection.
+	if( GetMainFrame()->GetNodeSelectionMode() != MULTI_SELECTION )
+	{
+		GetRegion()->ClearSelections();
+	}
+	
+	GetRegion()->SelectNode( pNewBrush->AsNode() );
+	GetRegionDoc()->NotifySelectionChange();
+
+	// Redraw all of the views
+	GetRegionDoc()->RedrawAllViews();
+}
+
+
+/************************************************************************/
+// The dome primitive command was called
+// talon: 2001's (0x46bfd2) keeps its settings in the primitives options.
+void CRegionView::OnCreatePrimitiveDome() 
+{
+	// The sphere primitive dialog
+	CSpherePrimitiveDlg dlg;
+
+	COptionsPrimitives *pOptions = GetApp()->GetOptions().GetPrimitivesOptions();
+	if (pOptions)
+	{
+		dlg.m_nSides				= pOptions->GetDomeSettings()->m_nNumSides;
+		dlg.m_nVerticalSubdivisions	= pOptions->GetDomeSettings()->m_nVerticalDivisions;
+		dlg.m_fRadius				= PrimitiveRadius(pOptions->GetDomeSettings());
+	}
+
+	// Create the sphere primitive dialog	
+	if (dlg.DoModal() == IDOK)
+	{
+		DoCreatePrimitiveSphere(GetRegion()->m_vMarker, dlg.m_nSides+1, dlg.m_nVerticalSubdivisions, dlg.m_fRadius, TRUE);
+
+		if (pOptions)
+		{
+			pOptions->GetDomeSettings()->m_nNumSides				= dlg.m_nSides;
+			pOptions->GetDomeSettings()->m_nVerticalDivisions	= dlg.m_nVerticalSubdivisions;
+			pOptions->GetDomeSettings()->m_fRadius				= dlg.m_fRadius;
+		}
+	}
+}
+
 // Rotates the polygon's texture coordinates around the specified origin and axis.
 void RotatePolyTCoords(CEditPoly *pPoly, uint32 nTexture,
 	const LTVector& vOrigin, const LTVector& vAxis, 
@@ -2714,3 +3377,25 @@ void CRegionView::OnAlignPolyTextures()
 }
 
 
+
+
+// talon: stand-in: 2001's light-texel selection (0x46c783, 761 bytes, in
+// LIGHT_EDITMODE from OnSelectLightNode 0x45db67) isn't written yet: it
+// needs RegionDoc's 2001 light members (doc+0x184, +0x320, +0x324, +0x328).
+void CRegionView::SelectLightTexel()
+{
+}
+
+
+// talon: stand-in: 2001's light poly pick (0x46c536, 589 bytes, in
+// LIGHT_EDITMODE from 0x45cfd0) isn't written yet.
+void CRegionView::PickLightPoly()
+{
+}
+
+
+// talon: stand-in: 2001's texel tagging in a rectangle (0x46ca7c, 437 bytes,
+// from the Tag tracker 0x4790c8) isn't written yet.
+void CRegionView::TagLightTexelsInRect( CRect rect )
+{
+}

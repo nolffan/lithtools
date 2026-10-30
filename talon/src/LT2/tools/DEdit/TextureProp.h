@@ -12,6 +12,7 @@
 
 
 #define TPROP_FLAGS					(1<<0)
+#define TPROP_LIGHTDEFS				(1<<1)
 #define TPROP_GROUP					(1<<2)
 #define TPROP_NUMMIPMAPS			(1<<3)
 #define TPROP_FULLBRITES			(1<<4)
@@ -25,8 +26,6 @@
 #define TPROP_DETAILTEXTURESCALE	(1<<12)
 #define TPROP_DETAILTEXTUREANGLE	(1<<13)
 #define TPROP_PREFER5551			(1<<14)
-#define TPROP_32BITSYSCOPY			(1<<15)
-#define TPROP_NOSYSCACHE			(1<<16)
 
 
 
@@ -42,22 +41,20 @@ public:
 
 	void	SetCheckBox(UINT id, BOOL bCheck);
 	BOOL	GetCheckBox(UINT id);
-	void	EnableCheckBox(UINT id, BOOL bEnable);
 
 	void	SetupBPPIdent();
 	void	RedrawPreviewWindow();
 
 
 	BOOL		m_bFullBrights;
-	BOOL		m_b32BitSysCopy;
 	BOOL		m_bPrefer4444;
 	BOOL		m_bPrefer5551;
 	BOOL		m_bPrefer16Bit;
-	BOOL		m_bNoSysCache;
 	DWORD		m_TextureFlags;
 	DWORD		m_TextureGroup;
 	DWORD		m_nMipmaps;
 	DWORD		m_NonS3TCMipmapOffset;
+	CString		m_LightDefs;		// talon: 2001's (0x7c): the texture's LIGHTDEFS section text
 	int			m_AlphaCutoff;
 	int			m_AverageAlpha;
 	int			m_UIMipmapOffset;
@@ -99,7 +96,6 @@ public:
 	CButton	m_Format_DXT3;
 	CButton	m_Format_DXT1;
 	CButton	m_Format_32Bit;
-	CButton m_Format_32P;
 	//}}AFX_DATA
 
 
@@ -119,21 +115,19 @@ protected:
 	//{{AFX_MSG(CTextureProp)
 	virtual BOOL OnInitDialog();
 	afx_msg void OnTexturePropChange();
+	afx_msg void OnLightDefsChange();
 	afx_msg void OnGroupChange();
 	afx_msg void OnNumMipmapsChange();
 	afx_msg void OnOk();
 	afx_msg void OnFullbrite();
-	afx_msg void On32BitSysCopy();
 	afx_msg void OnPrefer4444();
 	afx_msg void OnPrefer5551();
 	afx_msg void OnPrefer16Bit();
-	afx_msg void OnNoSysCache();
 	afx_msg void OnChangeDtxCommandString();
 	afx_msg void OnFormat32bit();
 	afx_msg void OnFormatDxt1();
 	afx_msg void OnFormatDxt3();
 	afx_msg void OnFormatDxt5();
-	afx_msg void OnFormat32P();
 	afx_msg void OnNonS3TCMipmapOffset();
 	afx_msg void OnUIMipmapOffset();
 	afx_msg void OnChangeTexturePriority();

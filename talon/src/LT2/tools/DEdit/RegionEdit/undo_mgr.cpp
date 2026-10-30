@@ -9,9 +9,7 @@
 #include "editpoly.h"
 #include "editregion.h"
 #include "edit_actions.h"
-#include "undowarningdlg.h"
 #include "dedit.h"
-#include "optionsmisc.h"
 
 
 extern BOOL g_bGlobalUndoDisable;
@@ -103,12 +101,7 @@ CUndoMgr::CUndoMgr()
 {
 	m_nUndos = 0;
 	m_nRedos = 0;
-	m_nWorldNodeCount = 0;
-	m_nNextNodeCountWarning = 1024;
-	m_bShowingWarningDialog = false;
-	m_bShowNodeCountWarning = GetApp()->GetOptions().GetMiscOptions()->GetShowUndoWarnings();
-	m_bAlwaysClearUndo		= false;
-	m_bCanAddActions = true;
+	m_bCanAddActions = TRUE;
 }
 
 
@@ -118,7 +111,7 @@ CUndoMgr::~CUndoMgr()
 }
 
 
-bool CUndoMgr::Init(CRegionDoc *pDoc, uint32 nUndos, uint32 nRedos)
+BOOL CUndoMgr::Init(CRegionDoc *pDoc, uint32 nUndos, uint32 nRedos)
 {
 	uint32 i;
 
@@ -136,9 +129,8 @@ bool CUndoMgr::Init(CRegionDoc *pDoc, uint32 nUndos, uint32 nRedos)
 		m_Redos[i] = new EditActionList;
 	}
 
-	m_nWorldNodeCount = 0;
 	m_pDoc = pDoc;
-	return true;
+	return TRUE;
 }
 
 
@@ -154,8 +146,6 @@ void CUndoMgr::Term()
 
 	DeleteAndClearArray(m_Undos);
 	DeleteAndClearArray(m_Redos);
-
-	m_nWorldNodeCount = 0;
 }
 
 
@@ -164,11 +154,11 @@ void CUndoMgr::PreAction(CPreAction *pAction)
 	PreActionList theList;
 	
 	theList.AddHead(pAction);
-	PreActions(&theList, false);
+	PreActions(&theList, FALSE);
 }
 
 
-void CUndoMgr::PreActions(PreActionList *pList, bool bClearList)
+void CUndoMgr::PreActions(PreActionList *pList, BOOL bClearList)
 {
 	EditActionList *pUndo;
 
@@ -185,11 +175,6 @@ void CUndoMgr::PreActions(PreActionList *pList, bool bClearList)
 
 		// Setup its reversal action.
 		SetupReversePreActions(pList, pUndo);
-
-		// Count number of World Nodes added
-		m_nWorldNodeCount += pUndo->GetSize();
-
-		if (m_nWorldNodeCount >= m_nNextNodeCountWarning)  DoNodeCountWarning();
 	}
 
 	if(bClearList)
@@ -204,12 +189,11 @@ void CUndoMgr::Undo()
 
 	// It does this stuff here because someone added bad code that caused it do
 	// do an undo in SynchronizePropertyLists() when LoadDataIntoRegion was called! 
-	m_bCanAddActions = false;
+	m_bCanAddActions = FALSE;
 
 	// Add a redo.
 	ASSERT(m_nUndos > 0);
 	pUndo = m_Undos[m_nUndos - 1];
-	m_nWorldNodeCount -= pUndo->GetSize(); // subtract the number of items that are being undone
 
 	pRedo = m_Redos[m_nRedos];
 	m_nRedos++;
@@ -221,7 +205,7 @@ void CUndoMgr::Undo()
 	ExecuteActions(pUndo);
 	m_nUndos--;
 
-	m_bCanAddActions = true;
+	m_bCanAddActions = TRUE;
 }
 
 
@@ -229,12 +213,11 @@ void CUndoMgr::Redo()
 {
 	EditActionList *pRedo, *pUndo;
 
-	m_bCanAddActions = false;
+	m_bCanAddActions = FALSE;
 
 	ASSERT(m_nRedos > 0);
 	pRedo = m_Redos[m_nRedos-1];
 	m_nRedos--;
-	m_nWorldNodeCount += pRedo->GetSize(); // add the number of items that are being redone
 
 		
 	// Add its reverse so we can undo it.
@@ -244,7 +227,7 @@ void CUndoMgr::Redo()
 	// Do the redo.
 	ExecuteActions(pRedo);
 
-	m_bCanAddActions = true;
+	m_bCanAddActions = TRUE;
 }
 
 
@@ -261,7 +244,6 @@ EditActionList* CUndoMgr::SetupNewUndoSlot()
 	else
 	{
 		pUndo = m_Undos[0];
-		m_nWorldNodeCount -=  pUndo->GetSize(); // subtract the number of items that are being wiped out
 
 		m_Undos.Remove(0);
 		m_Undos.Append(pUndo);
@@ -326,60 +308,5 @@ void CUndoMgr::ExecuteActions(EditActionList *pList)
 }
 
 
-void CUndoMgr::DoNodeCountWarning()
-{
-	if (!m_bShowNodeCountWarning)
-	{
-		if (m_bAlwaysClearUndo) // remove first item from undo stack since we're over the size limit
-		{
-			while (m_nWorldNodeCount >= m_nNextNodeCountWarning) 
-			{
-				m_nWorldNodeCount -=  m_Undos[0]->GetSize(); // subtract the number of items that are being wiped out
-				GDeleteAndRemoveElements(*m_Undos[0]);
-				m_Undos.Remove(0);
-				m_Undos.Append(new EditActionList);
-				m_nUndos--;
-			}
-		}
-
-		return;
-	}
-
-
-	if(!m_bShowingWarningDialog)
-	{
-		m_bShowingWarningDialog = true; // necessary for odd thread sync issues
-
-		CUndoWarningDlg Dlg;
-		Dlg.m_nWorldNodeCount = m_nWorldNodeCount;
-
-		switch (Dlg.DoModal())
-		{
-		case IDC_UW_ALWAYS:
-			m_bShowNodeCountWarning = false;
-			m_bAlwaysClearUndo		= true;
-
-		case IDC_UW_YES:
-			while (m_nWorldNodeCount >= m_nNextNodeCountWarning) 
-			{
-				m_nWorldNodeCount -=  m_Undos[0]->GetSize(); // subtract the number of items that are being wiped out
-				GDeleteAndRemoveElements(*m_Undos[0]);
-				m_Undos.Remove(0);
-				m_Undos.Append(new EditActionList);
-				m_nUndos--;
-			}
-			break;
-
-		case IDC_UW_NEVER:
-			m_bShowNodeCountWarning = false;
-
-		case IDC_UW_NO:
-			m_nNextNodeCountWarning += m_nWorldNodeCount; // double the threshhold for the next warning
-			break;
-		}
-
-		m_bShowingWarningDialog = false;
-	}
-}
 		
 
