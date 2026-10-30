@@ -16,32 +16,33 @@
 
 
 	// Includes....
-	#include "../stdlith/stdlithdefs.h"
-	#include "../stdlith/lithexception.h"
-	#include "../stdlith/memory.h"
+	// talon: ../stdlithNOLF/, which Monolith's named ../stdlith/
+	#include "../stdlithNOLF/stdlithdefs.h"
+	#include "../stdlithNOLF/lithexception.h"
+	#include "../stdlithNOLF/memory.h"
 
-	#include "../stdlith/dynarray.h"
+	#include "../stdlithNOLF/dynarray.h"
 	
-	#include "../stdlith/linklist.h"
-	#include "../stdlith/goodlinklist.h"
-	#include "../stdlith/multilinklist.h"
-	#include "../stdlith/fastlinklist.h"
-	#include "../stdlith/genhash.h"
-	#include "../stdlith/glink.h"
+	#include "../stdlithNOLF/linklist.h"
+	#include "../stdlithNOLF/goodlinklist.h"
+	#include "../stdlithNOLF/multilinklist.h"
+	#include "../stdlithNOLF/fastlinklist.h"
+	#include "../stdlithNOLF/genhash.h"
+	#include "../stdlithNOLF/glink.h"
 
-	#include "../stdlith/stringholder.h"
-	#include "../stdlith/morect.h"
+	#include "../stdlithNOLF/stringholder.h"
+	#include "../stdlithNOLF/morect.h"
 
-	#include "../stdlith/abstractio.h"
-	#include "../stdlith/fileio.h"
-	#include "../stdlith/memoryio.h"
-	#include "../stdlith/compressedio.h"
+	#include "../stdlithNOLF/abstractio.h"
+	#include "../stdlithNOLF/fileio.h"
+	#include "../stdlithNOLF/memoryio.h"
+	#include "../stdlithNOLF/compressedio.h"
 
-	#include "../stdlith/object_bank.h"
-	#include "../stdlith/struct_bank.h"
+	#include "../stdlithNOLF/object_bank.h"
+	#include "../stdlithNOLF/struct_bank.h"
 
-	#include "../stdlith/helpers.h"
-	#include "../stdlith/copy_lists.h"
+	#include "../stdlithNOLF/helpers.h"
+	#include "../stdlithNOLF/copy_lists.h"
 
 
 	#ifndef NO_PRAGMA_LIBS
