@@ -20,10 +20,10 @@
     #include "modelallocations.h"
     #endif
 
-	// stl goodies.
-	#include <map>
-	#include <string>
-	#include <vector>   
+	// talon: no STL here in 2001: <string> (or anything else that brings in
+	// <xlocale>) would give every file that includes this header the
+	// ctype<unsigned short>::id initializer, and model.cpp's module
+	// (0x429636) and transformmaker's (0x435f3d) have none.
 
 	// How the vertex weighting works:
 	// M = skeleton transform for the given frame
@@ -52,7 +52,7 @@
 
 	#define MAX_PIECENAME_LEN		32
 	#define MAX_SOCKETNAME_LEN		16
-	#define MAX_CHILD_MODELS		32
+	#define MAX_CHILD_MODELS		16	// talon: 2001 (InitChildInfo 0x42c4e6)
 	#define MAX_WEIGHTSETNAME_LEN	16
 
 	#define MAX_PIECE_TEXTURES		4
@@ -75,21 +75,6 @@
 	#define MODELFLAG_TOUCHED	(1<<0)	// Used by client.
 	#define MODELHEADER_SIZE	8
 	
-	// ------------------------------------------------------------------------
-	// oriented bounding box def.
-	// ------------------------------------------------------------------------
-	struct SOBB  {
-		LTVector m_Pos ;
-		LTVector m_Size ; // m_Dim ; 
-		LTRotation m_Orientation;
-
-		// defaults
-		SOBB():m_Pos(0.0f,0.0f,0.0f), m_Size(1.0f,1.0f,1.0f){ m_Orientation.Init();}
-		// copy contstr
-		SOBB(const SOBB &o ):m_Pos(o.m_Pos),m_Size(o.m_Size), m_Orientation(o.m_Orientation){}
-
-	};
-
 	class ModelNode;
 	class ModelAnim;
 	class AnimKeyFrame;
@@ -99,8 +84,6 @@
 	class TransformMaker;
 	class ModelPiece;
 	class PieceLOD ;
-	class CDIModelPieceLOD;
-	struct LTB_Header;
 	
 	typedef unsigned char KeyType;
 	typedef void (*KeyCallback)(void *pTracker, AnimKeyFrame *pFrame);
@@ -150,14 +133,17 @@
 		LTMatrix		m_BaseTransform;
 
 		// What LOD to get the vertex positions for.
+		// talon: 2001 (gl_modelrender's reads, 0x403c64): m_iLOD at 0x16c is
+		// the last member; Build 69's m_CurrentLODDist isn't there.
 		uint32		m_iLOD;
-		float		m_CurrentLODDist ;
 	};
 
 
 	// ------------------------------------------------------------------------
 	// ModelLoadRequest
 	// ------------------------------------------------------------------------
+	// talon: 0x24 bytes in 2001 (the inline constructor at 0x417678, part
+	// 4's DoLoadModel 0x417194): m_pLoadedSet at 0xc and LTBOOL flags.
 	class ModelLoadRequest
 	{
 	public:
@@ -173,9 +159,10 @@
 								m_bTreesValid = TRUE;
 								m_bSaveCountValid = TRUE;
 								m_bAllChildrenLoaded = TRUE;
+								m_pLoadedSet = NULL;
 							}
 
-		bool				IsValid() {return m_pFilename && m_pFile && m_LoadChildFn;}
+		LTBOOL				IsValid() {return m_pFilename && m_pFile && m_LoadChildFn;}
 
 
 	// Stuff to be set for Model::Load.
@@ -188,6 +175,12 @@
 		LoadChildFn			m_LoadChildFn;
 		void				*m_pLoadFnUserData;
 
+		// talon: a container the caller news before Model::Load (0x417194;
+		// the name is part 4's). Its type is the caller's and the loader's to
+		// settle: model.h can't name it, since a map of strings would need
+		// <string> and model.cpp and transformmaker have no ctype initializer.
+		void				*m_pLoadedSet;
+
 
 	// Stuff automatically set for m_LoadChildFn.
 	public:
@@ -196,7 +189,7 @@
 		char				*m_pFilename;
 
 		// Don't touch this.  The model loader uses it so it doesn't recursively load children.
-		bool				m_bLoadChildModels;
+		LTBOOL				m_bLoadChildModels;
 
 
 	// Return info.
@@ -205,13 +198,13 @@
 		// If this is FALSE, there was an error loading a ChildInfo tree.  The model 
 		// still loaded but at least one of the ChildInfos has an invalid tree (and can't
 		// be used unless it is rebuilt with SetupChildNodes).
-		bool				m_bTreesValid;
+		LTBOOL				m_bTreesValid;
 
 		// If this is FALSE, then one of the child models is out of date.
-		bool				m_bSaveCountValid;
+		LTBOOL				m_bSaveCountValid;
 
 		// If this is FALSE, then one or more child models couldn't load.
-		bool				m_bAllChildrenLoaded;
+		LTBOOL				m_bAllChildrenLoaded;
 	};
 
 	// ------------------------------------------------------------------------
@@ -335,6 +328,9 @@
 	} UVPair;
 
 
+	// talon: 0x20 bytes in 2001 (the indices, a pad, the UVs at 8:
+	// gl_modelrender 0x404d86, model_cleanup 0x42fa40): no m_Normals or
+	// m_Colors.
 	class ModelTri
 	{
 	public:
@@ -352,30 +348,25 @@
 		unsigned short	m_Indices[3];
 	
 		UVPair			m_UVs[3];
-        LTVector        m_Normals[3];
-        LTVector        m_Colors[3];
 	};
 
 	// ------------------------------------------------------------------------
 	// NodeKeyFrame
 	// data for AnimNode animation data 
 	// ------------------------------------------------------------------------
+	// talon: 0x1c bytes in 2001 (the 0x1c stride at 0x429647; transformmaker
+	// 0x436115): no m_Time, no m_pDefVertexLst, no constructor.
 	class NodeKeyFrame
 	{
 	public:
-		NodeKeyFrame() :m_pDefVertexLst(NULL)  {
-			m_Translation.Init(0.0f,0.0f,0.0f);
-			m_Quaternion.Init( 0.0f,0.0f,0.0f,1.0f);
-		}
-
+		// talon: no default constructor in 2001: CMoArray's BaseNew for it
+		// only allocates (0x41219d, which Insert2 0x42e87d calls).
 		void		operator=(const NodeKeyFrame &other)
 		{
 			m_Translation = other.m_Translation;
 			m_Quaternion = other.m_Quaternion;
-			// shallow copy
-			m_pDefVertexLst = other.m_pDefVertexLst ;
 		}
-		
+
 		void		ConvertToMatrix(LTMatrix &mat)
 		{
 			m_Quaternion.ConvertToMatrix(mat);
@@ -383,7 +374,7 @@
 			mat.m[1][3] = m_Translation.y;
 			mat.m[2][3] = m_Translation.z;
 		}
-		
+
 		void		ConvertFromMatrix(LTMatrix &mat)
 		{
 			m_Quaternion.ConvertFromMatrix(mat);
@@ -397,20 +388,23 @@
 			m_Quaternion.Init();
 			m_Translation.Init();
 		}
-			
-		
+
 		LTVector		m_Translation;
 		LTRotation		m_Quaternion;
-		uint32			m_Time ;
-	
-		// vertex animation data.
-		CDefVertexLst * m_pDefVertexLst ;
 	};
 
 	// ------------------------------------------------------------------------
 	// AnimNode
 	// represents a collection of positions/rotations in time associated with 
 	// a model node.
+	// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
+	// AnimNode
+	// talon: the 2001 layout, 0x30 bytes (0x429a41, 0x429af5, the 0x30 new
+	// at 0x429b99): vtable, m_pNode 4, m_KeyFrames 8, m_pParentNode 0x18,
+	// m_Children 0x1c, m_pAnim 0x2c. No vertex animation (m_iPiece) and no
+	// m_LastKF. The virtuals are in Build 69's order (SetAnim is slot 2,
+	// 0x429f4a).
 	// ------------------------------------------------------------------------
 	class AnimNode
 	{
@@ -420,7 +414,7 @@
 
 							AnimNode(ModelAnim *pAnim, AnimNode *pParent);
 		virtual				~AnimNode();
-		
+
 		void				Term();
 		void				Clear();
 
@@ -430,82 +424,50 @@
 		Model*				GetModel();
 		LAlloc*				GetAlloc();
 
-		// Used while precalculating lists..
-		bool				FillAnimNodeList(uint32 &curNodeIndex);
-		bool				SetNodePointers(ModelNode *pNode);
+		// Fills in ModelAnim::m_AnimNodes.
+		LTBOOL				FillAnimNodeList(uint32 &curNodeIndex);
+
+		// Sets m_pNode and recurses (returns FALSE if the trees don't match).
+		LTBOOL				SetNodePointers(ModelNode *pNode);
 
 		uint32				NumKeyFrames();	
 
-
-	// Clipboard functions.
+	// Functions used by ModelEdit.
 	public:
 
-		// (This creates the tree in the dest anim node and stores the specified keyframe in it).
-		bool				CopyKeyFrame(uint32 iKeyFrame, AnimNode *pDest);
+		LTBOOL				CopyKeyFrame(uint32 iKeyFrame, AnimNode *pDest);
+		LTBOOL				PasteKeyFrame(AnimNode *pSrc, uint32 iBefore);
+		LTBOOL				RemoveKeyFrame(uint32 iKeyFrame);
 
-		// Adds pSrc's first keyframe after the specified frame.
-		bool				PasteKeyFrame(AnimNode *pSrc, uint32 iBefore);
+		// talon: 2001's (0x429dd3; the name is ours): keyframe iDest = the
+		// interpolation of iFrom and iTo at t.
+		LTBOOL				InterpolateKeyFrame(uint32 iDest, uint32 iFrom, uint32 iTo, float t);
 
-		// Removes the specified keyframe (and recurses).
-		bool				RemoveKeyFrame(uint32 iKeyFrame);
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL				Load(ILTStream &file);	// 0x42fddf
+		LTBOOL				Save(ILTStream &file);	// 0x4320ad
 
-		// Save	
-		bool				Save(ILTStream &file, uint32 compression_type, uint32& nAnimDataSize);
-
-		// if there's a peice associated with this its a vertex anim
-		bool				isVertexAnim() { return m_iPiece >= 0 ; }
-
-		// the target for a vertex animation is a peice. the piece is in class model.
-		void				SetVertexAnimTarget( int ival ) { m_iPiece = ival ; }
-		int					GetVertexAnimTarget()           { return m_iPiece ; }
-		
-		// get the size of the vertex animation for this node. returns 0 if there
-		// are none.
-		int					GetVertexAnimMemSize() ; 
-		// get all the vert anim size for anim hierarchy.
-		int					GetTotalVertexAnimMemSize();
-		
-	// Overridables.	
+	// Overridables.
 	public:
 
 		virtual ModelAnim*	GetAnim() {return m_pAnim;}
 		virtual void		SetAnim(ModelAnim *pAnim);
 		virtual AnimNode*	AllocateSameKind(ModelAnim *pAnim, AnimNode *pParent);
 
-		
 	public:
-		
-		// Points to its model node.
+
+		// The ModelNode this AnimNode modifies.
 		ModelNode			*m_pNode;
 
-		NodeKeyFrame *GetKeyFrame( uint32 time );		
+		// Keyframes.
+		CMoArray<NodeKeyFrame,NoCache>	m_KeyFrames;
 
-		// Parent animnode.  Root has NULL.
 		AnimNode			*m_pParentNode;
-
-		// Number of children is m_pNode->m_nChildren.
 		CMoArray<AnimNode*,NoCache>	m_Children;
 
-		// private 
-		// Number of keyframes is m_pAnim->m_nKeyFrames.
-		CMoArray<NodeKeyFrame,NoCache>	m_KeyFrames;
-		uint32				   m_LastKF ;
-	
-	protected :
-		// data pertaining to vertex anim
-
-		// piece that this anim node is associated with if its a vertex animation
-		// node. If there is no vertex animation the piece value is -1
-		int32                  m_iPiece; 
-
-		
-		
 	private:
-
-		// For ModelAnim::m_DefaultRootNode.
 							AnimNode();
 
-		// Always must be valid.
 		ModelAnim			*m_pAnim;
 	};
 
@@ -536,12 +498,19 @@
 	// ModelAnim
 	// Collection of animations associated with a model.
 	// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
+	// ModelAnim
+	// talon: the 2001 layout, 0x5c bytes (0x429ef4, the 0x5c new at
+	// 0x42a06f): vtable, m_AnimNodes 4, m_KeyFrames 8, m_ModelEditWeightSet
+	// 0x18 (-1), m_InterpolationMS 0x1c (200), m_pModel 0x20, m_pName 0x24,
+	// m_DefaultRootNode 0x28, m_pRootNode 0x58. No compression type and no
+	// LUT buffer.
+	// ------------------------------------------------------------------------
 	class ModelAnim
 	{
 	friend class Model;
+
 	public:
-		enum ANIMCOMPRESSIONTYPE { 
-			NONE=0, RELEVANT, RELEVANT_16, RELEVANT_ROT16_ONLY };
 
 						ModelAnim(Model *pModel);
 		virtual			~ModelAnim();
@@ -550,7 +519,6 @@
 
 		inline uint32	NumKeyframes()	{return m_KeyFrames.GetSize();}
 
-		// Access the root node.
 		AnimNode*		GetRootNode()					{return m_pRootNode;}
 		void			SetRootNode(AnimNode *pNode);
 
@@ -561,123 +529,95 @@
 		LAlloc*			GetAlloc();
 
 		uint32			NumKeyFrames() {return m_KeyFrames.GetSize();}
-	
-		bool			PrecalcNodeLists(bool bRebuild=TRUE);
 
-		// Returns how long (in milliseconds) the animation is.
+		// Builds m_AnimNodes.
+		LTBOOL			PrecalcNodeLists(LTBOOL bRebuild=TRUE);
+
+		// Get the time of the last keyframe.
 		uint32			GetAnimTime();
 
-		// Copy the animation
-		bool			CopyAnim(ModelAnim *pSrc);
-		bool			CopyAnimNode( AnimNode* pSrc, AnimNode* pDest );
-
-	// 'Clipboard' functions.
+	// Functions used by ModelEdit.
 	public:
 
-		// These can be used to move keyframes around.
+		// Copy and cut a keyframe into a new animation.
 		ModelAnim*	CopyKeyFrame(uint32 iKeyFrame);
 		ModelAnim*	CutKeyFrame(uint32 iKeyFrame);
-		bool			PasteKeyFrame(ModelAnim *pFrame, uint32 iBefore);
 
-		// Remove the specified keyframe.  There must be at least 3 keyframes in the animation
-		// for this to work.
-		bool			RemoveKeyFrame(uint32 iKeyFrame);
+		LTBOOL			PasteKeyFrame(ModelAnim *pFrame, uint32 iBefore);
+		LTBOOL			RemoveKeyFrame(uint32 iKeyFrame);
 
-		// Load/save.
-		bool			Load(ILTStream &file);
-		bool			Save(ILTStream &file, uint32& nAnimDataSize);
+		// talon: 2001's (0x42a213; the name is ours): the keyframe times, then
+		// AnimNode::InterpolateKeyFrame over the tree.
+		LTBOOL			InterpolateKeyFrame(uint32 iDest, uint32 iFrom, uint32 iTo, float t);
 
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL			Load(ILTStream &file);	// 0x42ff10
+		LTBOOL			Save(ILTStream &file);	// 0x43211e
+
+		// Copies pSrc through a memory stream (0x432c40; the name is ours).
+		LTBOOL			CopyAnim(ModelAnim *pSrc);
 
 	// Overridables.
 	public:
-		
+
 		virtual void	SetModel(Model *pModel);
 		virtual ModelAnim*	AllocateSameKind(Model *pModel);
 
-
-	// Used by Model::PrecalculateLists.
 	private:
 
-		bool			BuildAnimNodeList(bool bRebuild=TRUE);
+		LTBOOL			BuildAnimNodeList(LTBOOL bRebuild=TRUE);
 
-		
 	public:
 
-		// Indexable array of pointers to anim nodes.
+		// AnimNodes for each ModelNode.
 		AnimNode		**m_AnimNodes;
-		
+
+		// The keyframes.
 		CMoArray<AnimKeyFrame, NoCache>	m_KeyFrames;
 
-		// Weight set ModelEdit uses while stacking anims.
+		// Used by ModelEdit to remember the weight set.
 		uint32			m_ModelEditWeightSet;
 
-		// The time we interpolate into this animation
+		// How long it takes to interpolate into this animation.
 		uint32			m_InterpolationMS;
-		
-		// The compression method we are going to save the 
-		// binary data with.
-		uint32			m_CompressionType ;
+
 	private:
 
-		// Deletes the root node if it's not our default root node.
 		void			DeleteRootNode();
-		
-	
+
 	private:
 
-		// Always must be valid.  Use SetModel() to change.
 		Model			*m_pModel;
-		
 		char			*m_pName;
 
 		AnimNode		m_DefaultRootNode; // Default root node.
 		AnimNode		*m_pRootNode;
-	
-		uint16			*m_pLUTWorkBuffer ; // used in saving.
-
 	};
 
 
 	// Used to represent position/rotation for some stuff.
 	// basic node transform
+	// Used to represent position/rotation for some stuff.
+	// talon: 2001's is 0x1c bytes, a position and a rotation (ModelSocket's
+	// constructor 0x42a9b2; CIRelation, transformmaker 0x43674e): no
+	// m_Scale.
 	class ModelTransform
 	{
 	public:
+
 		void		ConvertToMatrix(LTMatrix &mat)
 		{
 			m_Rot.ConvertToMatrix(mat);
 			mat.SetTranslation(m_Pos);
-			mat.Scale(m_Scale.x, m_Scale.y, m_Scale.z);
 		}
 
-		void		ConvertToMatrixNoScale(LTMatrix &mat)
-		{
-			m_Rot.ConvertToMatrix(mat);
-			mat.SetTranslation(m_Pos);
-		}
-		
 		void		ConvertFromMatrix(LTMatrix &mat)
-		{
-			m_Scale = mat.GetScale();			
-			//mat.Scale(1.0f/m_Scale.x,1.0f/m_Scale.y,1.0f/m_Scale.z); 
-			// check for zero scale, if so don't divide by zero ok?
-			mat.Scale(
-				(m_Scale.x?1.0f/m_Scale.x:0.0f),  
-				(m_Scale.y?1.0f/m_Scale.y:0.0f),
-				(m_Scale.z?1.0f/m_Scale.z:0.0f)
-				); 
-			m_Rot.ConvertFromMatrix(mat);
-			mat.GetTranslation(m_Pos);
-		}
-
-		void ConvertFromMatrixNoScale(LTMatrix &mat)
 		{
 			m_Rot.ConvertFromMatrix(mat);
 			mat.GetTranslation(m_Pos);
 		}
 
 		LTVector		m_Pos;
-		LTVector		m_Scale ;
 		LTRotation		m_Rot;
 	};
 
@@ -695,24 +635,32 @@
 	// to the parent's geometry along with the weights from the skeleton to the parent.
 	// NOTE: the parent itself has one of these to itself because it is used for all
 	//       skeletal animation.
+	// A (skeletal) Model contains one ChildInfo for each child model it is bound to.
+	// The ChildModel structure contains the mapping from the child's skeleton
+	// to the parent's geometry along with the weights from the skeleton to the parent.
+	// NOTE: the parent itself has one of these to itself because it is used for all
+	//       skeletal animation.
+	// talon: 0x30 bytes in 2001 (the 0x30 stride of BaseDelete, 0x42e84c;
+	// the constructor 0x429942), the flags LTBOOLs.
 	class ChildInfo
 	{
 	public:
 
 						ChildInfo();
 						~ChildInfo();
+
 		void			Term();
 
 		uint32			GetSaveIndex()	{return m_SaveIndex;}
 
-		bool			Load(ILTStream &file);
-		bool			Save(ILTStream &file);
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL			Load(ILTStream &file);	// 0x4301b4
+		LTBOOL			Save(ILTStream &file);	// 0x4323da
 
 		// Before depending on the bounding radius, this should be called to make sure it's valid.
-		bool			IsBoundRadiusValid() {return m_bBoundRadiusValid;}
+		LTBOOL			IsBoundRadiusValid() {return m_bBoundRadiusValid;}
 
 		LAlloc*			GetAlloc();
-
 
 	public:
 
@@ -721,7 +669,7 @@
 		CMoArray<CIRelation>	m_Relation;
 
 		// Tells if the animation bounding radii are valid.
-		bool			m_bBoundRadiusValid;
+		LTBOOL			m_bBoundRadiusValid;
 
 		// How far into the parent's m_Anims list this model's anims start.
 		uint32			m_AnimOffset;
@@ -741,7 +689,7 @@
 		Model			*m_pModel;
 
 		// Set to FALSE if there is an error while loading the model.
-		bool			m_bTreeValid;
+		LTBOOL			m_bTreeValid;
 	};
 
 
@@ -756,13 +704,13 @@
 		// Returns NULL if something's wrong.
 		Model*		GetAnimOwner();
 
-		// Save the anim info (dims and the animation itself).
-		bool		Load(ILTStream &file);
-		bool		Save(ILTStream &file, uint32& nAnimDataSize);
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL		Load(ILTStream &file);	// 0x430170
+		LTBOOL		Save(ILTStream &file);	// 0x432242
 
 		// Returns TRUE if this animation comes from the parent model (ie: if it
 		// can be edited in ModelEdit).
-		bool		IsParentModel()	{return m_pChildInfo->m_pParentModel == m_pChildInfo->m_pModel;}
+		LTBOOL		IsParentModel()	{return m_pChildInfo->m_pParentModel == m_pChildInfo->m_pModel;}
 
 	public:
 		
@@ -804,18 +752,26 @@
 	// ModelNode
 	// hierarchical organization of model. coordinate system for model
 	// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
+	// ModelNode
+	// hierarchical organization of model. coordinate system for model
+	// talon: the 2001 layout, 0xb4 bytes (0x42a3f2, 0x42a49e, the 0xb4 new
+	// at 0x42a4fb): vtable, m_vOffsetFromParent 4, m_NodeIndex 0x10,
+	// m_Flags 0x12, m_ScratchData 0x14, m_Children 0x18, m_iParentNode
+	// 0x28, the two transforms 0x2c and 0x6c, m_pModel 0xac, m_pName 0xb0.
+	// No eval state, no OBB.
+	// ------------------------------------------------------------------------
 	class ModelNode
 	{
 	friend class Model;
-	
+
 	public:
-		enum EEVALSTATE	{ kEval, kDone, kIgnore };
 
 						ModelNode(Model *pModel);
 		virtual			~ModelNode();
 
-		// Called when it's about to remove a vertex.. gives the exporter a chance to 
-		// update its structures.
+		// Change all references to vertex iFrom to iTo.  The piece is
+		// being modified and this is the node's chance to update things.
 		virtual void	ChangeVertexReferences(PieceLOD *pPiece, uint32 iFrom, uint32 iTo) {}
 
 		void			Term();
@@ -826,101 +782,70 @@
 
 		uint32			GetNodeIndex()			{return m_NodeIndex;}
 		uint32			GetParentNodeIndex()	{return m_iParentNode;}
-		
+
 		char*			GetName()		{return m_pName;}
 		void			SetName(char *pName);
 
 		Model*			GetModel() {return m_pModel;}
 		LAlloc*			GetAlloc();
 
-		// Scratch data for some of the algorithms.
 		uint32&			ScratchData() {return m_ScratchData;}
 
-		// Calculates the number of nodes in this subtree (including this one).
+		// Calculates the number of nodes including this one.
 		uint32			CalcNumNodes();
 
+		// Fills in the node list.
+		LTBOOL			FillNodeList(uint32 &curNodeIndex);
 
-		// Fills in Model::m_FlatNodeList and sets its transform index.
-		bool			FillNodeList(uint32 &curNodeIndex);
-
-		// Sets m_iParentNode and recurses.
+		// Sets the parent node index for this node's children.
 		void			SetParent_R(uint32 iNode);
 
-		// Load/save.
-		bool			Load(ILTStream &file);
-		bool			Save(ILTStream &file);
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL			Load(ILTStream &file);	// 0x42fffb
+		LTBOOL			Save(ILTStream &file);	// 0x4321a7
 
-		// Access the global transform.
 		inline LTMatrix&		GetGlobalTransform()	{return m_mGlobalTransform;}
 		inline LTMatrix&		GetInvGlobalTransform()	{return m_mInvGlobalTransform;}
-
-		// gets transform local to parent. 
 		LTMatrix				GetLocalTransform() ;
-		// 
-		
-		 
-		// this should be SetGlobalTransform( const LTMatrix & mMat ) ...
+
 		inline void			SetGlobalTransform(LTMatrix mMat)
 		{
 			m_mGlobalTransform = mMat;
 			m_mInvGlobalTransform = ~mMat;
 		}
-	
-		// OBB related methods
-		void SetOBB( const SOBB &new_obb );
-		const SOBB& GetOBB() const { return m_OBB ; }
-		bool IsOBBEnabled() { return m_bOBBEnabled ; }
-		void EnableOBB()    { m_bOBBEnabled = true ; }
-		void DisableOBB()   { m_bOBBEnabled = false ;}
 
-	// Overridables.	
+	// Overridables.
 	public:
 
-		// Allocate the same kind of node.
 		virtual ModelNode*	AllocateSameKind(Model *pModel);
-
-		// Change its model pointer.
 		virtual void		SetModel(Model *pModel);
 
-	
 	public:
 
-		// How far out along the parent's coordinate system is this node?
-		// (~parent->m_GlobalTransform * m_GlobalTransform)
+		// Offset from parent (in parent's space).
 		LTVector			m_vOffsetFromParent;
 
-		// The node index in all the lists.
+		// Index into Model::m_FlatNodeList.
 		uint16				m_NodeIndex;
-		uint8				m_Flags;
-		
 
+		// Node flags (MNODE_).
+		uint8				m_Flags;
+
+		// Can be used for whatever.
 		uint32				m_ScratchData;
-		
+
+		// Child nodes.
 		CMoArray<ModelNode*, NoCache>	m_Children;
 
-		// NODEPARENT_NONE if none.
+		// Parent node index (NODEPARENT_NONE for the root).
 		uint32			m_iParentNode;
 
-		// eval state is used to cache transfroms, or ignore if appropriate.
-		EEVALSTATE      m_EvalState;
-	
 	private:
-
-		// For Model::m_DefaultRootNode.
 						ModelNode();
 
-		// The base global transform for this node.  This is setup from the first frame of
-		// the first animation exported for this model, which is considered to be the
-		// 'base' transform for the model (and it's what the skeletal->envelope relations
-		// are setup from).  This transform is also used to relate child and parent model
-		// skeletons so the parent model's skeleton can be moved around for larger characters.
+		// The global transform and its inverse (setup by ModelEdit).
 		LTMatrix			m_mGlobalTransform;
 		LTMatrix			m_mInvGlobalTransform;
-
-		// obb for this model node.
-		SOBB				m_OBB ; // oriented bounding box
-		bool				m_bOBBEnabled ;// is it enabled
-		
 
 		Model			*m_pModel;
 		char			*m_pName;
@@ -930,9 +855,17 @@
 	// PieceLOD
 	// Level of Detail geometry and renderstyle. 
 	// ------------------------------------------------------------------------
+	// ------------------------------------------------------------------------
+	// PieceLOD
+	// talon: 2001's, 0x24 bytes (0x42a60b..0x42a694; model_cleanup
+	// 0x42f950): the vertices at 0, the triangles at 0x10 and the model at
+	// 0x20, and nothing else: no textures, render style or name.  A
+	// ModelPiece is its own base LOD.
+	// ------------------------------------------------------------------------
 	class PieceLOD
 	{
 	public:
+
 							PieceLOD(Model *pModel);
 							PieceLOD();
 							~PieceLOD();
@@ -944,47 +877,18 @@
 
 		uint32				NumVerts()		{return m_Verts.GetSize();}
 
-	
-		const char *		GetName() { return m_name.c_str() ; }
-		void				SetName( const char *name ) { m_name = name ; }
-
-	// T.F ModelPiece
-		bool			ReplaceVertex(uint32 iVert, uint32 iReplaceWith);
-
-		// remap node indices to match the node indices of destModel
-		// returns false if matching nodes aren't found
-		bool				RemapNodeIndices( Model* destModel );
-
-		// copy the material info from another piece lod
-		bool				SetMaterialInfo( const PieceLOD& sourceLOD );
-
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL				Load(ILTStream &file, uint32 &iCurWeight);	// 0x43022c
+		LTBOOL				Save(ILTStream &file);						// 0x43247d
 
 	public:
-		// number of textures used, and their actual indices
-		uint32				m_nNumTextures;
-		int32				m_iTextures[MAX_PIECE_TEXTURES];
 
-		// RenderStyle index
-		int32				m_iRenderStyle;
-
-		//the render priority
-		uint8				m_nRenderPriority;
-	
 		// Tris and vertices.
 		CMoArray<ModelVert, NoCache>	m_Verts;
 		CMoArray<ModelTri, NoCache>		m_Tris;
 
 		// Point back to parent model.
 		Model							*m_pModel;
-
-		void				CalcUsedNodeList();
-			// list of node index used by this lod.
-		
-		std::vector<uint32>			m_UsedNodeList ;
-
-	private :
-		std::string			m_name ;
-	
 	};
 
 
@@ -993,131 +897,86 @@
 	// model piece is a container for a collection of lod stages.
 	// each lod stage is a render-object.
 	// ------------------------------------------------------------------------
-	class ModelPiece 
+	// ------------------------------------------------------------------------
+	// ModelPiece
+	// talon: 2001's, 0x6c bytes (0x42a712, 0x42a767): a PieceLOD itself
+	// (its base LOD, at 0), the texture index 0x24, m_VertOffset 0x28, the
+	// specular power and scale 0x2c and 0x30 (5 and 1), the other LODs
+	// 0x34, m_LODWeight 0x44 (1), m_Name 0x48, m_pModel 0x68.  GetLOD(0) is
+	// the piece, GetLOD(i) m_LODs[i-1] (gl_modelrender, model_cleanup
+	// 0x42fb03).
+	// ------------------------------------------------------------------------
+	class ModelPiece : public PieceLOD
 	{
 	public:						
+
 						ModelPiece(Model *pModel);
 						~ModelPiece();
 
 		void			Term();
 
-		// If iLOD is PIECELOD_BASE, then it just returns the piece's LOD, otherwise
-		// it returns the correct LOD (NULL if iLOD is an invalid index).
-		inline uint32	NumLODs()	{return m_LODs.GetSize() ;}
-		PieceLOD*		GetLOD(uint32 iLOD);
+		// The number of LODs, the base one included.
+		inline uint32	NumLODs()	{return m_LODs.GetSize() + 1;}
 
-		// GetLOD( dist ) get the lod based on distance.
-		// returns null if there are no lods associated with this modelpiece.
-		PieceLOD*		GetLOD( float dist ) 
+		// If iLOD is PIECELOD_BASE, then it just returns the piece's LOD, otherwise
+		// it returns the correct LOD.
+		// (0x432dd3, 0x42fa68: NULL past the end; the dec, 0x42185c).
+		PieceLOD*		GetLOD(uint32 iLOD)
 		{
-			if( dist >= 0 )
-			{
-				uint32 num_lods = m_LODs.GetSize() -1 ;
-				for(uint32 i = 0 ; i < num_lods  ; i++ )
-				{
-					if( dist < m_LODDists[i+1] )
-					{
-						return &m_LODs[i];
-					}
-				}
-				// return the last one if we fell out of scale
-				return &m_LODs[num_lods];
-			}
-			else
-				if( m_LODs.GetSize() ) 
-					return &m_LODs[0];
-				else // theoretically this is an exception. 
-					return NULL ; 
+			if(iLOD == 0)
+				return this;
+			iLOD--;
+			if(iLOD < m_LODs.GetSize())
+				return &m_LODs[iLOD];
+			return NULL;
 		}
 
-		// AddLOD( PieceLOD, at_distance )
-		//
-		// returns 0 on fail (at_dist < 0) or
-		// returns 1 on sucess inserted or appended new lod.
-		uint32 AddLOD( PieceLOD &pPiece , float at_dist, bool append_only=false );
-
-		uint32 AddNullLOD(float at_dist, bool append_only=false );
-
-		// removes the specified LOD and slides higher LODs down
-		bool RemoveLOD( uint32 iLOD );
-
-		void SetMinMaxLODOffset( uint32 min, uint32 max )				{ m_MinLODOffset = min ;m_MaxLODOffset = max ; }
-		void GetMinMaxLODOffset( uint32 &min, uint32 &max )			{ min=m_MinLODOffset  ;max = m_MaxLODOffset ; }
-
-		// lodweights are used when (re)generating lods for the model.
 		float			GetLODWeight() {return m_LODWeight;}
 		void			SetLODWeight(float fWeight) {m_LODWeight = fWeight;}
 
-		// ModelEdit related funcs 
-
-		
-		float GetMaxDist() 
-		{  
-			if( m_LODDists.GetSize() ) return m_LODDists[ m_LODDists.GetSize()-1] ; 
-			else return 0.0f;
-		}
-
-		// get the distance value for this lod index
-		float GetLODDist( uint32 lod ) { if( lod < m_LODs.GetSize() ) return m_LODDists[ lod ] ; else return 0.0f ;}
-
-		// set the distance for this lod index (doesn't sort the piece lod list)
-		// you must call SortLODs to get the piece lods in the correct order
-		bool SetLODDist( uint32 lod, float dist );
-
-		// sort the piece lod list
-		bool SortLODs();
-
-
-		// Accessors.
 	public:
 
 		char*			GetName()		{return m_Name;}
 		void			SetName(const char *pName);
 
-		// make sure every body knows who they belong to...
 		Model*			GetModel() { return m_pModel ;}
 		LAlloc*			GetAlloc();
 
-
-	// Functions.
 	public:
+
 		// Copy the UV coordinates.
 		// Returns FALSE if the geometries on the two models don't match.
-		// T.F ModelPiece
-		bool			CopyUVs(ModelPiece *pSrc);
-		// T.F ModelPiece 
-		bool			FindTriByPosition(LTVector *pVertPositions, 
-			LTVector *pVert1, LTVector *pVert2, LTVector *pVert3, uint32 &triIndex);
+		LTBOOL			CopyUVs(ModelPiece *pSrc);
 
-		bool			ReplaceVertex(uint32 iVert, uint32 iReplaceWith);
+		LTBOOL			ReplaceVertex(uint32 iVert, uint32 iReplaceWith);
 
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL			Load(ILTStream &file, uint32 &iCurWeight);	// 0x43044c
+		LTBOOL			Save(ILTStream &file);						// 0x43263f
 
 	public:
-	
-		// Geometry for each LOD.  NEVER access these directly.. use NumLODs()..
-		CMoArray<PieceLOD, NoCache>	m_LODs;
-		CMoArray<float, NoCache>    m_LODDists ; 
 
-		uint32			m_MinLODOffset, m_MaxLODOffset ;
-		
-		// used to determine collapse priority for automatically generated lods.
-		float			m_LODWeight;
-
+		// The texture this piece uses.
+		uint32			m_iTexture;	// talon: unsigned: SortPiecesByTexture compares it so (0x417b9f)
 
 		// The base index of its vertices if all the nodes were laid out in a linear list
 		// (in the order of m_FlatNodeList).
 		uint32			m_VertOffset;
-		
-	
-		// vertex animated pieces should know about what's affecting them.
-		int								m_isVA ;    // am I a vertex animated node ?
-		int								m_vaAnimNodeIdx ;// which anim do I point to
 
+		float			m_SpecularPower;
+		float			m_SpecularScale;
+
+		// The other LODs (the piece itself is LOD 0).  Use GetLOD.
+		CMoArray<PieceLOD, NoCache>	m_LODs;
+
+		// used to determine collapse priority for automatically generated lods.
+		float			m_LODWeight;
+
+		char			m_Name[MAX_PIECENAME_LEN];
 
 	private:
 
 		Model*			m_pModel ;
-		char			m_Name[MAX_PIECENAME_LEN];
 	};
 
 
@@ -1129,10 +988,11 @@
 						WeightSet(Model *pModel);
 						~WeightSet();
 
-		bool			InitWeights(uint32 nWeights);
+		LTBOOL			InitWeights(uint32 nWeights);	// talon: LTBOOL (0x4283c9)
 	
-		bool			Load(ILTStream &file);
-		bool			Save(ILTStream &file);	
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL			Load(ILTStream &file);	// 0x430563
+		LTBOOL			Save(ILTStream &file);	// 0x4326f5
 
 		char*			GetName()	{return m_Name;}
 		void			SetName(const char *pName);
@@ -1180,7 +1040,7 @@
 
 		// Change the allocator.  You can NOT change it if strings have already been
 		// allocated into here.
-		bool			SetAlloc(LAlloc *pAlloc);
+		LTBOOL			SetAlloc(LAlloc *pAlloc);
 
 
 	protected:
@@ -1199,6 +1059,31 @@
 	};
 
 	// ------------------------------------------------------------------------
+	// CModelCallbackList
+	// talon: Model's member at 0x14 (8 bytes), from its own module between
+	// modelallocations and pixelformat (0x433084..0x43311c). The names are
+	// ours: no source names it. A list of registrations, each with a list
+	// of callbacks {fn, next}; Notify calls every fn(this, reg, a1, a2).
+	// ------------------------------------------------------------------------
+	class CModelCallbackList
+	{
+	public:
+
+						CModelCallbackList();			// 0x4330a5: Init(0)
+						~CModelCallbackList();			// 0x4330b3
+
+		LTBOOL			Init(void *pUser);				// 0x4330b8
+		LTRESULT		Term();							// 0x4330c8: Notify(0, &1)
+		LTRESULT		Notify(uint32 a1, void *a2);	// 0x4330e0
+
+	public:
+
+		void			*m_pHead;
+		void			*m_pUser;
+	};
+
+
+	// ------------------------------------------------------------------------
 	// Model
 	// Container that holds geometric, material and animation information. 
 	// The data contained represents data for character models as well as props 
@@ -1206,25 +1091,21 @@
 	// ------------------------------------------------------------------------
 	class Model
 	{
-	public :
-		
-		uint32 m_RefCount ;
-		bool IsFreeable() { return m_RefCount == 0 ; }
-		uint32 AddRef()   { return m_RefCount++ ; }
-		uint32 DecRef()   { return m_RefCount-- ; }
-
 	public:
 						Model(LAlloc *pAlloc=&g_DefAlloc, LAlloc *pDefAlloc=&g_DefAlloc);
 		virtual			~Model();
-		void			Term(bool bDeleteChildModels=FALSE);
+
+		void			Term(LTBOOL bDeleteChildModels=FALSE);
 
 		// Deletes all the animations.
 		void			TermAnims();
 
 		// Deletes and removes references to the child models.
-		void			TermChildModels(bool bDeleteChildModels);
+		void			TermChildModels(LTBOOL bDeleteChildModels);
 
 	
+	public:
+
 		// The save index is stored in the child model.
 		uint32			GetSaveIndex() {return m_SelfChildModel.m_SaveIndex;}
 		void			SetSaveIndex(uint32 index) {m_SelfChildModel.m_SaveIndex = index;}
@@ -1234,7 +1115,7 @@
 		void			SetRootNode(ModelNode *pNode);
 
 		// The way the lists are built, the root node is always node 0.
-		bool			IsRootNode(uint32 iNode) {return iNode == 0;}
+		LTBOOL			IsRootNode(uint32 iNode) {return iNode == 0;}
 
 		// Get the allocators this model uses.
 		inline LAlloc*	GetAlloc()		{return m_pAlloc;}
@@ -1271,26 +1152,28 @@
 		// Weight sets..
 		uint32			NumWeightSets()			{return m_WeightSets.GetSize();}
 		WeightSet*		GetWeightSet(uint32 i)	{return m_WeightSets[i];}
-		bool			AddWeightSet(WeightSet *pSet);
+		LTBOOL			AddWeightSet(WeightSet *pSet);
 		void			RemoveWeightSet(uint32 index);
 
 
 		uint32			GetTotalNumVerts()	{return m_nTotalVerts;}		
 		uint32			GetTotalNumTris()	{return m_nTotalTris;}		
 		
+		// The model's LODs: the base one (m_BaseLODInfo) and m_LODs.
+		uint32			NumLODs()	{return m_LODs.GetSize() + 1;}
+
 		// ------------------------------------------------------------------------
 		// NODES 
 
 		// Precalculate the lists of nodes (and figures out how many there are).
 		// This should be called whenever a node is added or removed.
-		bool			PrecalcNodeLists(bool bRebuild=TRUE);
+		LTBOOL			PrecalcNodeLists(LTBOOL bRebuild=TRUE);
 
 		ModelNode*		FindNode(const char *pName, uint32 *index=NULL);
+		// talon: the count is m_Transforms' (0x78: BuildFlatNodeList
+		// 0x42b136, transformmaker), the array m_FlatNodeList's.
 		uint32			NumNodes() {return m_Transforms.GetSize();}
 		ModelNode*		GetNode(uint32 i) {return m_FlatNodeList[i];}
-
-		// Get the movement node, if any, for this model
-		ModelNode*		GetMovementNode() {return m_pMovementNode;}
 
 		// This call gets the transform for node "i" after anim has been applied. So this is the current Global position of that node.
 		LTMatrix*		GetTransform(uint32 i) {return &m_Transforms[i];}
@@ -1307,12 +1190,11 @@
 
 		// Removes the node from the tree.  Only works on null nodes currently.
 		// NOTE: this function overwrites ModelNode::m_pSoftElem.
-		bool			RemoveNode(ModelNode *pNode);
+		LTBOOL			RemoveNode(ModelNode *pNode);
 
 		// Calls RemoveNode on all the removable nodes.
-		bool			RemoveRemovableNodes();
+		LTBOOL			RemoveRemovableNodes();
 
-		void			ResetNodeEvalState();
 		// ------------------------------------------------------------------------
 		// PIECES 
 
@@ -1321,21 +1203,11 @@
 		ModelPiece*		FindPiece(const char *pName, uint32 *index=NULL); 
 		WeightSet*		FindWeightSet(const char *pName, uint32 *index=NULL);
 
-		// Swap the two pieces. (note[T.F] must update anims)
-		bool			SwapPieces(uint32 iPiece1, uint32 iPiece2);
+		// Swap the two pieces.
+		LTBOOL			SwapPieces(uint32 iPiece1, uint32 iPiece2);
 	
-		void			SetupNodeEvalStateFromPieces(float lod_dist);
-		void			SetupNodeEvalStateFromNode( uint32 iNode );
-
-
-		// get vertex buffer offset from the piece specified
-		// returns false if iPieceIndex is invalid
-		bool GetVertBuffOffsetFor( uint32 iPieceIndex, int & iBuffOffset );
-
 		// Add a string to the model's list.
 		char*			AddString(const char* pStr);
-
-		
 
 		// Find an animation by name.
 		ModelAnim*		FindAnim(char *pName, uint32 *index=NULL, AnimInfo **ppInfo=NULL);
@@ -1344,7 +1216,7 @@
 		AnimInfo*		FindAnimInfo(char *pAnimName, Model *pOwner, uint32 *index=NULL);
 
 		// Returns the index of the given anim info.
-		bool			GetAnimInfoIndex(AnimInfo *pInfo, uint32 &index);
+		LTBOOL			GetAnimInfoIndex(AnimInfo *pInfo, uint32 &index);
 
 		// Add an animation to the list.  It adds it in the appropriate position given
 		// the ChildInfo.
@@ -1356,34 +1228,33 @@
 		// Creates a single-frame animation with identity translations and rotations
 		// using the vertex positions from the model's geometry.
 		// This does NOT support deformation nodes currently (returns FALSE if there are any).
-		bool			AddDummyAnimation(char *pName);
+		LTBOOL			AddDummyAnimation(char *pName);
 
-		// Load/save.
-		bool			LoadString(ILTStream &file, char* &pStr);
-		
-		bool			LoadAnimBindings(ModelLoadRequest *pRequest, ILTStream &file, bool bAllowUpdates);
-		bool			LoadSockets(ILTStream &file);
-		bool			LoadWeightSets(ILTStream &file);
+		// Load a model (.abc): 0x4308ab (model_load).  Returns LT_OK or an error.
+		LTRESULT		Load(ModelLoadRequest *pRequest);
 
+		// talon: load (model_load) and save (model_save), part 7's.
+		LTBOOL			LoadString(ILTStream &file, char* &pStr);					// 0x4305cc
+		LTBOOL			LoadAnimBindings(ModelLoadRequest *pRequest, ILTStream &file, LTBOOL bAllowUpdates);	// 0x430613 (the flag is unread)
+		LTBOOL			LoadSockets(ILTStream &file);								// 0x430722
+		LTBOOL			LoadWeightSets(ILTStream &file);							// 0x430807
+		LTBOOL			LoadHeader(ILTStream &file, ModelAllocations &allocs);	// 0x431233
 
-		// Used internally.. reads the header.
-		bool			ValidateHeader( ILTStream &file, ModelAllocations &allocs);
+		LTBOOL			SaveAnimBindings(ILTStream &file, uint32 &chunkPos);		// 0x432286
+		LTBOOL			SaveSockets(ILTStream &file);								// 0x432742
+		LTBOOL			SaveWeightSets(ILTStream &file);							// 0x4327c1
+		LTBOOL			SaveToStream(ILTStream &file);	// 0x43280b (the name is ours)
+		LTBOOL			Save(ILTStream &file);			// 0x432bb7: ForceAnimOrder, then SaveToStream
 
-		// Sets up m_BlockAlloc as the allocator and allocates a block as large
-		// as the file requires.
-		LTRESULT		SetupBlockAllocator(ILTStream &file, LAlloc *pAlloc, const char* pFilefname);
-		
-		bool			SaveAnimBindings(ILTStream &file);
-		bool			SaveWeightSets(ILTStream &file);
-		bool			SaveSockets(ILTStream &file);
-		
+		// Copies pSrc through a memory stream (0x432be4; the name is ours).
+		LTBOOL			CopyModel(Model *pSrc);
+
 		// Copy the UV coordinates.
 		// Returns FALSE if the geometries on the two models don't match.
-		bool			CopyUVs(Model *pSrc);
+		LTBOOL			CopyUVs(Model *pSrc);
 
 		// Calculates the total number of vertices in the model.
 		uint32			CalcNumTris(uint32 iLOD = PIECELOD_BASE);
-		uint32			CalcNumTris(float fDistLOD);
 		uint32			CalcNumVerts();
 
 		// Calculates the total number of vertex weights (ie: how expensive it is to 
@@ -1391,7 +1262,7 @@
 		uint32			CalcNumVertexWeights();
 
 		// Figures out how many animations are in the child models.
-		uint32			CalcNumChildModelAnims(bool bIncludeSelf);
+		uint32			CalcNumChildModelAnims(LTBOOL bIncludeSelf);
 
 		// Returns how many animations in our m_Anims list come from this model.
 		uint32			CalcNumParentAnims();
@@ -1399,9 +1270,12 @@
 		// Parses the command string.
 		void			ParseCommandString();
 
+		// Sets the fade range (the distances and their squares, 0x42c0e2).
+		void			SetFadeRange(float fMin, float fMax);
+
 		// Access the filename.
 		const char*		GetFilename();
-		bool			SetFilename(const char *pFilename);
+		LTBOOL			SetFilename(const char *pFilename);
 		void			FreeFilename(); // Free m_pFilename.
 		
 
@@ -1416,37 +1290,37 @@
 		ChildInfo*		GetChildModel(uint32 index) {ASSERT(index < m_nChildModels); return m_ChildModels[index];}
 		
 		// Returns if the child model's tree is valid.
-		bool			VerifyChildModelTree(Model *pChild, ModelNode* &pErrNode);
+		LTBOOL			VerifyChildModelTree(Model *pChild, ModelNode* &pErrNode);
 
 		// Setup the relation between the models.  If bScaleSkeleton is TRUE, then it 
 		// scales the skeleton to match the other model's skeleton.
-		bool			SetupChildModelRelation( ChildInfo *pInfo, 
+		LTBOOL			SetupChildModelRelation( ChildInfo *pInfo, 
 												 Model *pChild, 
-												 bool bScaleSkeleton=FALSE);
+												 LTBOOL bScaleSkeleton=FALSE);
 		
 		// Used by ModelEdit.. shouldn't be used at runtime.  Adds a new ChildModel
 		// with the specified info.
 		ChildInfo*		AddChildModel( Model *pChild, char *pFilename, 
 										char *pErrStr, 
-										bool bScaleSkeleton);
+										LTBOOL bScaleSkeleton);
 		// Creates a reference to a child model, no actually child model is assigned. 
 		// This message should only be used by tools that just need the child model filename and 
 		// params.
 		ChildInfo*		AddChildModelRef( char *pFilename, char *errStr );
 
 		// Remove the specified child model.
-		bool			RemoveChildModel(uint32 index);
+		LTBOOL			RemoveChildModel(uint32 index);
 
 
 		// Just initializes the model and sets our m_ChildModel[index] = pChildModel.
-		bool			InitChildInfo(uint32 index, ChildInfo *pChildModel, Model *pModel, char *pFilename);
+		LTBOOL			InitChildInfo(uint32 index, ChildInfo *pChildModel, Model *pModel, char *pFilename);
 		
 		// Find child models, first one by pointer reference.
 		ChildInfo*		FindChildModel(Model *pModel);
 		ChildInfo*		FindChildModelByFilename(char *pFilename, uint32 *index=NULL); // Case sensitive.
 
 		// Make a unique animation name.
-		bool			MakeUniqueAnimName(char *pBase, char *pName);
+		LTBOOL			MakeUniqueAnimName(char *pBase, char *pName);
 
 		// Sets ModelNode::m_vOffsetFromParent (and calls it on the children).
 		void			SetNodeParentOffsets();
@@ -1456,112 +1330,114 @@
 
 		// This is the 'reference' function for how to get the vertex positions on a given 
 		// frame of animation.
-		bool			GetVertexPositions(GVPStruct *pStruct, bool bSetupTransforms=TRUE, bool bWeight=TRUE);
+		LTBOOL			GetVertexPositions(GVPStruct *pStruct, LTBOOL bSetupTransforms=TRUE, LTBOOL bWeight=TRUE);
 
 		// Fix for a bug in ModelEdit where it sometimes saves animations in an order
 		// different from animation bindings.
-		bool			ForceAnimOrder();
+		LTBOOL			ForceAnimOrder();
 
 
 	private:
 
 		// These are used during precalculation.
-		bool			BuildTransformList(bool bRebuild=TRUE);
-		bool			BuildFlatNodeList(bool bRebuild=TRUE);
+		LTBOOL			BuildTransformList(LTBOOL bRebuild=TRUE);
+		LTBOOL			BuildFlatNodeList(LTBOOL bRebuild=TRUE);
 
-		// Not always set.. the engine uses this to determine if it has already
-		// been loaded.  Use Get/SetFilename.
+
+	// talon: the 2001 layout, 0x2c8 bytes (the constructor 0x42a9fd, which
+	// adds 0x2c8 to g_ModelMemory; ParseCommandString 0x42bceb for the
+	// command-string fields; model_load for m_FileVersion 0x208).  The
+	// flags are LTBOOLs.
+	private:
+
 		char			*m_pFilename;
-
 
 	public:
 
-	// Model link for a linked list.
-
 		LTLink			m_Link;
 
-	
-	// Misc. data.
+		// talon: 0x14, eight bytes (part 7's, 0x433084..0x43311c): a list
+		// of callbacks run when the model goes (the destructor's first call,
+		// 0x42ae02).
+		CModelCallbackList	m_Callbacks;
 
 		unsigned long	m_FileID;		// Used by server.
 		unsigned long	m_Flags;		// MODELFLAG flags above.  Used by various things.
 
+	// Node info.
+	public:
 
-	// Geometry data.
-
-		// The node list, generated by PREORDER traversal of the node tree.
+		// Flat node list (in the order they come in the tree).
 		CMoArray<ModelNode*, NoCache>	m_FlatNodeList;
-		
-		// Geometry pieces.. these are where the verts and tris are stored.
+
+		// Model pieces.
 		CMoArray<ModelPiece*, NoCache>	m_Pieces;
 
-		// Weight sets..
 		CMoArray<WeightSet*, NoCache>	m_WeightSets;
 
 		CMoArray<NewVertexWeight, NoCache>	m_VertexWeights;
 
-
-		// Setup with CalcNumVerts() in PrecalcNodeLists.
-		// This is the total number of vertices in all the nodes.
+		// Calculated in PrecalcNodeLists.
 		uint32			m_nTotalVerts;
 		uint32			m_nTotalTris;
 
-		// m_nNodes/4 and +1 if m_nNodes%4 != 0.
+		// How many DWORDs a bit per node takes.
 		unsigned long	m_nDWordNodes;
 
-		// These are allocated when you load the model.  You can use these
-		// this is the result of the animation update.
+		// The transforms, used in GetVertexPositions.
 		CMoArray<LTMatrix, NoCache>	m_Transforms;
 
-		// The command string for the model.  This is used for sequences of commands
-		// that get stored with the model (like LOD ranges...)
+		// The command string.
 		char			*m_CommandString;
 
 		ModelStringList	m_StringList;
 
-	// Stuff contained in the command string.
+		// The model's LODs past the base one.
+		CMoArray<LODInfo>	m_LODs;
+		LODInfo			m_BaseLODInfo;
+
+	// Command string stuff (ParseCommandString).
 	public:
 
 		float			m_GlobalRadius;		// Global radius.. MUST enclose the whole model.
+		float			m_VisRadius;		// VisRadius
+		LTBOOL			m_bNoAnimation;		// NoAnimation
 
-		float			m_VisRadius;		// Defaults to DEFAULT_MODEL_VIS_RADIUS or can be 
-											// overridden in the command string.
-		// If the NoAnimation token is in the model file, then this is TRUE.  This means 
-		// the renderer doesn't have to weight the verts so it's 15-25% faster.
-		bool			m_bNoAnimation;
+		// FadeRangeMin, FadeRangeMax (and their squares).
+		float			m_FadeRangeMin, m_FadeRangeMinSqr;
+		float			m_FadeRangeMax, m_FadeRangeMaxSqr;
 
-		// Ambient and directional light percentages.
+		// talon: 0xc0, zeroed by the constructor and read by nothing in
+		// the model code.
+		uint32			m_Unknown0c0;
+
+		// FadeSpriteSize.
+		float			m_FadeSpriteSizeX, m_FadeSpriteSizeY;
+
 		float			m_AmbientLight;
 		float			m_DirLight;
 
-		// Shadow stuff.
-		bool			m_bShadowEnable;
+		LTBOOL			m_bShadowEnable;
 		float			m_fShadowProjectLength;
 		float			m_fShadowLightDist;
 		float			m_fShadowSizeX;
 		float			m_fShadowSizeY;
 		LTVector		m_vShadowCenterOffset;
 
-		// Reference node for the normals.  Since it doesn't animate the normals on the model,
-		// the renderer can take the offset of this node from the first frame of this animation
-		// and apply that to the normals.
-		// If m_iNormalRefNode is INVALID_MODEL_NODE, then the reference node shouldn't be used.
+		// NormalRef: m_mNormalRef is the INVERSE of the first frame of
+		// m_iNormalRefAnim.
 		uint32			m_iNormalRefNode;
 		uint32			m_iNormalRefAnim;
-		LTMatrix		m_mNormalRef; // INVERSE of first frame of m_iNormalRefAnim.
-		bool			m_bNormalRef; // Tells if the normal reference should be used at all.
+		LTMatrix		m_mNormalRef;
+		LTBOOL			m_bNormalRef;
 
-		// Optional FOV offset used by the renderer.
-		bool			m_bFOVOffset;
+		// FovXOffset, FovYOffset.
+		LTBOOL			m_bFOVOffset;
 		float			m_xFOVOffset;
 		float			m_yFOVOffset;
 
-		// Does this model support specular highlighting?
-		bool			m_bSpecularEnable;
-
-        // Is this model rigid?
-		bool			m_bRigid;
-		uint32			m_iLTAFileType;
+		LTBOOL			m_bSpecularEnable;
+		LTBOOL			m_bRigid;
 
 
 	// Sockets.
@@ -1571,11 +1447,11 @@
 		ModelSocket*	GetSocket(uint32 index) {return m_Sockets[index];}
 		ModelSocket*	FindSocket(const char *pName, uint32 *index=NULL);
 
-		bool			AddSocket(ModelSocket *pSocket);
-		bool			RemoveSocket(uint32 index);
+		LTBOOL			AddSocket(ModelSocket *pSocket);
+		LTBOOL			RemoveSocket(uint32 index);
 		
 		// Gets the socket's transform, assumes the transforms for the model are already setup.
-		bool			GetSocketTransform(ModelSocket *pSocket, LTMatrix *pSocketTransform);
+		LTBOOL			GetSocketTransform(ModelSocket *pSocket, LTMatrix *pSocketTransform);
 		
 		CMoArray<ModelSocket*,NoCache>	m_Sockets;
 		
@@ -1583,7 +1459,7 @@
 	// Other...
 	public:
 
-		bool			AnyVertsWeightedToNode(uint32 iNode);
+		LTBOOL			AnyVertsWeightedToNode(uint32 iNode);
 
 	
 	// Animation data.
@@ -1593,24 +1469,9 @@
 		// it should never assume that they are.
 		CMoArray<AnimInfo, NoCache>		m_Anims;
 
-		// add an index-texture relation.
-		void AddTextureName( uint32 index, const char *filename );
-
-		// returns false if we could not find the index.
-		bool GetTextureName( uint32 index , std::string & name);
 		
 	// Misc.
 	public:
-		// *** TOOLS-INFO 
-		// the base
-		std::string m_sProjectDir ;
-		std::map<uint32,std::string> m_TextureIndexMap ;
-		typedef std::map<uint32,std::string>::iterator CTextureIndexMapIter;
-
-		uint32 m_CompressionType ;
-		bool   m_bExcludeGeom ;
-		// *** TOOLS INFO
-
 
 		// m_pAlloc = who's doing our BLOCK allocations.  Most allocations can go through 
 		// here, but some must go thru m_pDefAlloc if we can't predict ahead of time how
@@ -1620,6 +1481,10 @@
 
 		// At runtime, models are loaded using this.
 		LAllocSimpleBlock				m_BlockAlloc;
+
+		// talon: 0x190, zeroed last by the constructor (0x42ac79) and set to
+		// 1 by model_load (0x430daf).
+		uint32							m_Unknown190;
 
 		// What version of the file did we come from?
 		inline uint32	GetFileVersion()	{return m_FileVersion;}
@@ -1643,13 +1508,21 @@
 		// Set when it starts reading so it can track what file version it's reading in.
 		uint32							m_FileVersion;
 
+	public:
+
+		// How many parent models reference this one as a child (AddChildModel
+		// 0x42c38c, InitChildInfo 0x42c510; TermChildModels deletes a child
+		// whose count drops to 0, 0x42af7d).
+		uint32 m_RefCount ;
+		LTBOOL IsFreeable() { return m_RefCount == 0 ; }
+		uint32 AddRef()   { return m_RefCount++ ; }
+		uint32 DecRef()   { return m_RefCount-- ; }
+
+	private:
 		
 		// Default root node.. setup so it can be subclassed.
 		ModelNode		m_DefaultRootNode;
 		ModelNode		*m_pRootNode;
-
-		// Movement node.  NULL if none exists.
-		ModelNode		*m_pMovementNode;
 	};
 
 
@@ -1719,16 +1592,6 @@
 	inline LAlloc* ModelPiece::GetAlloc()
 	{
 		return GetModel()->GetAlloc();
-	}
-
-	inline PieceLOD* ModelPiece::GetLOD(uint32 i)
-	{
-		if(i < m_LODs.GetSize())
-			return &m_LODs[i];
-
-		// Invalid LOD index.
-		ASSERT(FALSE);
-		return NULL;
 	}
 
 	inline LAlloc* WeightSet::GetAlloc()

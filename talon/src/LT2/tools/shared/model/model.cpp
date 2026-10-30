@@ -15,6 +15,7 @@
 #define MAX_SKELETON_NODES	256
 #define NUM_RADIUS_TWEENS	25
 #define DEFAULT_MODEL_VIS_RADIUS	50.0f
+#define DEFAULT_MODEL_FADE_RANGE	20000.0f	// talon: 0x4770ec
 
 #define DEFAULT_MODEL_AMBIENT_LIGHT	0.25f
 #define DEFAULT_MODEL_DIR_LIGHT		0.75f
@@ -402,7 +403,7 @@ char* ModelStringList::AddString(const char *pString)
 }
 
 
-bool ModelStringList::SetAlloc(LAlloc *pAlloc)
+LTBOOL ModelStringList::SetAlloc(LAlloc *pAlloc)
 {
 	if(m_StringList)
 	{
@@ -596,7 +597,7 @@ ChildInfo::~ChildInfo()
 void ChildInfo::Term()
 {
 	m_pModel = LTNULL;
-	m_pFilename = LTNULL;
+	m_pFilename = "";
 	m_Relation.Term(GetAlloc());
 }
 
@@ -608,7 +609,7 @@ void ChildInfo::Term()
 AnimKeyFrame::AnimKeyFrame()
 {
 	m_Time = 0;
-	m_pString = LTNULL;
+	m_pString = "";
 	m_KeyType = KEYTYPE_POSITION;
 	m_Callback = LTNULL;
 	m_pUser1 = LTNULL;
@@ -624,18 +625,15 @@ AnimKeyFrame::AnimKeyFrame()
 // Constructor
 // ------------------------------------------------------------------------
 AnimNode::AnimNode()
-	:m_iPiece(-1){
-m_LastKF = 0;
+{
 	Clear();
 }
 
 AnimNode::AnimNode(ModelAnim *pAnim, AnimNode *pParent)
-	:m_iPiece(-1)
 {
 	Clear();
 	m_pAnim = pAnim;
 	m_pParentNode = pParent;
-	m_LastKF = 0;
 }
 
 AnimNode::~AnimNode()
@@ -670,7 +668,7 @@ AnimNode* AnimNode::AllocateSameKind(ModelAnim *pAnim, AnimNode *pParent)
 }
 
 
-bool AnimNode::FillAnimNodeList(uint32 &curNodeIndex)
+LTBOOL AnimNode::FillAnimNodeList(uint32 &curNodeIndex)
 {
 	unsigned long i;
 
@@ -693,7 +691,7 @@ bool AnimNode::FillAnimNodeList(uint32 &curNodeIndex)
 }
 
 
-bool AnimNode::SetNodePointers(ModelNode *pNode)
+LTBOOL AnimNode::SetNodePointers(ModelNode *pNode)
 {
 	uint32 i;
 
@@ -720,7 +718,7 @@ Model* AnimNode::GetModel()
 }
 
 
-bool AnimNode::RemoveKeyFrame(uint32 iKeyFrame)
+LTBOOL AnimNode::RemoveKeyFrame(uint32 iKeyFrame)
 {
 	uint32 i;
 
@@ -746,49 +744,7 @@ uint32 AnimNode::NumKeyFrames()
 }
 
 
-// ---------------------------------------------------------------------------
-// GetVertexAnimMemSize();
-// returns the total memory (in bytes) size of the vertex animation held in 
-// in this node.
-// return 0 if there's nothing.
-// ---------------------------------------------------------------------------
-int		AnimNode::GetVertexAnimMemSize()         
-{
-	int size =0;
-	
-	// quick check to see if this is a vertex anim node.
-	if( !isVertexAnim() )
-		return 0 ;
-
-	for( uint32 i = 0 ;i < m_KeyFrames.GetSize() ; i++ )
-	{
-		if( m_KeyFrames[i].m_pDefVertexLst != NULL )
-				size += m_KeyFrames[i].m_pDefVertexLst->mem_size();
-			
-	}
-	return size ;
-}
-
-// ----------------------------------------------------------------------------
-// size = GetTotalVertexAnimMemSize()
-// 
-//  calc the size for all children.
-// ----------------------------------------------------------------------------
-int	AnimNode::GetTotalVertexAnimMemSize()
-{
-	int size = 0;
-
-	size = GetVertexAnimMemSize();
-
-	for(uint32 i=0; i < m_Children.GetSize(); i++)
-	{
-		size += m_Children[i]->GetTotalVertexAnimMemSize();
-		
-	}
-	return size ;
-}
-
-bool AnimNode::CopyKeyFrame(uint32 iKeyFrame, AnimNode *pDest)
+LTBOOL AnimNode::CopyKeyFrame(uint32 iKeyFrame, AnimNode *pDest)
 {
 	uint32 i;
 	AnimNode *pNewChild;
@@ -827,7 +783,7 @@ bool AnimNode::CopyKeyFrame(uint32 iKeyFrame, AnimNode *pDest)
 }
 
 
-bool AnimNode::PasteKeyFrame(AnimNode *pSrc, uint32 iBefore)
+LTBOOL AnimNode::PasteKeyFrame(AnimNode *pSrc, uint32 iBefore)
 {
 	uint32 i;
 
@@ -836,11 +792,8 @@ bool AnimNode::PasteKeyFrame(AnimNode *pSrc, uint32 iBefore)
 	if(!pSrc->m_KeyFrames || pSrc->m_Children.GetSize() != m_Children.GetSize())
 		return false;
 
-	//clamp the position to insert to the number of keys
-	uint32 nPasteLocation = LTMIN(iBefore, m_KeyFrames.GetSize());
-
 	// Add to the keyframe array.
-	m_KeyFrames.Insert(nPasteLocation, pSrc->m_KeyFrames[0]);
+	m_KeyFrames.Insert(iBefore, pSrc->m_KeyFrames[0]);
 
 	// Recurse.
 	for(i=0; i < m_Children; i++)
@@ -852,48 +805,43 @@ bool AnimNode::PasteKeyFrame(AnimNode *pSrc, uint32 iBefore)
 	return true;
 }
 
-NodeKeyFrame *AnimNode::GetKeyFrame( uint32 time )
+// talon: 2001's (0x429dd3), not in Build 69; the name is ours. Sets keyframe
+// iDest to the interpolation of iFrom and iTo at t, over the tree. Retail
+// bug: the indices are checked with > against NumKeyFrames(), so an index
+// equal to the count gets through (RETAIL_BUGS.md).
+LTBOOL AnimNode::InterpolateKeyFrame(uint32 iDest, uint32 iFrom, uint32 iTo, float t)
 {
-	/*
-	if time is greater than or equal to last-kf and less then last-kf +1 then 
-	return last-kf 
-	else if time greater or equal to last-kf +1
-		while
-			if time is equal or greater then last-kf +1 and less then last-kf +2 then 
-			last-kf = last-kf +1 
-			return last-kf ;
-	else if time less then last-kf 
-		set last-kf = 0 ;
-		search forward for proximate key.
- 
+	NodeKeyFrame *pDest, *pFrom, *pTo;
+	uint32 i;
 
-// naive search for keyf.
-	uint32 cur_key=1;
-	uint32 size = m_KeyFrames.GetSize();
+	if(iDest > NumKeyFrames() || iFrom > NumKeyFrames() || iTo > NumKeyFrames() || iFrom > iTo)
+		return FALSE;
 
-	if( size >= 2)
+	if(t < 0.0f || t > 1.0f)
+		return FALSE;
+
+	pDest = &m_KeyFrames[iDest];
+	pFrom = &m_KeyFrames[iFrom];
+	pTo = &m_KeyFrames[iTo];
+	if(!pDest || !pFrom || !pTo)
+		return FALSE;
+
+	pDest->m_Quaternion.Slerp(pFrom->m_Quaternion, pTo->m_Quaternion, t);
+
+	if(!(m_pNode->m_Flags & MNODE_ROTATIONONLY))
 	{
-		NodeKeyFrame *pNKF0 = m_KeyFrames[0];
-		
-		while(cur_key<= (size-1))
-		{
-			NodeKeyFrame *pNKF1 = m_KeyFrames[cur_key];
-
-			if( pNKF0->m_Time >= time && pNKF1->m_Time < time )
-				break;
-			else
-			{
-				cur_key++ ;
-				pNKF0 = pNKF1 ;
-				pNKF1 = m_KeyFrames[ cur_key ] ;
-			}
-		}
-
-		return pNKF0;
+		pDest->m_Translation.x = pFrom->m_Translation.x + (pTo->m_Translation.x - pFrom->m_Translation.x) * t;
+		pDest->m_Translation.y = pFrom->m_Translation.y + (pTo->m_Translation.y - pFrom->m_Translation.y) * t;
+		pDest->m_Translation.z = pFrom->m_Translation.z + (pTo->m_Translation.z - pFrom->m_Translation.z) * t;
 	}
- */
-	
-	return NULL ;
+
+	for(i=0; i < m_Children; i++)
+	{
+		if(m_Children[i])
+			m_Children[i]->InterpolateKeyFrame(iDest, iFrom, iTo, t);
+	}
+
+	return TRUE;
 }
 
 // ------------------------------------------------------------------------ //
@@ -907,7 +855,6 @@ ModelAnim::ModelAnim(Model *pModel)
 	m_AnimNodes = LTNULL;
 	m_ModelEditWeightSet = INVALID_MODEL_WEIGHTSET;
 	m_InterpolationMS = 200;
-	m_CompressionType =NONE;
 
 	m_pRootNode = &m_DefaultRootNode;
 	m_pRootNode->SetAnim(this);
@@ -975,13 +922,13 @@ void ModelAnim::DeleteRootNode()
 }
 
 
-bool ModelAnim::PrecalcNodeLists(bool bRebuild)
+LTBOOL ModelAnim::PrecalcNodeLists(LTBOOL bRebuild)
 {
 	return BuildAnimNodeList(bRebuild);
 }
 
 
-bool ModelAnim::BuildAnimNodeList(bool bRebuild)
+LTBOOL ModelAnim::BuildAnimNodeList(LTBOOL bRebuild)
 {
 	uint32 curNodeIndex;
 
@@ -1041,7 +988,7 @@ Error:;
 }
 
 
-bool ModelAnim::PasteKeyFrame(ModelAnim *pFrame, uint32 iBefore)
+LTBOOL ModelAnim::PasteKeyFrame(ModelAnim *pFrame, uint32 iBefore)
 {
 	if(!pFrame || pFrame->NumKeyFrames() == 0)
 		return false;
@@ -1049,11 +996,9 @@ bool ModelAnim::PasteKeyFrame(ModelAnim *pFrame, uint32 iBefore)
 	if(!GetRootNode()->PasteKeyFrame(pFrame->GetRootNode(), iBefore))
 		return false;
 
-	uint32 nPasteLocation = LTMIN(iBefore, m_KeyFrames.GetSize());
-
 	// NOTE: it MUST do this last so the AnimNodes have a correct keyframe count
 	// while they do their paste.
-	if(!m_KeyFrames.Insert(nPasteLocation, pFrame->m_KeyFrames[0]))
+	if(!m_KeyFrames.Insert(iBefore, pFrame->m_KeyFrames[0]))
 		return false;
 	
 	return true;
@@ -1081,7 +1026,35 @@ ModelAnim* ModelAnim::CutKeyFrame(uint32 iKeyFrame)
 }
 
 
-bool ModelAnim::RemoveKeyFrame(uint32 iKeyFrame)
+// talon: 2001's (0x42a213), not in Build 69; the name is ours. ModelEditDlg
+// calls it after pasting a copy of a keyframe (0x42084e). The same > checks
+// as AnimNode's.
+LTBOOL ModelAnim::InterpolateKeyFrame(uint32 iDest, uint32 iFrom, uint32 iTo, float t)
+{
+	AnimKeyFrame *pDest, *pFrom, *pTo;
+
+	if(iDest > NumKeyFrames() || iFrom > NumKeyFrames() || iTo > NumKeyFrames() || iFrom > iTo)
+		return FALSE;
+
+	if(t < 0.0f || t > 1.0f)
+		return FALSE;
+
+	pDest = &m_KeyFrames[iDest];
+	pFrom = &m_KeyFrames[iFrom];
+	pTo = &m_KeyFrames[iTo];
+	if(!pDest || !pFrom || !pTo)
+		return FALSE;
+
+	pDest->m_Time = pFrom->m_Time + (uint32)((float)(pTo->m_Time - pFrom->m_Time) * t + 0.5f);
+
+	if(!GetRootNode()->InterpolateKeyFrame(iDest, iFrom, iTo, t))
+		return FALSE;
+
+	return TRUE;
+}
+
+
+LTBOOL ModelAnim::RemoveKeyFrame(uint32 iKeyFrame)
 {
 	uint32 i, nShortenedBy;
 
@@ -1120,98 +1093,6 @@ uint32 ModelAnim::GetAnimTime()
 	else
 		return 0;
 }
-
-
-bool ModelAnim::CopyAnimNode( AnimNode* pSrc, AnimNode* pDest )
-{
-	ASSERT( !pDest->m_KeyFrames );
-	if( !pDest->m_KeyFrames.SetSize2( NumKeyFrames(), GetAlloc() ) )
-		return false;
-
-	pDest->m_iPiece = pSrc->m_iPiece;
-
-	for( uint32 curFrame = 0; curFrame < NumKeyFrames(); curFrame++ )
-	{
-		pDest->m_KeyFrames[curFrame] = pSrc->m_KeyFrames[curFrame];
-
-		if( pSrc->m_KeyFrames[curFrame].m_pDefVertexLst )
-		{
-			uint32 size = pSrc->m_KeyFrames[curFrame].m_pDefVertexLst->size();
-
-			CDefVertexLst* pDefVertLst = new CDefVertexLst;
-			pDefVertLst->setSize( size, GetAlloc() );
-		
-			memcpy( pDefVertLst->getArray(), pSrc->m_KeyFrames[curFrame].m_pDefVertexLst->getArray(), sizeof(float) * 3 * size );
-
-			pDest->m_KeyFrames[curFrame].m_pDefVertexLst = pDefVertLst;
-		}
-		else
-			pDest->m_KeyFrames[curFrame].m_pDefVertexLst = NULL;
-	}
-	
-	// recurse through children
-	if( !pDest->m_Children.SetSizeInit4( pDest->m_pNode->NumChildren(), LTNULL, GetAlloc() ) )
-		return false;
-
-	for( uint32 curChild = 0; curChild < pDest->m_pNode->NumChildren(); curChild++ )
-	{
-		AnimNode* pChild = LNew_2P( GetAlloc(), AnimNode, pDest->GetAnim(), pDest );
-		if( !pChild )
-			return false;
-
-		pChild->m_pNode = pDest->m_pNode->m_Children[curChild];
-
-		if( !CopyAnimNode( pSrc->m_Children[curChild], pChild ) )
-		{
-			LDelete( GetAlloc(), pChild );
-			DeleteAndClearArray2( pDest->m_Children, GetAlloc() );
-			return false;
-		}
-
-		pDest->m_Children[curChild] = pChild;
-	}
-
-	return true;
-}
-
-
-bool ModelAnim::CopyAnim( ModelAnim* pSrc )
-{
-	Term();
-
-	// copy the name of the animation
-	if( !(m_pName = m_pModel->AddString( pSrc->m_pName )) )
-		return false;
-
-	m_ModelEditWeightSet = pSrc->m_ModelEditWeightSet;
-	m_InterpolationMS = pSrc->m_InterpolationMS;
-
-	// copy keyframes
-	uint32 numKeyFrames = pSrc->m_KeyFrames.GetSize();
-
-	if( !m_KeyFrames.SetSize2( numKeyFrames, GetAlloc() ) )
-		return false;
-
-	for( uint32 curKeyFrame = 0; curKeyFrame < numKeyFrames; curKeyFrame++ )
-	{
-		AnimKeyFrame* pThisKeyFrame = &m_KeyFrames[curKeyFrame];
-		AnimKeyFrame* pSrcKeyFrame = &pSrc->m_KeyFrames[curKeyFrame];
-		pThisKeyFrame->m_Time = pSrcKeyFrame->m_Time;
-		if( !(pThisKeyFrame->m_pString = m_pModel->AddString( pSrcKeyFrame->m_pString )) )
-			return false;
-	}
-
-	// copy the transform tree
-	GetRootNode()->m_pNode = m_pModel->GetRootNode();
-
-	CopyAnimNode( pSrc->GetRootNode(), GetRootNode() );
-
-	if( !PrecalcNodeLists() )
-		return false;
-
-	return true;
-};
-
 
 
 // ------------------------------------------------------------------------ //
@@ -1282,8 +1163,6 @@ void ModelNode::Clear()
 	m_vOffsetFromParent.Init();
 	m_mGlobalTransform.Identity();
 	m_mInvGlobalTransform.Identity();
-	DisableOBB();
-	m_EvalState = kIgnore ;
 }
 
 
@@ -1329,7 +1208,7 @@ uint32 ModelNode::CalcNumNodes()
 }
 
 
-bool ModelNode::FillNodeList(uint32 &curNodeIndex)
+LTBOOL ModelNode::FillNodeList(uint32 &curNodeIndex)
 {
 	unsigned long i;
 
@@ -1363,16 +1242,6 @@ void ModelNode::SetParent_R(uint32 iParent)
 }
 
 
-void ModelNode::SetOBB( const SOBB &new_obb )
-{
-	m_OBB = new_obb;
-	m_OBB.m_Size.x = fabsf( m_OBB.m_Size.x );
-	m_OBB.m_Size.y = fabsf( m_OBB.m_Size.y );
-	m_OBB.m_Size.z = fabsf( m_OBB.m_Size.z );
-}
-
-
-
 // ------------------------------------------------------------------------ //
 // PieceLOD.
 // ------------------------------------------------------------------------ //
@@ -1392,115 +1261,28 @@ PieceLOD::PieceLOD()
 void PieceLOD::Init(Model *pModel)
 {
 	m_pModel= pModel;
-
-	m_iRenderStyle = 0;
-	m_nNumTextures = 1;
-	m_nRenderPriority = 0;
-
-	m_iTextures[0] = 0;m_iTextures[1] = 1;
-	m_iTextures[2] = 2;m_iTextures[3] = 3;
-
 }
 
+// talon: 2001's (0x42a694) has no NULL-model case.
 PieceLOD::~PieceLOD()
 {	
-	// its possible that there are no model back pointer, in cases
-	// where the piecelod is a temporary.
-	if( m_pModel != NULL )
-	{
-		m_Tris.Term(GetAlloc());
-		m_Verts.Term(GetAlloc());
-	}
-	else 
-	{
-		m_Tris.Term();
-		m_Verts.Term();
-	}
-}
-
-// copy the material info from another piece lod
-bool PieceLOD::SetMaterialInfo( const PieceLOD& sourceLOD )
-{
-	m_iRenderStyle		= sourceLOD.m_iRenderStyle;
-	m_nRenderPriority	= sourceLOD.m_nRenderPriority;
-	m_nNumTextures		= sourceLOD.m_nNumTextures;
-	m_iTextures[0]		= sourceLOD.m_iTextures[0];
-	m_iTextures[1]		= sourceLOD.m_iTextures[1];
-	m_iTextures[2]		= sourceLOD.m_iTextures[2];
-	m_iTextures[3]		= sourceLOD.m_iTextures[3];
-
-	return true;
-}
-
-// ------------------------------------------------------------------------
-// CalcUsedNodeList()
-// Generate a list of nodes used by this geometry. These nodes must be the 
-// most distal nodes in the hierarchy. These distal or the leaves in the sub
-// tree used by the geometry is all we need to form an evaluation path between
-// the root and the leaf.
-// ------------------------------------------------------------------------
-void PieceLOD::CalcUsedNodeList()
-{
-	uint32 iVert, iWeight ;
-	ModelVert *pVert ;
-
-	std::set<uint32>			node_set ;
-
-	for(iVert=0; iVert < m_Verts; iVert++)
-	{
-		pVert = &m_Verts[iVert];
-
-		for(iWeight=0; iWeight < pVert->m_nWeights; iWeight++)
-			node_set.insert(pVert->m_Weights[iWeight].m_iNode);
-	}
-
-	std::set<uint32>::iterator set_it = node_set.begin() ;
-	
-	// create set of terminal nodes for finding paths.
-	for( ; set_it != node_set.end() ; set_it++ )
-	{
-		uint32 iNode  = *set_it ;
-		ModelNode *pModelNode = m_pModel->GetNode(iNode);
-	
-		// check if children are in the set.
-		// if none of the children are in the set, add the node to the final list.
-		uint32 nChildren = pModelNode->m_Children.GetSize();
-		uint32 iChild ;
-		bool   IsTerminalNode = true ;
-		for( iChild = 0 ; iChild < nChildren ; iChild++ )
-		{		
-			// if we find a child that is in the set, quit the search.
-			if( node_set.find( pModelNode->m_Children[iChild]->m_NodeIndex ) != node_set.end() )
-			{	
-				IsTerminalNode = false  ;
-				continue ;
-			}
-		}
-		
-		// if all the children didn't have a parent in the mesh's bone list, add this node
-		// as a terminal node.
-		if(IsTerminalNode)
-		{
-			m_UsedNodeList.push_back(*set_it);	
-		}
-	}	
+	m_Tris.Term(GetAlloc());
+	m_Verts.Term(GetAlloc());
 }
 
 // ------------------------------------------------------------------------ //
 // ModelPiece.
 // ------------------------------------------------------------------------ //
 
-ModelPiece::ModelPiece(Model *pModel)
+// talon: 2001's (0x42a712): the piece is its own base LOD.
+ModelPiece::ModelPiece(Model *pModel) : PieceLOD(pModel)
 {
-	m_pModel = pModel;
 	m_Name[0] = 0;
+	m_iTexture = 0;
+	m_pModel = pModel;
+	m_SpecularPower = 5.0f;
+	m_SpecularScale = 1.0f;
 	m_LODWeight = 1.0f;
-
-	m_isVA = 0;
-	m_vaAnimNodeIdx = -1 ;
-	m_MinLODOffset =  m_MaxLODOffset = 0;
-
-
 }
 
 
@@ -1522,170 +1304,9 @@ void ModelPiece::SetName(const char *pName)
 }
 
 
-// ------------------------------------------------------------------------
-// AddNullLOD
-// adds a new LOD that has no associated shape. For more info see AddLOD
-//
-// return 1 on success, 0 on fail.
-// it will fail if at_dist is < 0
-// ------------------------------------------------------------------------
-uint32 ModelPiece::AddNullLOD(float at_dist, bool append_only )
+// talon: 2001's (0x42a7e4) copies; Build 69 had it #if(0)'d out.
+LTBOOL ModelPiece::CopyUVs(ModelPiece *pSrc)
 {
-	PieceLOD LOD(GetModel());
-	LOD.SetName("NULL");
-	LOD.m_nNumTextures = 0;
-
-	return AddLOD(LOD, at_dist, append_only);
-}
-
-
-// ------------------------------------------------------------------------
-// AddLOD
-// puts the new lod at the distance specified, if the dist is beyond the last
-// one, append it.
-// if append_only is true (defaults to false) then the lod is appended no
-// matter what the distance is (must call SortLODs() before use)
-//
-// return 1 on success, 0 on fail.
-// it will fail if at_dist is < 0
-// ------------------------------------------------------------------------
-uint32 ModelPiece::AddLOD( PieceLOD &pPiece , float at_dist, bool append_only )
-{
-	if( at_dist < 0 ) 
-		return 0;
-
-	if( !append_only )
-	{
-		for( uint32 i = 0 ; i < m_LODDists.GetSize() ; ++i )
-		{
-			if(at_dist <= m_LODDists[i] )
-			{  
-				m_LODs.Insert(i, pPiece);
-				m_LODDists.Insert(i,at_dist);
-				return 1;
-			}
-		}
-	}
-
-	// ok then, append it to the end.
-	PieceLOD lod ;
-	m_LODs.Append(lod);
-	m_LODs.Last() = pPiece ;
-	m_LODDists.Append(at_dist);
-	m_MaxLODOffset = m_LODDists.GetSize() - 1;
-
-	return 1;
-}
-
-
-// removes the specified LOD and slides higher LODs down
-bool ModelPiece::RemoveLOD( uint32 iLOD )
-{
-	int numLODs = m_LODs.GetSize();
-
-	// only one remaining LOD or the specified LOD was out of range
-	if( (numLODs <= 1) || (iLOD >= m_LODs.GetSize()) )
-		return false;
-
-	ASSERT( m_LODs.GetSize() == m_LODDists.GetSize() );
-	m_LODs.Remove( iLOD );
-	m_LODDists.Remove( iLOD );
-
-	return true;
-}
-
-
-// sets the distance for the specified lod
-// caller should call SortLODs after setting LOD distances to make
-// sure that the lods are in the correct order
-// returns false if the lod or dist aren't valid
-bool ModelPiece::SetLODDist( uint32 lod, float dist )
-{
-	if( (dist < 0.0f) || (lod >= m_LODs.GetSize()) )
-		return false;
-
-	m_LODDists[lod] = dist;
-
-	return true;
-}
-
-
-// sorts lod pieces by distance
-bool ModelPiece::SortLODs( void )
-{
-	CMoArray<PieceLOD, NoCache>	sorted;
-	CMoArray<float, NoCache> sortedDists; 
-
-	for( uint32 i = 0; i < m_LODs.GetSize(); i++ )
-	{
-		bool inserted = false;
-		float dist = m_LODDists[i];
-		ASSERT( dist >= 0.0f );
-
-		for( uint32 j = 0; j < sortedDists.GetSize(); j++ )
-		{
-			if( dist <= sortedDists[j] )
-			{
-				sorted.Insert( j, m_LODs[i] );
-				sortedDists.Insert( j, dist );
-				inserted = true;
-				break;
-			}
-		}
-
-		// append it to the end if not inserted
-		if( !inserted )
-		{
-			PieceLOD lod;
-			sorted.Append( lod );
-			sorted.Last() = m_LODs[i];
-			sortedDists.Append( dist );
-		}
-	}
-
-	m_LODs.CopyArray( sorted );
-	m_LODDists.CopyArray( sortedDists );
-
-	return true;
-}
-
-
-// T.F ModelPiece // no longer valid Move this to PIECE-LOD
-bool ModelPiece::FindTriByPosition(LTVector *pVertPositions, 
-									 LTVector *pVert1, 
-									 LTVector *pVert2, 
-									 LTVector *pVert3, 
-									 uint32 &triIndex)
-{
-		// T.F ModelPiece 
-	ASSERT(FALSE && " this is no longer valid " );
-#if(0)
-	uint32 i;
-	ModelTri *pTri;
-
-	for(i=0; i < m_Tris; i++)
-	{
-		pTri = &m_Tris[i];
-
-		if(	pVertPositions[pTri->m_Indices[0]].NearlyEquals(*pVert1, 0.1f) && 
-			pVertPositions[pTri->m_Indices[1]].NearlyEquals(*pVert2, 0.1f) &&
-			pVertPositions[pTri->m_Indices[2]].NearlyEquals(*pVert3, 0.1f))
-		{
-			triIndex = i;
-			return true;
-		}
-	}
-#endif
-	return true;
-}
-
-
-bool ModelPiece::CopyUVs(ModelPiece *pSrc)
-{
-	// T.F ModelPiece Move To PieceLOD
-	ASSERT(FALSE );
-
-#if(0)
 	uint32 i, j;
 
 	// Make sure the nodes match.
@@ -1701,16 +1322,14 @@ bool ModelPiece::CopyUVs(ModelPiece *pSrc)
 			m_Tris[i].m_UVs[j] = pSrc->m_Tris[i].m_UVs[j];
 		}
 	}
-#endif
+
 	return true;
 }
 
 
-bool PieceLOD::ReplaceVertex(uint32 iVert, uint32 iReplaceWith)
+// talon: ModelPiece's in 2001 (its m_pModel, 0x42a86f).
+LTBOOL ModelPiece::ReplaceVertex(uint32 iVert, uint32 iReplaceWith)
 {
-	// T.F ModelPiece 
-	ASSERT(FALSE);
-
 	if(iVert >= m_Verts.GetSize() || iReplaceWith >= m_Verts.GetSize())
 		return false;
 
@@ -1722,55 +1341,6 @@ bool PieceLOD::ReplaceVertex(uint32 iVert, uint32 iReplaceWith)
 	m_Verts.Remove(iVert);
 	return true;
 }
-
-// remap node indices to match the node indices of destModel
-// returns false if matching nodes aren't found
-bool PieceLOD::RemapNodeIndices( Model* destModel )
-{
-	uint32 numNodes, newIndex, i, j;
-	bool retVal = true;
-
-	numNodes = m_pModel->NumNodes();
-	ASSERT( numNodes );
-
-	// array mapping node indices in one model to those in the destination model
-	uint32* mapping = new uint32[numNodes];
-
-	for( i = 0; i < numNodes; i++ )
-	{
-		ModelNode* node = m_pModel->GetNode( i );
-		char* nodeName = node->GetName();
-
-		// check for the matching node in the destination model
-		if( destModel->FindNode( nodeName, &newIndex ) )
-			mapping[i] = newIndex;		// good mapping found
-		else
-			mapping[i] = 0xffffffff;	// no mapping found
-	}
-
-	for( i = 0; retVal && (i < m_Verts); i++ )
-	{
-		for( j = 0; j < m_Verts[i].m_nWeights; j++ )
-		{
-			// remap the node index
-			uint32& weightNode = m_Verts[i].m_Weights[j].m_iNode;
-			ASSERT( weightNode < numNodes );
-			weightNode = mapping[weightNode];
-
-			// found a node that doesn't match any in the destination
-			if( weightNode == 0xffffffff )
-			{
-				retVal = false;
-				break;
-			}
-		}
-	}
-
-	delete [] mapping;
-
-	return retVal;
-}
-
 
 // ------------------------------------------------------------------------ //
 // WeightSet.
@@ -1792,9 +1362,9 @@ void WeightSet::SetName(const char *pName)
 	SAFE_STRCPY(m_Name, pName);
 }
 
-bool WeightSet::InitWeights(uint32 nWeights)
+LTBOOL WeightSet::InitWeights(uint32 nWeights)
 {
-	return m_Weights.SetSizeInit2(nWeights, 0.0f) == LTTRUE;
+	return m_Weights.SetSizeInit2(nWeights, 0.0f);
 }
 
 
@@ -1808,7 +1378,6 @@ ModelSocket::ModelSocket()
 	m_iNode = 0;
 	m_Pos.Init();
 	m_Rot.Init();
-	m_Scale.Init(1.0f,1.0f,1.0f);
 	m_pAttachment = LTNULL;
 }
 
@@ -1824,6 +1393,8 @@ void ModelSocket::SetName(const char *pName)
 // Model functions.
 // ------------------------------------------------------------------------ //
 
+// talon: the 2001 constructor (0x42a9fd): the command-string defaults,
+// the fade range and the model LODs; no movement node or LTB fields.
 Model::Model(LAlloc *pAlloc, LAlloc *pDefAlloc) :
 	m_StringList(pAlloc)
 {
@@ -1843,33 +1414,32 @@ Model::Model(LAlloc *pAlloc, LAlloc *pDefAlloc) :
 	m_nDWordNodes = 0;
 	
 	m_VisRadius = DEFAULT_MODEL_VIS_RADIUS;
-	m_bNoAnimation = false;
+	m_bNoAnimation = FALSE;
+	SetFadeRange(DEFAULT_MODEL_FADE_RANGE, DEFAULT_MODEL_FADE_RANGE);
+	m_Unknown0c0 = 0;
+	m_FadeSpriteSizeX = m_FadeSpriteSizeY = 100.0f;
 	m_AmbientLight = DEFAULT_MODEL_AMBIENT_LIGHT;
 	m_DirLight = DEFAULT_MODEL_DIR_LIGHT;
-	m_bFOVOffset = false;
-	m_bSpecularEnable = false;
+	m_bFOVOffset = FALSE;
+	m_bSpecularEnable = FALSE;
 	
-	m_bShadowEnable = false;
+	m_bShadowEnable = FALSE;
 	m_fShadowProjectLength = 200.0f;
 	m_fShadowLightDist = 200.0f;
 	m_fShadowSizeX = 50.0f;
 	m_fShadowSizeY = 50.0f;
 	m_vShadowCenterOffset.Init();
 
-    m_bRigid = false;
-        
 	m_iNormalRefNode = INVALID_MODEL_NODE;
 	m_iNormalRefAnim = INVALID_MODEL_ANIM;
-	m_bNormalRef = false;
+	m_bRigid = FALSE;
+	m_bNormalRef = FALSE;
 
 	m_Transforms = LTNULL;
-//	m_DDTransforms = LTNULL;
 	m_CommandString = "";
 
 	m_pRootNode = &m_DefaultRootNode;
 	m_pRootNode->SetModel(this);
-
-	m_pMovementNode = NULL;
 
 	m_nChildModels = 1;
 	m_ChildModels[0] = &m_SelfChildModel;
@@ -1877,12 +1447,10 @@ Model::Model(LAlloc *pAlloc, LAlloc *pDefAlloc) :
 
 	SetSaveIndex((uint32)rand());
 
+	m_Unknown190 = 0;
+
 	// Memory tracking
 	g_ModelMemory += sizeof(Model);
-
-	m_CompressionType  = 0;
-	m_bExcludeGeom = false;
-		
 }
 
 
@@ -1897,8 +1465,10 @@ Model::~Model()
 }
 						  
 
-void Model::Term(bool bDeleteChildModels)
+void Model::Term(LTBOOL bDeleteChildModels)
 {
+	m_Callbacks.Term();
+
 	if(m_pRootNode != &m_DefaultRootNode)
 	{
 		LDelete(GetAlloc(), m_pRootNode);
@@ -1906,8 +1476,6 @@ void Model::Term(bool bDeleteChildModels)
 	m_DefaultRootNode.Term();
 	m_pRootNode = &m_DefaultRootNode;
 	DeleteAndClearArray2(m_Pieces, GetAlloc());
-
-	m_pMovementNode = NULL;
 
 	TermAnims();
 	TermChildModels(bDeleteChildModels);
@@ -1924,6 +1492,7 @@ void Model::Term(bool bDeleteChildModels)
 
 	FreeFilename();
 
+	m_LODs.Term(GetAlloc());
 
 	m_nTotalVerts = 0;
 }
@@ -1949,7 +1518,7 @@ void Model::TermAnims()
 }
 
 
-void Model::TermChildModels(bool bDeleteChildModels)
+void Model::TermChildModels(LTBOOL bDeleteChildModels)
 {
 	uint32 i;
 	ChildInfo *pChildModel;
@@ -1966,6 +1535,9 @@ void Model::TermChildModels(bool bDeleteChildModels)
 		{
 			if(pChildModel->m_pModel && pChildModel->m_pModel != this)
 			{
+				// talon: 2001 counts the references (0x42af66).
+				if(pChildModel->m_pModel->m_RefCount > 0)
+					pChildModel->m_pModel->m_RefCount--;
 
 				if(bDeleteChildModels && pChildModel->m_pModel->IsFreeable())
 					delete pChildModel->m_pModel;
@@ -1988,22 +1560,6 @@ void Model::TermChildModels(bool bDeleteChildModels)
 	m_ChildModels[0] = &m_SelfChildModel;
 }
 
-void Model::AddTextureName( uint32 index, const char *filename )
-{
-	m_TextureIndexMap[ index ]  = filename ;
-}
-
-// returns false if we could not find the index.
-bool Model::GetTextureName( uint32 index , std::string & name) 
-{
-	name = m_TextureIndexMap[ index ];
-
-	if( m_TextureIndexMap[ index ].size() == 0 )
-		return false ;
-
-	return true ;
-}
-
 void Model::SetRootNode(ModelNode *pRoot)
 {
 	// Delete the old one.
@@ -2014,9 +1570,9 @@ void Model::SetRootNode(ModelNode *pRoot)
 }
 
 
-bool Model::AddWeightSet(WeightSet *pSet)
+LTBOOL Model::AddWeightSet(WeightSet *pSet)
 {
-	return m_WeightSets.Append(pSet) == LTTRUE;
+	return m_WeightSets.Append(pSet);
 }
 
 
@@ -2041,7 +1597,7 @@ void Model::RemoveWeightSet(uint32 index)
 // 4. calls PrecalcNodeListys on all animation nodes.
 // 5. finds the number of verts and num tris the model contains.
 // ------------------------------------------------------------------------
-bool Model::PrecalcNodeLists(bool bRebuild)
+LTBOOL Model::PrecalcNodeLists(LTBOOL bRebuild)
 {
 	uint32 i, curOffset;
 	ModelAnim *pAnim;
@@ -2053,34 +1609,12 @@ bool Model::PrecalcNodeLists(bool bRebuild)
 		return false;
 	}
 
-	// find the movement node if it exists
-	uint32 numRootChildren;
-	m_pMovementNode = NULL;
-	ModelNode* pRootNode = GetRootNode();
-	if( pRootNode && (numRootChildren = pRootNode->NumChildren()) )
-	{
-		for( i = 0; i < numRootChildren; i++ )
-		{
-			// try to find an immediate child named movement
-			ModelNode* pCurChild = pRootNode->GetChild( i );
-			if( stricmp( pCurChild->GetName(), "movement" ) == 0 )
-			{
-				// movement node must not have any children
-				if( pCurChild->NumChildren() == 0 )
-				{
-					m_pMovementNode = pCurChild;
-					break;
-				}
-			}
-		}
-	}
-
 	// Precalculate ModelNode::m_VertOffset.
 	curOffset = 0;
 	for(i=0; i < NumPieces(); i++)
 	{
 		GetPiece(i)->m_VertOffset = curOffset;
-		curOffset += GetPiece(i)->GetLOD(uint32(0))->m_Verts.GetSize();
+		curOffset += GetPiece(i)->m_Verts.GetSize();
 	}
 
 	for(i=0; i < m_Anims; i++)
@@ -2100,7 +1634,7 @@ bool Model::PrecalcNodeLists(bool bRebuild)
 }
 
 
-bool Model::BuildTransformList(bool bRebuild)
+LTBOOL Model::BuildTransformList(LTBOOL bRebuild)
 {
 	uint32 nNodes;
 
@@ -2118,7 +1652,7 @@ bool Model::BuildTransformList(bool bRebuild)
 }
 
 
-bool Model::BuildFlatNodeList(bool bRebuild)
+LTBOOL Model::BuildFlatNodeList(LTBOOL bRebuild)
 {
 	uint32 nNodes, curNodeIndex;
 
@@ -2146,72 +1680,6 @@ bool Model::BuildFlatNodeList(bool bRebuild)
 	GetRootNode()->SetParent_R(NODEPARENT_NONE);
 	return true;
 }
-
-void Model::ResetNodeEvalState()
-{
-	for( uint32 i = 0 ; i < m_FlatNodeList.GetSize() ; i++ )
-	{
-		m_FlatNodeList[i]->m_EvalState = ModelNode::kIgnore;
-	}
-}
-
-
-void Model::SetupNodeEvalStateFromPieces(float lod_dist)
-{
-	uint32 iPiece, iParent ;
-	ModelPiece *pPiece ;
-
-	for( iPiece = 0 ; iPiece < NumPieces() ; iPiece++ )
-	{
-		pPiece = GetPiece(iPiece);
-
-		PieceLOD *pLOD = pPiece->GetLOD(lod_dist);
-
-		for( uint32 iNodeCnt = 0 ; iNodeCnt < pLOD->m_UsedNodeList.size() ; iNodeCnt++)
-		{
-
-			uint32 iNode = pLOD->m_UsedNodeList[ iNodeCnt ];
-			m_FlatNodeList[ iNode ]->m_EvalState = ModelNode::kEval ;
-
-			iParent = m_FlatNodeList[ iNode ]->m_iParentNode;
-			
-			while(iParent != NODEPARENT_NONE)
-			{
-				if( m_FlatNodeList[ iParent ]->m_EvalState != ModelNode::kEval  ) 
-				{
-					m_FlatNodeList[ iParent ]->m_EvalState = ModelNode::kEval ;
-					iParent = m_FlatNodeList[ iParent ]->m_iParentNode ;
-				}
-				else
-					break;	
-			}
-		}
-	}
-}
-
-void Model::SetupNodeEvalStateFromNode( uint32 iNode )
-{
-	if( m_FlatNodeList[ iNode ]->m_EvalState == ModelNode::kEval ) 
-		return ;
-
-	uint32 iParent ;
-	m_FlatNodeList[ iNode ]->m_EvalState = ModelNode::kEval ;
-
-	iParent = m_FlatNodeList[ iNode ]->m_iParentNode ;
-	while(iParent != NODEPARENT_NONE)
-	{
-		// if the parent node hasn't been evaled or asked to be evaled, evaluate it.
-		if( m_FlatNodeList[ iParent ]->m_EvalState == ModelNode::kIgnore )
-		{
-			m_FlatNodeList[ iParent ]->m_EvalState = ModelNode::kEval ;
-			iParent = m_FlatNodeList[ iParent ]->m_iParentNode ;
-		}
-		else
-			break;	
-	}
-}
-
-
 
 ModelPiece* Model::FindPiece(const char *pName, uint32 *index)
 {
@@ -2257,7 +1725,7 @@ WeightSet* Model::FindWeightSet(const char *pName, uint32 *index)
 }
 
 
-bool Model::SwapPieces(uint32 iPiece1, uint32 iPiece2)
+LTBOOL Model::SwapPieces(uint32 iPiece1, uint32 iPiece2)
 {
 	ModelPiece *pTemp;
 
@@ -2373,7 +1841,7 @@ void Model::UnrotateNode(ModelNode *pNode)
 }
 
 
-bool Model::RemoveNode(ModelNode *pNode)
+LTBOOL Model::RemoveNode(ModelNode *pNode)
 {
 	ModelAnim *pAnim;
 	uint32 i, j, k, nodeIndex, oldTransformIndex;
@@ -2508,20 +1976,15 @@ bool Model::RemoveNode(ModelNode *pNode)
 	for(i=0; i < NumPieces(); i++)
 	{
 		pPiece = GetPiece(i);
-		uint32 num_lods = pPiece->NumLODs();
-		for( uint32 iLods = 0 ; iLods < num_lods ; ++iLods )
+		for(j=0; j < pPiece->m_Verts; j++)
 		{
-			PieceLOD *pLOD = pPiece->GetLOD(iLods);
-			for(j=0; j < pLOD->m_Verts; j++)
-			{
-				pVert = &pLOD->m_Verts[j];
+			pVert = &pPiece->m_Verts[j];
 
-				for(k=0; k < pVert->m_nWeights; k++)
-				{
-					pWeight = &pVert->m_Weights[k];
-				
-					pWeight->m_iNode = tMap[pWeight->m_iNode].m_NewTransform;
-				}
+			for(k=0; k < pVert->m_nWeights; k++)
+			{
+				pWeight = &pVert->m_Weights[k];
+			
+				pWeight->m_iNode = tMap[pWeight->m_iNode].m_NewTransform;
 			}
 		}
 	}
@@ -2534,7 +1997,7 @@ bool Model::RemoveNode(ModelNode *pNode)
 }
 
 
-bool Model::RemoveRemovableNodes()
+LTBOOL Model::RemoveRemovableNodes()
 {
 	uint32 i;
 	ModelNode *pNode;
@@ -2590,7 +2053,7 @@ AnimInfo* Model::AddAnim(ModelAnim *pAnim, ChildInfo *pInfo)
 }
 
 
-bool Model::AddDummyAnimation(char *pName)
+LTBOOL Model::AddDummyAnimation(char *pName)
 {
 	ModelAnim *pAnim;
 	AnimKeyFrame frame;
@@ -2675,7 +2138,7 @@ AnimInfo* Model::FindAnimInfo(char *pAnimName, Model *pOwner, uint32 *index)
 }
 
 
-bool Model::GetAnimInfoIndex(AnimInfo *pInfo, uint32 &index)
+LTBOOL Model::GetAnimInfoIndex(AnimInfo *pInfo, uint32 &index)
 {
 	uint32 i;
 
@@ -2692,39 +2155,10 @@ bool Model::GetAnimInfoIndex(AnimInfo *pInfo, uint32 &index)
 }
 
 
-bool Model::ForceAnimOrder()
-{
-	CMoArray<AnimInfo,NoCache> newAnimList;
-	uint32 i, iOut;
-
-	if(!newAnimList.SetSize(m_Anims.GetSize()))
-		return false;
-
-	// Make sure our animations are the first in the list.
-	iOut = 0;
-	for(i=0; i < m_Anims; i++)
-	{
-		if(m_Anims[i].IsParentModel())
-		{
-			newAnimList[iOut] = m_Anims[i];
-			iOut++;
-		}
-	}
-
-	for(i=0; i < m_Anims; i++)
-	{
-		if(!m_Anims[i].IsParentModel())
-		{
-			newAnimList[iOut] = m_Anims[i];
-			iOut++;
-		}
-	}
-	
-	return m_Anims.CopyArray(newAnimList) == LTTRUE;
-}
+// talon: ForceAnimOrder is model_save's in 2001 (0x432a9a).
 
 
-bool Model::CopyUVs(Model *pSrc)
+LTBOOL Model::CopyUVs(Model *pSrc)
 {
 	uint32 i;
 
@@ -2754,7 +2188,7 @@ inline void _MatVMul_Deform(LTVector *pDest, LTMatrix *pMat, LTVector *pSrc)
 }
 
 
-bool Model::MakeUniqueAnimName(char *pBase, char *pName)
+LTBOOL Model::MakeUniqueAnimName(char *pBase, char *pName)
 {
 	uint32 i;
 
@@ -2807,7 +2241,7 @@ void Model::SetNodeParentOffsets()
 // This is the 'reference' function for how to get the vertex positions on a given 
 // frame of animation.
 // ------------------------------------------------------------------------	
-bool Model::GetVertexPositions(GVPStruct *pStruct, bool bSetupTransforms, bool bWeight)
+LTBOOL Model::GetVertexPositions(GVPStruct *pStruct, LTBOOL bSetupTransforms, LTBOOL bWeight)
 {
 	uint32 i, j, k;
 	ModelPiece *pPiece;
@@ -2898,38 +2332,14 @@ uint32 Model::CalcNumTris(uint32 iLOD)
 	return total;
 }
 
-uint32 Model::CalcNumTris(float fDistLOD)
-{
-	uint32 i, total;
-	PieceLOD *pLOD;
-
-	total = 0;
-	for(i=0; i < NumPieces(); i++)
-	{
-		pLOD = GetPiece(i)->GetLOD(fDistLOD);
-		if(pLOD)
-		{
-			total += pLOD->m_Tris;
-		}
-		else
-		{
-			ASSERT(false);
-		}
-	}
-
-	return total;
-}
-
-
-
 uint32 Model::CalcNumVerts()
 {
-	uint32 i,j, total;
+	uint32 i, total;
 
+	// talon: 2001's counts the base LODs only (0x42bbef).
 	total = 0;
 	for(i=0; i < NumPieces(); i++)
-		for(j=0; j< GetPiece(i)->NumLODs() ; j++ )
-		total += GetPiece(i)->GetLOD(j)->m_Verts.GetSize();
+		total += GetPiece(i)->m_Verts.GetSize();
 
 	return total;
 }
@@ -2961,7 +2371,7 @@ uint32 Model::CalcNumVertexWeights()
 }
 
 
-uint32 Model::CalcNumChildModelAnims(bool bIncludeSelf)
+uint32 Model::CalcNumChildModelAnims(LTBOOL bIncludeSelf)
 {
 	uint32 i, total;
 	ChildInfo *pChildModel;
@@ -3020,92 +2430,124 @@ void Model::ParseCommandString()
 	if(!m_CommandString)
 		return;
 
-	m_bFOVOffset = false;
+	m_bFOVOffset = FALSE;
 
+	// talon: 2001's (0x42bceb) switches on the argument count, and has the
+	// fade range and the fade sprite size.
 	// Parse for level of detail settings...
 	parse.Init(m_CommandString);
 	while(parse.Parse())
 	{
-		if(parse.m_nArgs == 2)
+		switch(parse.m_nArgs)
 		{
-			// Read in the easy ones.
-			for(i=0; i < (sizeof(floatVars) / sizeof(floatVars[0])); i++)
+			case 1:
 			{
-				if(stricmp(floatVars[i].m_pName, parse.m_Args[0]) == 0)
-					*floatVars[i].m_pVal = (float)atof(parse.m_Args[1]);
-			}
-
-			// Check for non-trivial ones..
-			if(stricmp("FovXOffset", parse.m_Args[0]) == 0)
-			{
-				m_xFOVOffset = (float)atof(parse.m_Args[1]);
-				m_xFOVOffset = MATH_DEGREES_TO_RADIANS(m_xFOVOffset);
-				m_bFOVOffset = true;
-			}
-			else if(stricmp("FovYOffset", parse.m_Args[0]) == 0)
-			{
-				m_yFOVOffset = (float)atof(parse.m_Args[1]);
-				m_yFOVOffset = MATH_DEGREES_TO_RADIANS(m_yFOVOffset);
-				m_bFOVOffset = true;
-			}
-		}
-		else if(parse.m_nArgs == 1)
-		{
-			if(stricmp("NoAnimation", parse.m_Args[0]) == 0)
-			{
-				m_bNoAnimation = true;
-			}
-			else if(stricmp("ShadowEnable", parse.m_Args[0]) == 0)
-			{
-				m_bShadowEnable = true;
-			}
-			else if(stricmp("SpecularEnable", parse.m_Args[0]) == 0)
-			{
-				m_bSpecularEnable = true;
-			}
-            else if(stricmp("Rigid", parse.m_Args[0]) == 0)
-			{
-				m_bRigid = true;
-			}
-
-		}
-		else if(parse.m_nArgs >= 3)
-		{
-			if(stricmp("NormalRef", parse.m_Args[0]) == 0)
-			{
-				m_bNormalRef = false;
-				m_iNormalRefNode = INVALID_MODEL_NODE;
-				if(FindNode(parse.m_Args[1], &m_iNormalRefNode))
+				if(stricmp("NoAnimation", parse.m_Args[0]) == 0)
 				{
-					m_iNormalRefAnim = INVALID_MODEL_ANIM;
-					if(FindAnim(parse.m_Args[2], &m_iNormalRefAnim))
-					{
-						tMaker.m_Anims[0].Init(this, 
-							m_iNormalRefAnim, 0, 
-							m_iNormalRefAnim, 0,
-							0.0f);
-						tMaker.m_nAnims = 1;
-												
-						if(tMaker.SetupTransforms())
-						{
-							m_mNormalRef = m_Transforms[m_iNormalRefNode];
-							m_bNormalRef = true;
-						}							
-					}					
+					m_bNoAnimation = TRUE;
+				}
+				else if(stricmp("ShadowEnable", parse.m_Args[0]) == 0)
+				{
+					m_bShadowEnable = TRUE;
+				}
+				else if(stricmp("SpecularEnable", parse.m_Args[0]) == 0)
+				{
+					m_bSpecularEnable = TRUE;
+				}
+				else if(stricmp("Rigid", parse.m_Args[0]) == 0)
+				{
+					m_bRigid = TRUE;
 				}
 			}
-		}
-		else if(parse.m_nArgs >= 4)
-		{
-			if(stricmp("ShadowCenterOffset", parse.m_Args[0]) == 0)
+			break;
+
+			case 2:
 			{
-				m_vShadowCenterOffset.x = (float)atof(parse.m_Args[1]);
-				m_vShadowCenterOffset.y = (float)atof(parse.m_Args[2]);
-				m_vShadowCenterOffset.z = (float)atof(parse.m_Args[3]);
+				// Read in the easy ones.
+				for(i=0; i < (sizeof(floatVars) / sizeof(floatVars[0])); i++)
+				{
+					if(stricmp(floatVars[i].m_pName, parse.m_Args[0]) == 0)
+						*floatVars[i].m_pVal = (float)atof(parse.m_Args[1]);
+				}
+
+				// Check for non-trivial ones..
+				if(stricmp("FadeRangeMin", parse.m_Args[0]) == 0)
+				{
+					SetFadeRange((float)atof(parse.m_Args[1]), m_FadeRangeMax);
+				}
+				else if(stricmp("FadeRangeMax", parse.m_Args[0]) == 0)
+				{
+					SetFadeRange(m_FadeRangeMin, (float)atof(parse.m_Args[1]));
+				}
+				else if(stricmp("FovXOffset", parse.m_Args[0]) == 0)
+				{
+					m_xFOVOffset = MATH_DEGREES_TO_RADIANS((float)atof(parse.m_Args[1]));
+					m_bFOVOffset = TRUE;
+				}
+				else if(stricmp("FovYOffset", parse.m_Args[0]) == 0)
+				{
+					m_yFOVOffset = MATH_DEGREES_TO_RADIANS((float)atof(parse.m_Args[1]));
+					m_bFOVOffset = TRUE;
+				}
 			}
+			break;
+
+			case 3:
+			{
+				if(stricmp("FadeSpriteSize", parse.m_Args[0]) == 0)
+				{
+					m_FadeSpriteSizeX = (float)atof(parse.m_Args[1]);
+					m_FadeSpriteSizeY = (float)atof(parse.m_Args[2]);
+				}
+				else if(stricmp("NormalRef", parse.m_Args[0]) == 0)
+				{
+					m_bNormalRef = FALSE;
+					m_iNormalRefNode = INVALID_MODEL_NODE;
+					if(FindNode(parse.m_Args[1], &m_iNormalRefNode))
+					{
+						m_iNormalRefAnim = INVALID_MODEL_ANIM;
+						if(FindAnim(parse.m_Args[2], &m_iNormalRefAnim))
+						{
+							tMaker.m_Anims[0].Init(this, 
+								m_iNormalRefAnim, 0, 
+								m_iNormalRefAnim, 0,
+								0.0f);
+							tMaker.m_nAnims = 1;
+													
+							if(tMaker.SetupTransforms())
+							{
+								m_mNormalRef = m_Transforms[m_iNormalRefNode];
+								m_bNormalRef = TRUE;
+							}							
+						}					
+					}
+				}
+			}
+			break;
+
+			case 4:
+			{
+				if(stricmp("ShadowCenterOffset", parse.m_Args[0]) == 0)
+				{
+					m_vShadowCenterOffset.x = (float)atof(parse.m_Args[1]);
+					m_vShadowCenterOffset.y = (float)atof(parse.m_Args[2]);
+					m_vShadowCenterOffset.z = (float)atof(parse.m_Args[3]);
+				}
+			}
+			break;
 		}
 	}
 }
+
+// talon: 2001's (0x42c0e2).
+void Model::SetFadeRange(float fMin, float fMax)
+{
+	m_FadeRangeMin = fMin;
+	m_FadeRangeMinSqr = fMin * fMin;
+	m_FadeRangeMax = fMax;
+	m_FadeRangeMaxSqr = fMax * fMax;
+}
+
 
 const char* Model::GetFilename()
 {
@@ -3113,7 +2555,7 @@ const char* Model::GetFilename()
 }
 
 
-bool Model::SetFilename(const char *pInFilename)
+LTBOOL Model::SetFilename(const char *pInFilename)
 {
 	char *pFilename;
 
@@ -3142,9 +2584,9 @@ void Model::FreeFilename()
 }
 
 
-bool Model::VerifyChildModelTree(Model *pChild, ModelNode* &pErrNode)
+LTBOOL Model::VerifyChildModelTree(Model *pChild, ModelNode* &pErrNode)
 {
-	return VerifyChildModel_R(GetRootNode(), pChild->GetRootNode(), pErrNode) == LTTRUE;
+	return VerifyChildModel_R(GetRootNode(), pChild->GetRootNode(), pErrNode);
 }
 
 
@@ -3183,7 +2625,7 @@ void _SetupChildModelRelation_R(ChildInfo *pInfo,
 }
 
 
-bool Model::SetupChildModelRelation(ChildInfo *pInfo, Model *pChild, bool bScaleSkeleton)
+LTBOOL Model::SetupChildModelRelation(ChildInfo *pInfo, Model *pChild, LTBOOL bScaleSkeleton)
 {
 	LTMatrix ident;
 	uint32 i;
@@ -3213,7 +2655,7 @@ ChildInfo* Model::AddChildModel(
 				Model *pChild,         // ptr to loaded child model
 				char *pFilename,	   // name of on-disk file.
 				char *pErrStr,         // return error string to caller (must have space)
-				bool bScaleSkeleton)
+				LTBOOL bScaleSkeleton)
 {
 	ChildInfo *pChildModel;
 	AnimInfo *pAnim;
@@ -3395,7 +2837,7 @@ ChildInfo* Model::AddChildModelRef( char *pFilename,
 // ------------------------------------------------------------------------
 // RemoveChildModel
 // ------------------------------------------------------------------------
-bool Model::RemoveChildModel(uint32 index)
+LTBOOL Model::RemoveChildModel(uint32 index)
 {
 	uint32 i;
 	ChildInfo *pInfo;
@@ -3423,17 +2865,15 @@ bool Model::RemoveChildModel(uint32 index)
 	{
 		m_ChildModels[i] = m_ChildModels[i+1];	
 	}
-	
-	for( ; i < MAX_CHILD_MODELS; i++ )
-		m_ChildModels[i] = NULL ;
 
-	m_nChildModels = m_nChildModels -1 ;
+	// talon: 2001 doesn't clear the freed slots (0x42c4ce).
+	m_nChildModels--;
 	
 	return true;
 }
 
 
-bool Model::InitChildInfo(uint32 index, ChildInfo *pChildModel, Model *pModel, char *pFilename)
+LTBOOL Model::InitChildInfo(uint32 index, ChildInfo *pChildModel, Model *pModel, char *pFilename)
 {
 	if(index >= MAX_CHILD_MODELS)
 		return false;
@@ -3479,7 +2919,8 @@ ChildInfo* Model::FindChildModelByFilename(char *pFilename, uint32 *index)
 	{
 		pInfo = GetChildModel(i);
 
-		if(strcmp(pInfo->m_pFilename, pFilename) == 0)
+		// talon: stricmp in 2001 (0x42c57f, the same call as FindPiece's).
+		if(stricmp(pInfo->m_pFilename, pFilename) == 0)
 		{
 			if(index)
 				*index = i;
@@ -3515,13 +2956,13 @@ ModelSocket* Model::FindSocket(const char *pName, uint32 *index)
 }
 
 
-bool Model::AddSocket(ModelSocket *pSocket)
+LTBOOL Model::AddSocket(ModelSocket *pSocket)
 {
-	return m_Sockets.Append(pSocket) == LTTRUE;
+	return m_Sockets.Append(pSocket);
 }
 
 
-bool Model::RemoveSocket(uint32 index)
+LTBOOL Model::RemoveSocket(uint32 index)
 {
 	if(index >= m_Sockets.GetSize())
 		return false;
@@ -3532,7 +2973,7 @@ bool Model::RemoveSocket(uint32 index)
 }
 
 
-bool Model::GetSocketTransform(ModelSocket *pSocket, LTMatrix *pSocketTransform)
+LTBOOL Model::GetSocketTransform(ModelSocket *pSocket, LTMatrix *pSocketTransform)
 {
 	LTMatrix offsetTransform, *pTransform;
 	ModelNode *pNode;
@@ -3553,26 +2994,23 @@ bool Model::GetSocketTransform(ModelSocket *pSocket, LTMatrix *pSocketTransform)
 }
 
 
-bool Model::AnyVertsWeightedToNode(uint32 iNode)
+// talon: 2001's looks at the base LOD only (0x42c6c5).
+LTBOOL Model::AnyVertsWeightedToNode(uint32 iNode)
 {
-	uint32 iPiece, iLOD, iVert, iWeight;
+	uint32 iPiece, iVert, iWeight;
 	ModelPiece *pPiece;
 	ModelVert *pVert;
 
 	for(iPiece=0; iPiece < NumPieces(); iPiece++)
 	{
 		pPiece = GetPiece(iPiece);
-		for( iLOD = 0 ; iLOD < pPiece->NumLODs() ; iLOD++ )
+		for(iVert=0; iVert < pPiece->m_Verts; iVert++)
 		{
-			PieceLOD *pLOD = GetPiece(iPiece)->GetLOD(iLOD);
-			for(iVert=0; iVert < pLOD->m_Verts; iVert++)
-			{
-				pVert = &pLOD->m_Verts[iVert];
+			pVert = &pPiece->m_Verts[iVert];
 
-				for(iWeight=0; iWeight < pVert->m_nWeights; iWeight++)
-					if(pVert->m_Weights[iWeight].m_iNode == iNode)
-						return true;
-			}
+			for(iWeight=0; iWeight < pVert->m_nWeights; iWeight++)
+				if(pVert->m_Weights[iWeight].m_iNode == iNode)
+					return true;
 		}
 	}
 

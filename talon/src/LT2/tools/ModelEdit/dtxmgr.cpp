@@ -169,9 +169,9 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 	pRet->m_Unknown_c4 = 0;
 
 	// Setup the mipmap structures.
+	pOutData = pRet->m_pDataBuffer;
 	width = baseWidth;
 	height = baseHeight;
-	pOutData = pRet->m_pDataBuffer;
 	for(i=0; i < nMipmaps; i++)
 	{
 		pMip = &pRet->m_Mips[i];
@@ -207,8 +207,8 @@ TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32
 }
 
 
-// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection, dtx_SetupDTXFormat or
-// dtx_BuildMipmaps (dtxmgr.h).
+// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection or dtx_BuildMipmaps
+// (dtxmgr.h).
 
 void
 dtx_RevRGBOrder (uint32 *pData, uint32 nElems) {
@@ -365,6 +365,14 @@ DtxSection* dtx_FindSection(TextureData *pData, char *pSectionType)
 
 
 
+
+
+// talon: ModelEdit's (0x42912f), before dtx_SetupDTXFormat2 as in Build 69;
+// gl_modelrender calls it.
+void dtx_SetupDTXFormat(TextureData *pData, PFormat *pFormat)
+{
+	dtx_SetupDTXFormat2(pData->m_Header.GetBPPIdent(), pFormat);
+}
 
 
 void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat)

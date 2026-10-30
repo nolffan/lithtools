@@ -236,11 +236,9 @@
 	TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32 nMipmaps,
 		uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2);	// talon: 2001's seventh argument (0x40d100)
 
-	// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection, dtx_SetupDTXFormat
-	// or dtx_BuildMipmaps: none is in the image, and with them declared
-	// PreWorld.cpp's static CMoArray destructor (0x430a90) adds its two
-	// counts the other way round (the header declaration-count threshold,
-	// tools/guides/09).
+	// talon: no dtx_Resize, dtx_Save, dtx_RemoveSection or dtx_BuildMipmaps:
+	// none is in ModelEdit's image (nor in the processors', whose copy of
+	// this header is tools/shared/engine's).
 
 	void dtx_Destroy(TextureData *pData);
 
@@ -254,6 +252,7 @@
 	// Returns DE_ERROR if the section isn't in the texture.
 
 	// Fill in the DTX format.
+	void dtx_SetupDTXFormat(TextureData *pData, PFormat *pFormat);	// talon: ModelEdit's (0x42912f)
 	void dtx_SetupDTXFormat2(BPPIdent bpp, PFormat *pFormat);
 
 	// Build all the mipmaps.
