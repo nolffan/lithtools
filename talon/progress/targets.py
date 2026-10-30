@@ -36,13 +36,37 @@ TARGETS = [
     # Update 2 carries Update 1's DEdit and ModelEdit unchanged (same
     # SHA-256). Both are cl 12.00.9044 (msvc-6.00-9044) with MFC linked
     # statically (nafxcw.lib, build 8569) and the old iostreams
-    # (libcimt.lib). Provisional ranges: to the first static MFC member
-    # libscan.py finds (wincore.obj's _InitMultipleMonitorStubs); the
-    # shared libraries (ButeMgr, StdLith, RegMgr, DibMgr) are below it,
-    # as Monolith code of ours to build.
+    # (libcimt.lib). The ranges end where MFC's inline functions and the
+    # first static MFC member libscan.py finds (wincore.obj's
+    # _InitMultipleMonitorStubs) start; the shared libraries below them
+    # (ButeMgr, StdLith, RegMgr, DibMgr, ...) are Monolith code of ours
+    # to build (progress/DEdit-map.md, progress/ModelEdit-map.md).
     dict(label="DEdit.exe", what="world editor (Talon, Update 1/2)", kind="image",
-         shipped=U2 + "/DEdit.exe", stem="DEdit", built=None, optional=True,
-         app=[(0x00401000, 0x0048d759)]),
+         shipped=U2 + "/DEdit.exe", stem="DEdit",
+         # src/LT2/tools/DEdit/DEdit.dsw (cl 9044, /O1, static MFC, STLport;
+         # progress/DEdit-map.md). Its own code, in module order, to
+         # 0x0047d040; S3's prebuilt s3tc.lib (0x0047d040..0x0048301a) is
+         # middleware; then the libraries, Monolith's and ours to build:
+         # GenRegMgr 0x00483020, ButeMgr 0x004835a0, RegMgr 0x00488ed0,
+         # StdLith (the allocator-override build) 0x00489190, DibMgr
+         # 0x0048b5e0, the LTA library 0x0048ba90..0x0048d73d. From 0x0048d740
+         # MFC's inline functions (CPropertySheet::GetTabControl), from
+         # 0x0048d759 nafxcw.lib's wincore.obj. zlib 1.0.4 is linked after the
+         # C runtime and the old iostreams (0x004a25f0..0x004a7cf1, deflate.obj
+         # first): Monolith's library too, a range of its own. Inside them, MFC's
+         # and the CRT's header functions our objects instantiate are screened
+         # out (progress/DEdit-screen-exclude.csv)
+         built="src/LT2/built/Release/tools/DEdit/DEdit.exe", optional=True,
+         partial_objs=["src/LT2/built/Release/tools/DEdit/*.obj",
+                       "src/LT2/lithshared/built/ReleaseTalon/GenRegMgr/genregmgr.lib",
+                       "src/Libs/built/ReleaseTalon/ButeMgr/ButeMgr.lib",
+                       "src/LT2/lithshared/built/ReleaseTalon/RegMgr/regmgr.lib",
+                       "src/LT2/lithshared/built/Release/Lib_StdLith_alloc/Lib_StdLith.lib",
+                       "src/LT2/lithshared/built/ReleaseTalon/DibMgr/dibmgr.lib",
+                       "src/Engine/built/ReleaseTalon/LTAMgr/ltamgr.lib",
+                       "src/LT2/lithshared/built/ReleaseTalon/Lib_ZLib/Lib_ZLib.lib"],
+         middleware=[(0x0047d040, 0x00483020)],
+         app=[(0x00401000, 0x0048d740), (0x004a25f0, 0x004a7d00)]),
     dict(label="ModelEdit.exe", what="model editor (Talon, Update 1/2)", kind="image",
          shipped=U2 + "/ModelEdit.exe", stem="ModelEdit",
          # src/LT2/tools/ModelEdit/ModelEdit.dsw (cl 9044, /O1, static MFC;
