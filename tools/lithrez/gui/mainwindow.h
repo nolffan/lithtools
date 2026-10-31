@@ -118,6 +118,9 @@ private:
     void updateRecent();
 
     lithtech::rez::CreateOptions createOptions() const;
+    // Archive::open on a thread of its own, behind a progress dialog that can
+    // cancel it; throws what Archive::open throws (rez::Cancelled if cancelled).
+    std::unique_ptr<lithtech::rez::Archive> openArchive(const QString& path);
     void importArchive(lithtech::rez::Archive& from, lithtech::rez::Directory& src,
                        lithtech::rez::Directory& dst, int& count);
     int insertPaths(const QStringList& paths, lithtech::rez::Directory* into);

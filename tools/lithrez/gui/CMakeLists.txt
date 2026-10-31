@@ -14,7 +14,9 @@ qt_add_executable(lithrez-studio WIN32 MACOSX_BUNDLE
   resources.qrc
 )
 target_compile_definitions(lithrez-studio PRIVATE LITHREZSTUDIO_VERSION="${LITHTOOLS_VERSION}")
-target_link_libraries(lithrez-studio PRIVATE lithtech Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Multimedia)
+# Threads: rez files open on a thread of their own (MainWindow::openArchive).
+find_package(Threads REQUIRED)
+target_link_libraries(lithrez-studio PRIVATE lithtech Qt6::Widgets Qt6::OpenGL Qt6::OpenGLWidgets Qt6::Multimedia Threads::Threads)
 set_target_properties(lithrez-studio PROPERTIES
   MACOSX_BUNDLE_BUNDLE_NAME "LithRez Studio"
   MACOSX_BUNDLE_GUI_IDENTIFIER "org.lithtools.lithrez-studio")

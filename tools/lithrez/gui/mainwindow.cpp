@@ -28,6 +28,7 @@
 #include <QDrag>
 #include <QDragEnterEvent>
 #include <QDropEvent>
+#include <QEventLoop>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -40,6 +41,7 @@
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
+#include <QLocale>
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
@@ -61,8 +63,12 @@
 #include <QVBoxLayout>
 
 #include <algorithm>
+#include <atomic>
+#include <exception>
 #include <limits>
 #include <map>
+#include <mutex>
+#include <thread>
 
 using namespace lithtech;
 using rez::Archive;
@@ -592,14 +598,80 @@ void MainWindow::newRez() {
     updateTitle();
 }
 
+std::unique_ptr<Archive> MainWindow::openArchive(const QString& path) {
+    // A large archive, or a PS2 disc image on slow storage, takes a while to
+    // read: the window keeps painting, and a progress bar (directory bytes or
+    // PS2 entries, a busy bar while the total isn't known) comes up once the
+    // open has taken more than half a second.
+    std::mutex m;
+    rez::OpenProgress latest;
+    std::atomic<bool> cancel{false}, finished{false};
+    std::unique_ptr<Archive> a;
+    std::exception_ptr error;
+    rez::OpenOptions opts;
+    opts.progress = [&](const rez::OpenProgress& p) {
+        std::lock_guard<std::mutex> lock(m);
+        latest = p;
+        return !cancel.load();
+    };
+    std::thread worker([&] {
+        try {
+            a = Archive::open(ss(path), opts);
+        } catch (...) {
+            error = std::current_exception();
+        }
+        finished = true;
+    });
+
+    QProgressDialog prog(tr("Opening %1...").arg(QFileInfo(path).fileName()), tr("Cancel"), 0, 0, this);
+    prog.setWindowModality(Qt::WindowModal);
+    prog.setMinimumDuration(500);
+    prog.setAutoReset(false);
+    prog.setAutoClose(false);
+    connect(&prog, &QProgressDialog::canceled, this, [&] { cancel = true; });
+    QEventLoop loop;
+    QTimer poll;
+    connect(&poll, &QTimer::timeout, this, [&] {
+        if (finished) {
+            loop.quit();
+            return;
+        }
+        if (prog.wasCanceled()) cancel = true;
+        rez::OpenProgress p;
+        {
+            std::lock_guard<std::mutex> lock(m);
+            p = latest;
+        }
+        if (p.total) {
+            // QProgressDialog's range is an int: work in thousandths
+            prog.setMaximum(1000);
+            prog.setValue(int(p.done * 1000 / p.total));
+        } else {
+            prog.setMaximum(0);
+            prog.setValue(0);   // a busy bar; setValue also shows the dialog once its delay has passed
+        }
+        prog.setLabelText(tr("Opening %1...\n%2 files in %3 folders")
+                              .arg(QFileInfo(path).fileName(), QLocale().toString(qulonglong(p.resources)),
+                                   QLocale().toString(qulonglong(p.dirs))));
+    });
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    poll.start(50);
+    loop.exec();
+    poll.stop();
+    QApplication::restoreOverrideCursor();
+    worker.join();
+    prog.close();
+    if (error) std::rethrow_exception(error);
+    return a;
+}
+
 bool MainWindow::openRez(const QString& path) {
     std::unique_ptr<Archive> a;
     try {
-        QApplication::setOverrideCursor(Qt::WaitCursor);
-        a = Archive::open(ss(path));
-        QApplication::restoreOverrideCursor();
+        a = openArchive(path);
+    } catch (const rez::Cancelled&) {
+        return false;
     } catch (const std::exception& e) {
-        QApplication::restoreOverrideCursor();
         QMessageBox::warning(this, tr("Open"), tr("Can't open %1:\n%2").arg(path, qs(e.what())));
         return false;
     }
@@ -1306,8 +1378,10 @@ void MainWindow::doImport() {
     std::vector<std::unique_ptr<Archive>> keep;
     for (const QString& f : files) {
         try {
-            auto other = Archive::open(ss(f));
+            auto other = openArchive(f);
             importArchive(*other, other->root(), *targetDir(), count);
+        } catch (const rez::Cancelled&) {
+            break;
         } catch (const std::exception& e) {
             QMessageBox::warning(this, tr("Import"), tr("Can't read %1:\n%2").arg(f, qs(e.what())));
         }
@@ -1326,8 +1400,10 @@ void MainWindow::doMerge() {
     int count = 0;
     for (const QString& f : files) {
         try {
-            auto other = Archive::open(ss(f));
+            auto other = openArchive(f);
             importArchive(*other, other->root(), archive_->root(), count);
+        } catch (const rez::Cancelled&) {
+            return;
         } catch (const std::exception& e) {
             QMessageBox::warning(this, tr("Merge"), tr("Can't read %1:\n%2").arg(f, qs(e.what())));
             return;
