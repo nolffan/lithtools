@@ -40,10 +40,10 @@ suite_processor_nolf() {
                 printf -- '%s -logfile -skipdialog \n\n' "$opts" > "$dir/$side/$case/$name/processor.opt"
                 if ! run_tool_until 900 "$dir/$side/$case/$name" "${name}_0.log" '^Light table size' \
                         "$(winpath "$dir/$side/bin/Processor.exe")" "$(winpath "$dir/$side/$case/$name/$name")"; then
-                    fail "$case/$name: the $side exe did not finish"
+                    fail "$case/$name: the $side exe did not finish"; wine_tail "$dir/$side/$case/$name"
                     continue 2
                 fi
-                [ -f "$dir/$side/$case/$name/$name.dat" ] || { fail "$case/$name: the $side exe wrote no .dat"; continue 2; }
+                [ -f "$dir/$side/$case/$name/$name.dat" ] || { fail "$case/$name: the $side exe wrote no .dat"; wine_tail "$dir/$side/$case/$name"; continue 2; }
             done
             if cmp -s "$dir/ship/$case/$name/$name.dat" "$dir/ours/$case/$name/$name.dat"; then
                 pass "$case/$name.dat ($(stat -c %s "$dir/ours/$case/$name/$name.dat") bytes): identical"

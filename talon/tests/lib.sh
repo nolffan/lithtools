@@ -24,13 +24,26 @@ need() {   # need <file> <what to run to make it>
 }
 
 # One Wine prefix and one virtual display for the whole run.
+# Both are waited for, not slept on: a fresh prefix (always, in CI) goes on
+# setting itself up after wineboot returns, and a busy runner can take more
+# than a second to bring Xvfb up; either made the first tool started exit
+# without doing anything.
 start_wine() {
     mkdir -p "$WORK"
-    [ -d "$WINEPREFIX/drive_c" ] || wineboot -i >/dev/null 2>&1
+    if [ ! -d "$WINEPREFIX/drive_c" ]; then
+        wineboot -i >/dev/null 2>&1
+        wineserver -w
+    fi
     Xvfb "$TEST_DISPLAY" -screen 0 1024x768x24 >/dev/null 2>&1 &
     XVFB_PID=$!
     trap stop_wine EXIT
-    sleep 1
+    local i sock="/tmp/.X11-unix/X${TEST_DISPLAY#:}"
+    for ((i = 0; i < 100; i++)); do
+        [ -S "$sock" ] && return 0
+        sleep 0.1
+    done
+    log "Xvfb $TEST_DISPLAY did not come up"
+    exit 2
 }
 stop_wine() {
     wineserver -k >/dev/null 2>&1 || true
@@ -68,6 +81,9 @@ run_tool_until() {
     wait $pid 2>/dev/null
     [ $rc -eq 0 ] || return 124
 }
+
+# wine_tail <dir>: the end of the wine.log a run left in <dir>, for a failure
+wine_tail() { tail -n 5 "$1/wine.log" 2>/dev/null | sed 's/^/        /'; }
 
 # winpath <path>: the Z: path Wine gives a Unix path
 winpath() { printf 'Z:%s' "$(realpath -m "$1" | tr / '\\')"; }

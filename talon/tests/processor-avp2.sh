@@ -34,10 +34,10 @@ suite_processor_avp2() {
             cp "$WORLDS/$w.ed" "$dir/$side/$name/"
             if ! run_tool 900 "$dir/$side/$name" "$(winpath "$dir/$side/bin/Processor.exe")" \
                     "$(winpath "$dir/$side/$name/$name.ed")" -skipdialog; then
-                fail "$name: the $side exe did not finish"
+                fail "$name: the $side exe did not finish"; wine_tail "$dir/$side/$name"
                 continue 2
             fi
-            [ -f "$dir/$side/$name/$name.dat" ] || { fail "$name: the $side exe wrote no .dat"; continue 2; }
+            [ -f "$dir/$side/$name/$name.dat" ] || { fail "$name: the $side exe wrote no .dat"; wine_tail "$dir/$side/$name"; continue 2; }
         done
         if verdict=$(python3 -I "$TALON/tests/datcmp.py" "$dir/ship/$name/$name.dat" "$dir/ours/$name/$name.dat"); then
             pass "$name.dat ($(stat -c %s "$dir/ours/$name/$name.dat") bytes): $verdict"
