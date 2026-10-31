@@ -28,6 +28,12 @@ public:
     using std::runtime_error::runtime_error;
 };
 
+// Thrown by Archive::open when its progress callback asks it to stop.
+class Cancelled : public Error {
+public:
+    Cancelled() : Error("cancelled") {}
+};
+
 // Sizes from the file format (rezmgr.cpp, FileMainHeaderStruct).
 inline constexpr std::size_t kTitleSize = 60;
 inline constexpr std::size_t kHeaderSize = 168;
@@ -171,10 +177,23 @@ struct SaveOptions {
     bool recompute_largest = true;
 };
 
+// How far Archive::open has got, for a progress bar: done of total, in
+// whatever units the archive offers (directory bytes for a RezMgr file,
+// entries for a PS2 one); total is 0 while it isn't known.
+struct OpenProgress {
+    uint64_t done = 0;
+    uint64_t total = 0;
+    uint64_t dirs = 0;       // directories read so far
+    uint64_t resources = 0;  // resources read so far
+};
+
 struct OpenOptions {
     // Accept files whose version isn't 1, and directory blocks that run past
     // the end of the file, reading what can be read.
     bool lenient = false;
+    // Called as the directory is read (from the calling thread); returning
+    // false stops the open, which then throws Cancelled.
+    std::function<bool(const OpenProgress&)> progress;
 };
 
 class Archive {
@@ -227,7 +246,7 @@ private:
     std::unique_ptr<File> file_;
     uint64_t data_counter_ = 0;
     void attach(Directory& d);
-    void open_ps2(const std::string& path);
+    void open_ps2(const std::string& path, const OpenOptions& opts);
     void save_ps2(const std::string& path);
     friend class Directory;
 };

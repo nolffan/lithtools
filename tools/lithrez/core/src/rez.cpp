@@ -354,7 +354,7 @@ bool Archive::probe(const std::string& path) {
 std::unique_ptr<Archive> Archive::open(const std::string& path, OpenOptions opts) {
     if (ps2rez::probe(path)) {
         auto a = std::make_unique<Archive>();
-        a->open_ps2(path);
+        a->open_ps2(path, opts);
         return a;
     }
     auto a = std::make_unique<Archive>();
@@ -399,6 +399,28 @@ std::unique_ptr<Archive> Archive::open(const std::string& path, OpenOptions opts
     uint64_t seq = 0;
     std::set<uint64_t> visiting;
 
+    // Progress: the directory blocks come after the data, from the next write
+    // position to the end of the root block (CRezDir::WriteAllDirs), each but
+    // the last (the root) followed by a zero gap its own size, so a block and
+    // its gap read out of that span is how far the open has got. A file saved
+    // without the gaps overruns that count and is measured in block bytes
+    // alone; a header that doesn't fit the layout leaves the total unknown.
+    // (Once the gaps prove absent the count changes units; it never goes
+    // back, so the bar waits until block bytes catch up.)
+    OpenProgress prog;
+    uint64_t with_gaps = 0, blocks = 0;
+    bool no_gaps = false;
+    const uint64_t dirs_end = uint64_t(H.root_dir_pos) + H.root_dir_size;
+    if (H.next_write_pos <= H.root_dir_pos && dirs_end <= a->file_->size)
+        prog.total = dirs_end - H.next_write_pos;
+    auto report = [&]() {
+        if (with_gaps > prog.total) no_gaps = true;
+        prog.done = std::max(prog.done, no_gaps ? blocks : with_gaps);
+        if (prog.done > prog.total) prog.total = 0;
+        if (opts.progress && !opts.progress(prog)) throw Cancelled();
+    };
+    report();
+
     std::function<void(Directory&, uint32_t, uint32_t, int)> read_dir =
         [&](Directory& d, uint32_t pos, uint32_t size, int depth) {
             if (size == 0) return;
@@ -410,6 +432,9 @@ std::unique_ptr<Archive> Archive::open(const std::string& path, OpenOptions opts
                 size = uint32_t(a->file_->size > pos ? a->file_->size - pos : 0);
             }
             std::vector<uint8_t> b = a->read_at(pos, size);
+            blocks += size;
+            with_gaps += depth ? 2 * uint64_t(size) : size;
+            ++prog.dirs;
             std::size_t o = 0;
             auto need = [&](std::size_t n) {
                 if (o + n > b.size()) throw Error(path + ": truncated directory entry");
@@ -459,10 +484,12 @@ std::unique_ptr<Archive> Archive::open(const std::string& path, OpenOptions opts
                     }
                     Resource* rr = d.add(std::move(r));
                     by_offset.emplace_back((uint64_t(rp) << 24) | (seq++ & 0xffffff), rr);
+                    ++prog.resources;
                 } else {
                     throw Error(path + ": unknown directory entry type " + std::to_string(kind));
                 }
             }
+            report();
             for (auto& [sd, dp, ds] : subdirs) read_dir(*sd, dp, ds, depth + 1);
             visiting.erase(pos);
         };
@@ -1087,7 +1114,7 @@ std::optional<uint32_t> unnamed_hash(const Resource& r) {
 
 }  // namespace
 
-void Archive::open_ps2(const std::string& path) {
+void Archive::open_ps2(const std::string& path, const OpenOptions& opts) {
     ps2 = ps2rez::Archive::open(path);
     // names lithrez stored in the archive when it added files
     if (!ps2rez::Names::global().find(ps2rez::hash(ps2rez::Names::kArchiveNamesFile, ps2->header.weight), ps2->header.weight))
@@ -1118,7 +1145,13 @@ void Archive::open_ps2(const std::string& path) {
     std::vector<const ps2rez::Entry*> order;
     for (auto& e : ps2->tables[0]) order.push_back(&e);
     std::stable_sort(order.begin(), order.end(), [](auto* x, auto* y) { return x->sector < y->sector; });
+    // Progress: entries named (name_of reads the small ones to recognise them).
+    OpenProgress prog;
+    prog.total = order.size();
     for (const ps2rez::Entry* e : order) {
+        if (opts.progress && !opts.progress(prog)) throw Cancelled();
+        ++prog.done;
+        ++prog.resources;
         std::string name = ps2->name_of(*e);
         Directory* d = root_.get();
         std::size_t start = 0, sep;
@@ -1153,6 +1186,7 @@ void Archive::open_ps2(const std::string& path) {
         }
         d->add(std::move(r));
     }
+    if (opts.progress && !opts.progress(prog)) throw Cancelled();
     attach(*root_);
 }
 

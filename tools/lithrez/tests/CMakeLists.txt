@@ -1,6 +1,10 @@
 add_executable(rez_selftest selftest.cpp)
 target_link_libraries(rez_selftest PRIVATE lithtech)
 add_test(NAME rez_selftest COMMAND rez_selftest ${CMAKE_CURRENT_BINARY_DIR}/selftest-work)
+# Archive::open's progress callback and cancelling.
+add_executable(rez_progress_test rez_progress_test.cpp)
+target_link_libraries(rez_progress_test PRIVATE lithtech)
+add_test(NAME rez_progress_test COMMAND rez_progress_test ${CMAKE_CURRENT_BINARY_DIR}/progress-work)
 add_executable(abc_verify abc_verify.cpp)
 target_link_libraries(abc_verify PRIVATE lithtech)
 
