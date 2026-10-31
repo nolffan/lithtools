@@ -47,3 +47,14 @@ not in the repository.
 The tools workflow's builds (Windows, Linux AppImage, macOS universal, and
 the Blender extension) are attached to each tagged release, and to a
 nightly build of the latest commit.
+
+## Credits
+
+This project builds on the work of others:
+
+- **Monolith Productions**, for _No One Lives Forever_, _Aliens versus
+  Predator 2_, _No One Lives Forever 2_ and the other LithTech games, and
+  for the editing tools they released to their players, which `legacy/`
+  archives.
+- [StenApp](https://github.com/StenApp) for generously sharing his invaluable,
+  in-depth knowledge of all things NOLF and LithTech.
