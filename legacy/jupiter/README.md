@@ -1,21 +1,21 @@
-# jupiter/: the LithTech Jupiter tools, from Build 69's source
+# legacy/jupiter/: the LithTech Jupiter tools, from Build 69's source
 
 The tools for NOLF2, Contract J.A.C.K. and Tron 2.0: DEdit, ModelEdit,
 WinPacker and WorldPacker, Model_Packer, LithRez, FxED, the render-style
 tools, the 3ds Max and Maya plug-ins and the rest, built from the source
 in Touchdown Entertainment's 2006 "Jupiter System Enterprise Edition,
 Build 69" (archive.org `Lithtech-Jupiter-System-Enterprise-Edition-Build-69`;
-`../INVENTORY.md`).
+`../../INVENTORY.md`).
 
 The first goal is a working build of that source, for testing under Wine;
 a byte-matching build of Contract J.A.C.K.'s October 2003 tools comes
-later (`../INVENTORY.md`, `../FORMATS.md`).
+later (`../../INVENTORY.md`, `../../FORMATS.md`).
 
 ## src/
 
 `src/` is the setup's on-disk layout, `Engine/` and `Libs/` side by side, so
 every project's relative paths resolve as Monolith wrote them. It was
-copied out of the package by `../scripts/import_b69.py`, which records what it
+copied out of the package by `../../scripts/import_b69.py`, which records what it
 takes and leaves out, and committed unmodified apart from line endings (LF
 for text files). Every later change is a commit of its own.
 
@@ -36,12 +36,12 @@ Not in the repository:
 ## Building
 
 ```sh
-jupiter/build/build.sh                 # everything, in the cjacksrc-build image
-jupiter/build/build.sh DEdit LithRez   # just these (and what they need)
-jupiter/build/build.sh --force         # from scratch (headers are not tracked)
-python3 jupiter/build/package.py jupiter/src extracted/jupiter-b69/x/Tools/Tools \
+legacy/jupiter/build/build.sh                 # everything, in the cjacksrc-build image
+legacy/jupiter/build/build.sh DEdit LithRez   # just these (and what they need)
+legacy/jupiter/build/build.sh --force         # from scratch (headers are not tracked)
+python3 legacy/jupiter/build/package.py legacy/jupiter/src extracted/jupiter-b69/x/Tools/Tools \
         out/dist/lithtools-jupiter     # the distribution
-jupiter/build/build.sh --shell         # then: jupiter/build/smoke.sh out/dist/lithtools-jupiter
+legacy/jupiter/build/build.sh --shell         # then: legacy/jupiter/build/smoke.sh out/dist/lithtools-jupiter
 ```
 
 Needs: the `cjacksrc-build` Docker image (Ubuntu 24.04 with 32-bit Wine),
@@ -49,7 +49,7 @@ VC .NET 2003 (`msvc-7.10-3077`; by default cjacksrc's checkout of the
 toolchains, `../cjacksrc/toolchains/msvc-7.10-3077`, override with `VC71`),
 the Build 69 package unpacked by file group (`extracted/jupiter-b69/x`,
 `B69`) and its DirectX SDK unpacked to `extracted/dxsdk-feb2006`
-(`Include/`, `Lib/x86/`; `DXSDK`). `../INVENTORY.md` says where each comes
+(`Include/`, `Lib/x86/`; `DXSDK`). `../../INVENTORY.md` says where each comes
 from. Outputs go where the projects put them (`src/Engine/built`,
 `src/Libs/built`, and the Maya 7.0 projects' `Release Maya70` folders),
 all gitignored.
@@ -80,7 +80,7 @@ Each is its own commit; changes to code are marked `lithtools:` in it:
   from the DirectX 9 SDK; nothing in DEdit uses it).
 - `tools/Model_Packer`: writes model file version 23 by default, without
   the OBB radius that version 24 added, as NOLF2, Contract J.A.C.K. and
-  Tron 2.0 expect (`../FORMATS.md`); `-ModelVersion 25` writes Build 69's
+  Tron 2.0 expect (`../../FORMATS.md`); `-ModelVersion 25` writes Build 69's
   format. Its output is then byte-identical to Contract J.A.C.K.'s
   Model_Packer for the CJ toolkit's sample character, with and without an
   OBB (and with `-ModelVersion 25`, to Build 69's).

@@ -4,7 +4,7 @@ LithTech Jupiter tools, built from Build 69's source
 The editing tools for No One Lives Forever 2, Contract J.A.C.K. and
 Tron 2.0, built from the source in Touchdown Entertainment's 2006
 "Jupiter System Enterprise Edition, Build 69" by lithtools
-(jupiter/README.md in the repository says how). This is a test build:
+(legacy/jupiter/README.md in the repository says how). This is a test build:
 it is meant to be tried, not yet relied on.
 
 What is here

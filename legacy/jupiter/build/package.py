@@ -3,7 +3,7 @@
 
     package.py <src> <build69-tools> <out>
 
-<src> is jupiter/src (its Built folders hold what vcbuild.py made),
+<src> is legacy/jupiter/src (its Built folders hold what vcbuild.py made),
 <build69-tools> the Tools folder of the Build 69 package
 (extracted/jupiter-b69/x/Tools/Tools), <out> the distribution folder,
 created afresh.

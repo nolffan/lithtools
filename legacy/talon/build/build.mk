@@ -14,7 +14,7 @@
 # command line changes (the line is kept in <object>.cmd), a binary when any
 # of its inputs does.
 #
-# Run from talon/ (the build container mounts it at /repo):
+# Run from legacy/talon/ (the build container mounts it at /repo):
 #
 #   make -f build/build.mk -j<N> [target...]
 #
@@ -36,7 +36,7 @@ MAKEFLAGS += --no-builtin-rules --no-builtin-variables
 .DEFAULT_GOAL := all
 
 ifeq ($(wildcard $(ROOT)/src/Engine),)
-$(error run build/build.mk from talon/)
+$(error run build/build.mk from legacy/talon/)
 endif
 
 empty :=

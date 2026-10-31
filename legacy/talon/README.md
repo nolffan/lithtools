@@ -10,14 +10,14 @@ by function, with the compilers that built them:
   games' worlds (`.ed`, version 1249) and models (`.abc` v12);
 - the **world processors** that compile those worlds: AvP2 v1.0's (writes
   AvP2's world version 70) and NOLF Tools 001's (NOLF's 66) -- each game's
-  engine takes only its own (`../FORMATS.md`);
+  engine takes only its own (`../../FORMATS.md`);
 - the **3ds Max and Maya plug-ins** of Update 2 (March 2002).
 
 The same project's other half, `../jupiter/`, builds the next engine
 generation's tools (NOLF2, Contract J.A.C.K., Tron 2.0) from Build 69's
 source. The reconstruction method and tools are nolfsrc's, nolf2src's and
 cjacksrc's (`tools/`, `tools/guides/`); `docs/PLAN.md` says what is done
-in what order, `../INVENTORY.md` where every shipped binary comes from, and
+in what order, `../../INVENTORY.md` where every shipped binary comes from, and
 `RETAIL_BUGS.md` lists the bugs found in the retail tools, for fixing when
 they are re-implemented.
 
@@ -76,7 +76,7 @@ Needs docker, the `cjacksrc-build` image, and the compilers
 (redump.org 35760) and the NOLF Game of the Year disc 2:
 `rez/fetch-isos.sh avp2-ph-eu nolf-eu-goty` fetches both from archive.org,
 and `build/reference.sh` says where else it looks and checks them. CI
-(`../.github/workflows/talon.yml`) runs all of the above.
+(`../../.github/workflows/talon.yml`) runs all of the above.
 
 ## Where the source comes from
 

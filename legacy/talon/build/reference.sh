@@ -8,7 +8,7 @@
 # Inputs, each checked before use. By default rez/'s disc images, as
 # rez/fetch-isos.sh avp2-ph-eu nolf-eu-goty leaves them in rez/isos/ (it
 # checks the zips against rez/isos/SHA256SUMS); failing those, the raw
-# images under ../extracted/. Override in the environment:
+# images under ../../extracted/. Override in the environment:
 #   AVP2_PH_ISO  the Aliens versus Predator 2: Primal Hunt (Europe) disc
 #                (redump.org disc 35760) as a 2048-byte-sector .iso, or
 #   AVP2_PH_BIN  the same disc's raw .bin (SHA-1 b47b0750...747d). Its Tools
@@ -32,11 +32,11 @@ PH_NAME="Aliens Versus Predator 2 - Primal Hunt (Europe)"
 DISC2_NAME="Operative, The - No One Lives Forever (USA, Europe) (Disc 2) (Game of the Year Edition)"
 if [ -z "${AVP2_PH_ISO:-}${AVP2_PH_BIN:-}" ]; then
     if [ -f "$ISOS/$PH_NAME.iso" ]; then AVP2_PH_ISO="$ISOS/$PH_NAME.iso"
-    else AVP2_PH_BIN="$TALON/../extracted/avp2-ph-eu/$PH_NAME.bin"; fi
+    else AVP2_PH_BIN="$TALON/../../extracted/avp2-ph-eu/$PH_NAME.bin"; fi
 fi
 if [ -z "${NOLF_TOOLS:-}${NOLF_DISC2:-}" ]; then
     if [ -f "$ISOS/$DISC2_NAME.iso" ]; then NOLF_DISC2="$ISOS/$DISC2_NAME.iso"
-    else NOLF_TOOLS="$TALON/../extracted/nolf-tools-001/iso/Game/NOLFTools001.exe"; fi
+    else NOLF_TOOLS="$TALON/../../extracted/nolf-tools-001/iso/Game/NOLFTools001.exe"; fi
 fi
 PH_SHA1=b47b07507ad6a511958b8544498d4b9399c2747d
 NOLF_SHA256=b2a13a39a12642b8de66b541dea999c5315c6764f0b6897bcaf7a01e832071d1

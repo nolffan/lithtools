@@ -3,7 +3,7 @@
 # comes up: still running after a few seconds, with a window. Run inside the
 # build container (build.sh --shell), from the repository root:
 #
-#   jupiter/build/smoke.sh out/dist/lithtools-jupiter [tool.exe ...]
+#   legacy/jupiter/build/smoke.sh out/dist/lithtools-jupiter [tool.exe ...]
 #
 # For each tool it prints the windows it opened (xdotool) and saves a
 # screenshot to out/smoke/<tool>.png. A tool that has exited by then is

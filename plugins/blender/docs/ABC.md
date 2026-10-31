@@ -37,7 +37,7 @@ extracts them into the gitignored `out/assets/abc/`.
 
   The reconstruction often names members `m_Unknown…`. R gives the sizes and
   order of the reads; the names come from B69.
-- **B69:** Build 69's model code, `jupiter/src/Engine/tools/shared/model/model.h`.
+- **B69:** Build 69's model code, `legacy/jupiter/src/Engine/tools/shared/model/model.h`.
   This is the next generation (LTA/LTB), but it keeps the 2000 classes and
   their member names. It supplies:
   - `NewVertexWeight { float m_Vec[4]; uint32 m_iNode; }`

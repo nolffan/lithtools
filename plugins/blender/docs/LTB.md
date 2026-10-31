@@ -26,7 +26,7 @@ models; they aren't covered here.
 
 Evidence, in order of weight:
 
-- **Build 69's engine**: `jupiter/src/Engine/runtime/model/src/model_load.cpp`
+- **Build 69's engine**: `legacy/jupiter/src/Engine/runtime/model/src/model_load.cpp`
   (Model::Load and the pieces, nodes, animations, sockets and bindings),
   `modelallocations.cpp`, `model.h` (the channel interpreters, versions),
   `ltb.h`, and the D3D render objects in

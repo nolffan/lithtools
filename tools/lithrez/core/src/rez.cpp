@@ -1,6 +1,6 @@
 // LithTech .rez archives. The behaviour follows the 1998 RezMgr and
-// LithRez (talon/src/LT2/tools/LithRez, which match the shipped lithrez.exe)
-// and LithRez 1.10 (jupiter/src/Engine/tools/LithRez); see docs/REZ.md.
+// LithRez (legacy/talon/src/LT2/tools/LithRez, which match the shipped lithrez.exe)
+// and LithRez 1.10 (legacy/jupiter/src/Engine/tools/LithRez); see docs/REZ.md.
 
 #include "lithtech/rez.hpp"
 #include "lithtech/ps2rez.hpp"

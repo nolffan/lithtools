@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Copy the LithTech Jupiter tools source out of Build 69 into jupiter/src.
+"""Copy the LithTech Jupiter tools source out of Build 69 into legacy/jupiter/src.
 
     import_b69.py <unshield-root> <dest>
 

@@ -1,10 +1,10 @@
 #!/bin/bash
 # Build the Jupiter tools in the build container.
 #
-#   jupiter/build/build.sh [vcbuild.py options] [project ...]
-#   jupiter/build/build.sh --shell          (a shell in the container)
+#   legacy/jupiter/build/build.sh [vcbuild.py options] [project ...]
+#   legacy/jupiter/build/build.sh --shell          (a shell in the container)
 #
-# Runs jupiter/build/vcbuild.py on jupiter/src/Engine/tools/Tools.sln in the
+# Runs legacy/jupiter/build/vcbuild.py on legacy/jupiter/src/Engine/tools/Tools.sln in the
 # cjacksrc build image (Ubuntu 24.04 with 32-bit Wine), as the invoking user,
 # with this repository at /repo and the VC .NET 2003 tree at /tc.
 #
@@ -22,7 +22,7 @@
 # were (its default game executable is LithTechDev.exe). The 3ds Max 7 and
 # Maya 6.5/7.0 plug-ins are built; the others' SDKs are not in Build 69.
 set -euo pipefail
-REPO="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO="$(cd "$(dirname "$0")/../../.." && pwd)"
 IMAGE="${IMAGE:-cjacksrc-build}"
 VC71="$(realpath "${VC71:-$REPO/../cjacksrc/toolchains/msvc-7.10-3077}")"
 B69="$(realpath "${B69:-$REPO/extracted/jupiter-b69/x}")"
@@ -30,7 +30,7 @@ DXSDK="$(realpath "${DXSDK:-$REPO/extracted/dxsdk-feb2006}")"
 
 for f in "$VC71/bin/cl.exe" "$DXSDK/Include/d3dx9.h" \
          "$B69/Engine/Engine/tools/Plugins/SDKFiles"; do
-    [ -e "$f" ] || { echo "error: missing $f (see jupiter/README.md)" >&2; exit 1; }
+    [ -e "$f" ] || { echo "error: missing $f (see legacy/jupiter/README.md)" >&2; exit 1; }
 done
 case "$DXSDK" in "$REPO"/*) ;; *) echo "error: DXSDK must be inside the repository" >&2; exit 1;; esac
 
@@ -60,9 +60,9 @@ done
 # is built after it, with the same options (but none of the project names).
 opts=(); for a in "$@"; do case "$a" in --*) opts+=("$a");; esac; done
 status=0
-"${run[@]}" python3 jupiter/build/vcbuild.py \
-    jupiter/src/Engine/tools/Tools.sln \
+"${run[@]}" python3 legacy/jupiter/build/vcbuild.py \
+    legacy/jupiter/src/Engine/tools/Tools.sln \
     --set "DEdit=Release Public Development" "${skip[@]}" "$@" || status=$?
-"${run[@]}" python3 jupiter/build/vcbuild.py \
-    jupiter/src/Engine/tools/Plugins/Photoshop/dtxformat/DTXFormat.sln "${opts[@]}" || status=$?
+"${run[@]}" python3 legacy/jupiter/build/vcbuild.py \
+    legacy/jupiter/src/Engine/tools/Plugins/Photoshop/dtxformat/DTXFormat.sln "${opts[@]}" || status=$?
 exit $status

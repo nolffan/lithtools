@@ -2,7 +2,7 @@
 
 "ModelEdit for Talon", built 2001-12-19 (Update 1's and Update 2's are the
 same file). It loads and saves `.abc` models (v12, the version NOLF and AvP2
-ship: `../FORMATS.md`), imports `.lta`, and draws with OpenGL. 1,945 rows of
+ship: `../../FORMATS.md`), imports `.lta`, and draws with OpenGL. 1,945 rows of
 the function table in its own code, 0x00401000..0x00437170, 1,927 once the
 library header functions (`ModelEdit-screen-exclude.csv`) are screened out.
 

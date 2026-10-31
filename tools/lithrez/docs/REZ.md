@@ -8,9 +8,9 @@ use this one layout. No other version number appears in any file or in the
 RezMgr sources ("only 1 is possible here right now", `rezmgr.h`).
 
 Sources:
-- **talon:** `talon/src/LT2/tools/LithRez`, the 1998 RezMgr and LithRez
+- **talon:** `legacy/talon/src/LT2/tools/LithRez`, the 1998 RezMgr and LithRez
   1.00. It is decompiled from the shipped `lithrez.exe` and matches it.
-- **Build 69:** `jupiter/src/Engine/libs/rezmgr` and `tools/LithRez`
+- **Build 69:** `legacy/jupiter/src/Engine/libs/rezmgr` and `tools/LithRez`
   (LithRez 1.10, 2004).
 - **The files:** every claim below holds for all 100.
 

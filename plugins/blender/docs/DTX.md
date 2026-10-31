@@ -20,13 +20,13 @@ level). Five `.dtx` names in Blood 2 hold something else (see
 
 Evidence, in order of weight:
 
-- **talon**: `talon/src/LT2/tools/shared/engine/dtxmgr.h`, `dtxmgr.cpp`
+- **talon**: `legacy/talon/src/LT2/tools/shared/engine/dtxmgr.h`, `dtxmgr.cpp`
   and `pixelformat.h`/`.cpp`. This is the engine code the 2001 tools
   (DEdit, Processor) were built with. `dtx_Create` reads the format and
   `dtx_Save` writes it.
-- **Build 69**: `jupiter/src/Engine/runtime/shared/src/dtxmgr.*` and
+- **Build 69**: `legacy/jupiter/src/Engine/runtime/shared/src/dtxmgr.*` and
   `pixelformat.cpp`, the same format two years on. Also DEdit's
-  `jupiter/src/Engine/tools/DEdit/TextureDlg.cpp` and
+  `legacy/jupiter/src/Engine/tools/DEdit/TextureDlg.cpp` and
   `Misc/TextureHelper.cpp`, which write the palette and cube-map sections.
 - **The files themselves**: every claim below was checked against all
   21,955 files (`tests/roundtrip_dtx.py`).

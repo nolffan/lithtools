@@ -4,13 +4,13 @@
 #                   the NOLF Game of the Year disc 2 (NOLF Tools 001)
 #   make            every reconstructed tool
 #   make progress   byte regressions: fails if a function recorded in
-#                   talon/progress/identical.txt is no longer byte-identical
+#                   legacy/talon/progress/identical.txt is no longer byte-identical
 #   make test       behaviour: the shipped tools and ours run on the same
-#                   inputs must write the same files (talon/tests/README.md)
+#                   inputs must write the same files (legacy/talon/tests/README.md)
 #
-# The disc images come from archive.org through talon/rez/fetch-isos.sh
+# The disc images come from archive.org through legacy/talon/rez/fetch-isos.sh
 # (the releases avp2-ph-eu and nolf-eu-goty: about 1.1 GB, checked against
-# talon/rez/isos/SHA256SUMS). The job "prepare" fetches them once, into a
+# legacy/talon/rez/isos/SHA256SUMS). The job "prepare" fetches them once, into a
 # cache keyed on that file, and builds the docker image -- cjacksrc's, the
 # one the Makefile runs every step in, from nolffan/cjacksrc at the commit
 # pinned below -- into a layer cache; "check" restores both.
@@ -20,7 +20,7 @@ on:
   push:
     branches: [master]
   pull_request:
-    paths: ['talon/**', '.github/workflows/talon.yml']
+    paths: ['legacy/talon/**', '.github/workflows/talon.yml']
   workflow_dispatch:
 
 concurrency:
@@ -51,30 +51,30 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync
-          git submodule update --init --depth 1 talon/rez
+          git submodule update --init --depth 1 legacy/talon/rez
 
       - name: Cache key
         id: key
-        run: echo "key=redump-talon-$(echo "$RELEASES" | tr ' ' -)-$(sha256sum talon/rez/isos/SHA256SUMS | cut -c1-64)" >> "$GITHUB_OUTPUT"
+        run: echo "key=redump-talon-$(echo "$RELEASES" | tr ' ' -)-$(sha256sum legacy/talon/rez/isos/SHA256SUMS | cut -c1-64)" >> "$GITHUB_OUTPUT"
 
       - name: Look for the disc images
         id: discs
         uses: actions/cache/restore@v4
         with:
-          path: talon/rez/isos/*.zip
+          path: legacy/talon/rez/isos/*.zip
           key: ${{ steps.key.outputs.key }}
           lookup-only: true
 
       # Checked against SHA256SUMS before it is saved.
       - name: Fetch the disc images
         if: steps.discs.outputs.cache-hit != 'true'
-        run: talon/rez/fetch-isos.sh $RELEASES
+        run: legacy/talon/rez/fetch-isos.sh $RELEASES
 
       - name: Save the disc images
         if: steps.discs.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with:
-          path: talon/rez/isos/*.zip
+          path: legacy/talon/rez/isos/*.zip
           key: ${{ steps.key.outputs.key }}
 
       - uses: actions/checkout@v4
@@ -114,18 +114,18 @@ jobs:
         run: |
           git config --global url."https://github.com/".insteadOf "git@github.com:"
           git submodule sync
-          git submodule update --init --depth 1 --jobs 3 talon/toolchains talon/rez talon/tools
+          git submodule update --init --depth 1 --jobs 3 legacy/talon/toolchains legacy/talon/rez legacy/talon/tools
 
       - name: Restore the disc images
         uses: actions/cache/restore@v4
         with:
-          path: talon/rez/isos/*.zip
+          path: legacy/talon/rez/isos/*.zip
           key: ${{ needs.prepare.outputs.discs-key }}
           fail-on-cache-miss: true
 
       # Downloads nothing (the zips are there): checks them and makes the .isos.
       - name: Verify and convert the disc images
-        run: talon/rez/fetch-isos.sh $RELEASES
+        run: legacy/talon/rez/fetch-isos.sh $RELEASES
 
       - uses: actions/checkout@v4
         with:
@@ -134,7 +134,7 @@ jobs:
           path: cjacksrc
           sparse-checkout: docker
 
-      # Loaded as cjacksrc-build, which talon/Makefile runs every step in.
+      # Loaded as cjacksrc-build, which legacy/talon/Makefile runs every step in.
       - uses: docker/setup-buildx-action@v3
       - name: Build image
         uses: docker/build-push-action@v6
@@ -145,16 +145,16 @@ jobs:
           cache-from: type=gha,scope=cjacksrc-build
 
       - name: The shipped tools (make reference)
-        run: make -C talon reference
+        run: make -C legacy/talon reference
 
       - name: Build (make)
-        run: make -C talon
+        run: make -C legacy/talon
 
       - name: Byte regressions (make progress)
-        run: make -C talon progress
+        run: make -C legacy/talon progress
 
       - name: Behaviour (make test)
-        run: make -C talon test
+        run: make -C legacy/talon test
 
       # What the tests wrote, both sides, for diffing a failure.
       - name: Keep the test outputs
@@ -162,5 +162,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: talon-tests
-          path: talon/out/tests/
+          path: legacy/talon/out/tests/
           if-no-files-found: ignore
