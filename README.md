@@ -66,3 +66,4 @@ This project builds on the work of others:
   archives.
 - [StenApp](https://github.com/StenApp) for generously sharing his invaluable,
   in-depth knowledge of all things NOLF and LithTech.
+- [branung](https://github.com/branung) for contributing v6 ABC format support.
