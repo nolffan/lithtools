@@ -1264,35 +1264,51 @@ static void AddHullMakerBacksides(CPreWorld *pWorld)
 
 
 // Gives every hull maker node a backside node, once.
+// talon: near (0x408680), size-exact: the three IsValidNode tests jump to
+// a `jmp` placed after the ret (0x408732) that goes back to the epilogue;
+// ours jump to the epilogue itself. As an early return (AvP2's form) the
+// epilogue is copied instead (171 bytes). The same untaken jump threading
+// as DoPostProcessing's loop exit (0x40a755).
 static void AddHullMakerBacksides_R(CPreWorld *pWorld, GenList<CNode*> &added, CNode *pRoot)
 {
 	GenListPos pos;
 	CNode *pNewNode;
 
-	if(!IsValidNode(pRoot))
-		return;
-
-	if((pRoot->m_pPoly->GetSurfaceFlags() & SURF_HULLMAKER) && !added.GenFindElement(pRoot, pos))
+	if(IsValidNode(pRoot))
 	{
-		pNewNode = AddBacksideNode(pWorld, pRoot);
-		if(pNewNode)
-			added.GenAppend(pNewNode);
-	}
+		if((pRoot->m_pPoly->GetSurfaceFlags() & SURF_HULLMAKER) && !added.GenFindElement(pRoot, pos))
+		{
+			pNewNode = AddBacksideNode(pWorld, pRoot);
+			if(pNewNode)
+				added.GenAppend(pNewNode);
+		}
 
-	AddHullMakerBacksides_R(pWorld, added, pRoot->m_Sides[0]);
-	AddHullMakerBacksides_R(pWorld, added, pRoot->m_Sides[1]);
+		AddHullMakerBacksides_R(pWorld, added, pRoot->m_Sides[0]);
+		AddHullMakerBacksides_R(pWorld, added, pRoot->m_Sides[1]);
+	}
 }
 
 
 
 
 
+// 0x40a5d0. talon: near (383 against 396). The clamps are Build 69's two
+// statements: through an inline accessor the grid size is read twice, as
+// shipped (0x40a67f, 0x40a694), not common-subexpressioned. The shipped
+// code reads m_pMainWorld twice as well (0x40a67b, 0x40a67d), which a
+// CPreWorld accessor forwarding to the main world's gives (Build 69 has
+// one, by surface; not added: PreWorld.h is shared, and the loop's end
+// still differs). Then the function is size-exact: GetNext's `pos = NULL`
+// at the loop's end is a block of its own in the shipped code (0x40a755:
+// `xor %ebx,%ebx` and a jump back to the loop's test) where ours jumps
+// straight out; a ternary in CGLinkedList::GetNext gives the block, but
+// through a temporary (nolfsrc's and Build 69's GetNext are if/else).
 BOOL CBspGen::DoPostProcessing()
 {
 	CNode		*pNode;
 	GPOS		pos;
 	uint32		nStartingPolies, nStartingNodes;
-	PReal		fClamp;
+	PReal		fClampU, fClampV;
 
 
 	// Update the replacement polies (ie: replace fragments with the original unsplit polies).
@@ -1326,8 +1342,9 @@ BOOL CBspGen::DoPostProcessing()
 			{
 				// We use LIGHTMAP_MAX_PIXELS-1 because all lightmaps need one extra pixel
 				// for the last interpolation values.
-				fClamp = (g_pGlobs->m_MaxLMSize - 1.0f) * m_pWorld->m_pMainWorld->m_LMGridSize - 0.2f;
-				MinimizeNodePolySize(pNode, fClamp, fClamp);
+				fClampU = (m_pWorld->m_pMainWorld->GetLMGridSize() * (g_pGlobs->m_MaxLMSize - 1.0f)) - 0.2f;
+				fClampV = (m_pWorld->m_pMainWorld->GetLMGridSize() * (g_pGlobs->m_MaxLMSize - 1.0f)) - 0.2f;
+				MinimizeNodePolySize(pNode, fClampU, fClampV);
 			}
 
 			m_pWorld->m_Nodes.GetNext(pos);
