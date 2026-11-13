@@ -3213,7 +3213,6 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 	CPreLeafList *pList;
 	CNode *pNode;
 	PreSurfaceUser *pUser;
-	CPolyVert *pVert;
 	PVector vMin, vMax;
 	uint8 r, g, b;
 
@@ -3394,28 +3393,20 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 
 		for(j=0; j < pPoly->NumVerts(); j++)
 		{
-			pVert = &pPoly->Vert(j);
-
-			file << indexMap[pVert->m_Index];
-			r = (uint8)pVert->m_Color.x;
-			g = (uint8)pVert->m_Color.y;
-			b = (uint8)pVert->m_Color.z;
-			file << r;
-			file << g;
-			file << b;
+			file << indexMap[pPoly->Vert(j).m_Index];
+			r = (uint8)pPoly->Vert(j).m_Color.x;
+			g = (uint8)pPoly->Vert(j).m_Color.y;
+			b = (uint8)pPoly->Vert(j).m_Color.z;
+			file << r << g << b;
 		}
 
 		for(j=0; j < pPoly->m_Unknown_0c; j++)
 		{
-			pVert = &pPoly->m_Unknown_0c[j];
-
-			file << indexMap[pVert->m_Index];
-			r = (uint8)pVert->m_Color.x;
-			g = (uint8)pVert->m_Color.y;
-			b = (uint8)pVert->m_Color.z;
-			file << r;
-			file << g;
-			file << b;
+			file << indexMap[pPoly->m_Unknown_0c[j].m_Index];
+			r = (uint8)pPoly->m_Unknown_0c[j].m_Color.x;
+			g = (uint8)pPoly->m_Unknown_0c[j].m_Color.y;
+			b = (uint8)pPoly->m_Unknown_0c[j].m_Color.z;
+			file << r << g << b;
 		}
 
 		iPoly++;
