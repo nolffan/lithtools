@@ -756,6 +756,15 @@ static inline int GetQuickSide(CPrePlane *pPlane, const CPrePoly *pPoly)
 		return Intersect;
 }
 
+// 0x406dc0. talon: near (2507 against 2727). The shipped function is a
+// `$$1` pair (the realigning stub at 0x406dc0, the body at 0x406dce, `this`
+// of the frame in ebx) and ours isn't: its doubles (sqrt's spill at
+// 0xd8(%esp), pow's arguments, the uint32's fildll) are ours too, and
+// neither a double fBalance nor a static function aligns ours. The weight
+// is computed as ((D * b + 0.0f) and then A * (1.0f - b)), with 1.0f and
+// 0.0f literals in that order (0x495634, 0x495638): a third, zero term
+// (an axis-aligned weight of 0.0f gives the sequence standalone) that
+// AvP2's and Build 69's sources don't have.
 LTBOOL CalcSplitSelector(CPolyList &polies, CPrePoly *pPoly, SplitSelector &result, const SplitSelector *pBest, uint32 nLevel)
 {
 	result.m_nAddedPolies = result.m_nAxisAligned = 0;
@@ -925,6 +934,14 @@ void CBspGen::SplitPolyArray(CPolyList &polies, CPrePoly *pSplitOn, CPolyList *s
 // read directly in ::SplitPoly's call expands GetPolyType in the trivial
 // cases instead; the replacement as if/else, sides[] set separately: no
 // change.
+// 0x409a40..0x40a5c8 (the function table splits it at 0x40a4e9). talon:
+// near, 2952 bytes against 2956, the calls all as shipped. GetPolyType's
+// `return POLYTYPE_DETAIL` (in AddTail, three times) is a block after the
+// rest in the shipped code (0x409aca; and in GetPolyType's own copy,
+// 0x40ba3f), ours in line under every spelling of it tried (if/else,
+// separate ifs, the test negated, a ternary). The inlined FlushCenters
+// read m_nVerts through &m_BasePoly kept in a stack slot (0x409e5e), ours
+// off the poly in ebx.
 void CBspGen::SplitPoly(CPrePoly *pSplitOn, CPrePoly *pToSplit, CPolyList *sideArrays[2])
 {
 	CPrePoly *sides[2], *pReplacement;
