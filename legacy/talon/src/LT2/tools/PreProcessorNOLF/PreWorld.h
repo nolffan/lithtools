@@ -67,9 +67,9 @@ public:
 	// One lightmap for each poly..
 	CMoArray<CPreLightMap*>	m_PolyMaps;
 
-	// talon: 2001; one for each poly too, made with m_PolyMaps by the
-	// lightmap maker (0x418b70). What it holds is not known yet.
-	CMoArray<CMoArray<uint32>*>	m_Unknown_14;
+	// talon: NOLF's is 0x14 bytes, m_PolyMaps alone (BaseNew 0x44ca8b
+	// allocates 20*n, BaseDelete 0x44c997 strides 0x14, the destructor
+	// 0x44302f): AvP2's m_Unknown_14 came later.
 };
 
 

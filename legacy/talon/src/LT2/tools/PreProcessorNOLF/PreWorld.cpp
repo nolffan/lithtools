@@ -115,14 +115,12 @@ void PointStackEl::AddToWorld(CPreWorld *pWorld)
 CPreLightFrame::CPreLightFrame()
 {
 	m_PolyMaps.SetCacheSize(1024);
-	m_Unknown_14.SetCacheSize(1024);
 }
 
 
 CPreLightFrame::~CPreLightFrame()
 {
 	DeleteAndClearArray(m_PolyMaps);
-	DeleteAndClearArray(m_Unknown_14);
 }
 
 

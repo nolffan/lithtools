@@ -1145,19 +1145,9 @@ static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly)
 static BOOL CalcVertNormals(CPreWorld *pWorld, CMoArray<PVector> &normals);
 
 
-// 0x418b70..0x418e98. talon: near (inline budget), 781 bytes against 809.
-// Shipped expands the third failure-path DeleteAndClearArray (m_Unknown_14:
-// a loop calling BaseDelete<CMoArray<uint32>>, 0x423880, then SetSize2) and
-// calls BaseDelete (0x422fa0) in the final ~CMoArray of threads; ours calls
-// DeleteAndClearArray2 for all three and expands that BaseDelete. Measured
-// (round 2): the DeleteAndClearArray wrapper is what keeps DeleteAndClearArray2
-// out of line. Calling DeleteAndClearArray2(..., &g_DefAlloc) for the third
-// gives the shipped final dtor and expands the third, but then expands its
-// BaseDelete too (??_G(0) for the element, 837 bytes); for the second and
-// third, BaseDelete is called as shipped but the second is expanded as well
-// (879); for all three, all three are expanded (916). A goto to one failure
-// block at the end expands everything (935). GetSize()/GetArray()[i]/
-// &threads[0]/SetSize2 spellings in the thread code don't move it.
+// talon: NOLF's (0x4248f0..0x424b94): no m_Unknown_14 (NOLF's
+// CPreLightFrame holds only m_PolyMaps), and the thread array isn't
+// cleared before the threads are started.
 BOOL CLightMapMaker::CalculateLightFrame()
 {
 	CMoArray<THREAD_ID> threads;
@@ -1171,14 +1161,11 @@ BOOL CLightMapMaker::CalculateLightFrame()
 	// Create all the objects.
 	if(!m_FullLightMaps.SetSizeInit2(m_pCurAnim->m_Polies.GetSize(), NULL) ||
 		!m_pCurFrame->m_PolyMaps.SetSizeInit2(m_pCurAnim->m_Polies.GetSize(), NULL) ||
-		!m_pCurFrame->m_Unknown_14.SetSizeInit2(m_pCurAnim->m_Polies.GetSize(), NULL) ||
 		!AllocateArray(m_FullLightMaps, (CFullLightMap*)NULL) ||
-		!AllocateArray(m_pCurFrame->m_PolyMaps, (CPreLightMap*)NULL) ||
-		!AllocateArray(m_pCurFrame->m_Unknown_14, (CMoArray<uint32>*)NULL))
+		!AllocateArray(m_pCurFrame->m_PolyMaps, (CPreLightMap*)NULL))
 	{
 		DeleteAndClearArray(m_FullLightMaps);
 		DeleteAndClearArray(m_pCurFrame->m_PolyMaps);
-		DeleteAndClearArray(m_pCurFrame->m_Unknown_14);
 		return FALSE;
 	}
 
@@ -1191,9 +1178,6 @@ BOOL CLightMapMaker::CalculateLightFrame()
 
 	if(!threads.SetSize(nThreads))
 		return FALSE;
-
-	for(i=0; i < threads; i++)
-		threads[i] = 0;
 
 	for(i=0; i < nThreads; i++)
 	{
