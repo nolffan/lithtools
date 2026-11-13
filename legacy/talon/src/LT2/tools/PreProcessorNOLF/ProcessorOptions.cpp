@@ -289,10 +289,10 @@ BOOL CProcessingOptionsDlg::OnInitDialog()
 		fgets(cmdLine, sizeof(cmdLine), fp);
 		fgets(extra, sizeof(extra), fp);
 
-		if(strlen(cmdLine))
+		if(strlen(cmdLine) > 0)
 			cmdLine[strlen(cmdLine)-1] = 0;
 
-		if(strlen(extra))
+		if(strlen(extra) > 0)
 			extra[strlen(extra)-1] = 0;
 
 		SetArgs(cmdLine);
@@ -306,19 +306,18 @@ BOOL CProcessingOptionsDlg::OnInitDialog()
 	if(m_pGlobs->m_bSkipDialog)
 	{
 		EndDialog(IDOK);
+		return TRUE;
 	}
-	else
-	{
-		CDialog::OnInitDialog();
 
-		str.FormatMessage(IDS_PO_TITLE, m_pGlobs->m_InputFile);
-		SetWindowText(str);
-		GetWindowRect(&m_Rect);
+	CDialog::OnInitDialog();
 
-		m_ExtraParams.SetWindowText(extra);
-		InitControls();
-		UpdateControls();
-	}
+	str.FormatMessage(IDS_PO_TITLE, m_pGlobs->m_InputFile);
+	SetWindowText(str);
+	GetWindowRect(&m_Rect);
+
+	m_ExtraParams.SetWindowText(extra);
+	InitControls();
+	UpdateControls();
 
 	return TRUE;
 }
