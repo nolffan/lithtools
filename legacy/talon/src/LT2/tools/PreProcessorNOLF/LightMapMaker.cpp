@@ -928,64 +928,73 @@ inline void CPrePoly::CalcExtents(PReal fExpand) const
 // 0x41845a); the macros in the shadowed branch are what leave the inline
 // budget for the center (with sample.Init and += there, two of its
 // constructors are called out of line).
+//
+// talon: NOLF's (0x429d80) is icl's, and differs: the facing test is an
+// early return (its epilogue copied at 0x429dc4, where every other return
+// jumps); the normal is one reference (its address in %esi, reused for
+// CalcSunLightSample's copy, 0x429e08); the unclipped arm returns on its
+// own (the loops' exit jumps straight to the return, 0x429f12); and the
+// shadowed sample is sample.Init (its 255.0f hoisted out of the loops
+// into a slot, 0x429e76, and the arm laid out last, 0x42a0ed).
 BOOL CLightMapMaker::ApplySunLightToPoly(CPrePoly *pPoly, CMoArray<PVector> *pPositions)
 {
 	PVector			color, pos, sample;
 	CFullLightMap	*pMap;
 	PVector			*pColor;
 	uint32			x, y, i;
+	const PVector	&vNormal = pPoly->Normal();
 
-	if(-m_SunLightDir.Dot(pPoly->Normal()) > 0.0f)
+	if(-m_SunLightDir.Dot(vNormal) <= 0.0f)
+		return TRUE;
+
+	if(g_pGlobs->m_bLambertian)
 	{
-		if(g_pGlobs->m_bLambertian)
-		{
-			color = CalcSunLightSample(pPoly->Normal());
-		}
-		else
-		{
-			color = m_SunLightInner;
-		}
+		color = CalcSunLightSample(vNormal);
+	}
+	else
+	{
+		color = m_SunLightInner;
+	}
 
-		pMap = m_FullLightMaps[pPoly->m_nName];
-		pColor = pMap->m_Map.GetArray();
+	pMap = m_FullLightMaps[pPoly->m_nName];
+	pColor = pMap->m_Map.GetArray();
 
-		if(!m_bClipLight)
+	if(!m_bClipLight)
+	{
+		pPoly->CalcExtents();
+		PVector vCenter = (pPoly->m_vExtentsMax - pPoly->m_vExtentsMin) * 0.5f + pPoly->m_vExtentsMin;
+		if(DoesSunLightHit(vCenter))
 		{
-			pPoly->CalcExtents();
-			PVector vCenter = (pPoly->m_vExtentsMax - pPoly->m_vExtentsMin) * 0.5f + pPoly->m_vExtentsMin;
-			if(DoesSunLightHit(vCenter))
+			for(i=pMap->m_Width*pMap->m_Height; i; i--)
 			{
-				for(i=pMap->m_Width*pMap->m_Height; i; i--)
-				{
-					*pColor += color;
-					pColor++;
-				}
+				*pColor += color;
+				pColor++;
 			}
 		}
-		else
+
+		return TRUE;
+	}
+
+	for(y=0; y < pMap->m_Height; y++)
+	{
+		for(x=0; x < pMap->m_Width; x++)
 		{
-			for(y=0; y < pMap->m_Height; y++)
+			pos = (*pPositions)[y*pMap->m_Width + x];
+			if(DoesSunLightHit(pos))
 			{
-				for(x=0; x < pMap->m_Width; x++)
+				if(m_pCurAnim->m_bShadowMap)
 				{
-					pos = (*pPositions)[y*pMap->m_Width + x];
-					if(DoesSunLightHit(pos))
-					{
-						if(m_pCurAnim->m_bShadowMap)
-						{
-							VEC_SET(sample, 255.0f, 255.0f, 255.0f);
-						}
-						else
-						{
-							sample = color;
-						}
-
-						VEC_ADD(*pColor, *pColor, sample);
-					}
-
-					pColor++;
+					sample.Init(255.0f, 255.0f, 255.0f);
 				}
+				else
+				{
+					sample = color;
+				}
+
+				VEC_ADD(*pColor, *pColor, sample);
 			}
+
+			pColor++;
 		}
 	}
 
@@ -993,31 +1002,33 @@ BOOL CLightMapMaker::ApplySunLightToPoly(CPrePoly *pPoly, CMoArray<PVector> *pPo
 }
 
 
-// 0x418610..0x418753.
+// 0x418610..0x418753 (NOLF's 0x42a100). The far end is declared before the
+// query (its stack slot is below the query's, the near end's above it,
+// 0x42a14d/0x42a172); the surface is read once (0x42a207), and the
+// failures share the FALSE return that falls through (0x42a218).
 BOOL CLightMapMaker::DoesSunLightHit(const PVector &vPos)
 {
+	PVector vEnd = vPos - m_SunLightDir * m_fSunRayLength;
 	LMMSegQuery	query;
 
 	query.m_pMaker = this;
-	PVector vEnd = vPos - m_SunLightDir * m_fSunRayLength;
 	PVector vStart = vPos - m_SunLightDir;
 	query.m_vStart = vStart;
 	query.m_vEnd = vEnd;
 	query.m_fBestDistSqr = 0.0f;
-	query.m_nTests = 0;
 	query.m_pHitPoly = NULL;
+	query.m_nTests = 0;
 	m_WorldTree.IntersectSegment(&query.m_vStart, &query.m_vEnd, SunWorldModelCB, &query, NOA_Objects);
 
 	if(!query.m_nTests)
 		return TRUE;
 
-	if(query.m_pHitPoly && query.m_pHitPoly->GetSurface())
-	{
-		if(query.m_pHitPoly->GetSurfaceFlags() & SURF_SKY)
-			return TRUE;
-	}
+	CPreSurface *pSurface;
+	if(!query.m_pHitPoly || !(pSurface = query.m_pHitPoly->GetSurface()) ||
+		!(pSurface->m_Flags & SURF_SKY))
+		return FALSE;
 
-	return FALSE;
+	return TRUE;
 }
 
 
