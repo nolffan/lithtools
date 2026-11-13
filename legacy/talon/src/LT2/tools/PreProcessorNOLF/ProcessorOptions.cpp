@@ -125,7 +125,13 @@ static char* ProcessorOptions_GetToken(char **ppIn, char **ppOut)
 		if(**ppIn == '"')
 			bInQuote = !bInQuote;
 		else
-			*(*ppOut)++ = **ppIn;
+		{
+			// talon: the store, then the pointer incremented in place
+			// (0x4527eb, 0x4527ed). Still near: the shipped code keeps
+			// the character in al/ah/bl and reloads it for the copy.
+			**ppOut = **ppIn;
+			(*ppOut)++;
+		}
 
 		(*ppIn)++;
 	}
