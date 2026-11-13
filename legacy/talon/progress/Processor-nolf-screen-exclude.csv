@@ -1,0 +1,7 @@
+addr,reason
+0x0043d503,"not a function: interior block of MakeTempBrush (0x0043cef0); mid-instruction (0x43d500 jb 0x43d45b)"
+0x00440043,"not a function: interior block of CPrePoly::PostJoinFixup (0x0043ff40); mid-instruction (0x440042 fstps -0x354(%ebp))"
+0x0044496d,"not a function: interior block of CPreWorld::InitPolyVertexIndices (0x004448f0); mid-instruction (0x44496c cmpw $0,0x94(%esi))"
+0x0044832c,"not a function: interior block of CPreWorld::CalcNodeBoundingBoxes_R (0x004481af); mid-instruction (0x44832b fsubs -0x18(%ebp))"
+0x00448e7d,"not a function: interior block of CPreWorld::CalcLeafSpheres (0x00448db9); mid-instruction (0x448e7c fstps -0x18(%ebp))"
+0x0044c72b,"not a function: interior block of the 0x0044c6ea row (an STL heap function's body); mid-instruction (0x44c728 call 0x44a6be)"
