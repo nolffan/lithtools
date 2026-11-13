@@ -256,6 +256,84 @@ Eight agents, 1,374 -> 1,443 identical, the function table corrected
   funclets (0x44dcd0); out-of-class members defined earlier in the file
   aren't inlined, unlike free functions (PortalBuffer::Cur).
 
+## What the fourth round learned (2026-11-13)
+
+Six agents: five by address range over the near pairs, closest first,
+and one on the unplaced functions. 1,443 -> 1,444 identical; unwritten
+131 -> 123 and unplaced 69 -> 63 with six own_symbols pins
+(progress/targets.py).
+
+- **The per-function inlining ceiling, measured with the scorer:** built
+  with every icl file /Ob0, 848 functions are identical, 193 of them
+  (16.4 KB) not identical as built: as built or /Ob0, whichever matches,
+  would be 1,636. (exematch's exact unique matches gave 51 and badly
+  undercounted it.) LightMapMaker +39, Processing +30, BspGen +17,
+  BasePoly +8, WorldApprox +8, the rest spread thin; mostly small
+  functions and EH pieces. The shipped compiler behaved as if EH-framed
+  functions were /Ob0 and the rest inlined, inside one file (BspGen: /Ob0
+  gains 37, all EH-framed or their pieces, and loses 21, all plain). The
+  way to take it is a stand-in: each file's EH-framed functions in a
+  second source compiled /Ob0, /ORDER keeping the shipped placement.
+- **Proven right, blocked only by the limit** (identical built /Ob0):
+  MakeVisBSP 0x411ae0, FilterTerrainPolies_R 0x410d80, VisFlowPortal
+  0x45b540, WorldTree() 0x45fa00, CWorldNode's constructor 0x460730 and
+  destructor 0x4607e0, ProcessorOptions::OnOK 0x453a20, FindLeakPath
+  0x420a40, FindWorldModels 0x41cf20, RecurseAndAddWorldModels 0x41cc70,
+  PVSInfo() 0x451f50, GetWorldStats 0x44ed20; MakePhysicsBlocks 0x432a40
+  agrees on all 102 calls.
+- **CreatePoly** (EH-framed in the shipped build, the placement delete)
+  is called out of line by every SplitPoly copy (0x403730, 0x407970,
+  0x410600, 0x41118e, 0x43c280, 0x4589e0) and MakeBoxPortals (six times):
+  none of them can match while ours inlines it.
+- **What no source reaches, now ruled out by name:** GenFindElement's
+  frame release (all 11 copies, 0x4027a0..0x450f40, release before the
+  stores; six source forms and /G5 /G6 /Os /O2 /Op /Qpc32 /Qip /Gy
+  don't move ours); MatVMul_H's term order, which differs between two
+  inlines in one object (0x427a74, 0x423129); `this` moved to a stack
+  slot at loop entry across LightMapMaker (0x42a3fe); repeated loads the
+  shipped code merges or not where ours does the other (0x4295c3,
+  0x42440e). icl 4.0 ignores `__declspec(noinline)` (warning #688);
+  `#pragma optimize("g", off)` stops inlining but changes other code.
+- **cl 8447 (PreWorld):** stack slots follow the set of variables and how
+  they're used, not declaration order or names: one shipped slot where
+  ours has two means one variable reused, an extra single-use slot an
+  extra local. Matching LoadFile's slots this way (0x444b97, frame
+  0x354) also fixed most of its registers (36 -> 7 differing blocks).
+- **icl:** a `switch`'s default arm is the only form that goes after the
+  unwind funclets (LoadDATFile 0x44de03, `switch(status == 1)`); trivial
+  address-returning inlines are folded even in EH-framed functions
+  (MakeZones 0x45d9db's `lea 0x20`); a function with no realign stub
+  still gets a zero-length `X$$1` label; template members aren't bound
+  by the EH rule (GenAppend 0x42c620, fully inlined).
+- **Probably two source files we lack:** ProcessorApp's range holds a
+  `PreProcessorThread.cpp` from 0x4424c0 and a `PreSurface.cpp` from
+  0x442bd0 (the MFC inline copies' placement, the module order; Build 69
+  has both names). Split out without /Ob0 they match five more and lose
+  five recorded, to the limit.
+- **Not landed, saved in out/drafts:** NOLF's SetupNewLightAnim puts each
+  poly through ShouldLightmap (0x4257dd) and adds only lightmapped ones
+  to the animation (ours, AvP2's, adds all: a behaviour difference), and
+  GetLightDefs adds each light as soon as it's made (0x4265b3). Each
+  flips Insert2 (0x42e660) or a placement; to re-try after the next
+  change in LightMapMaker.obj.
+- **Mispairings the near list makes** (by address; the scorer's, not the
+  source's): 0x425aa0 + 0x425f04 are GetTextureLights; 0x427f70 +
+  0x428814 CalcSamplePositions; 0x42b210 GenAppend<CMoArray<PVector>>;
+  0x422d20 TraceSegment and 0x4230d0 LightWorldModelCB (swapped);
+  0x42bc70 InternalNiceSetSize<CMoArray<CPrePoly*>>; 0x42f190
+  _AllocateTArray<CMoArray<PVector>>; 0x403730 is ClipPoly$$1, 0x4042c0
+  DoBrushesIntersect$$1, 0x406dc0 CalcSplitSelector, 0x408c60
+  MinimizeNodePolySize; about 40 pairs in 0x40f840..0x4210f0 point at
+  the dead code (third round).
+- **What the scorer would need** (ext/tools is shared: described, not
+  changed): place an icl realign stub only with its `$$1` body (all 26
+  shipped stubs are byte-identical); ignore zero-length labels; pair by
+  best rank across candidates, preferring the object's neighbourhood,
+  not greedily in name order; let vtable slots and by-reference evidence
+  override interchangeable copies (??_G, SetSize2, _AllocateTArray);
+  take by-reference evidence from near callers' aligned call sequences,
+  not only identical ones.
+
 ## Layout (libscan.py)
 
 | Range | What | Source |
