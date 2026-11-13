@@ -142,13 +142,10 @@
 
 	inline void sb_Free(StructBank *pBank, void *pObj)
 	{
-		// talon: the NOLF processor's copies (0x4321d0) test pObj alone
-		if (!pObj)
-		{
-			ASSERT(FALSE);
-			return;
-		}
-
+		// talon: no test of pObj or pBank, as nolfsrc's: the NOLF
+		// processor's CLinkedList RemoveAt and RemoveAll copies free their
+		// nodes unchecked (0x4101b0, 0x40a820), as ObjectBank's FreeVoid
+		// does (0x450a80)
 		StructLink *pLink = (StructLink*)pObj;
 
 		#ifdef _DEBUG
