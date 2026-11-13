@@ -140,7 +140,9 @@ static void MakeZones(PVSInfo *pInfo)
 	{
 		pObj = pWorld->m_pMainWorld->m_Objects[i];
 
-		if(stricmp(pObj->GetClassName(), "Zone") != 0)
+		// talon: the member, not GetClassName() (NOLF's 0x45d920 reads it in place,
+		// lea 0x20; nothing is inlined into this EH-framed function).
+		if(stricmp(pObj->m_TypeName, "Zone") != 0)
 			continue;
 
 		pModel = pWorld->m_pMainWorld->FindWorldModel(pObj->GetName());
@@ -162,7 +164,8 @@ static void MakeZones(PVSInfo *pInfo)
 
 			if(IsLeafInZone(pLeaf, pZone))
 			{
-				pLeaf->m_Unknown_a0 = pInfo->m_Zones.GetSize() - 1;
+				// talon: LastI() (0x45db1b calls it, 0x40d180).
+				pLeaf->m_Unknown_a0 = pInfo->m_Zones.LastI();
 				pZone->m_Leaves.Append(pLeaf);
 			}
 		}
