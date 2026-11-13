@@ -48,7 +48,11 @@ RSC=rc.exe
 # PROP Intermediate_Dir "..\built\ReleaseNOLF\Lib_ZLib"
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
-# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\..\libs\STLPORT-4.0\STLPORT" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /FR /YX /FD /c
+# talon: no /FR here (AvP2's release has it). cl 8447 and 8168 with browse
+# info reload inflate_blocks' cached z, q and s at its DRY and DONE joins in
+# another order (0x4677aa, 0x467811); without it the function is identical.
+# AvP2's Processor.exe (8966, with /FR) matches with the same source.
+# ADD CPP /nologo /MT /W3 /GX /O2 /I "..\..\..\libs\STLPORT-4.0\STLPORT" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /YX /FD /c
 # ADD BASE RSC /l 0x409 /d "NDEBUG"
 # ADD RSC /l 0x409 /d "NDEBUG"
 BSC32=bscmake.exe
