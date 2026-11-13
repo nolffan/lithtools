@@ -141,6 +141,10 @@ struct PBlockTable
 
 	// talon, W1: zeroes it (0x433b80; the name is ours).
 	void		Clear();
+
+	// talon: takes src's blocks and clears it (0x458160, Terrain.cpp's;
+	// the name is ours).
+	void		Take(PBlockTable &src);
 };
 
 

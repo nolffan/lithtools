@@ -129,28 +129,6 @@ void TerrainBspProgressFn(CBspGen *pBspGen, CReal fPercent)
 }
 
 
-// talon: the 2001 PBlockTable's copy and Clear, inline in MakeTerrain
-// (0x446b13..0x446c04): the header's Clear is PreWorld.cpp's (0x433b80).
-inline void TakePBlocks(PBlockTable &dest, PBlockTable &src)
-{
-	dest.m_vBlockSize	= src.m_vBlockSize;
-	dest.m_vMin			= src.m_vMin;
-	dest.m_nBlocks[0]	= src.m_nBlocks[0];
-	dest.m_nBlocks[1]	= src.m_nBlocks[1];
-	dest.m_nBlocks[2]	= src.m_nBlocks[2];
-	dest.m_nBlocksXY	= src.m_nBlocksXY;
-	dest.m_nBlocksTotal	= src.m_nBlocksTotal;
-	dest.m_pBlocks		= src.m_pBlocks;
-
-	src.m_vBlockSize.Init();
-	src.m_vMin.Init();
-	src.m_nBlocks[0] = src.m_nBlocks[1] = src.m_nBlocks[2] = 0;
-	src.m_nBlocksXY = 0;
-	src.m_nBlocksTotal = 0;
-	src.m_pBlocks = NULL;
-}
-
-
 // A terrain world model (0x446530): its polies split into sections on the
 // world tree, a BSP for each, then the world's T-junctions fixed.
 // Near (2703 bytes against 2634), the calls in the shipped order but for
@@ -297,7 +275,7 @@ BOOL MakeTerrain(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld, 
 		// The section takes the BSP.
 		pSubBsp->m_Nodes.StealList(tempWorld.m_Nodes);
 		pSubBsp->m_RootNode = tempWorld.m_RootNode;
-		TakePBlocks(pSubBsp->m_PBlocks, tempWorld.m_PBlocks);
+		pSubBsp->m_PBlocks.Take(tempWorld.m_PBlocks);
 
 		tempWorld.m_Polies.RemoveAll();
 		tempWorld.TermGeometry();
@@ -470,4 +448,28 @@ void sub_447940(CPreWorld *pWorld, CNodeList &nodes, CPrePoly *pOld, CPrePoly *p
 
 		nodes.GetNext(pos);
 	}
+}
+
+
+// talon: the 2001 PBlockTable's copy and Clear, inline in AvP2's
+// MakeTerrain (0x446b13..0x446c04). NOLF's is a member, out of line
+// (0x458160, among the object's last copies) as MakeTerrain calls it
+// (0x457e67); ours, defined after MakeTerrain, isn't inlined either.
+void PBlockTable::Take(PBlockTable &src)
+{
+	m_vBlockSize	= src.m_vBlockSize;
+	m_vMin			= src.m_vMin;
+	m_nBlocks[0]	= src.m_nBlocks[0];
+	m_nBlocks[1]	= src.m_nBlocks[1];
+	m_nBlocks[2]	= src.m_nBlocks[2];
+	m_nBlocksXY		= src.m_nBlocksXY;
+	m_nBlocksTotal	= src.m_nBlocksTotal;
+	m_pBlocks		= src.m_pBlocks;
+
+	src.m_vBlockSize.Init();
+	src.m_vMin.Init();
+	src.m_nBlocks[0] = src.m_nBlocks[1] = src.m_nBlocks[2] = 0;
+	src.m_nBlocksXY = 0;
+	src.m_nBlocksTotal = 0;
+	src.m_pBlocks = NULL;
 }
