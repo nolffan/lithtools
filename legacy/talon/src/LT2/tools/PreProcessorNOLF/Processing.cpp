@@ -1252,10 +1252,20 @@ BOOL LoadDATFile(CPreMainWorld *pMainWorld, BOOL bWarn, BOOL *pbLoaded)
 	if(status != 0)
 	{
 		file.Close();
-		if(status == 1)
-			DrawStatusText("DAT file %s is an invalid version.", g_pGlobs->m_OutputFile);
-		else
-			DrawStatusText("DAT file %s is corrupt.", g_pGlobs->m_OutputFile);
+
+		// talon: the bad version's message is the switch's default arm,
+		// which icl places after the unwind funclets (0x44de03), as
+		// shipped; `if(status == 1)` keeps it in line.
+		switch(status == 1)
+		{
+			case FALSE:
+				DrawStatusText("DAT file %s is corrupt.", g_pGlobs->m_OutputFile);
+				break;
+
+			default:
+				DrawStatusText("DAT file %s is an invalid version.", g_pGlobs->m_OutputFile);
+				break;
+		}
 
 		return FALSE;
 	}
