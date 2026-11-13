@@ -3180,7 +3180,16 @@ void CPreWorld::SaveSubBsp(CAbstractIO &file, CPreSubBsp *pBsp)
 
 // The world in NOLF's .dat form (0x445c23): the surfaces from the list
 // with their planes, the points after the surface users with each point's
-// normal (CalcVertexNormals), no texture vectors per poly.
+// normal (CalcVertexNormals), no texture vectors per poly. Near (size-exact,
+// 261 instructions differ): from the planes on, the image copies most of
+// the floats it writes through the FPU (flds/fstps: the normal's y and z,
+// all nine texture vector components, the poly's origin, 0x446283) where
+// ours moves them through eax, and the temporaries' stack slots follow.
+// A PReal local assigned and then written gives the image's flds/fstps
+// for the first such write and not the next (the normal's y, not its z);
+// casts, FVec(), a reference, operator[], a chained << and /Op or /G5 for
+// the file give none. The AvP2 processor (0x436ad0) has the same copies
+// and our build of it the same eax moves.
 BOOL CPreWorld::SaveFile(CAbstractIO &file)
 {
 	CMoArray<const char*> unused;
@@ -3264,10 +3273,17 @@ BOOL CPreWorld::SaveFile(CAbstractIO &file)
 	SetLeafIndices();
 
 	// The polies' vertex counts.
-	for(pos=m_Polies; pos; )
+	// talon: a GPOS of its own: the image's pos (-0x20) is dead through
+	// the leaves loop, which gives its slot to pLeaf (0x4460e6); one pos for
+	// every loop would be live across it.
 	{
-		file << (uint8)m_Polies.GetAt(pos)->NumVerts();
-		file << (uint8)m_Polies.GetNext(pos)->m_Unknown_0c.GetSize();
+		GPOS pos;
+
+		for(pos=m_Polies; pos; )
+		{
+			file << (uint8)m_Polies.GetAt(pos)->NumVerts();
+			file << (uint8)m_Polies.GetNext(pos)->m_Unknown_0c.GetSize();
+		}
 	}
 
 	// The leaves.
