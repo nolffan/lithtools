@@ -1924,6 +1924,9 @@ void CLightMapMaker::ClampMapValues(CFullLightMap *pMap, uint32 nSamplesU, uint3
 
 
 // Averages each 2x2 of samples (0x41bed0).
+// talon: NOLF's (0x427c50): the width first (lea -1 into edi, then esi,
+// 0x427c73). Near: SetSize's allocation is a call in the shipped code
+// (the inlining limit).
 void CLightMapMaker::DownSample(CFullLightMap *pIn, CFullLightMap *pOut)
 {
 	uint32 x, y, width, height;
@@ -1932,8 +1935,8 @@ void CLightMapMaker::DownSample(CFullLightMap *pIn, CFullLightMap *pOut)
 	if(!pIn->m_Width || !pIn->m_Height)
 		return;
 
-	height = pIn->m_Height - 1;
 	width = pIn->m_Width - 1;
+	height = pIn->m_Height - 1;
 	if(width * height > pOut->m_Map.GetSize())
 		pOut->m_Map.SetSize(width * height);
 
