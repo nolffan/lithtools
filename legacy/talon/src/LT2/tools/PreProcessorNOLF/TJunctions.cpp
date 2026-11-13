@@ -184,12 +184,21 @@ static BOOL TJ_SplitPoly(CPreWorld *pWorld, CPrePoly **ppPoly, LTPlane *pPlane, 
 }
 
 
-// TRUE if pt is on the line through linePt along dir (a unit vector); t
-// is how far along the line pt's nearest point is.
-inline BOOL TJ_IsOnLine(const PVector &pt, const PVector &linePt, const PVector &dir, PReal &t)
+// TRUE if pt is on the line through linePt along dir (a unit vector);
+// bInside if it is also inside the edge, fEdgeLen long, that starts at
+// linePt (NOLF's 0x45a6f0: the inline's out-of-line copy, after the
+// module's other copies, which FixTJunctions calls three times; ours
+// inlines it there). The shipped copy calls the vector subtractions
+// (0x40b140) and expands the rest; t is a double across the second.
+inline BOOL TJ_IsOnEdge(const PVector &linePt, const PVector &dir, PReal fEdgeLen, const PVector &pt, BOOL &bInside)
 {
+	PReal t;
+	BOOL bInLine;
+
 	t = dir.Dot(pt - linePt);
-	return (pt - (linePt + dir * t)).MagSqr() < 0.00001f;
+	bInLine = (pt - (linePt + dir * t)).MagSqr() < 0.00001f;
+	bInside = bInLine && t > 0.25f && t < (fEdgeLen - 0.25f);
+	return bInLine;
 }
 
 
@@ -207,11 +216,11 @@ void CTJunctionFixer::FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys)
 	PVector *pPt1, *pPt2, *pNextPt;
 	PVector vPt, vN1, vN2, vInvalidPt;
 	LTPlane splitPlane;
-	PReal fEdgeLen, t, fRatio;
+	PReal fEdgeLen, fRatio;
 	uint32 i, iVert, iTouch, iTouchVert, nLast;
 	uint32 nPolysAdded, nVertsAdded, nSkip, nProgress;
 	BOOL bSplit, bChanged, bFailed, bInvalidGeometry;
-	BOOL bPrevInLine, bCurInLine, bNextInLine, bCurInside, bNextInside;
+	BOOL bPrevInside, bPrevInLine, bCurInside, bCurInLine, bNextInside, bNextInLine;
 
 
 	DrawStatusTextIfMainWorld("Fixing T-Junctions on %d polys...", pWorld->m_Polies.GetSize());
@@ -309,16 +318,13 @@ void CTJunctionFixer::FixTJunctions(CPreWorld *pWorld, BOOL bSplitPolys)
 
 				// Is each of its vertices on the edge's line, and inside the edge?
 				nLast = pTouch->NumVerts() - 1;
-				bPrevInLine = TJ_IsOnLine(pTouch->Pt(nLast), *pPt1, vEdgeDir, t);
-
-				bCurInLine = TJ_IsOnLine(pTouch->Pt(0), *pPt1, vEdgeDir, t);
-				bCurInside = bCurInLine && t > 0.25f && t < (fEdgeLen - 0.25f);
+				bPrevInLine = TJ_IsOnEdge(*pPt1, vEdgeDir, fEdgeLen, pTouch->Pt(nLast), bPrevInside);
+				bCurInLine = TJ_IsOnEdge(*pPt1, vEdgeDir, fEdgeLen, pTouch->Pt(0), bCurInside);
 
 				for(iTouchVert=0; iTouchVert < pTouch->NumVerts(); iTouchVert++)
 				{
 					pNextPt = &pTouch->Pt((iTouchVert+1) % pTouch->NumVerts());
-					bNextInLine = TJ_IsOnLine(*pNextPt, *pPt1, vEdgeDir, t);
-					bNextInside = bNextInLine && t > 0.25f && t < (fEdgeLen - 0.25f);
+					bNextInLine = TJ_IsOnEdge(*pPt1, vEdgeDir, fEdgeLen, *pNextPt, bNextInside);
 
 					// A vertex inside the edge, with an edge of its poly along it.
 					if(bCurInside && (bPrevInLine || bNextInLine))
