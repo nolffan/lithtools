@@ -361,7 +361,10 @@ void CEditRegion::RecurseAndSaveNode( CAbstractIO &OutFile, CWorldNode *pNode )
 	{
 		pChild = pNode->m_Children.GetNext(pos);
 
-		OutFile << (DWORD)pChild->m_Type;
+		// talon: the type through a local: 0x41bd5e loads it before
+		// homing the stream for the inline operator<<
+		DWORD type = pChild->m_Type;
+		OutFile << type;
 		if( pChild->m_Type == Node_Brush )
 			OutFile << pChild->AsBrush()->m_RegionBrushIndex;
 
