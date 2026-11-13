@@ -49,30 +49,39 @@ uint32 ApplyTextureFlagsToWorld(CGLinkedList<TInfo*> &theList, CPreMainWorld *pM
 // matches) and CGLinkedList's constructor (0x41f360) and destructor
 // (0x41f340) out of line, where ours inlines them. The shipped code tests
 // GetTextureInfo's count with the found arm first (je to the messages,
-// 0x41f213) and zeroes the count in that arm and adds Apply's result into
-// it (0x41f218, 0x41f229), as written here. Built /Ob0 the instructions are
-// then the shipped ones, but for the messages arm: the shipped code puts it
-// after the EH funclet (0x41f27d), ours before it; without an else, the
-// same.
+// 0x41f213), zeroes the count in that arm and adds Apply's result into it
+// (0x41f218, 0x41f229):
+//
+//	if(GetTextureInfo(pWorld, theList))
+//	{
+//		nFlagsGotten = 0;
+//		nFlagsGotten += ApplyTextureFlagsToWorld(theList, pWorld);
+//		... GDeleteAndRemoveElements, the message, return nFlagsGotten;
+//	}
+//	else { the two messages; return 0; }
+//
+// Built /Ob0 that gives the shipped instructions but for the messages
+// arm's place (the shipped code puts it after the EH funclet, 0x41f27d;
+// without the else, the same). It is not written so here because, as the
+// file is built, the change moves which object's copy the link keeps of
+// the folded CMoArray<T*>::Insert2s (EditObjects' for BuildHulls'), and
+// the scorer's near pairings with it, for no identical function.
 uint32 GetTextureFlags(CPreMainWorld *pWorld)
 {
 	CGLinkedList<TInfo*>	theList;
 	uint32					nFlagsGotten;
 
-	if(GetTextureInfo(pWorld, theList))
-	{
-		nFlagsGotten = 0;
-		nFlagsGotten += ApplyTextureFlagsToWorld(theList, pWorld);
-
-		GDeleteAndRemoveElements(theList);
-		DrawStatusText("Imported %d texture flags", nFlagsGotten);
-
-		return nFlagsGotten;
-	}
-	else
+	if(GetTextureInfo(pWorld, theList) == 0)
 	{
 		DrawStatusText("** Couldn't find any textures.");
 		DrawStatusText("** (Is project path set?)");
 		return 0;
 	}
+
+	nFlagsGotten = ApplyTextureFlagsToWorld(theList, pWorld);
+
+	GDeleteAndRemoveElements(theList);
+	DrawStatusText("Imported %d texture flags", nFlagsGotten);
+
+	return nFlagsGotten;
 }
