@@ -1309,23 +1309,14 @@ bool AreSurfacesEqual(CPreSurface *pSurface1, CPreSurface *pSurface2)
 
 
 // ----------------------------------------------------------------------- //
-// talon: CPreWorld::LoadFile (0x434630, 6978 bytes). Near: callseq 198 of
-// 199. What moved it from 183 (all budget, measured round 2):
-//  - each failed check is its own `return 2` (no shared Error: label): the
-//    early returns' destructors (vptr + Term inline, SetSize2 0x43d3e0
-//    called) are tail-merged into the one block at 0x435ab7, and their cost
-//    is what leaves Inverse()'s Norm (0x4044b0) out of line, as shipped;
-//  - m_PolyArray.SetSizeInit(n, pNullBsp), the LoadSubBsp idiom: one level
-//    deeper than SetSize + a NULL loop, so SetSize2 stays a call (0x435c9f);
-//  - Append, not AddTail, for the poly-loop m_Surfaces, m_Nodes and
-//    m_Unknown_04 adds (InsertAfter 0x43dc50 called at 0x43582a, 0x435878).
-// Left: m_Unknown_04's InsertAfter (0x435a87) is still expanded, and the
-// success path's third destructor (polies) calls _DeleteAndDestroyArray
-// where shipped expands it. Tried for those: every AddTail/Append mix of the
-// last three adds (7 combos, all 196-197), IndexToNode for the node sides
-// and root (worse: 191). Also left: the texture-name loop spills
-// textureName-1 (shipped rematerialises it; three spellings tried), and the
-// frame is 0x3a0 against 0x3a4 (one 4-byte local short).
+// talon: CPreWorld::LoadFile, NOLF's at 0x444b97 (3928 bytes). Near: the
+// texture-name loop keeps textureName-1 in a slot (the shipped code makes
+// it again each pass), and VC6 gives the dead `file` parameter's slot to
+// pos where the shipped code gives it to pPoly and the loop counters. The
+// sub-BSP array is sized with SetSizeInit2 (0x44af5a: NULL pushed by
+// value), the surface vectors copied member by member (no movs). The
+// AvP2 build's notes (0x434630): each failed check is its own `return 2`;
+// Append, not AddTail, for the m_Nodes and m_Unknown_04 adds.
 // ----------------------------------------------------------------------- //
 
 
@@ -1363,7 +1354,6 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 	CPrePlane				*pPlane;
 	CPreSurface				*pSurface;
 	PreSurfaceUser		*pUser;
-	CPreSubBsp				*pNullBsp;
 
 
 	// Header.
@@ -1511,12 +1501,16 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> vec.x;
 		file >> vec.y;
 		file >> vec.z;
-		pSurface->m_TextureP = vec;
+		pSurface->m_TextureP.x = vec.x;
+		pSurface->m_TextureP.y = vec.y;
+		pSurface->m_TextureP.z = vec.z;
 
 		file >> vec.x;
 		file >> vec.y;
 		file >> vec.z;
-		pSurface->m_TextureQ = vec;
+		pSurface->m_TextureQ.x = vec.x;
+		pSurface->m_TextureQ.y = vec.y;
+		pSurface->m_TextureQ.z = vec.z;
 
 		file >> iTexture;
 		if(iTexture >= m_TextureNames.GetSize())
@@ -1690,8 +1684,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 	// The sub-BSPs.
 	file >> nSubBsps;
-	pNullBsp = NULL;
-	if(!m_PolyArray.SetSizeInit(nSubBsps, pNullBsp))
+	if(!m_PolyArray.SetSizeInit2(nSubBsps, NULL))
 		return 2;
 
 	for(i=0; i < nSubBsps; i++)
