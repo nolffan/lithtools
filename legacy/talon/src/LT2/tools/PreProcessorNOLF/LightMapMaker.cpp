@@ -1100,7 +1100,9 @@ static CPrePoly* FindSegmentHit(NODEREF pNode, PVector *pStart, PVector *pEnd, P
 // the normal at 0x34 and the rest never stored). NextPt's `% m_nVerts` is
 // what zero-extends the count a second time (0x418a0a) where NumVerts()
 // shares the loop bound's, and the plane's Dot of the point (the point as
-// the copied argument) evaluates x, y, z in order (0x418b19).
+// the copied argument) evaluates x, y, z in order (0x418b19). talon: NOLF's
+// (0x422b90) walks a vertex pointer (add $0x28): Pt(i) written twice, not
+// held in a reference (that indexes by an offset register instead).
 static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly)
 {
 	CPrePlane edgePlane;
@@ -1108,11 +1110,10 @@ static BOOL IsPtInPoly(PVector vPt, CPrePoly *pPoly)
 
 	for(i=0; i < pPoly->NumVerts(); i++)
 	{
-		PVector &vCur = pPoly->Pt(i);
-		PVector edge = vCur - pPoly->NextPt(i);
+		PVector edge = pPoly->Pt(i) - pPoly->NextPt(i);
 		edgePlane.m_Normal = pPoly->Normal().Cross(edge);
 		edgePlane.m_Normal.Norm();
-		edgePlane.m_Dist = edgePlane.m_Normal.Dot(vCur);
+		edgePlane.m_Dist = edgePlane.m_Normal.Dot(pPoly->Pt(i));
 
 		if(edgePlane.m_Normal.Dot(vPt) - edgePlane.m_Dist < 0.0f)
 			return FALSE;
