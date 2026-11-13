@@ -407,9 +407,10 @@ void SetFullOptimization()
 }
 
 
-// 0x442810. talon: NOLF's asks even with -skipdialog (AvP2's answers no).
-// Still near: the shipped code puts each test's taken arm out of line
-// (0x442874, 0x442861..0x44286f), ours keeps them in place.
+// 0x442810. talon: NOLF's asks even with -skipdialog (AvP2's answers no),
+// and returns MessageBox's own code for any other answer. Still near:
+// the shipped code tests QUES_CANCEL out of line (0x442874), ours in
+// place; the answers' tests and arms are the shipped ones.
 uint32 AskQuestion(const char *pQuestion, uint32 type)
 {
 	UINT mbType = MB_YESNO;
@@ -420,17 +421,14 @@ uint32 AskQuestion(const char *pQuestion, uint32 type)
 
 	ret = g_pAppDlg->MessageBox(pQuestion, "PreProcessor", mbType);
 	if(ret == IDYES)
-		return QUES_YES;
+		ret = QUES_YES;
 	else if(ret == IDNO)
-		return QUES_NO;
+		ret = QUES_NO;
 	else if(ret == IDCANCEL)
-		return QUES_CANCEL;
+		ret = QUES_CANCEL;
 
-	// Retail: no return here (0x43056f returns MessageBox's own code in
-	// eax; with MB_YESNO and MB_YESNOCANCEL it can't get here).
-#pragma warning(disable : 4715)
+	return ret;
 }
-#pragma warning(default : 4715)
 
 
 // ------------------------------------------------------------------------ //
