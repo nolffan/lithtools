@@ -23,7 +23,8 @@ add)
     name="${2:?usage: agentwt.sh add <name> [start]}"
     wt="$REPO/out/wt-$name"
     git -C "$REPO" worktree add -q -b "talon/$name" "$wt" "${3:-HEAD}"
-    rmdir "$wt/ext/tools" "$wt/ext/toolchains" "$wt/ext/rez" 2>/dev/null || true
+    # (ext/rez stays the empty folder git checks out: the build needs none of it)
+    rmdir "$wt/ext/tools" "$wt/ext/toolchains" 2>/dev/null || true
     cp -al "$REPO/ext/toolchains" "$wt/ext/toolchains"
     rm -f "$wt/ext/toolchains/.git"
     cp -a "$REPO/ext/tools" "$wt/ext/tools"
