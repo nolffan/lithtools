@@ -51,9 +51,10 @@ CLightMapMaker::CLightMapMaker()
 	m_hClassModule = NULL;
 	m_pCurAnim = NULL;
 	m_pCurFrame = NULL;
+	// talon: before the sun ray's length, as NOLF has it (0x423a74).
+	m_pMathLT = &m_MathLT;
 	m_fSunRayLength = 0.0f;
 	m_ThreadCS = NULL;
-	m_pMathLT = &m_MathLT;
 }
 
 
