@@ -80,10 +80,6 @@ BOOL MakeTerrain(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld, 
 // RaySelect: selects the brushes the RaySelecter objects' rays hit (0x4450c0).
 uint32 DoRaySelect(CPreMainWorld *pMainWorld, CEditRegion *pRegion);
 
-// Does nothing to the region (0x40a0a0, folded with cb_CheckClassDefs;
-// the name is ours).
-void CheckRegion(CEditRegion *pRegion);
-
 // ReplaceTextures (0x445700).
 int ReplaceTextures(CEditRegion *pRegion, CPreMainWorld *pWorld);
 
@@ -149,20 +145,24 @@ void InitProcessOptions(CProcessorGlobs *pGlobs)
 	int i;
 	char *pArg;
 
+	// talon: the clears in the reverse of the shipped stores (0x44cef1..:
+	// icl emits a run of `x = 0;` backwards). Still near: the shipped
+	// function has the $$1 realigning stub and a 0x3c frame (0x44cec0),
+	// ours neither, so its registers differ throughout.
 	pGlobs->m_MaxBounds = 400000.0f;
 	pGlobs->m_bPortals = TRUE;
-	pGlobs->m_bTextureFlags = FALSE;
-	pGlobs->m_bSelectProblemBrushes = FALSE;
-	pGlobs->m_bSelectOutOfBoundsBrushes = FALSE;
-	pGlobs->m_bRemoveProblemObjects = FALSE;
-	pGlobs->m_LeakFile[0] = 0;
-	pGlobs->m_PortalFile[0] = 0;
-	pGlobs->m_bRaySelect = FALSE;
-	pGlobs->m_bLightAnimations = FALSE;
-	pGlobs->m_bSelectHullProblemBrushes = FALSE;
-	pGlobs->m_bIgnoreHidden = FALSE;
-	pGlobs->m_bFixTJunc = FALSE;
 	pGlobs->m_bNoSnapNoCSG = FALSE;
+	pGlobs->m_bFixTJunc = FALSE;
+	pGlobs->m_bIgnoreHidden = FALSE;
+	pGlobs->m_bSelectHullProblemBrushes = FALSE;
+	pGlobs->m_bLightAnimations = FALSE;
+	pGlobs->m_bRaySelect = FALSE;
+	pGlobs->m_PortalFile[0] = 0;
+	pGlobs->m_LeakFile[0] = 0;
+	pGlobs->m_bRemoveProblemObjects = FALSE;
+	pGlobs->m_bSelectOutOfBoundsBrushes = FALSE;
+	pGlobs->m_bSelectProblemBrushes = FALSE;
+	pGlobs->m_bTextureFlags = FALSE;
 	pGlobs->m_bBalanceBSPs = TRUE;
 	strcpy(pGlobs->m_ProjectDir, ".");
 
@@ -326,32 +326,7 @@ static void InternalDrawStatusText(const char *pMsg, va_list marker)
 }
 
 
-void DrawStatusText(const char *pMsg, ...)
-{
-	va_list marker;
-
-	va_start(marker, pMsg);
-	InternalDrawStatusText(pMsg, marker);
-	va_end(marker);
-}
-
-
-void DrawStatusTextIfMainWorld(const char *pMsg, ...)
-{
-	va_list marker;
-
-	// talon: an early return (0x45091d: the return falls through, the
-	// call is after it).
-	if(g_pGlobs->m_bMakingWorldModel)
-		return;
-
-	va_start(marker, pMsg);
-	InternalDrawStatusText(pMsg, marker);
-	va_end(marker);
-}
-
-
-// Saves the ED file (with the selections) over the input (0x43edc0).
+// Saves the ED file (with the selections) over the input (0x44dbc0).
 BOOL SaveEDFile()
 {
 	CMoFileIO	file;
@@ -749,27 +724,6 @@ PReal GetLMGridSize(char *pInfoString)
 		return (PReal)atoi(parse.m_Args[1]);
 
 	return 20.0f;
-}
-
-
-BOOL MergeBrushes(
-	GenList<CEditBrush*> &brushes,
-	CPreWorld *pWorld)
-{
-	DrawStatusTextIfMainWorld("Merging %d brushes.", brushes.GenGetSize());
-
-	StartProgressStage(PROGRESS_MERGEBRUSHES);
-	if(!BrushToWorld(brushes, pWorld, ProgressFn))
-	{
-		DrawStatusText("");
-		DrawStatusText("---------------");
-		DrawStatusText("Found an invalid (unprocessable) brush!");
-		DrawStatusText("---------------");
-		return FALSE;
-	}
-
-	EndProgressStage(PROGRESS_MERGEBRUSHES, FALSE);
-	return TRUE;
 }
 
 
@@ -1202,17 +1156,11 @@ void OpenLogFile()
 }
 
 
-void CloseLogFile()
-{
-	if(g_pGlobs->m_bLogFile && g_pLogFile)
-	{
-		fclose(g_pLogFile);
-		g_pLogFile = NULL;
-	}
-}
-
-
-// Loads the ED file into g_InputRegion (0x4410c0).
+// Loads the ED file into g_InputRegion (0x44d810). talon: NOLF's calls
+// no CheckRegion after RemoveDetailBrushes (0x44da7a). Still near: the
+// shipped code lays the failed open out after the objects loop (0x44d9cb)
+// and the rest after it; ours keeps the then-arm together whether the
+// failure is an else, an early return or the end (all three built).
 BOOL LoadEDFile()
 {
 	CMoFileIO			file;
@@ -1265,7 +1213,6 @@ BOOL LoadEDFile()
 
 		g_InputRegion->ClearSelections();
 		RemoveDetailBrushes(g_InputRegion);
-		CheckRegion((CEditRegion*)g_InputRegion);
 		return TRUE;
 	}
 
@@ -1368,45 +1315,6 @@ BOOL SaveDATFile(CPreMainWorld *pMainWorld)
 }
 
 
-void ShowStatusText(DWORD startTime, DWORD endTime)
-{
-	uint32 k = 1024;
-
-	DrawStatusText("Done in %.2f minutes", ((endTime - startTime) / 1000.0f) / 60.0f);
-	
-	DrawStatusText("");
-	
-	DrawStatusText("Number of input polies: %d", g_pGlobs->m_nInputPolies);
-	DrawStatusText("Number of input vertices: %d", g_pGlobs->m_nInputVertices);
-	
-	DrawStatusText("");
-	
-	DrawStatusText("Number of output polies: %d", g_pGlobs->m_nOutputPolies);
-	DrawStatusText("Number of output vertices: %d", g_pGlobs->m_nOutputVertices);
-	DrawStatusText("Tree depth: %d", g_pGlobs->m_TreeDepth);
-	DrawStatusText("Memory for vis lists: %d", g_pGlobs->m_VisListMemory);
-	DrawStatusText("Number of (unseen) polies removed: %d", g_pGlobs->m_nPoliesRemoved);
-
-	DrawStatusText("");
-
-	DrawStatusText("Number of leaves: %d", g_pGlobs->m_nLeaves);
-	DrawStatusText("Number of visible leaves: %d", g_pGlobs->m_nVisibleLeaves);
-
-	DrawStatusText("");
-
-	DrawStatusText("Lightmap data size: %d", g_pGlobs->m_LMDataSize);
-	DrawStatusText("Lightmap compression ratio: %.2f", g_pGlobs->m_LMCompressionRatio);
-	DrawStatusText("Number of objects: %d", g_pGlobs->m_nInputObjects);
-
-	DrawStatusText("");
-
-	DrawStatusText("Light table size (from LightTableRes): %dM %dk",
-		g_pGlobs->m_LightTableSize / (k*k), ((g_pGlobs->m_LightTableSize % (k*k)) + 512) / k);
-
-	DrawStatusText("");
-}
-
-
 // Writes the vis BSP's leaves, portals and visibility (PortalFile;
 // 0x441a50, the name is ours).
 BOOL SavePortalFile(CPreMainWorld *pMainWorld, const char *pFilename)
@@ -1474,31 +1382,140 @@ BOOL SavePortalFile(CPreMainWorld *pMainWorld, const char *pFilename)
 }
 
 
+// talon: each test of a bit through an inline helper (the names are
+// ours): the shipped WriteVisibleLeaves (0x44fae0) sinks the ReadVisBit
+// call with what it guards, which `a && ReadVisBit()`, `!a || !b` and
+// nested ifs don't give.
+inline void TestWriteLeaf(CPreLeafList *pList, uint32 *pBit, CNode *pNode, FILE *fp)
+{
+	if(ReadVisBit(pList, pBit))
+		WriteLeafIndex(pNode, fp);
+}
+
+inline void TestWriteNode(CPreLeafList *pList, uint32 *pBit, CNode *pNode, FILE *fp)
+{
+	if(ReadVisBit(pList, pBit))
+		WriteVisibleLeaves(pList, pBit, pNode, fp);
+}
+
 // The leaves a visibility list sees, in the order of a walk down the BSP
-// (0x441ca0; the name is ours).
+// (0x44fae0; the name is ours).
 void WriteVisibleLeaves(CPreLeafList *pList, uint32 *pBit, CNode *pNode, FILE *fp)
 {
 	CNode *pFront, *pBack;
 
-	if(pNode->m_pLeaf && ReadVisBit(pList, pBit))
-		WriteLeafIndex(pNode, fp);
+	if(pNode->m_pLeaf)
+		TestWriteLeaf(pList, pBit, pNode, fp);
 
 	pFront = pNode->m_Sides[0];
 	pBack = pNode->m_Sides[1];
 
-	if(IsValidNode(pFront) && ReadVisBit(pList, pBit))
-		WriteVisibleLeaves(pList, pBit, pFront, fp);
+	if(IsValidNode(pFront))
+		TestWriteNode(pList, pBit, pFront, fp);
 
-	if(IsValidNode(pBack) && ReadVisBit(pList, pBit))
-		WriteVisibleLeaves(pList, pBit, pBack, fp);
+	if(IsValidNode(pBack))
+		TestWriteNode(pList, pBit, pBack, fp);
 }
 
 
-// talon: CheckRegion (the name ours) does nothing: LoadEDFile's call
-// (0x4412f4) goes to 0x40a0a0, a `ret` the shipped link folded with
-// classbind's cb_CheckClassDefs (whose call is 0x40a018).
-void CheckRegion(CEditRegion *pRegion)
+// talon: DrawStatusText, DrawStatusTextIfMainWorld and CloseLogFile come
+// after the EH-framed functions that call them (0x450910, 0x450940,
+// 0x450960: the shipped icl calls them out of line from those), and
+// before ShowStatusText and MergeBrushes, which inline DrawStatusText
+// (0x44ef30, 0x44f350): ours inlines a function of the file only into
+// the functions after it.
+void CloseLogFile()
 {
+	if(g_pGlobs->m_bLogFile && g_pLogFile)
+	{
+		fclose(g_pLogFile);
+		g_pLogFile = NULL;
+	}
+}
+
+
+void DrawStatusText(const char *pMsg, ...)
+{
+	va_list marker;
+
+	va_start(marker, pMsg);
+	InternalDrawStatusText(pMsg, marker);
+	va_end(marker);
+}
+
+
+void DrawStatusTextIfMainWorld(const char *pMsg, ...)
+{
+	va_list marker;
+
+	// talon: an early return (0x45091d: the return falls through, the
+	// call is after it).
+	if(g_pGlobs->m_bMakingWorldModel)
+		return;
+
+	va_start(marker, pMsg);
+	InternalDrawStatusText(pMsg, marker);
+	va_end(marker);
+}
+
+
+void ShowStatusText(DWORD startTime, DWORD endTime)
+{
+	uint32 k = 1024;
+
+	DrawStatusText("Done in %.2f minutes", ((endTime - startTime) / 1000.0f) / 60.0f);
+	
+	DrawStatusText("");
+	
+	DrawStatusText("Number of input polies: %d", g_pGlobs->m_nInputPolies);
+	DrawStatusText("Number of input vertices: %d", g_pGlobs->m_nInputVertices);
+	
+	DrawStatusText("");
+	
+	DrawStatusText("Number of output polies: %d", g_pGlobs->m_nOutputPolies);
+	DrawStatusText("Number of output vertices: %d", g_pGlobs->m_nOutputVertices);
+	DrawStatusText("Tree depth: %d", g_pGlobs->m_TreeDepth);
+	DrawStatusText("Memory for vis lists: %d", g_pGlobs->m_VisListMemory);
+	DrawStatusText("Number of (unseen) polies removed: %d", g_pGlobs->m_nPoliesRemoved);
+
+	DrawStatusText("");
+
+	DrawStatusText("Number of leaves: %d", g_pGlobs->m_nLeaves);
+	DrawStatusText("Number of visible leaves: %d", g_pGlobs->m_nVisibleLeaves);
+
+	DrawStatusText("");
+
+	DrawStatusText("Lightmap data size: %d", g_pGlobs->m_LMDataSize);
+	DrawStatusText("Lightmap compression ratio: %.2f", g_pGlobs->m_LMCompressionRatio);
+	DrawStatusText("Number of objects: %d", g_pGlobs->m_nInputObjects);
+
+	DrawStatusText("");
+
+	DrawStatusText("Light table size (from LightTableRes): %dM %dk",
+		g_pGlobs->m_LightTableSize / (k*k), ((g_pGlobs->m_LightTableSize % (k*k)) + 512) / k);
+
+	DrawStatusText("");
+}
+
+
+BOOL MergeBrushes(
+	GenList<CEditBrush*> &brushes,
+	CPreWorld *pWorld)
+{
+	DrawStatusTextIfMainWorld("Merging %d brushes.", brushes.GenGetSize());
+
+	StartProgressStage(PROGRESS_MERGEBRUSHES);
+	if(!BrushToWorld(brushes, pWorld, ProgressFn))
+	{
+		DrawStatusText("");
+		DrawStatusText("---------------");
+		DrawStatusText("Found an invalid (unprocessable) brush!");
+		DrawStatusText("---------------");
+		return FALSE;
+	}
+
+	EndProgressStage(PROGRESS_MERGEBRUSHES, FALSE);
+	return TRUE;
 }
 
 
