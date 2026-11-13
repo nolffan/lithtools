@@ -270,28 +270,41 @@ int ReplaceTextures(CEditRegion *pRegion, CPreMainWorld *pWorld)
 
 #define NUM_SURFACE_HASH_BUCKETS	512
 
-// 0x446080: the bucket of a surface: its plane, texture vectors and
-// texture name (the multipliers -10000 at 0x475c7c, 10000 at 0x475c78).
+// 0x457010 (AvP2's 0x446080): the bucket of a surface: its texture
+// vectors, plane and texture name (each 10000 a literal of its own,
+// 0x49ba58..0x49ba84). icl adds the terms in the order written, two at a
+// time, and the shipped code takes them in this order: each vector's x
+// comes after the next vector's z (0x4570fc, 0x4571d3).
 uint32 GetSurfaceHash_RS(CPreSurface *pSurface)
 {
 	return ((uint32)pSurface->m_pTextureName +
-		(int)(pSurface->m_pPlane->m_Normal.x * 10000.0f) +
-		(int)(pSurface->m_pPlane->m_Normal.y * 10000.0f) +
-		(int)(pSurface->m_pPlane->m_Normal.z * 10000.0f) +
-		(int)(pSurface->m_TextureO.x * 10000.0f) +
 		(int)(pSurface->m_TextureO.y * 10000.0f) +
 		(int)(pSurface->m_TextureO.z * 10000.0f) +
 		(int)(pSurface->P.x * 10000.0f) +
 		(int)(pSurface->P.y * 10000.0f) +
 		(int)(pSurface->P.z * 10000.0f) +
-		(int)(pSurface->Q.x * 10000.0f) +
+		(int)(pSurface->m_TextureO.x * 10000.0f) +
 		(int)(pSurface->Q.y * 10000.0f) +
-		(int)(pSurface->Q.z * 10000.0f)) & (NUM_SURFACE_HASH_BUCKETS-1);
+		(int)(pSurface->Q.z * 10000.0f) +
+		(int)(pSurface->m_pPlane->m_Normal.x * 10000.0f) +
+		(int)(pSurface->m_pPlane->m_Normal.y * 10000.0f) +
+		(int)(pSurface->m_pPlane->m_Normal.z * 10000.0f) +
+		(int)(pSurface->Q.x * 10000.0f)) & (NUM_SURFACE_HASH_BUCKETS-1);
 }
 
 
-// 0x445e10: whether two surfaces are the same (0.0001 at 0x47559c, as a
-// double at 0x475c70).
+// 0x456dc0 (AvP2's 0x445e10): whether two surfaces are the same (0.0001
+// at 0x47559c, as a double at 0x475c70).
+//
+// Near (592 bytes, shipped 588): the same tests, laid out differently at
+// the end. The shipped code falls from the texture-name test into the
+// shared return FALSE (0x456f98) and branches forward to the flags test,
+// which returns 1 or 0 through jne/xor/inc (0x456fa0); ours falls through
+// into the flags test and keeps the FALSE return at the end. Tried: an if
+// with the flags test in its arm (if/else, nested ifs, an early return on
+// the names, return FALSE first), the negated chain as an early return,
+// the || of the negations, a ternary: the closest of those is size-exact
+// with the name test's branch still the other way.
 BOOL AreSurfacesSame_RS(CPreSurface *pSurface1, CPreSurface *pSurface2)
 {
 	return pSurface1->m_TextureO.Equals(pSurface2->m_TextureO, 0.0001f) &&
