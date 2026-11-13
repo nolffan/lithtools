@@ -93,8 +93,8 @@ void CProcessingOptionsDlg::SetArgs(char *pCmdLine)
 {
 	char *pIn, *pOut;
 
-	pIn = pCmdLine;
 	m_Argc = 0;
+	pIn = pCmdLine;
 	pOut = m_ArgBuffer;
 
 	while((m_Argv[m_Argc] = ProcessorOptions_GetToken(&pIn, &pOut)) != NULL)
