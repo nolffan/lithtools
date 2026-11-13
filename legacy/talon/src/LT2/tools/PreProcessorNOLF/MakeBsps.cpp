@@ -1,12 +1,14 @@
-// talon: 0x0040b540..0x0040cff0, after create_world_tree: making a world
+// talon: 0x0040fa60..0x00411dd0, after create_world_tree: making a world
 // model's (and the physics) BSP, the visibility BSP and its leaves'
 // polies, selecting the problem and out-of-bounds brushes. Written from the
-// image; Build 69 has none of it. The file's name and every function name
+// AvP2 processor's image and brought back to NOLF's (the addresses here are
+// NOLF's); Build 69 has none of it. The file's name and every function name
 // here are ours.
 //
-// 0x40cff0 (22 bytes) is not this module's: it is TextureMipData's
-// constructor (the 2001 one zeroes six fields), dtxmgr's first function,
-// called by TextureData's constructor (0x40d022).
+// The layout looks like two source files: the world model half
+// (0x40fa60..0x410570) is followed by its inline copies (0x4101b0..), then
+// the vis BSP half (GetVisBspBrushes 0x410570..MakeVisBSP) by its own
+// (0x411d30, 0x411db0). Kept as one file until the split is shown.
 
 #include "bdefs.h"
 #include "editregion.h"
@@ -25,23 +27,23 @@
 // written (the names are ours).
 
 // Processing.cpp.
-BOOL BuildWorldHulls(CPreWorld *pWorld, CHullInfo *pInfo);	// 0x43f020
-BOOL MakeHullsAndRemoveUnseen(CPreWorld *pWorld);			// 0x43f5f0
-void FixWorldTJunctions(CPreWorld *pWorld);					// 0x43f810
-BOOL SaveEDFile();											// 0x43edc0
+BOOL BuildWorldHulls(CPreWorld *pWorld, CHullInfo *pInfo);	// 0x44e0b0
+BOOL MakeHullsAndRemoveUnseen(CPreWorld *pWorld);			// 0x44e3c0
+void FixWorldTJunctions(CPreWorld *pWorld);					// 0x44e560
+BOOL SaveEDFile();											// 0x44dbc0
 
-// LeakFile.cpp (0x414790).
+// LeakFile.cpp (0x420be0).
 BOOL MakeLeakFile(CPreWorld *pWorld, const char *pFilename);
 
-// The physics module (0x425d20): the physics blocks of a BSP.
+// The physics module (0x432a40): the physics blocks of a BSP.
 void MakePhysicsBlocks_425d20(CPreWorld *pWorld, BOOL bUnknown, char *pInfoString, BOOL bUnknown2);
 
 
-// talon: a walk of the BSP from a node down (0x40bab0, thiscall on the
+// talon: a walk of the BSP from a node down (0x410320, thiscall on the
 // node) that does nothing in this build: it stops at NODE_IN and NODE_OUT
-// (not at NULL) and touches nothing else. Inline, so its callers expand
-// the first level (0x40b7cd, 0x40cd13). A stand-in on CNode's own class,
-// whose header is shared.
+// (not at NULL) and touches nothing else. Inline: the copy expands its own
+// first level, and the EH-framed callers call it (0x40fef6, 0x411bba). A
+// stand-in on CNode's own class, whose header is shared.
 class CMBNode : public CNode
 {
 public:
@@ -60,15 +62,92 @@ BOOL SelectProblemBrushes(CEditRegion *pRegion);
 BOOL SelectOutOfBoundsBrushes(CEditRegion *pRegion);
 void GetBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrushes);
 void RemoveTerrainOccluderPolies(CPreWorld *pWorld);
+void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> &polies);
+void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode);
 
 
-// A world model's BSP (0x40b540): bPhysicsBSP for the physics BSP, which
+// Takes the polies on SURF_TERRAINOCCLUDER surfaces out of the world's
+// list (0x40fa60). They are not freed. Through GenList: the shipped calls
+// are virtual.
+// talon: through pWorld->m_Polies each time, no reference: 0x40fa60
+// recomputes the list's address for every call
+void RemoveTerrainOccluderPolies(CPreWorld *pWorld)
+{
+	GenListPos			pos, curPos;
+	CPrePoly			*pPoly;
+
+	for(pos=pWorld->m_Polies.GenBegin(); pWorld->m_Polies.GenIsValid(pos); )
+	{
+		curPos = pos;
+		pPoly = pWorld->m_Polies.GenGetNext(pos);
+		if(pPoly->GetSurfaceFlags() & SURF_TERRAINOCCLUDER)
+			pWorld->m_Polies.GenRemoveAt(curPos);
+	}
+}
+
+
+// -SelectProblemBrushes: selects the brushes the brush checks found
+// problems in, and the out-of-bounds ones, and saves the ED file (0x40fb10).
+BOOL SelectProblemBrushes(CEditRegion *pRegion)
+{
+	uint32 i;
+
+	DrawStatusText("");
+	DrawStatusText("---------------");
+	DrawStatusText("Selecting %d problem brushes", g_ProblemBrushes.GetSize() + g_OutOfBoundsBrushes.GetSize());
+	DrawStatusText("---------------");
+
+	for(i=0; i < g_ProblemBrushes; i++)
+		pRegion->SelectNode(g_ProblemBrushes[i]);
+
+	for(i=0; i < g_OutOfBoundsBrushes; i++)
+		pRegion->SelectNode(g_OutOfBoundsBrushes[i]);
+
+	return SaveEDFile();
+}
+
+
+// -SelectOutOfBoundsBrushes: selects the out-of-bounds brushes and saves
+// the ED file (0x40fbd0).
+BOOL SelectOutOfBoundsBrushes(CEditRegion *pRegion)
+{
+	uint32 i;
+
+	DrawStatusText("");
+	DrawStatusText("---------------");
+	DrawStatusText("Selecting %d out-of-bounds brushes", g_OutOfBoundsBrushes.GetSize());
+	DrawStatusText("---------------");
+
+	for(i=0; i < g_OutOfBoundsBrushes; i++)
+		pRegion->SelectNode(g_OutOfBoundsBrushes[i]);
+
+	return SaveEDFile();
+}
+
+
+// The brushes that go into a world model's BSP: all but the hull makers
+// and terrain occluders (0x40fc60).
+void GetBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrushes)
+{
+	GenListPos	pos;
+	CEditBrush	*pBrush;
+
+	for(pos=brushes.GenBegin(); brushes.GenIsValid(pos); )
+	{
+		pBrush = brushes.GenGetNext(pos);
+		if(!(GetBrushType(pBrush) & (SURF_HULLMAKER|SURF_TERRAINOCCLUDER)))
+			bspBrushes.GenAppend(pBrush);
+	}
+}
+
+
+// A world model's BSP (0x40fcf0, a $$1 pair): bPhysicsBSP for the physics BSP, which
 // also loses the polies no leaf sees. Brushes the brush checks found
 // problems in stop it with SelectProblemBrushes or
 // SelectOutOfBoundsBrushes (after saving the ED file with them selected).
 BOOL MakeWorldModelBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld, BOOL bPhysicsBSP)
 {
-	// talon: an initialized static (0x47e2e8, TRUE, read only here), passed
+	// talon: an initialized static (0x489420, TRUE, read only here), passed
 	// as MakeBsp's bUseOriginalPolies; the name is ours.
 	static BOOL					bUseOriginalPolies = TRUE;
 	CLinkedList<CEditBrush*>	brushes;
@@ -81,7 +160,7 @@ BOOL MakeWorldModelBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pW
 	if(!MergeBrushes(brushes, pWorld))
 		return FALSE;
 
-	// talon: GenRemoveAll, not RemoveAll: both are 0x407bd0, but only this
+	// talon: GenRemoveAll, not RemoveAll: both are 0x40a820, but only this
 	// leaves the inline budget the shipped code has (the destructors'
 	// RemoveAll calls at the early returns, expanded at the end).
 	brushes.GenRemoveAll();
@@ -152,68 +231,8 @@ BOOL MakeWorldModelBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pW
 }
 
 
-// Takes the polies on SURF_TERRAINOCCLUDER surfaces out of the world's
-// list (0x40bad0). They are not freed. Through GenList: the shipped calls
-// are virtual.
-// talon: through pWorld->m_Polies each time, no reference: 0x40fa60
-// recomputes the list's address for every call
-void RemoveTerrainOccluderPolies(CPreWorld *pWorld)
-{
-	GenListPos			pos, curPos;
-	CPrePoly			*pPoly;
-
-	for(pos=pWorld->m_Polies.GenBegin(); pWorld->m_Polies.GenIsValid(pos); )
-	{
-		curPos = pos;
-		pPoly = pWorld->m_Polies.GenGetNext(pos);
-		if(pPoly->GetSurfaceFlags() & SURF_TERRAINOCCLUDER)
-			pWorld->m_Polies.GenRemoveAt(curPos);
-	}
-}
-
-
-// -SelectProblemBrushes: selects the brushes the brush checks found
-// problems in, and the out-of-bounds ones, and saves the ED file (0x40bb50).
-BOOL SelectProblemBrushes(CEditRegion *pRegion)
-{
-	uint32 i;
-
-	DrawStatusText("");
-	DrawStatusText("---------------");
-	DrawStatusText("Selecting %d problem brushes", g_ProblemBrushes.GetSize() + g_OutOfBoundsBrushes.GetSize());
-	DrawStatusText("---------------");
-
-	for(i=0; i < g_ProblemBrushes; i++)
-		pRegion->SelectNode(g_ProblemBrushes[i]);
-
-	for(i=0; i < g_OutOfBoundsBrushes; i++)
-		pRegion->SelectNode(g_OutOfBoundsBrushes[i]);
-
-	return SaveEDFile();
-}
-
-
-// -SelectOutOfBoundsBrushes: selects the out-of-bounds brushes and saves
-// the ED file (0x40bbf0).
-BOOL SelectOutOfBoundsBrushes(CEditRegion *pRegion)
-{
-	uint32 i;
-
-	DrawStatusText("");
-	DrawStatusText("---------------");
-	DrawStatusText("Selecting %d out-of-bounds brushes", g_OutOfBoundsBrushes.GetSize());
-	DrawStatusText("---------------");
-
-	for(i=0; i < g_OutOfBoundsBrushes; i++)
-		pRegion->SelectNode(g_OutOfBoundsBrushes[i]);
-
-	return SaveEDFile();
-}
-
-
-// The brushes that go into a world model's BSP: all but the hull makers
-// and terrain occluders (0x40bc60).
-void GetBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrushes)
+// The brushes that go into the vis BSP: the detail level 0 ones (0x410570).
+void GetVisBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrushes)
 {
 	GenListPos	pos;
 	CEditBrush	*pBrush;
@@ -221,123 +240,17 @@ void GetBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrush
 	for(pos=brushes.GenBegin(); brushes.GenIsValid(pos); )
 	{
 		pBrush = brushes.GenGetNext(pos);
-		if(!(GetBrushType(pBrush) & (SURF_HULLMAKER|SURF_TERRAINOCCLUDER)))
+		if(!GetDetailLevel(pBrush))
 			bspBrushes.GenAppend(pBrush);
 	}
 }
 
 
-void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> &polies);
-void SplitPolyList(CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2]);
-
-// talon: a GenList's GDeleteAndRemoveElements. Not known to be in the
-// source: as an inline (and its own block-scoped GenListPos), it gives
-// AddTerrainBlockers the shipped frame (pos at 0x10, GenBegin's temporary
-// at 0x18, 0x40c12b) and the virtual calls 0x40c1c3..0x40c227 have; the
-// name is ours.
-template<class T>
-inline void GenDeleteAndRemoveElements(GenList<T> &theList)
-{
-	GenListPos pos;
-
-	for(pos=theList.GenBegin(); theList.GenIsValid(pos); )
-		delete theList.GenGetNext(pos);
-
-	theList.GenRemoveAll();
-}
-
-
-// Makes the terrain block visibility in the vis BSP (0x40bfb0): the
-// terrain world models' polies are filtered down it, and where a piece
-// lands in front of a node whose back is outside, a node marked as a
-// blocker (CNode::m_Unknown_1a & 1; BuildHulls.cpp) is added behind it.
-// FALSE if there's no physics BSP.
-// Near (804 bytes against 797): the inline budget. Shipped (0x40c22a..):
-// both lists' destructors at the end call RemoveAll and expand ObjectBank's
-// destructor; ours expands RemoveAll and calls ~ObjectBank. Append (not
-// AddTail) leaves InsertAfter and AddHead calls as shipped (0x40c16f,
-// 0x40c17a); with AddTail the end comes out as shipped but InsertAfter is
-// expanded. The GetPhysicsBSP test is `cmp %ebx,%eax` in the shipped code
-// (0x40c066), `test` in ours, and pWorld is held in esi there.
-// talon, retail bug: the pieces are malloc'd (CreatePoly, in SplitPoly)
-// and freed with delete (0x40c209, the virtual destructor with 1), not
-// DeletePoly; it works only because operator delete is free.
-BOOL AddTerrainBlockers(CPreWorld *pWorld)
-{
-	CLinkedList<CPrePoly*>	polies;
-	CLinkedList<CPrePoly*>	newPolies;
-	CPreMainWorld			*pMainWorld;
-	CPreWorld				*pModel;
-	uint32					i;
-
-	pMainWorld = pWorld->m_pMainWorld;
-	if(!pMainWorld->GetPhysicsBSP())
-		return FALSE;
-
-	for(i=0; i < pMainWorld->m_WorldModels; i++)
-	{
-		pModel = pMainWorld->m_WorldModels[i];
-		if(pModel->m_WorldInfoFlags & WIF_TERRAIN)
-		{
-			GenListPos pos;
-
-			for(pos=pModel->m_Polies.GenBegin(); pModel->m_Polies.GenIsValid(pos); )
-				polies.Append(pModel->m_Polies.GenGetNext(pos));
-		}
-	}
-
-	FilterTerrainPolies_R(pWorld, pWorld->m_RootNode, newPolies, polies);
-
-	// The pieces split off are the walk's own.
-	GenDeleteAndRemoveElements(newPolies);
-	return TRUE;
-}
-
-
-// The walk (0x40c2d0): polies split on pNode's plane into the lists of its
-// two sides (the new pieces into newPolies too), then down each side.
-// Near, size-exact (324 bytes): the scratch registers at the three
-// recursive calls and the array destructor (shipped puts the side list's
-// address in eax/edx and the child in ecx, 0x40c3a8..0x40c3eb; ours
-// ecx/edx and edx/eax). The parameter as a CLinkedList& doesn't move it,
-// nor (round 2) GetSize() without `> 0`, GetCount, an assignment in the
-// if, the pSides initialiser, the declaration order, CNode* or const
-// NODEREF for pNode, or an explicit `| 1`.
-void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> &polies)
-{
-	CLinkedList<CPrePoly*>	sides[2];
-	GenList<CPrePoly*>		*pSides[2];
-	CNode					*pNewNode;
-
-	if(!IsValidNode(pNode))
-		return;
-
-	pSides[0] = &sides[0];
-	pSides[1] = &sides[1];
-	// talon: casts, as below: NOLF's LTPlane::DistTo isn't const and Node.h's
-	// m_pPlane is (the 2001 one likely wasn't)
-	SplitPolyList((CPrePlane*)pNode->m_pPlane, polies, newPolies, pSides);
-
-	if(pNode->m_Sides[BackSide] == NODE_OUT && sides[BackSide].GetSize() > 0)
-	{
-		pNewNode = AddBacksideNode(pWorld, pNode);
-		if(pNewNode)
-			pNewNode->m_Unknown_1a |= 1;
-
-		FilterTerrainPolies_R(pWorld, pNode->m_Sides[FrontSide], newPolies, sides[FrontSide]);
-	}
-	else
-	{
-		FilterTerrainPolies_R(pWorld, pNode->m_Sides[BackSide], newPolies, sides[BackSide]);
-		FilterTerrainPolies_R(pWorld, pNode->m_Sides[FrontSide], newPolies, sides[FrontSide]);
-	}
-}
-
-
-// Sorts polies by pPlane into sideLists (0x40c420); the ones it cuts go in
+// Sorts polies by pPlane into sideLists (0x410600); the ones it cuts go in
 // pieces into both, and the pieces into newPolies too.
-// talon, retail bug: SplitPoly's result is not looked at (0x40c5fb), so a
-// poly it gave up on (more than two edge splits) still goes on in pieces.
+// talon, retail bug: SplitPoly's result is not looked at (its "Bad poly"
+// path, 0x410991, goes on to the appends at 0x410bbc), so a poly it gave
+// up on (more than two edge splits) still goes on in pieces.
 void SplitPolyList(CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2])
 {
 	SplitStruct		splitStruct;
@@ -367,55 +280,95 @@ void SplitPolyList(CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePo
 }
 
 
-void ClearLeafPolies(CPreWorld *pWorld);
-void AddPoliesToLeaves(CPreWorld *pWorld, GenList<CPrePoly*> &polies);
+// The walk (0x410d80): polies split on pNode's plane into the lists of its
+// two sides (the new pieces into newPolies too), then down each side. The
+// node's plane through CNode::GetPlane (0x40fa50, called at 0x410e3a), the
+// back list's size through GenGetSize (virtual, 0x410f17).
+void FilterTerrainPolies_R(CPreWorld *pWorld, NODEREF pNode, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> &polies)
+{
+	CLinkedList<CPrePoly*>	sides[2];
+	GenList<CPrePoly*>		*pSides[2];
+	CNode					*pNewNode;
 
-// Finds the vis BSP's leaves (0x40c640): makes its hulls and gives each
-// leaf the polies of the physics BSP and the terrain that are in it.
-// MakeVisBSP and MakeWorldPVS (0x43f272) call it.
-// Near (606 bytes against 618): the inline budget. Shipped calls
-// ObjectBank::Allocate (0x40c7c6) where ours expands it to sb_Allocate,
-// expands ~ObjectBank at the failure return (0x40c6eb) where ours calls it,
-// and calls sb_Free in the final RemoveAll (0x40c851) where ours expands
-// it. The model poly position is block-scoped: it shares GenBegin's
-// temporary's slot (0x10) as shipped. Round 2: shipped's 0x40c8b0 is
-// sb_Free (cdecl), called in both RemoveAll loops. One dead
-// `polies.GetSize();` before the return makes it size-exact (618) and
-// fixes the final destructor and Allocate; the failure path then still
-// calls ObjectBank::Free where shipped expands it to the sb_Free call
-// (not kept: not identical). Append for AddTail, dead calls at the top or
-// in the loop: no better.
-BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP)
+	if(!IsValidNode(pNode))
+		return;
+
+	pSides[0] = &sides[0];
+	pSides[1] = &sides[1];
+	// talon: a cast, as below: NOLF's LTPlane::DistTo isn't const and
+	// Node.h's GetPlane is (the 2001 one likely wasn't)
+	SplitPolyList((CPrePlane*)pNode->GetPlane(), polies, newPolies, pSides);
+
+	if(pNode->m_Sides[BackSide] == NODE_OUT && pSides[BackSide]->GenGetSize() > 0)
+	{
+		pNewNode = AddBacksideNode(pWorld, pNode);
+		if(pNewNode)
+			pNewNode->m_Unknown_1a |= 1;
+
+		FilterTerrainPolies_R(pWorld, pNode->m_Sides[FrontSide], newPolies, sides[FrontSide]);
+	}
+	else
+	{
+		FilterTerrainPolies_R(pWorld, pNode->m_Sides[BackSide], newPolies, sides[BackSide]);
+		FilterTerrainPolies_R(pWorld, pNode->m_Sides[FrontSide], newPolies, sides[FrontSide]);
+	}
+}
+
+
+// talon: a GenList's GDeleteAndRemoveElements, out of line at 0x411d30
+// (AddTerrainBlockers calls it, 0x41107a): virtual GenBegin, GenIsValid,
+// GenGetNext, the deleting destructor and GenRemoveAll. stdlith has no such
+// helper (linklist.h's DeleteAndRemoveElements is CLinkedList's); the name
+// is ours.
+template<class T>
+inline void GenDeleteAndRemoveElements(GenList<T> &theList)
+{
+	GenListPos pos;
+
+	for(pos=theList.GenBegin(); theList.GenIsValid(pos); )
+		delete theList.GenGetNext(pos);
+
+	theList.GenRemoveAll();
+}
+
+
+// Makes the terrain block visibility in the vis BSP (0x410f80): the
+// terrain world models' polies are filtered down it, and where a piece
+// lands in front of a node whose back is outside, a node marked as a
+// blocker (CNode::m_Unknown_1a & 1; BuildHulls.cpp) is added behind it.
+// FALSE if there's no physics BSP. NOLF's takes each terrain model's
+// polies with GenAppendList (0x411029, 0x42ba20).
+// talon, retail bug: the pieces are malloc'd (CreatePoly, in SplitPoly)
+// and freed with delete (0x411d7f, the virtual destructor with 1), not
+// DeletePoly; it works only because operator delete is free.
+BOOL AddTerrainBlockers(CPreWorld *pWorld)
 {
 	CLinkedList<CPrePoly*>	polies;
+	CLinkedList<CPrePoly*>	newPolies;
 	CPreMainWorld			*pMainWorld;
 	CPreWorld				*pModel;
-	GenListPos				pos;
+	uint32					i;
 
-	if(!BuildWorldHulls(pVisBSP, NULL))
+	pMainWorld = pWorld->m_pMainWorld;
+	if(!pMainWorld->GetPhysicsBSP())
 		return FALSE;
 
-	pMainWorld = pVisBSP->m_pMainWorld;
-	ClearLeafPolies(pVisBSP);
-
-	for(pos=pMainWorld->m_WorldModels.GenBegin(); pMainWorld->m_WorldModels.GenIsValid(pos); )
+	for(i=0; i < pMainWorld->m_WorldModels; i++)
 	{
-		pModel = pMainWorld->m_WorldModels.GenGetNext(pos);
-		if(pModel->m_WorldInfoFlags & (WIF_TERRAIN|WIF_PHYSICSBSP))
-		{
-			GenListPos polyPos;
-
-			for(polyPos=pModel->m_Polies.GenBegin(); pModel->m_Polies.GenIsValid(polyPos); )
-				polies.AddTail(pModel->m_Polies.GenGetNext(polyPos));
-		}
+		pModel = pMainWorld->m_WorldModels[i];
+		if(pModel->m_WorldInfoFlags & WIF_TERRAIN)
+			polies.GenAppendList(pModel->m_Polies);
 	}
 
-	AddPoliesToLeaves(pVisBSP, polies);
+	FilterTerrainPolies_R(pWorld, pWorld->m_RootNode, newPolies, polies);
+
+	// The pieces split off are the walk's own.
+	GenDeleteAndRemoveElements(newPolies);
 	return TRUE;
 }
 
 
-// Empties each leaf's poly list (0x40c8d0; the calls are virtual).
+// Empties each leaf's poly list (0x411100; the calls are virtual).
 // talon: through pWorld->m_Leaves each time, as 0x411100 has it
 void ClearLeafPolies(CPreWorld *pWorld)
 {
@@ -428,41 +381,14 @@ void ClearLeafPolies(CPreWorld *pWorld)
 }
 
 
-void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode);
-
-// Each visible poly into the leaves it's in (0x40c930).
-void AddPoliesToLeaves(CPreWorld *pWorld, GenList<CPrePoly*> &polies)
-{
-	GenListPos	pos;
-	CPrePoly	*pPoly;
-
-	for(pos=polies.GenBegin(); polies.GenIsValid(pos); )
-	{
-		pPoly = polies.GenGetNext(pos);
-		if(!(pPoly->GetSurfaceFlags() & SURF_INVISIBLE))
-			FilterPolyIntoLeaves_R(pPoly, pPoly, pWorld->m_RootNode);
-	}
-}
-
-
 // pPoly (pOriginal or a piece of it) down the BSP from pNode; pOriginal
-// goes into the leaf of each node it's not behind (0x40c9b0).
-// Near (525 bytes against 530): the inline budget. Shipped calls
-// _CVector::Dot (0x40ca27, the point copied to the stack, the plane kept in
-// a slot) in GetPolySide's DistTo, where ours expands it; the second Dot
-// (the poly's normal, 0x40cac1) is expanded in both. Measured: one more
-// expansion that compiles to nothing anywhere after GetPolySide calls that
-// Dot and makes it size-exact (530); what is left is pPoly in ebp where
-// shipped has ebx (and the vertex pointer the other way), the same with
-// the dead expansion placed or spelled several ways (round 2: a dead
-// IsValidNode(pNode)/pPoly->NumVerts()/pOriginal->NumVerts() after
-// GetPolySide, at the loop's end, in the else, in the leaf test; int i,
-// uint32 side: all the same swap).
-// talon, retail bug: when SplitPoly gives up (0x40cb61) it returns without
-// freeing the two pieces SplitPoly made.
+// goes into the leaf of each node it's not behind (0x411180, a $$1 pair).
+// talon, retail bug: when SplitPoly gives up (more than two pieces' worth
+// of edge splits, 0x411717) it returns without freeing the two pieces
+// SplitPoly made.
 void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode)
 {
-	static SplitStruct	splitStruct;		// 0x4845c0 (.bss)
+	static SplitStruct	splitStruct;		// 0x48cf20 (.bss)
 	CPrePoly			*sides[2];
 	PolySide			side;
 	uint32				i;
@@ -493,17 +419,60 @@ void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode)
 }
 
 
-void GetVisBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrushes);
+// Each visible poly into the leaves it's in (0x4118f0).
+void AddPoliesToLeaves(CPreWorld *pWorld, GenList<CPrePoly*> &polies)
+{
+	GenListPos	pos;
+	CPrePoly	*pPoly;
 
-// The visibility BSP (0x40cbd0): made of the detail level 0 brushes, with
+	for(pos=polies.GenBegin(); polies.GenIsValid(pos); )
+	{
+		pPoly = polies.GenGetNext(pos);
+		if(!(pPoly->GetSurfaceFlags() & SURF_INVISIBLE))
+			FilterPolyIntoLeaves_R(pPoly, pPoly, pWorld->m_RootNode);
+	}
+}
+
+
+// Finds the vis BSP's leaves (0x411980): makes its hulls and gives each
+// leaf the polies of the physics BSP and the terrain that are in it, each
+// model's with GenAppendList (0x411a74). MakeVisBSP and MakeWorldPVS
+// (0x44e1eb) call it.
+BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP)
+{
+	CLinkedList<CPrePoly*>	polies;
+	CPreMainWorld			*pMainWorld;
+	CPreWorld				*pModel;
+	GenListPos				pos;
+
+	if(!BuildWorldHulls(pVisBSP, NULL))
+		return FALSE;
+
+	pMainWorld = pVisBSP->m_pMainWorld;
+	ClearLeafPolies(pVisBSP);
+
+	for(pos=pMainWorld->m_WorldModels.GenBegin(); pMainWorld->m_WorldModels.GenIsValid(pos); )
+	{
+		pModel = pMainWorld->m_WorldModels.GenGetNext(pos);
+		if(pModel->m_WorldInfoFlags & (WIF_TERRAIN|WIF_PHYSICSBSP))
+			polies.GenAppendList(pModel->m_Polies);
+	}
+
+	AddPoliesToLeaves(pVisBSP, polies);
+	return TRUE;
+}
+
+
+// The visibility BSP (0x411ae0): made of the detail level 0 brushes, with
 // the unseen polies removed; the terrain blocks it, and its leaves get
-// their polies.
+// their polies. NOLF's: no hulls before the leak file, which is made last,
+// under the -LeakFile name itself (AvP2's adds "_Vis.lek" and is made
+// before the unseen geometry goes).
 BOOL MakeVisBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld)
 {
-	// talon: as MakeWorldModelBSP's (0x47e414, TRUE).
+	// talon: as MakeWorldModelBSP's (0x4894a0, TRUE).
 	static BOOL					bUseOriginalPolies = TRUE;
 	CLinkedList<CEditBrush*>	brushes;
-	char						leakFile[MAX_PATH + 10];
 
 	GetVisBspBrushes(pDef->m_Brushes, brushes);
 	GenerateSurfaces(brushes, pWorld);
@@ -518,17 +487,6 @@ BOOL MakeVisBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld)
 
 	((CMBNode*)pWorld->m_RootNode)->Walk_40bab0();
 
-	if(g_pGlobs->m_LeakFile[0] && (pWorld->m_WorldInfoFlags & WIF_VISBSP))
-	{
-		BuildWorldHulls(pWorld, NULL);
-		strncpy(leakFile, g_pGlobs->m_LeakFile, MAX_PATH);
-		// talon: strncat with the whole buffer's size (0x40cd6b, 270), not
-		// what is left of it; m_LeakFile's 255 characters keep it inside.
-		strncat(leakFile, "_Vis.lek", sizeof(leakFile));
-		DrawStatusText("Making VisBSP leak file: %s", leakFile);
-		MakeLeakFile(pWorld, leakFile);
-	}
-
 	DrawStatusTextIfMainWorld("Removing unseen geometry.");
 	if(!MakeHullsAndRemoveUnseen(pWorld))
 		return FALSE;
@@ -537,7 +495,7 @@ BOOL MakeVisBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld)
 	pWorld->TermLeaves();
 	pWorld->RemoveAllNodes();
 
-	// talon, retail bug: what this BSP returns is not looked at (0x40ce37;
+	// talon, retail bug: what this BSP returns is not looked at (0x411c38;
 	// MakeWorldModelBSP's is): a failed vis BSP goes on to the PVS.
 	DrawStatusTextIfMainWorld("Recreating BSP.");
 	MakeBsp(pWorld, TRUE, TRUE, bUseOriginalPolies);
@@ -549,26 +507,18 @@ BOOL MakeVisBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld)
 
 	pWorld->InitPolyVertexIndices();
 
-	// talon: nor what this returns (0x40cec7); MakeWorldPVS calls it again
+	// talon: nor what this returns (0x411c95); MakeWorldPVS calls it again
 	// and does look.
 	DrawStatusTextIfMainWorld("Finding leaves.");
 	SetupVisBSPLeaves(pWorld);
 
 	DrawStatusText("-  %s (%d polies)", pWorld->m_WorldName, pWorld->m_Polies.GetSize());
-	return TRUE;
-}
 
-
-// The brushes that go into the vis BSP: the detail level 0 ones (0x40cf70).
-void GetVisBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrushes)
-{
-	GenListPos	pos;
-	CEditBrush	*pBrush;
-
-	for(pos=brushes.GenBegin(); brushes.GenIsValid(pos); )
+	if(g_pGlobs->m_LeakFile[0] && (pWorld->m_WorldInfoFlags & WIF_VISBSP))
 	{
-		pBrush = brushes.GenGetNext(pos);
-		if(!GetDetailLevel(pBrush))
-			bspBrushes.GenAppend(pBrush);
+		DrawStatusText("Making VisBSP leak file.");
+		MakeLeakFile(pWorld, g_pGlobs->m_LeakFile);
 	}
+
+	return TRUE;
 }
