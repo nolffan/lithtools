@@ -1735,6 +1735,16 @@ static PreWorldModelInfo* FindWorldModelInfo(const char *pName, PreWorldModelInf
 }
 
 
+// talon: NOLF's (0x426ef0, 2044 bytes). The box's corners read the main
+// world's m_PosMin/m_PosMax afresh for each Init (m_pWorld reloaded,
+// 0x426fda..0x4270de), not through references; m_vMax gets pts[0] and
+// m_vMin is copied from it (0x42712c, 0x427134); the untransformed arm
+// clears bInvisible after its two copies (0x4276dd). Near (ours 2059):
+// the loop keeps &m_LMMWorlds[i]'s offset in ebx and the array in a slot
+// (ours the other way round), the transform's terms in another order
+// (0x42716a), RemoveFromWorldTree's vtable loaded into eax (0x427599).
+// The corners are the main world's box, not the model's own
+// (pWorld->m_pWorld's, as the untransformed arm uses): retail as shipped.
 BOOL CLightMapMaker::SetupWorldModels(PreWorldModelInfo *pInfos, uint32 nInfos)
 {
 	LMMWorld *pWorld;
@@ -1756,19 +1766,16 @@ BOOL CLightMapMaker::SetupWorldModels(PreWorldModelInfo *pInfos, uint32 nInfos)
 				&pWorld->m_mTransform, &pWorld->m_mInverseTransform);
 
 			// Where the world's box ends up.
-			PVector &vMin = m_pWorld->m_PosMin;
-			PVector &vMax = m_pWorld->m_PosMax;
-			pts[0].Init(vMin.x, vMin.y, vMin.z);
-			pts[1].Init(vMin.x, vMax.y, vMin.z);
-			pts[2].Init(vMax.x, vMin.y, vMin.z);
-			pts[3].Init(vMax.x, vMax.y, vMin.z);
-			pts[4].Init(vMin.x, vMin.y, vMax.z);
-			pts[5].Init(vMin.x, vMax.y, vMax.z);
-			pts[6].Init(vMax.x, vMin.y, vMax.z);
-			pts[7].Init(vMax.x, vMax.y, vMax.z);
+			pts[0].Init(m_pWorld->m_PosMin.x, m_pWorld->m_PosMin.y, m_pWorld->m_PosMin.z);
+			pts[1].Init(m_pWorld->m_PosMin.x, m_pWorld->m_PosMax.y, m_pWorld->m_PosMin.z);
+			pts[2].Init(m_pWorld->m_PosMax.x, m_pWorld->m_PosMin.y, m_pWorld->m_PosMin.z);
+			pts[3].Init(m_pWorld->m_PosMax.x, m_pWorld->m_PosMax.y, m_pWorld->m_PosMin.z);
+			pts[4].Init(m_pWorld->m_PosMin.x, m_pWorld->m_PosMin.y, m_pWorld->m_PosMax.z);
+			pts[5].Init(m_pWorld->m_PosMin.x, m_pWorld->m_PosMax.y, m_pWorld->m_PosMax.z);
+			pts[6].Init(m_pWorld->m_PosMax.x, m_pWorld->m_PosMin.y, m_pWorld->m_PosMax.z);
+			pts[7].Init(m_pWorld->m_PosMax.x, m_pWorld->m_PosMax.y, m_pWorld->m_PosMax.z);
 
-			pWorld->m_vMax = pts[0];
-			pWorld->m_vMin = pts[0];
+			pWorld->m_vMin = pWorld->m_vMax = pts[0];
 			for(iPt=0; iPt < 8; iPt++)
 			{
 				pts[iPt] = pWorld->m_mTransform * pts[iPt];
@@ -1782,9 +1789,9 @@ BOOL CLightMapMaker::SetupWorldModels(PreWorldModelInfo *pInfos, uint32 nInfos)
 		{
 			pWorld->m_bUsingTransform = FALSE;
 			pWorld->m_mTransform.Identity();
-			bInvisible = FALSE;
 			pWorld->m_vMin = pWorld->m_pWorld->m_PosMin;
 			pWorld->m_vMax = pWorld->m_pWorld->m_PosMax;
+			bInvisible = FALSE;
 		}
 
 		pWorld->m_mInverseTransform = pWorld->m_mTransform.MakeInverse();
