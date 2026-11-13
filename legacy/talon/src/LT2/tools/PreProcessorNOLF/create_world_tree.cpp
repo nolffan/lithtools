@@ -12,6 +12,13 @@
 // A poly and its world model (the names are ours).
 struct WTPolyRef
 {
+	// talon: out of line at 0x40fa30 (CreateWorldTree's one call).
+	void	Init(CEditPoly *pPoly, CWorldModelDef *pWorldModel)
+	{
+		m_pPoly = pPoly;
+		m_pWorldModel = pWorldModel;
+	}
+
 	CEditPoly		*m_pPoly;
 	CWorldModelDef	*m_pWorldModel;
 };
@@ -225,6 +232,12 @@ BOOL CreateNodes_R(	WorldTree *pWorldTree, WorldTreeNode *pNode,
 }
 
 
+// talon: 0x40ec90 (its tail 0x40ef0d, the main world models' poly loop at
+// 0x40efa9). Near under the file's /Ob0 (1047 bytes, shipped 1020): ours
+// calls minBox's and maxBox's empty constructors, which the shipped code
+// drops (as OnPaint's CRect(), 0x441a30), and merges the poly loop's two
+// increments into one load/inc/store pair where the shipped code has two
+// incl (0x40f052); ++iOutPoly and += 1 do the same.
 BOOL CreateWorldTree(WorldTree *pWorldTree,
 	CMoArray<CWorldModelDef*> &worldModels, char *pInfoString)
 {
@@ -260,10 +273,7 @@ BOOL CreateWorldTree(WorldTree *pWorldTree,
 
 			for(iPoly=0; iPoly < pBrush->m_Polies; iPoly++)
 			{
-				pPoly = pBrush->m_Polies[iPoly];
-				WTPolyRef *pRef = &rootPolies[iOutPoly];
-				pRef->m_pPoly = pPoly;
-				pRef->m_pWorldModel = pWorldModel;
+				rootPolies[iOutPoly].Init(pBrush->m_Polies[iPoly], pWorldModel);
 				iOutPoly++;
 			}
 		}
