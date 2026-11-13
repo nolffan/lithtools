@@ -189,12 +189,11 @@ PVector CLightMapMaker::CalcSunLightSample(PVector dir)
 // the helper: written out as one `||` guard (LightMapMaker.cpp's form), VC6
 // sinks the return block to the end of the function, where the shipped code
 // has it straight after the last test (0x4162c0, 0x416cc8). The names are
-// ours.
+// ours. talon: NOLF's has no vertices-only test: its out-of-line copy
+// (0x42f710, called by ThreadLightPoly) and the one expanded in
+// InitPolyLightmapFill (0x42440e) test the three flags alone.
 static inline BOOL ShouldLightmap(CPrePoly *pPoly)
 {
-	if(g_pGlobs->m_bVerticesOnly)
-		return FALSE;
-
 	return (pPoly->GetSurfaceFlags() & SURF_LIGHTMAP) &&
 		!(pPoly->GetSurfaceFlags() & SURF_INVISIBLE) &&
 		!(pPoly->GetSurfaceFlags() & SURF_SKY);
@@ -226,24 +225,13 @@ BOOL CLightMapMaker::InitPolyLightmapFill(CPrePoly *pPoly, CFullLightMap *pMap)
 
 	if(pPoly->GetSurface()->m_Flags & SURF_DIRECTIONALLIGHT)
 	{
-		pPlane = pPoly->GetSurface()->m_pPlane;
 		fillColor = m_AmbientLight;
+		pPlane = pPoly->GetSurface()->m_pPlane;
 		fillColor += CalcSunLightSample(PVector(pPlane->m_Normal.x, pPlane->m_Normal.y, pPlane->m_Normal.z));
 
-		if(fillColor.x < 0.0f)
-			fillColor.x = 0.0f;
-		else if(fillColor.x > 255.0f)
-			fillColor.x = 255.0f;
-
-		if(fillColor.y < 0.0f)
-			fillColor.y = 0.0f;
-		else if(fillColor.y > 255.0f)
-			fillColor.y = 255.0f;
-
-		if(fillColor.z < 0.0f)
-			fillColor.z = 0.0f;
-		else if(fillColor.z > 255.0f)
-			fillColor.z = 255.0f;
+		fillColor.x = LTCLAMP(fillColor.x, 0.0f, 255.0f);
+		fillColor.y = LTCLAMP(fillColor.y, 0.0f, 255.0f);
+		fillColor.z = LTCLAMP(fillColor.z, 0.0f, 255.0f);
 	}
 	else
 	{
@@ -1046,7 +1034,7 @@ static LTBOOL SunWorldModelCB(WorldTreeObj *pObj, void *pUser)
 	pPoly = FindSegmentHit(pWorld->m_pWorld->m_RootNode, &pQuery->m_vStart, &pQuery->m_vEnd, &vHit);
 	if(pPoly)
 	{
-		distSqr = (vHit - pQuery->m_vStart).MagSqr();
+		distSqr = VEC_DISTSQR(vHit, pQuery->m_vStart);
 		if(distSqr < pQuery->m_fBestDistSqr || !pQuery->m_pHitPoly)
 		{
 			pQuery->m_pHitPoly = pPoly;
@@ -1068,38 +1056,41 @@ static CPrePoly* FindSegmentHit(NODEREF pNode, PVector *pStart, PVector *pEnd, P
 	PVector		vHit;
 	uint32		side1, side2;
 
-	// The two tail calls are jumps back to the top (0x4188d7, 0x4189a7):
-	// written recursive, the loop is VC6's (no rotation, as shipped).
-	if(!pNode || pNode == NODE_IN || pNode == NODE_OUT)
-		return NULL;
-
-	// Near (0x418860): dot1's x and z products load their operands the other
-	// way round (VC6 orders them whatever the source order; the grouping
-	// a + (b + c) is what gives the shipped z, y, x term order).
-	dot1 = (pNode->m_pPlane->m_Normal.x*(*pStart).x+(pNode->m_pPlane->m_Normal.y*(*pStart).y+pNode->m_pPlane->m_Normal.z*(*pStart).z)) - pNode->m_pPlane->m_Dist;
-	dot2 = (pNode->m_pPlane->m_Normal.x*(*pEnd).x+(pNode->m_pPlane->m_Normal.y*(*pEnd).y+pNode->m_pPlane->m_Normal.z*(*pEnd).z)) - pNode->m_pPlane->m_Dist;
-	side1 = dot1 > 0.0f;
-	side2 = dot2 > 0.0f;
-	if(side1 == side2)
-		return FindSegmentHit(pNode->m_Sides[side1], pStart, pEnd, pHit);
-
-	pRet = FindSegmentHit(pNode->m_Sides[side1], pStart, pEnd, pHit);
-	if(pRet)
-		return pRet;
-
-	if(!(pNode->m_pPoly->GetSurfaceFlags() & SURF_INVISIBLE))
+	// talon: NOLF's (0x422f20) is icl's loop: the two tail calls are jumps to
+	// the bottom test, and IsValidNode's value is made (xor/inc %al) for the
+	// first test only. Near (432 bytes both): vHit's z product is scheduled
+	// after its y store in ours (0x42306f).
+	while(IsValidNode(pNode))
 	{
-		t = dot1 / (dot1 - dot2);
-		// 0x418913: only the subtraction copies *pStart.
-		vHit = *pStart + (*pEnd - *pStart) * t;
-		if(IsPtInPoly(vHit, pNode->m_pPoly))
+		dot1 = (pNode->m_pPlane->m_Normal.x*(*pStart).x+(pNode->m_pPlane->m_Normal.y*(*pStart).y+pNode->m_pPlane->m_Normal.z*(*pStart).z)) - pNode->m_pPlane->m_Dist;
+		dot2 = (pNode->m_pPlane->m_Normal.x*(*pEnd).x+(pNode->m_pPlane->m_Normal.y*(*pEnd).y+pNode->m_pPlane->m_Normal.z*(*pEnd).z)) - pNode->m_pPlane->m_Dist;
+		side1 = (dot1 > 0.0f) ? 1 : 0;
+		side2 = (dot2 > 0.0f) ? 1 : 0;
+		if(side1 == side2)
 		{
-			*pHit = vHit;
-			return pNode->m_pPoly;
+			pNode = pNode->m_Sides[side1];
+			continue;
 		}
+
+		pRet = FindSegmentHit(pNode->m_Sides[side1], pStart, pEnd, pHit);
+		if(pRet)
+			return pRet;
+
+		if(!(pNode->m_pPoly->GetSurfaceFlags() & SURF_INVISIBLE))
+		{
+			t = dot1 / (dot1 - dot2);
+			vHit = *pStart + (*pEnd - *pStart) * t;
+			if(IsPtInPoly(vHit, pNode->m_pPoly))
+			{
+				*pHit = vHit;
+				return pNode->m_pPoly;
+			}
+		}
+
+		pNode = pNode->m_Sides[side2];
 	}
 
-	return FindSegmentHit(pNode->m_Sides[side2], pStart, pEnd, pHit);
+	return NULL;
 }
 
 
@@ -1713,18 +1704,18 @@ BOOL CLightMapMaker::ShouldBlockLight(CPreWorld *pWorld)
 	if(pWorld->m_WorldInfoFlags & WIF_PHYSICSBSP)
 		return TRUE;
 
-	if(!(pWorld->m_WorldInfoFlags & WIF_VISBSP))
-	{
-		for(i=0; i < m_pWorld->m_Objects; i++)
-		{
-			pObj = m_pWorld->m_Objects[i];
+	if(pWorld->m_WorldInfoFlags & WIF_VISBSP)
+		return FALSE;
 
-			if(stricmp(pObj->GetName(), pWorld->m_WorldName) == 0)
-			{
-				pProp = (CBoolProp*)pObj->m_PropList.GetMatchingProp("BlockLight", PT_BOOL);
-				if(pProp && pProp->m_Value)
-					return TRUE;
-			}
+	for(i=0; i < m_pWorld->m_Objects; i++)
+	{
+		pObj = m_pWorld->m_Objects[i];
+
+		if(stricmp(pObj->GetName(), pWorld->m_WorldName) == 0)
+		{
+			pProp = (CBoolProp*)pObj->m_PropList.GetMatchingProp("BlockLight", PT_BOOL);
+			if(pProp && pProp->m_Value)
+				return TRUE;
 		}
 	}
 
@@ -1876,25 +1867,25 @@ void CLightMapMaker::LightVertex(CPolyVert *pVert, BOOL bClip)
 		if(distSqr < pLight->m_MaxDistSqr)
 		{
 			dot = CalcLightDot(&vToLight, distSqr, &pVert->m_Normal);
-			if(dot > 0.0f)
+			if(dot <= 0.0f)
+				continue;
+
+			// Anything in the way?
+			if(m_bClipLight && bClip && pLight->m_bClip)
 			{
-				// Anything in the way?
-				if(m_bClipLight && bClip && pLight->m_bClip)
-				{
-					query.m_pMaker = this;
-					query.m_bBlocked = FALSE;
-					query.m_vStart = pVert->m_Vec;
-					query.m_vEnd = pLight->m_Pos;
-					query.m_vStart += vToLight * (1.0f / (PReal)sqrt(distSqr));
-					m_WorldTree.IntersectSegment(&query.m_vStart, &query.m_vEnd, LightWorldModelCB, &query);
+				query.m_pMaker = this;
+				query.m_bBlocked = FALSE;
+				query.m_vStart = pVert->m_Vec;
+				query.m_vStart += vToLight * (1.0f / (PReal)sqrt(distSqr));
+				query.m_vEnd = pLight->m_Pos;
+				m_WorldTree.IntersectSegment(&query.m_vStart, &query.m_vEnd, LightWorldModelCB, &query);
 
-					if(query.m_bBlocked)
-						continue;
-				}
-
-				pVert->m_Color += CalcLightSample(pLight, pLight->m_Pos, pLight->m_Direction,
-					pVert->m_Vec, distSqr, dot);
+				if(query.m_bBlocked)
+					continue;
 			}
+
+			pVert->m_Color += CalcLightSample(pLight, pLight->m_Pos, pLight->m_Direction,
+				pVert->m_Vec, distSqr, dot);
 		}
 	}
 
@@ -2044,7 +2035,9 @@ static BOOL IsPointInBSP(NODEREF pNode, PVector &vPos, PReal fEpsilon);
 
 
 // A world model the point is in: it stays valid only if it is in the clear
-// in each one (0x41cdf0).
+// in each one (0x41cdf0; NOLF's 0x423540). The `else return` is the shipped
+// block order: the return's epilogue right after the test, the call's arm
+// jumping back to it (a plain if jumps forward past the call).
 static void PointInsideCB(WorldTreeObj *pObj, void *pUser)
 {
 	LMMPointQuery *pQuery = (LMMPointQuery*)pUser;
@@ -2052,6 +2045,8 @@ static void PointInsideCB(WorldTreeObj *pObj, void *pUser)
 	pQuery->m_nWorlds++;
 	if(*pQuery->m_pbValid)
 		*pQuery->m_pbValid = IsPointInBSP(((LMMWorld*)pObj)->m_pWorld->m_RootNode, pQuery->m_vPos, 0.1f);
+	else
+		return;
 }
 
 
