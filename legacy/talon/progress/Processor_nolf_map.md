@@ -197,6 +197,65 @@ Nine agents, one per group of modules, 1,344 -> 1,374 identical.
   matches once every function before its target in that object has the
   shipped size. Take it when the objects' layouts are right.
 
+## What the third round learned (2026-11-13)
+
+Eight agents, 1,374 -> 1,443 identical, the function table corrected
+(2,579 -> 2,217 rows).
+
+- **PreWorld.cpp's STL is SGI 3.2's**, now ours in lithshared/stl_sgi
+  (Visual C++ 6 config, the node allocator and its spin lock, list,
+  deque, heap, priority_queue over a deque of 42-element nodes), each
+  piece checked against 0x449c8c..0x44ce10: PreWorld 275 -> 330. destroy
+  is three levels out of line (0x44b615); functions taking deque
+  iterators by value are never inlined under cl 8447 (0x44b63e).
+- **NOLF's CPreLightFrame** is m_PolyMaps alone, 0x14 bytes, with the
+  implicit constructor (0x42e8c0).
+- **NOLF's zlib was built without /FR**: browse info changes cl 8447's
+  code (inflate_blocks 0x466bf0 reloads cached pointers in another order
+  with it). StdLith's NOLF project has /FR too: untested.
+- **Our icl also inlines functions that have an EH frame**, the other
+  half of the inlining limit. The shipped CreatePoly (0x405180, 0x40cfb0)
+  and BaseNew/_AllocateTArray (0x435c30) are EH-framed because the
+  placement `operator delete` exists (l_allocator.h, object_bank.h
+  declare it only when `_MSC_VER != 1100`), and every caller calls them
+  out of line. Under our /Qvc5 they have no frame and inline everywhere;
+  declaring the delete gives them the frame, but ours then inlines them
+  with it (FilterPolyIntoBSP 2,872 -> 5,082 bytes).
+- **The shipped compiler sizes a frame as if it had inlined** where it
+  didn't (MakeLeakFile 0x420bee: 0xac against our 0x80, with $$1
+  alignment), so /Ob0 doesn't reach those either.
+- **Out-of-line copies by definition order.** icl doesn't inline a
+  function defined later in the file than its caller, so defining a
+  helper after the EH-framed functions that call it, and before the ones
+  that inline it, gives the shipped mix (DrawStatusText: called from
+  SaveEDFile, inlined in ShowStatusText 0x44ef30). Ruling: a faithful
+  shape where the helper's shipped copy sits where that definition (or an
+  inline's out-of-line copy) puts it; where it would move a function off
+  its shipped place, it's a stand-in and says so in its `talon:` comment.
+  It doesn't hold for every function (~CFullLightMap is inlined into
+  Term 0x424160 wherever it's defined).
+- **Per-object lottery, more of it:** a header member removed in
+  PreWorld.h swaps floating-point operands in PrePoly.obj (AdjustForVec
+  0x43f2b0); every term order of MatVMul_H's third row gives the same
+  bytes (x, z, y shipped, y, z, x ours, 0x4296cf); an edit in one object
+  can change which copy of a folded Insert2 the link keeps (0x4126e0 vs
+  0x41c2b0).
+- **Dead code in the image.** A call graph of the shipped image (calls,
+  and pointers in .rdata/.data/.rsrc) shows about 9 KB of EditBrush
+  (MakeCap 0x412770 .. 0x4154f0), EditObjects 0x416fc0..0x418230,
+  EditPlane's three functions, EditPoly 0x41a340..0x41a610 and EditRegion
+  0x41bed0, 0x41c050 reached only from functions nothing references: kept
+  by the plain-section build (`/Gy-`, above), dropped by ours, so ours of
+  them are "unlinked" and can't score under the current link however
+  right they are.
+- **Smaller:** cl 8447 holds a return value in esi past a local's
+  destructor and duplicates the destructor when esi is busy
+  (LoadLightAnims 0x443af8); integer stores are scheduled on their own
+  (TraceSegment 0x422e47); stack slots follow first use as well as
+  declaration (0x41f590); a `switch`'s default arm goes after the unwind
+  funclets (0x44dcd0); out-of-class members defined earlier in the file
+  aren't inlined, unlike free functions (PortalBuffer::Cur).
+
 ## Layout (libscan.py)
 
 | Range | What | Source |
