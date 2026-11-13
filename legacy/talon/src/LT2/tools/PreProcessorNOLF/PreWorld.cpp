@@ -1983,8 +1983,8 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 			iPt1 = pPoly->Index(i);
 			iPt2 = pPoly->Index((i+1) % pPoly->NumVerts());
 
-			*pPolyEdges = FindEdge(edgeHash, iPt1, iPt2);
-			if(*pPolyEdges == 0xFFFF)
+			pPolyEdges[i] = FindEdge(edgeHash, iPt1, iPt2);
+			if(pPolyEdges[i] == 0xFFFF)
 			{
 				pEntry = new EdgeHashEntry;
 				pEntry->m_iPt1 = LTMIN(iPt1, iPt2);
@@ -1993,11 +1993,9 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 				pEntry->m_pNext = edgeHash[pEntry->m_iPt1];
 				edgeHash[pEntry->m_iPt1] = pEntry;
 
-				*pPolyEdges = (uint16)nEdges;
+				pPolyEdges[i] = (uint16)nEdges;
 				nEdges++;
 			}
-
-			pPolyEdges++;
 		}
 
 		iPoly++;
@@ -2005,10 +2003,12 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 
 	for(i=0; i < edgeHash; i++)
 	{
-		for(pEntry=edgeHash[i]; pEntry; pEntry=pNext)
+		pEntry = edgeHash[i];
+		while(pEntry)
 		{
-			pNext = pEntry->m_pNext;
-			delete pEntry;
+			pNext = pEntry;
+			pEntry = pEntry->m_pNext;
+			delete pNext;
 		}
 	}
 
@@ -2420,10 +2420,10 @@ BOOL CPreWorld::CalcNodeBoundingBoxes_R(NODEREF pNode, PVector &vMin, PVector &v
 		if(vPt.z > vMax.z) vMax.z = vPt.z;
 	}
 
-	PReal &fRadius = pNode->m_fRadius;
 	pNode->m_vCenter = vMin + (vMax - vMin) * 0.5f;
+	pNode->m_fRadius = -1.0f;
 	PVector &vCenter = pNode->m_vCenter;
-	fRadius = -1.0f;
+	PReal &fRadius = pNode->m_fRadius;
 
 	// The radius: the farthest vertex of the subtree's polies.
 	for(;;)
@@ -2444,10 +2444,10 @@ BOOL CPreWorld::CalcNodeBoundingBoxes_R(NODEREF pNode, PVector &vMin, PVector &v
 				fRadius = fDist;
 		}
 
-		if(nStack < (int)g_NodeStack.GetSize())
-			g_NodeStack[nStack] = pNode->m_Sides[0];
-		else
+		if(nStack >= (int)g_NodeStack.GetSize())
 			g_NodeStack.Append(pNode->m_Sides[0]);
+		else
+			g_NodeStack[nStack] = pNode->m_Sides[0];
 
 		nStack++;
 		pNode = pNode->m_Sides[1];
