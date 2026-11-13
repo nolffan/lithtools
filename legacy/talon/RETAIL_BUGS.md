@@ -124,6 +124,10 @@ visibility BSP goes on into the PVS; the physics BSP's path checks the
 same call. 0x40cec7 also ignores SetupVisBSPLeaves' result (MakeWorldPVS
 calls it again and checks).
 
+NOLF's Processor.exe has it too (MakeVisBSP,
+src/LT2/tools/PreProcessorNOLF/MakeBsps.cpp; near): it ignores what the
+recreated BSP (0x411c38) and SetupVisBSPLeaves (0x411c95) return.
+
 Not fixed yet.
 
 ### Filtering a poly into the leaves leaks the pieces of a failed split
@@ -133,6 +137,9 @@ MakeBsps.cpp; near: one inlined dot product). When SplitPoly gives up, the
 function returns without freeing the two pieces SplitPoly already made.
 A memory leak during processing; nothing shows.
 
+NOLF's Processor.exe has it too, at 0x411717 (FilterPolyIntoLeaves_R,
+src/LT2/tools/PreProcessorNOLF/MakeBsps.cpp; near).
+
 Not fixed yet.
 
 ### Splitting a poly list keeps polies SplitPoly gave up on
@@ -140,6 +147,10 @@ Not fixed yet.
 AvP2's Processor.exe 0x40c5fb (SplitPolyList, the name ours, MakeBsps.cpp;
 identical). SplitPoly's result is ignored, so a poly it gave up on (more
 than two edge splits) still goes on, in whatever pieces it left.
+
+NOLF's Processor.exe has it too (SplitPolyList,
+src/LT2/tools/PreProcessorNOLF/MakeBsps.cpp; near): after SplitPoly's
+"Bad poly" give-up at 0x410991 the pieces are still appended (0x410bbc).
 
 Not fixed yet.
 
@@ -149,6 +160,10 @@ AvP2's Processor.exe 0x40c209 (AddTerrainBlockers, the name ours,
 MakeBsps.cpp; near: the inline budget at two list destructors). The split
 pieces were allocated with malloc and are freed with scalar delete; it
 works only because the runtime's operator delete calls free.
+
+NOLF's Processor.exe has it too, at 0x411d7f (AddTerrainBlockers,
+src/LT2/tools/PreProcessorNOLF/MakeBsps.cpp; near), freeing them through
+the virtual destructor and delete rather than DeletePoly.
 
 Not fixed yet.
 
@@ -233,6 +248,28 @@ name from the command line is taken as given and ".ed" appended to it,
 with no test for an extension already there (AvP2's strips one first),
 so a world passed with its extension is looked for as "<name>.ed.ed" and
 not found.
+
+Not fixed yet.
+
+### NOLF's processor checks only every other bad object in a row
+
+NOLF's Processor.exe 0x44d99f..0x44d9a7 (LoadEDFile,
+src/LT2/tools/PreProcessorNOLF/Processing.cpp; near). An object with an
+invalid position is removed with no_DestroyNode, which also takes it out
+of m_Objects, and the loop's index then goes on to the next slot anyway,
+so the object that moved into the removed one's slot is never checked:
+of two bad objects in a row, the second stays in the world.
+
+Not fixed yet.
+
+### Ordering a poly's vertices steps back from an erased list iterator
+
+NOLF's Processor.exe 0x444a6b (InitPolyVertexIndices,
+src/LT2/tools/PreProcessorNOLF/PreWorld.cpp; identical). The stack walk
+erases an element (`theStack.erase(iStack)`), deletes it, then does
+`iStack--` on the erased iterator, reading `_M_prev` from a freed list
+node. It works only because the SGI STL's node allocator keeps freed
+nodes and overwrites just their first word with its free-list link.
 
 Not fixed yet.
 
