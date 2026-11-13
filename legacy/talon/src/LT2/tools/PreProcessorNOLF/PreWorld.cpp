@@ -3,7 +3,6 @@
 #include "list"
 #include "queue"
 
-using namespace std;
 
 #include "preworld.h"
 #include "prepoly.h"
@@ -1047,14 +1046,12 @@ void CPreWorld::TermGeometry()
 }
 
 
-// 0x434170..0x434572 (the function table's 0x434443, 0x434465 and
-// 0x434470 are inside it). Near (1017 bytes against 1026): only the end,
-// theQueue's vector destructor, where the shipped code expands
-// allocator::deallocate (the null test and __node_alloc's deallocate,
-// 0x422060, with the size in bytes) and ours calls it (the inline budget).
+// 0x4448f0..0x444b92 (the function table cuts it at 0x44496d). The SGI
+// STL's (lithshared/stl_sgi): theQueue is over a deque (its push, 0x449cf2,
+// pushes a 12-byte PointElement into 504-byte nodes).
 void CPreWorld::InitPolyVertexIndices()
 {
-	priority_queue<PointElement> theQueue;
+	priority_queue<PointElement, deque<PointElement>, less<PointElement> > theQueue;
 	list<PointStackEl*> theStack;
 	list<PointStackEl*>::iterator iStack;
 	GPOS pos;

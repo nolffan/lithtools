@@ -34,8 +34,14 @@
 #include "presurface.h"
 #include "de_mainworld.h"
 
+// talon: STLport's, for the icl objects. PreWorld.cpp, built with the SGI
+// STL (lithshared/stl_sgi, which has neither), uses neither, and Visual
+// C++'s own would add their locale initializers to its object (std::ctype's
+// id: the image has none).
+#ifndef __STL_SGI_3_2
 #include <string>
 #include <vector>
+#endif
 
 #define MAINWORLD_MODEL_NAME		"MAIN_WORLD"
 #define DEFAULT_CONVEX_THRESHOLD	0.0001f

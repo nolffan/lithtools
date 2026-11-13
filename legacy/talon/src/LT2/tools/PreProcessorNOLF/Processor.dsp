@@ -283,10 +283,13 @@ SOURCE=.\ProcessorApp.cpp
 # Begin Source File
 
 SOURCE=.\PreWorld.cpp
+# talon: the SGI STL (3.2) it was built with, not STLport
+# (..\..\lithshared\stl_sgi\stl_config.h)
 
 !IF  "$(CFG)" == "Processor - Win32 Release"
 
-# SUBTRACT CPP /EHa
+# ADD CPP /I "..\..\lithshared\stl_sgi"
+# SUBTRACT CPP /EHa /I "..\..\lithshared\stl"
 
 !ENDIF 
 
