@@ -505,6 +505,11 @@ void VisThreadFn(void *pData)
 
 BOOL VisClipToSeparators(CPrePortal *pSource, CPrePortal *pPass, PortalBuffer *pBuf, BOOL bFlip);
 
+// pLeaf's bit in pBits. talon: NOLF's is out of line (0x45e480, the
+// merged object's last copies), as VisFlow_R calls it (0x45b29a); ours,
+// defined after it, isn't inlined there either.
+static BOOL VisTestLeafBit(uint8 *pBits, CPreLeaf *pLeaf);
+
 
 // From pLeaf through pPortal: what the leaves behind it can see, into the
 // portal's m_Unknown_48 (0x44a200). FastApprox leaves are left alone.
@@ -588,7 +593,7 @@ void VisFlow_R(VisFlowState *pState, CPrePortal *pSource, CPrePortal *pPass, uin
 		if(VIS_TESTBIT(pState->m_OnPath, pNext->m_Index))
 			continue;
 
-		if(!VIS_TESTBIT(pMightSee, pNext->m_Index))
+		if(!VisTestLeafBit(pMightSee, pNext))
 			continue;
 
 		pPortalBits = (uint32*)pPortal->m_Unknown_48.GetArray();
@@ -721,4 +726,10 @@ void VisMarkFastApprox_R(CPreLeaf *pLeaf)
 			VisMarkFastApprox_R(pPortal->m_pLeaf);
 		}
 	}
+}
+
+
+static BOOL VisTestLeafBit(uint8 *pBits, CPreLeaf *pLeaf)
+{
+	return VIS_TESTBIT(pBits, pLeaf->m_Index);
 }
