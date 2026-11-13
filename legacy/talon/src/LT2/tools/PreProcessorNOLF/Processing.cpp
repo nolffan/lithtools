@@ -340,12 +340,14 @@ void DrawStatusTextIfMainWorld(const char *pMsg, ...)
 {
 	va_list marker;
 
-	if(!g_pGlobs->m_bMakingWorldModel)
-	{
-		va_start(marker, pMsg);
-		InternalDrawStatusText(pMsg, marker);
-		va_end(marker);
-	}
+	// talon: an early return (0x45091d: the return falls through, the
+	// call is after it).
+	if(g_pGlobs->m_bMakingWorldModel)
+		return;
+
+	va_start(marker, pMsg);
+	InternalDrawStatusText(pMsg, marker);
+	va_end(marker);
 }
 
 
@@ -714,6 +716,13 @@ void GenerateSurfaces(GenList<CEditBrush*> &brushes, CPreWorld *pWorld)
 }
 
 
+// talon: the test is a function's (0x44f2bf: the size compared in eax, its
+// conversion on the fall-through): the runtime's lightmapdefs.h has it so
+// (Build 69's; NOLF's tool headers have no lightmapdefs.h).
+inline int IsValidLightmapSize(int size) {
+    return size==16 || size==32;
+}
+
 PReal GetMaxLMSize(char *pInfoString)
 {
 	ConParse parse;
@@ -723,7 +732,7 @@ PReal GetMaxLMSize(char *pInfoString)
 	if(parse.ParseFind("MaxLMSize", FALSE, 2))
 	{
 		size = atoi(parse.m_Args[1]);
-		if(size == 16 || size == 32)
+		if(IsValidLightmapSize(size))
 			return (PReal)size;
 	}
 
