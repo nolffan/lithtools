@@ -233,36 +233,40 @@ void					*g_pProgressCS;
 void					*g_pLeafCS;
 
 
-// Collects into g_VisWalkLeaves the leaves under pNode whose bits are set,
-// taking the bits in g_pVisWalkBits one per leaf and one per child in
-// walk order (0x449c00). talon: each bit is taken into a byte before the
-// index moves on (the `and` into %cl at 0x449c31); with the test written
-// inline the compiler tests memory instead.
-void VisCollectLeaves_R(CNode *pNode)
+// The next bit of the vis-BSP walk (the name is ours; always inlined).
+inline uint8 VisNextWalkBit()
 {
 	uint8 bSet;
 
+	bSet = VIS_TESTBIT(g_pVisWalkBits->m_Data, g_iVisWalkBit);
+	g_iVisWalkBit++;
+	return bSet;
+}
+
+
+// Collects into g_VisWalkLeaves the leaves under pNode whose bits are set,
+// taking the bits in g_pVisWalkBits one per leaf and one per child in
+// walk order (0x45bbe0). talon: each bit is taken into a byte before the
+// index moves on (the `and` into %cl); taken by a helper, each if's body
+// falls through as shipped, where the same statements written in line put
+// them out of line.
+void VisCollectLeaves_R(CNode *pNode)
+{
 	if(pNode->m_pLeaf)
 	{
-		bSet = VIS_TESTBIT(g_pVisWalkBits->m_Data, g_iVisWalkBit);
-		g_iVisWalkBit++;
-		if(bSet)
+		if(VisNextWalkBit())
 			g_VisWalkLeaves.Append(pNode->m_pLeaf);
 	}
 
 	if(IsValidNode(pNode->m_Sides[0]))
 	{
-		bSet = VIS_TESTBIT(g_pVisWalkBits->m_Data, g_iVisWalkBit);
-		g_iVisWalkBit++;
-		if(bSet)
+		if(VisNextWalkBit())
 			VisCollectLeaves_R(pNode->m_Sides[0]);
 	}
 
 	if(IsValidNode(pNode->m_Sides[1]))
 	{
-		bSet = VIS_TESTBIT(g_pVisWalkBits->m_Data, g_iVisWalkBit);
-		g_iVisWalkBit++;
-		if(bSet)
+		if(VisNextWalkBit())
 			VisCollectLeaves_R(pNode->m_Sides[1]);
 	}
 }
@@ -411,8 +415,7 @@ void VisCalcLeafRadius(CPreWorld *pWorld, CPreLeaf *pLeaf, CMoArray<uint8> &visi
 		if(VIS_TESTBIT(visible, pTest->m_Index))
 		{
 			fDist = (pTest->m_vCenter - pLeaf->m_vCenter).Mag() + pTest->m_fRadius;
-			if(fDist > fMax)
-				fMax = fDist;
+			fMax = LTMAX(fDist, fMax);
 		}
 	}
 
