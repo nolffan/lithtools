@@ -180,8 +180,22 @@ Nine agents, one per group of modules, 1,344 -> 1,374 identical.
   - `_MSC_VER` was above 1100 in the shipped build (probably icl's
     /Qvc6, ours is the default /Qvc5): CreatePoly's unwind funclet
     (0x405180) is the empty placement `operator delete`, which
-    object_bank.h declares only then. /Qvc6 on one file made it worse;
-    the whole project with it is untried.
+    object_bank.h declares only then.
+- **Build switches, measured on the whole target (1,374 identical as
+  built):** `/Qvc6` everywhere keeps the count but loses 1,174 identical
+  bytes and places 3 fewer; `/OPT:NOREF` gives 175 unwritten rows a
+  counterpart (479 -> 304) but adds 158 functions of ours the image
+  doesn't have (unplaced 57 -> 215, and 5 fewer identical); `/Gy-`
+  (icl's ordinary functions in plain sections, inlines still COMDATs)
+  loses 53 identical. So none is taken. But `/Gy-` is very likely the
+  original's: icl's objects here put every function in a COMDAT
+  (ordinary ones NODUPLICATES, inlines ANY), so /OPT:REF drops an
+  unreferenced ordinary function, which the shipped image keeps (the
+  EditBrush ones above) while dropping unreferenced inline copies, as
+  plain sections plus COMDAT inlines would. It costs now because a call
+  within one plain section has no relocation: its displacement only
+  matches once every function before its target in that object has the
+  shipped size. Take it when the objects' layouts are right.
 
 ## Layout (libscan.py)
 
