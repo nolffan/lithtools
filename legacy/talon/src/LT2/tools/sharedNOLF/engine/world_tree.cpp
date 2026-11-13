@@ -588,6 +588,12 @@ WorldTreeNode::~WorldTreeNode()
 }
 
 
+// talon: near, 111/111 bytes (0x45f110): the shipped code frees its frame
+// (add $0x10,%esp) after the last store; ours before the vector stores.
+// The vector and float clears in any order, Init(0,0,0) and a chained
+// float assignment change nothing. SSBufStream::Read (0x456830) has the
+// add after its last store where ours has it before, and the template
+// GenFindElements (0x4027a0, 0x41f2c0, 0x4210f0) the other way round.
 void WorldTreeNode::Clear()
 {
 	uint32 i;

@@ -44,6 +44,12 @@ uint32 ApplyTextureFlagsToWorld(CGLinkedList<TInfo*> &theList, CPreMainWorld *pM
 }
 
 
+// talon: near (0x41f1d0, 164+54 bytes, its EH funclet 0x41f2aa): it has an
+// EH frame (theList), and calls ApplyTextureFlagsToWorld (0x41f130, which
+// matches) and CGLinkedList's constructor (0x41f360) and destructor
+// (0x41f340) out of line, where ours inlines them. The shipped one also
+// tests GetTextureInfo's count the other way round (je to the messages,
+// 0x41f210) and adds Apply's result into a zeroed slot (0x41f229).
 uint32 GetTextureFlags(CPreMainWorld *pWorld)
 {
 	CGLinkedList<TInfo*>	theList;

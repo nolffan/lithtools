@@ -54,6 +54,11 @@ LTBOOL CompressLMData(uint16 *pData, uint32 width, uint32 height,
 }
 
 
+// talon: near, 111/111 bytes: the shipped run branch masks the colour
+// into the register it keeps (mov %edx,%ebx; and $0x7fff,%ebx, 0x422131),
+// ours masks and then copies. The four orders of the run branch's three
+// statements, `*pCur++` and `color = color & 0x7FFF` give ours, as do
+// /Os, /Ob0 and /G5 for the file (/O2 matches nothing).
 LTBOOL DecompressLMData(uint16 *pCompressed, uint32 dataLen, uint16 *pOut)
 {
 	uint8 *pCur, *pEnd;
@@ -148,6 +153,10 @@ LTBOOL CompressShadowMap(uint16 *pData, uint32 width, uint32 height,
 }
 
 
+// talon: near, 95/94 bytes: the shipped bounds test adds with mov+add
+// (0x422236); ours is a lea. runLength as int, uint8 or unsigned long, the
+// sum either way round, `&pOut[runLength]`, the test negated or turned
+// around, and pointer or integer compares all give the lea.
 LTBOOL DecompressShadowMap(uint8 *pCompressed, uint32 dataLen, uint8 *pOutData)
 {
 	uint32 runLength;

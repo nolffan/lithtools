@@ -113,6 +113,12 @@ void quat_GetVectors(const float *pQuat, float *pRight, float *pUp, float *pForw
 }
 
 
+// talon: near, 308/308 bytes (0x42fe20, $$1 at 0x42fe2e): the shipped dot
+// product multiplies terms 3 and 2 as pQ1*pQ2 and 0 and 1 as pQ2*pQ1;
+// ours puts pQ2 first in all four. icl canonicalises the sum: operands
+// either way round, the terms in any order or grouping all give the same
+// code. RotateAroundAxis (0x430a60) and gr_SetupWMTransform (0x41e340)
+// differ the same way in LTMatrix's operator* they inline.
 void quat_Slerp(float *pDest, const float *pQ1, const float *pQ2, float t)
 {
 	float	rot1q[4];

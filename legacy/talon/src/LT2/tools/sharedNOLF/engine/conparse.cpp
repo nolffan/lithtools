@@ -116,6 +116,13 @@ static inline LTBOOL cp_IsCmdSeparator(char curChar)
 }
 
 
+// talon: near, 370/313 bytes (0x40dd60): the shipped code keeps pToken in
+// a stack slot and a zero in %bh (0x40dd85) for the truncating store, so
+// pCurPos, pTokenPos and the character stay in registers. Ours keeps
+// pToken in %edi. Not static, bEnd assigned apart and the two locals the
+// other way round change nothing; cp_IsCmdSeparator's test written out in
+// the else-if spills pToken as the shipped code does but moves the ';'
+// test ahead of '%' (363 bytes), so the inline is right.
 static GNTResult cp_GetNextToken(char* &pCurPos, char* &pTokenPos)
 {
 	char *pToken;

@@ -114,6 +114,14 @@ LTBOOL dtx_IsTextureSizeValid(uint32 size)
 // pitch at 0x10 and 0x14). dtx_Create passes 0 (0x40d3a3). The stores are
 // in nolfsrc's order for the engine's copy (m_AllocSize after m_pSections),
 // and the second loop's pitch is an if-chain.
+// talon: NOLF's (0x411e30, its tail 0x4120fb): near, 715+85/799 bytes. It
+// has an EH frame (new TextureData) and calls SetBPPIdent out of line
+// (0x412730, a COMDAT of this object); ours inlines it. With SetBPPIdent
+// out of line (tried by declaring it only) the frame's slots match, and
+// what is left is the two += of the loops: the shipped code adds into the
+// slot (add %eax,-0x44(%ebp), 0x411e9b; add %eax,-0x20(%ebp)), ours loads,
+// adds and stores; `a = a + b` and `a = b + a` give the same. /Ob0 for
+// the file loses (5 matches in the range against 8).
 TextureData* dtx_Alloc(BPPIdent bpp, uint32 baseWidth, uint32 baseHeight, uint32 nMipmaps,
 	uint32 *pAllocSize, uint32 *pTextureDataSize, LTBOOL bPlane2)
 {
