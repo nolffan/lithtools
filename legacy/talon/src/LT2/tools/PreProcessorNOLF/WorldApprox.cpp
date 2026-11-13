@@ -19,6 +19,7 @@
 #include "processing.h"
 #include "threads.h"
 #include "VisLeaves.h"
+#include "LeafPortals.h"
 
 
 // pregeometry.cpp (0x42ccd0).
@@ -703,8 +704,14 @@ static BOOL CanSeeThrough(CPrePortal *pPortal, CPrePortal *pTest)
 
 // Gives each leaf (m_Unknown_00) the partners of its portals that have
 // them, puts those in the info's list, and sets their centers (0x44c580).
+// talon: NOLF's (0x45d100) has a PortalBuffer over two portal-sized
+// buffers on its stack (0x2068 bytes, _chkstk), set up and never used
+// (0x45d116..0x45d12f). Near: in the centers' loop the zero for Init and
+// the loop's bound take other registers (0x45d2c4).
 static void SetupPortals()
 {
+	uint8 portalData[2][sizeof(CPrePortal) + sizeof(CPolyVert)*97];
+	PortalBuffer buf;
 	CPreWorld *pWorld;
 	CPreLeaf *pLeaf;
 	CPrePortal *pPortal;
@@ -712,6 +719,8 @@ static void SetupPortals()
 
 	pWorld = g_pPVSInfo->m_pWorld;
 	g_pPVSInfo->m_nPortals = 0;
+	buf.m_pPortals[0] = (CPrePortal*)portalData[0];
+	buf.m_pPortals[1] = (CPrePortal*)portalData[1];
 	g_pPVSInfo->m_pWorld->SetLeafIndices();
 
 	for(i=0; i < pWorld->m_Leaves; i++)
