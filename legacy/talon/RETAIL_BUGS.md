@@ -273,6 +273,19 @@ nodes and overwrites just their first word with its free-list link.
 
 Not fixed yet.
 
+### Moving world models get the whole level's box for lighting
+
+NOLF's Processor.exe 0x426fda..0x4270de (SetupWorldModels,
+src/LT2/tools/PreProcessorNOLF/LightMapMaker.cpp; near). For each
+transformed world model the light map maker builds its bounding box from
+the main world's box (m_pWorld's +0xc0..+0xd4), not the model's own, as
+the untransformed branch does (pWorld->m_pWorld->m_PosMin, 0x427643). A
+moving model's box in the lighting world tree is then as big as the
+level: more segment tests while lighting, no wrong light. AvP2's
+processor has the same code.
+
+Not fixed yet.
+
 ### NOLF's unseen-poly removal tests an unsigned root for "< 0"
 
 NOLF's Processor.exe 0x45ad80 (CUnseenPolyRemover::RemoveUnseenPolies,
