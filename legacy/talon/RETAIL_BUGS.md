@@ -187,6 +187,10 @@ GetLimitText() instead of the text's length, so once the edit control
 reaches its text limit, new status text may no longer show (read from the
 window messages, not run). The log file is unaffected.
 
+NOLF's Processor.exe has the same code at 0x4424c0
+(DrawStatusTextToScreen, src/LT2/tools/PreProcessorNOLF/ProcessorApp.cpp;
+near: the file's /Ob0 stand-in calls what the shipped code inlines).
+
 Not fixed yet.
 
 ### Two NULL checks are missing in the application
@@ -218,6 +222,17 @@ src/LT2/tools/PreProcessorNOLF/Processing.cpp; near). Answering No to
 and ImportGeometry carry on and print the world's statistics as if the
 DAT file had been written. With -skipdialog nobody can answer the
 question, and the run waits for good.
+
+Not fixed yet.
+
+### NOLF's processor opens "x.ed.ed" when given "x.ed"
+
+NOLF's Processor.exe 0x441703 (CPreProcessorDlg::OnInitDialog,
+src/LT2/tools/PreProcessorNOLF/ProcessorApp.cpp; identical). The world
+name from the command line is taken as given and ".ed" appended to it,
+with no test for an extension already there (AvP2's strips one first),
+so a world passed with its extension is looked for as "<name>.ed.ed" and
+not found.
 
 Not fixed yet.
 
