@@ -1321,16 +1321,25 @@ struct PreSurfaceUser : public CGLLNode
 
 uint32 CPreWorld::LoadFile(CAbstractIO &file)
 {
+	// talon: the locals are the shipped frame's (0x354 bytes, every slot
+	// accounted for, 0x444ba1): the name bytes before the texture count
+	// and a surface user's word after its name have locals of their own;
+	// one uint16 (word) serves the leaf lists, the skip count and the
+	// vertex indices (slot -0x24); a node's sides are read into an array
+	// (-0x6c, -0x68); and the last loop counts its vertices with i. Still
+	// near: the texture-name loop's textureName-1 is hoisted out of the
+	// loop in ours (0x444de1 reloads it every time), which also reorders
+	// i and j's slots.
 	CMoArray<CNode*>		nodes;
 	CMoArray<CPrePlane*>	planes;
 	CMoArray<CPrePoly*>		polies;
 	CMoArray<CPreSurface*>	surfaces;
 	CMoArray<CPrePoly*>		newPolies;
 	uint32					dummy, i, j;
-	uint32					nPoints, nPlanes, nSurfaces, nPortals, nPolies, nLeaves, nNodes, nTextures;
+	uint32					nPoints, nPlanes, nSurfaces, nPortals, nPolies, nLeaves, nNodes, nTextures, nNameBytes, userFlags;
 	uint32					nVisListSize, nLeafListSize, nUnknown1, nUnknown2, nUnknown3, nUnknown4;
-	uint32					iSurface, iPlane, iPoly, iFront, iBack, iRoot, nSubBsps, value, nPolyRefs;
-	uint16					nLeafLists, word, listSize, iTexture, iLeaf, nSkip, skip1, skip2, index;
+	uint32					iSurface, iPlane, iPoly, iSides[2], iRoot, nSubBsps, value, nPolyRefs;
+	uint16					nLeafLists, word, listSize, iTexture, iLeaf, skip1, skip2;
 	uint8					nVerts, nExtraVerts, byteVal, r, g, b;
 	PVector					vec, vMin, vMax;
 	PReal					dist;
@@ -1379,7 +1388,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 	file >> vMax.z;
 	m_WorldTranslation = ReadVector(file);
 
-	file >> dummy;
+	file >> nNameBytes;
 	file >> nTextures;
 
 	// Texture names.
@@ -1554,10 +1563,10 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> pPoly->m_LMWidth;
 		file >> pPoly->m_LMHeight;
 
-		file >> nSkip;
-		while(nSkip)
+		file >> word;
+		while(word)
 		{
-			nSkip--;
+			word--;
 			file >> skip1;
 			file >> skip2;
 		}
@@ -1570,8 +1579,8 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 		for(j=0; j < pPoly->NumVerts(); j++)
 		{
-			file >> index;
-			pPoly->Vert(j).m_Index = index;
+			file >> word;
+			pPoly->Vert(j).m_Index = word;
 			file >> r;
 			file >> g;
 			file >> b;
@@ -1582,8 +1591,8 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 
 		for(j=0; j < pPoly->m_Unknown_0c.GetSize(); j++)
 		{
-			file >> index;
-			pPoly->m_Unknown_0c[j].m_Index = index;
+			file >> word;
+			pPoly->m_Unknown_0c[j].m_Index = word;
 			file >> r;
 			file >> g;
 			file >> b;
@@ -1606,10 +1615,10 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> iLeaf;
 		pNode->m_pLeaf = (iLeaf == 0xFFFF) ? NULL : m_Leaves[iLeaf];
 
-		file >> iFront;
-		file >> iBack;
-		pNode->m_Sides[0] = (iFront == NODEINDEX_IN) ? NODE_IN : ((iFront == NODEINDEX_OUT) ? NODE_OUT : nodes[iFront]);
-		pNode->m_Sides[1] = (iBack == NODEINDEX_IN) ? NODE_IN : ((iBack == NODEINDEX_OUT) ? NODE_OUT : nodes[iBack]);
+		file >> iSides[0];
+		file >> iSides[1];
+		pNode->m_Sides[0] = (iSides[0] == NODEINDEX_IN) ? NODE_IN : ((iSides[0] == NODEINDEX_OUT) ? NODE_OUT : nodes[iSides[0]]);
+		pNode->m_Sides[1] = (iSides[1] == NODEINDEX_IN) ? NODE_IN : ((iSides[1] == NODEINDEX_OUT) ? NODE_OUT : nodes[iSides[1]]);
 	}
 
 	// What m_Unknown_04 holds.
@@ -1621,7 +1630,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file.ReadString(effectName, 256);
 		pUser->m_pName = m_StringHolder.AddString(effectName, TRUE);
 
-		file >> dummy;
+		file >> userFlags;
 		file >> word;
 		if(word >= m_Surfaces.GetSize())
 			return 2;
@@ -1661,11 +1670,11 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 	{
 		pPoly = m_Polies.GetNext(pos);
 
-		for(j=0; j < pPoly->NumVerts(); j++)
-			pPoly->Pt(j) = m_Points[pPoly->Vert(j).m_Index];
+		for(i=0; i < pPoly->NumVerts(); i++)
+			pPoly->Pt(i) = m_Points[pPoly->Vert(i).m_Index];
 
-		for(j=0; j < pPoly->m_Unknown_0c.GetSize(); j++)
-			pPoly->m_Unknown_0c[j].m_Vec = m_Points[pPoly->m_Unknown_0c[j].m_Index];
+		for(i=0; i < pPoly->m_Unknown_0c.GetSize(); i++)
+			pPoly->m_Unknown_0c[i].m_Vec = m_Points[pPoly->m_Unknown_0c[i].m_Index];
 	}
 
 	file >> iRoot;
