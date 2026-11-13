@@ -39,13 +39,9 @@
 // cleared for each one (0x4450e7), a retail bug kept. The brush is the
 // surface's CEditPoly's (CEditPoly::m_pBrush, 0x28, at 0x4452c7).
 //
-// Near: size-exact; the three products of dir * t come out as dir.x * t
-// where the shipped code has t * dir.x (0x44524f..0x445267), the operand
-// order of a commutative fmul. VEC_MULSCALAR, a named temporary, a
-// constructed vector, (dir * t) + pos and the declaration order don't move
-// it. The plane through m_pSurface->m_pPlane each time and Dot() are what
-// give both dot products the shipped z, y, x order (a CPrePlane* local or
-// VEC_DOT give x, z, y; -DIST_TO_PLANE the order but an fchs).
+// The forward vector is copied by component (VEC_COPY: a struct copy
+// keeps it in memory, where the shipped code holds it in registers,
+// 0x455146), and the plane through one local (one load of it, 0x455191).
 uint32 DoRaySelect(CPreMainWorld *pMainWorld, CEditRegion *pRegion)
 {
 	float			t;
@@ -55,6 +51,7 @@ uint32 DoRaySelect(CPreMainWorld *pMainWorld, CEditRegion *pRegion)
 	CBaseProp		*pProp;
 	PVector			pos, dir, right, up, forward, testPt;
 	CPrePoly		*pPoly, *pSelPoly;
+	CPrePlane		*pPlane;
 	GPOS			polyPos;
 
 	for(i=0; i < pMainWorld->m_WorldModels; i++)
@@ -74,15 +71,15 @@ uint32 DoRaySelect(CPreMainWorld *pMainWorld, CEditRegion *pRegion)
 				if(pProp)
 				{
 					gr_GetEulerVectors(((CRotationProp*)pProp)->GetEulerAngles(), right, up, forward);
-					dir = forward;
+					VEC_COPY(dir, forward);
 
 					pSelPoly = NULL;
 					for(polyPos=pWorld->m_Polies; polyPos; )
 					{
 						pPoly = pWorld->m_Polies.GetNext(polyPos);
 
-						t = (pPoly->m_pSurface->m_pPlane->m_Dist - pPoly->m_pSurface->m_pPlane->m_Normal.Dot(pos)) /
-							pPoly->m_pSurface->m_pPlane->m_Normal.Dot(dir);
+						pPlane = pPoly->m_pSurface->m_pPlane;
+						t = (pPlane->m_Dist - pPlane->m_Normal.Dot(pos)) / pPlane->m_Normal.Dot(dir);
 						if(t > 0.1f && t < 1000000.0f)
 						{
 							testPt = pos + dir * t;
