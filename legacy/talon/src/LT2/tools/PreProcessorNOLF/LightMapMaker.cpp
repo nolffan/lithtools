@@ -639,17 +639,6 @@ static inline BOOL IsInShadowCone(const CLightDef *pLight, const PVector &sample
 // round (1715), VEC_COPY for either or both (1733..1763), GetArray()[i],
 // the arms as `&& !` or nested (1732), the helper's compare as if/return,
 // `!(<=)`, or the helper returning the colour (1749).
-//
-// talon: NOLF's (0x4294e0, 2204 bytes; ours 2172) copies the sample's
-// position into a local of its own before the query (0x429ac1), and the
-// clipped arm tests for the unshadowed case first: its two
-// CalcLightSample calls and its += are its own (0x429b5b..0x429c1c,
-// 0x429d5a) with the shadow-map arm laid out last (0x429c21). Left: the
-// shadow arm's temporaries sit below the clipped arm's (0x429c41, ours
-// above them, the arms' source order: most of the size, in disp8/disp32
-// offsets); the surface is loaded twice for rowPos's two terms (0x4295c3,
-// ebx and ecx; ours once, InverseP()/InverseQ() no different); the
-// transform's x row adds m[0][3] before the x term (0x4297f5).
 BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArray<PVector> *pPositions)
 {
 	LMMSegQuery		query;
@@ -692,34 +681,30 @@ BOOL CLightMapMaker::ApplyLightToPoly(CLightDef *pLight, CPrePoly *pPoly, CMoArr
 			{
 				if(m_bClipLight && pLight->m_bClip)
 				{
-					PVector vStart = (*pPositions)[y*pMap->m_Width + x];
+					query.m_vStart = (*pPositions)[y*pMap->m_Width + x];
+					query.m_vEnd = lightPos;
 					query.m_pMaker = this;
 					query.m_bBlocked = FALSE;
-					query.m_vStart = vStart;
-					query.m_vEnd = lightPos;
 					m_WorldTree.IntersectSegment(&query.m_vStart, &query.m_vEnd,
 						LightWorldModelCB, &query, NOA_Objects);
 
 					if(!query.m_bBlocked)
 					{
-						if(!m_pCurAnim->m_bShadowMap)
-						{
-							if(g_pGlobs->m_bLambertian)
-							{
-								color = CalcLightSample(pLight, lightPos2, lightDir, pos, distSqr,
-									pPoly->Normal());
-							}
-							else
-							{
-								color = CalcLightSample(pLight, lightPos2, lightDir, pos, distSqr, 1.0f);
-							}
-						}
-						else
+						if(m_pCurAnim->m_bShadowMap)
 						{
 							if(!pLight->m_bDirectional || IsInShadowCone(pLight, pos))
 								color.Init(255.0f, 255.0f, 255.0f);
 							else
 								color.Init(0.0f, 0.0f, 0.0f);
+						}
+						else if(g_pGlobs->m_bLambertian)
+						{
+							color = CalcLightSample(pLight, lightPos2, lightDir, pos, distSqr,
+								pPoly->Normal());
+						}
+						else
+						{
+							color = CalcLightSample(pLight, lightPos2, lightDir, pos, distSqr, 1.0f);
 						}
 
 						*pColor += color;
@@ -1723,12 +1708,6 @@ BOOL CLightMapMaker::SetupFrameLights(PreLightAnimFrameInfo *pFrame)
 }
 
 
-// talon: near (NOLF's 0x426e40, 170 bytes, ours 164): written with
-// `if(VISBSP) return FALSE;` as its own statement the branches are the
-// shipped ones (167 bytes) but this, pWorld and i are allocated otherwise
-// (shipped keeps pWorld in edi and spills this), and that form changes the
-// object's later COMDAT code: CMoArray<CPrePolyRef>::Insert2 (0x42e660)
-// stops matching. Kept as it was.
 BOOL CLightMapMaker::ShouldBlockLight(CPreWorld *pWorld)
 {
 	CBaseEditObj *pObj;
@@ -1738,18 +1717,18 @@ BOOL CLightMapMaker::ShouldBlockLight(CPreWorld *pWorld)
 	if(pWorld->m_WorldInfoFlags & WIF_PHYSICSBSP)
 		return TRUE;
 
-	if(!(pWorld->m_WorldInfoFlags & WIF_VISBSP))
-	{
-		for(i=0; i < m_pWorld->m_Objects; i++)
-		{
-			pObj = m_pWorld->m_Objects[i];
+	if(pWorld->m_WorldInfoFlags & WIF_VISBSP)
+		return FALSE;
 
-			if(stricmp(pObj->GetName(), pWorld->m_WorldName) == 0)
-			{
-				pProp = (CBoolProp*)pObj->m_PropList.GetMatchingProp("BlockLight", PT_BOOL);
-				if(pProp && pProp->m_Value)
-					return TRUE;
-			}
+	for(i=0; i < m_pWorld->m_Objects; i++)
+	{
+		pObj = m_pWorld->m_Objects[i];
+
+		if(stricmp(pObj->GetName(), pWorld->m_WorldName) == 0)
+		{
+			pProp = (CBoolProp*)pObj->m_PropList.GetMatchingProp("BlockLight", PT_BOOL);
+			if(pProp && pProp->m_Value)
+				return TRUE;
 		}
 	}
 
