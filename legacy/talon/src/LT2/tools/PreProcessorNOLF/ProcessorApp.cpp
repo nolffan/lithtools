@@ -67,7 +67,14 @@ BOOL CPreProcessorApp::InitInstance()
 
 	CPreProcessorDlg dlg;
 	m_pMainWnd = &dlg;
-	dlg.DoModal();
+	// talon: the wizard's nResponse is kept (0x4412ba), its tests empty.
+	int nResponse = dlg.DoModal();
+	if (nResponse == IDOK)
+	{
+	}
+	else if (nResponse == IDCANCEL)
+	{
+	}
 
 	return FALSE;
 }
@@ -136,14 +143,11 @@ BEGIN_MESSAGE_MAP(CPreProcessorDlg, CDialog)
 END_MESSAGE_MAP()
 
 
-// 0x42f900: the world file is the command line's first argument ("-
-// skipdialog" after it runs without questions and ends the dialog when
-// done); the options dialog runs first, then the window starts the thread.
+// 0x441660: the world file is the command line's first argument; the
+// options dialog runs first, then the window starts the thread.
 BOOL CPreProcessorDlg::OnInitDialog()
 {
 	CProcessingOptionsDlg optionsDlg;
-	uint32 len;
-	char *pExt;
 
 	if(__argc < 2)
 	{
@@ -152,22 +156,11 @@ BOOL CPreProcessorDlg::OnInitDialog()
 		return TRUE;
 	}
 
+	// talon: NOLF's (0x441703) takes the name as given (no ".ed" taken
+	// off) and leaves -skipdialog to InitProcessOptions.
 	memset(&g_AppGlobs, 0, sizeof(g_AppGlobs));
 	strcpy(g_AppGlobs.m_InputFile, __argv[1]);
-
-	len = strlen(g_AppGlobs.m_InputFile);
-	if(len > 3)
-	{
-		pExt = &g_AppGlobs.m_InputFile[len - 3];
-		if(stricmp(pExt, ".ed") == 0)
-			*pExt = 0;
-	}
-
 	sprintf(g_AppGlobs.m_OutputFile, "%s.dat", g_AppGlobs.m_InputFile);
-
-	// m_bSkipDialog: 0x4855b4.
-	if(__argc > 2 && strlen(__argv[2]) > 1 && stricmp(&__argv[2][1], "skipdialog") == 0)
-		g_AppGlobs.m_bSkipDialog = TRUE;
 
 	optionsDlg.m_pGlobs = &g_AppGlobs;
 	if(optionsDlg.DoModal() != IDOK)
@@ -414,14 +407,13 @@ void SetFullOptimization()
 }
 
 
-// 0x430510: with -skipdialog every question is answered no.
+// 0x442810. talon: NOLF's asks even with -skipdialog (AvP2's answers no).
+// Still near: the shipped code puts each test's taken arm out of line
+// (0x442874, 0x442861..0x44286f), ours keeps them in place.
 uint32 AskQuestion(const char *pQuestion, uint32 type)
 {
 	UINT mbType = MB_YESNO;
 	int ret;
-
-	if(g_AppGlobs.m_bSkipDialog)
-		return QUES_NO;
 
 	if((type & QUES_YES) && (type & QUES_NO) && (type & QUES_CANCEL))
 		mbType = MB_YESNOCANCEL;
@@ -459,28 +451,26 @@ CPreProcessorThread::~CPreProcessorThread()
 }
 
 
-// 0x430640: does the processing, then shows the OK button (or with
-// -skipdialog ends the window) and plays the default sound. FALSE ends the
-// thread.
+// 0x442920: does the processing, then shows the OK button and plays the
+// default sound. FALSE ends the thread.
 BOOL CPreProcessorThread::InitInstance()
 {
 	CWnd *pOK;
 
+	// talon: NOLF's (0x442920) always leaves the window up with its OK
+	// button shown (no -skipdialog ending) and plays the sound without
+	// waiting or stopping another.
 	DoProcessing(&g_AppGlobs);
 	g_pAppThread = NULL;
 
-	if(!g_AppGlobs.m_bSkipDialog && (pOK = g_pAppDlg->GetDlgItem(IDOK)) != NULL)
+	pOK = g_pAppDlg->GetDlgItem(IDOK);
+	if(pOK)
 	{
 		pOK->ShowWindow(SW_SHOW);
 		pOK->SetFocus();
 	}
-	else
-	{
-		if(g_pAppDlg)
-			g_pAppDlg->EndDialog(IDOK);
-	}
 
-	PlaySound("Default", NULL, 0);
+	PlaySound("Default", NULL, SND_NOSTOP|SND_NOWAIT);
 	return FALSE;
 }
 
@@ -519,19 +509,27 @@ CPreSurface::CPreSurface()
 
 
 // 0x430740: whether the poly may be split.
+// talon: NOLF's (0x442cb0) tests the sky and hull maker flags together,
+// then the no-subdivide flag, each returning FALSE.
 BOOL CPreSurface::ShouldSubdivide() const
 {
-	if(!(m_Flags & SURF_SKY) && !(m_Flags & SURF_HULLMAKER))
-		return !(m_Flags & SURF_NOSUBDIV);
+	if(m_Flags & (SURF_SKY|SURF_HULLMAKER))
+		return FALSE;
 
-	return FALSE;
+	if(m_Flags & SURF_NOSUBDIV)
+		return FALSE;
+
+	return TRUE;
 }
 
 
 // 0x430760
 BOOL CPreSurface::ShouldLightmap() const
 {
-	return (m_Flags & SURF_LIGHTMAP) && !(m_Flags & (SURF_SKY|SURF_INVISIBLE));
+	// talon: Build 69's (PreSurface.cpp): invisible, then sky (0x442cde).
+	return (m_Flags & SURF_LIGHTMAP) && 
+		!(m_Flags & SURF_INVISIBLE) &&
+		!(m_Flags & SURF_SKY);
 }
 
 
