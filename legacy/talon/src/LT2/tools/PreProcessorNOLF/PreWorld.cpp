@@ -1976,8 +1976,8 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 			iPt1 = pPoly->Index(i);
 			iPt2 = pPoly->Index((i+1) % pPoly->NumVerts());
 
-			pPolyEdges[i] = FindEdge(edgeHash, iPt1, iPt2);
-			if(pPolyEdges[i] == 0xFFFF)
+			*pPolyEdges = FindEdge(edgeHash, iPt1, iPt2);
+			if(*pPolyEdges == 0xFFFF)
 			{
 				pEntry = new EdgeHashEntry;
 				pEntry->m_iPt1 = LTMIN(iPt1, iPt2);
@@ -1986,9 +1986,11 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 				pEntry->m_pNext = edgeHash[pEntry->m_iPt1];
 				edgeHash[pEntry->m_iPt1] = pEntry;
 
-				pPolyEdges[i] = (uint16)nEdges;
+				*pPolyEdges = (uint16)nEdges;
 				nEdges++;
 			}
+
+			pPolyEdges++;
 		}
 
 		iPoly++;
@@ -1996,12 +1998,10 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 
 	for(i=0; i < edgeHash; i++)
 	{
-		pEntry = edgeHash[i];
-		while(pEntry)
+		for(pEntry=edgeHash[i]; pEntry; pEntry=pNext)
 		{
-			pNext = pEntry;
-			pEntry = pEntry->m_pNext;
-			delete pNext;
+			pNext = pEntry->m_pNext;
+			delete pEntry;
 		}
 	}
 
