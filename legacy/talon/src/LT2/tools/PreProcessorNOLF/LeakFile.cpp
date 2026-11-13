@@ -12,11 +12,23 @@
 // CopyArray2, 0x414d70, and Insert2, 0x43ddb0).
 
 
+// talon: NOLF's FindLeakPath is 0x420a40 (339 bytes, its EH funclets
+// 0x420b93), before LeakFile's range in the map. It constructs vCenter
+// with testPath at the top (0x420a56), not in the loop. Built /Ob0 it is
+// byte-identical; as the file is built (inlining), the out-of-line calls
+// the shipped code makes (CMoArray's CopyArray, Append, the PVertex
+// constructor) are inlined, and /Ob0 for the file loses LeakFile's
+// templates (0x421550, 0x421a20). MakeLeakFile (0x420be0) built /Ob0 has
+// the shipped instructions but in an unaligned frame: the shipped one is
+// a $$1 (0x420bee) with a 0xac-byte frame, 16 bytes of it unused
+// (-0x18..-0x24), where ours is 0x80; what makes icl align it is open.
+
 // Looks for a way through the portals from pLeaf to pTarget. path holds
 // the portal centers on the way to pLeaf, and gets the ones on to pTarget.
 static BOOL FindLeakPath(CPreLeaf *pLeaf, CPreLeaf *pTarget, PVertexArray &path)
 {
 	PVertexArray testPath;
+	PVertex vCenter;
 	CPrePortal *pPortal;
 	uint32 i;
 
@@ -33,7 +45,6 @@ static BOOL FindLeakPath(CPreLeaf *pLeaf, CPreLeaf *pTarget, PVertexArray &path)
 
 		if(pPortal->m_pPartner && pPortal->m_pPartner->m_pLeaf)
 		{
-			PVertex vCenter;
 			(PVector&)vCenter = pPortal->m_BasePoly.GetCenter();
 			testPath.CopyArray(path);
 			testPath.Append(vCenter);
