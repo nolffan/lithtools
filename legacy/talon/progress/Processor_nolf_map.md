@@ -309,6 +309,32 @@ first link's):
   is 0x41fd40 with 0x420140 its tail; mathlt_impl's 0x430a8c starts mid-
   instruction in RotateAroundAxis (0x430a60). Six more that start mid-
   instruction are in Processor-nolf-screen-exclude.csv.
+- The third round corrected the table itself (535 rows merged into the
+  row before them in Processor-nolf-screen-exclude.csv, 15 starts added
+  in extent-splits.csv; each with its evidence; 2,579 -> 2,217 rows):
+  - 43 rows start mid-instruction and 24 begin at an instruction the
+    one before falls through into. Most come from an `e8` byte inside
+    another instruction (icl's `-0x18(%ebp)` displacement is `e8`, and
+    `movl $0,-0x18(%ebp)` reads as `call` to the next instruction) or
+    from ASCII in .data/.rdata read as a pointer (RTTI names, the import
+    names); six follow `3b c2 73 xx` (`cmp edx,eax; jae`) read as `ret`.
+    0x464a19 is inside zlib inflate's jump table.
+  - 47 tails reached only by jumps from the function before: every
+    deleting destructor's `operator delete` island (17 bytes after the
+    `ret`), early-return splits (0x40c515, 0x412408, 0x413d81, 0x41b19a,
+    0x414baf), VC6's islands in RegMgr and adler32.
+  - 413 unwind actions and 7 catch blocks (read from each function's
+    FuncInfo). Our icl objects give a function one symbol up to its
+    `$Bn$EH` handler thunk, and the thunk a symbol that runs on to the
+    next function; a catch block is a symbol of its own (`catch_T_C`).
+    So the funclets before the thunk are the function's, those after it
+    the thunk row's (28) or a catch row's (6); the catch rows stay. In
+    VC6's PreWorld and StdLith a catch block is the function's.
+  - 15 functions the table had no row for, behind an EH handler thunk or
+    a function's last jump (lea-nop padding hides them from the `gap`
+    rule): 0x401090, 0x413610, 0x414670, 0x414a40, 0x414bf0, 0x415130,
+    0x417450, 0x417ee0, 0x41bed0, 0x41c050, 0x4230d0, 0x455ad0, 0x455b70,
+    0x455dc0, 0x455e70. Nothing calls, jumps to or points at any of them.
 
 ## What AvP2 added later, and what NOLF has that AvP2 doesn't
 
