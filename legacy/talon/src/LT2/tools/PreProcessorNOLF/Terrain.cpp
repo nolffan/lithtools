@@ -324,59 +324,59 @@ BOOL MakeTerrain(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld, 
 // ------------------------------------------------------------------------ //
 
 // talon: Build 69's CPrePoly::OverlapExtents, inline in 0x447220 (not in
-// our header: it moves BrushToWorld's declaration count). The 2001 one tests
-// and returns true or false: that is what spends sub_447220's inline budget
-// as shipped (Build 69's single return leaves Insert2's
-// _DeleteAndDestroyArray expanded).
-inline bool OverlapExtents_447220(const CPrePoly &thisPoly, const CPrePoly &pOtherPoly)
+// our header: it moves BrushToWorld's declaration count). NOLF's
+// (0x4582b0) is one BOOL expression: its compares jump straight to the
+// Append (0x45842e), where a bool, or if/else returns, make the value
+// (xor/inc %al) and test it.
+inline BOOL OverlapExtents_447220(const CPrePoly &thisPoly, const CPrePoly &pOtherPoly)
 {
-	if((pOtherPoly.m_vExtentsMin.x < thisPoly.m_vExtentsMax.x) && (pOtherPoly.m_vExtentsMax.x > thisPoly.m_vExtentsMin.x) &&
+	return (pOtherPoly.m_vExtentsMin.x < thisPoly.m_vExtentsMax.x) && (pOtherPoly.m_vExtentsMax.x > thisPoly.m_vExtentsMin.x) &&
 			(pOtherPoly.m_vExtentsMin.y < thisPoly.m_vExtentsMax.y) && (pOtherPoly.m_vExtentsMax.y > thisPoly.m_vExtentsMin.y) &&
-			(pOtherPoly.m_vExtentsMin.z < thisPoly.m_vExtentsMax.z) && (pOtherPoly.m_vExtentsMax.z > thisPoly.m_vExtentsMin.z))
-		return true;
-	else
-		return false;
+			(pOtherPoly.m_vExtentsMin.z < thisPoly.m_vExtentsMax.z) && (pOtherPoly.m_vExtentsMax.z > thisPoly.m_vExtentsMin.z);
 }
 
 // Adds to touching each poly of the BSP under pRoot that lies on pPoly's
 // plane and overlaps its extents (0x447220). The shipped code calls
 // Insert2's _DeleteAndDestroyArray (0x4474e1) and Dot (0x4472b9): the
-// inline budget, which OverlapExtents' spelling decides.
+// inline budget, which OverlapExtents' spelling decides. talon: NOLF's
+// (0x4582b0) is identical as icl's loop: the tail calls are jumps back to
+// the validity test (0x458444, 0x45847d), as FindSegmentHit's in
+// LightMapMaker.cpp (our icl doesn't make them so).
 void sub_447220(NODEREF pRoot, CPrePoly *pPoly, CMoArray<CPrePoly*> &touching)
 {
 	static SplitStruct	splitStruct;
 	static PolySide		side;
 
-	if(!IsValidNode(pRoot))
-		return;
-
-	if(pRoot->m_pPoly == pPoly)
+	while(IsValidNode(pRoot))
 	{
-		side = Intersect;
-	}
-	else
-	{
-		side = GetPolySide(pRoot->m_pPoly->GetPlane(), pPoly, &splitStruct);
-		if(splitStruct.m_nIntersect > 0)
+		if(pRoot->m_pPoly == pPoly)
 		{
-			if(OverlapExtents_447220(*pPoly, *pRoot->m_pPoly))
-			{
-				if(touching.FindElement(pRoot->m_pPoly) == BAD_INDEX)
-					touching.Append(pRoot->m_pPoly);
-			}
-
 			side = Intersect;
 		}
-	}
+		else
+		{
+			side = GetPolySide(pRoot->m_pPoly->GetPlane(), pPoly, &splitStruct);
+			if(splitStruct.m_nIntersect > 0)
+			{
+				if(OverlapExtents_447220(*pPoly, *pRoot->m_pPoly))
+				{
+					if(touching.FindElement(pRoot->m_pPoly) == BAD_INDEX)
+						touching.Append(pRoot->m_pPoly);
+				}
 
-	if(side == Intersect)
-	{
-		sub_447220(pRoot->m_Sides[0], pPoly, touching);
-		sub_447220(pRoot->m_Sides[1], pPoly, touching);
-	}
-	else
-	{
-		sub_447220(pRoot->m_Sides[side], pPoly, touching);
+				side = Intersect;
+			}
+		}
+
+		if(side == Intersect)
+		{
+			sub_447220(pRoot->m_Sides[0], pPoly, touching);
+			pRoot = pRoot->m_Sides[1];
+		}
+		else
+		{
+			pRoot = pRoot->m_Sides[side];
+		}
 	}
 }
 
