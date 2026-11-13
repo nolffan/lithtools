@@ -57,11 +57,15 @@ static BOOL TJ_IsNodeTreeFull(CPreWorld *pWorld)
 // Looks for a plane through pPt, perpendicular to pPoly, that cuts pPoly
 // through one of its vertices (not iEdge1 or iEdge2, the edge pPt is on)
 // and through nothing else of it; the nearest such vertex wins.
-// *pbFailed is TRUE if there is none at all (0x4488f0).
-// Near: after GetPolySide's loop the shipped code reloads bFound, the
-// vertex pointer and i in that order, ours in the reverse (register
-// allocation; declaration order, the init order and the shape of the test
-// don't move it).
+// *pbFailed is TRUE if there is none at all (0x4488f0; NOLF's 0x458620).
+// talon: near, size-exact, two instructions: the dot product's z term
+// loads the normal first (0x45882e), ours the vertex; the other two terms
+// agree only with vVert.Dot(normal), and no spelling of the dot tried
+// (the member either way, VEC_DOT, written out, the declaration order)
+// gets all three. The plane is the vertex's copy dotted (the copy at
+// 0x4586ab), and the first-plane copy falls through as shipped only with
+// the test written as an empty then (!bFound or == FALSE put it out of
+// line, != TRUE compares with 1).
 static BOOL TJ_FindSplitPlane(CPrePoly *pPoly, PVector *pPt, BOOL *pbFailed, LTPlane *pPlane, uint32 iEdge1, uint32 iEdge2)
 {
 	SplitStruct split;
@@ -90,9 +94,11 @@ static BOOL TJ_FindSplitPlane(CPrePoly *pPoly, PVector *pPt, BOOL *pbFailed, LTP
 
 		plane.m_Normal = pPoly->Normal().Cross(vToVert);
 		plane.m_Normal.Norm();
-		plane.m_Dist = plane.m_Normal.Dot(pPoly->Pt(i));
+		plane.m_Dist = vVert.Dot(plane.m_Normal);
 
-		if(!bFound)
+		if(bFound)
+			;
+		else
 			*pPlane = plane;
 
 		if(fabs(plane.DistTo(*pPt)) > 0.1)
@@ -113,16 +119,22 @@ static BOOL TJ_FindSplitPlane(CPrePoly *pPoly, PVector *pPt, BOOL *pbFailed, LTP
 
 // Splits *ppPoly on pPlane, through pPt, and puts the two halves in its
 // place: in the world's poly list, its nodes and its sub-BSPs. *ppPoly is
-// deleted and becomes the first half (0x448d20).
+// deleted and becomes the first half (0x448d20; NOLF's 0x459010). The
+// side is kept in a local first: compared straight away, the inlined
+// GetPolySide's return folds into its tests (ours then skips the
+// coplanar case's dot), where the shipped code makes it in %al and
+// compares it with Intersect (0x459115).
 static BOOL TJ_SplitPoly(CPreWorld *pWorld, CPrePoly **ppPoly, LTPlane *pPlane, PVector *pPt)
 {
 	SplitStruct split;
 	CPrePoly *sides[2];
 	CPreSubBsp *pBsp;
+	PolySide side;
 	BOOL bReplaced;
 	uint32 i, j;
 
-	if(GetPolySide(pPlane, *ppPoly, &split) != Intersect)
+	side = GetPolySide(pPlane, *ppPoly, &split);
+	if(side != Intersect)
 		return FALSE;
 
 	if(!sub_4475a0(pPt, *ppPoly, sides, &split))
