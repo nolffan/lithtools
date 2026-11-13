@@ -26,7 +26,7 @@ static CHullInfo	*g_pHullInfo;
 
 
 static void CheckLeaves(CPreWorld *pWorld);
-static void MakeHulls_R(CNode *pRoot, CPreLeaf *pLeaf);
+static void MakeHulls_R(NODEREF iRoot, CPreLeaf *pLeaf);
 static BOOL IsHullNode(CPreWorld *pWorld, CNode *pNode);
 static void AddNodePoly(CPreWorld *pWorld, CNode *pNode, CLinkedList<CPrePoly*> &polies);
 static CPrePortal* MakeNodePortal(CPreLeaf *pLeaf, CPrePoly *pPoly);
@@ -115,24 +115,46 @@ static void CheckLeaves(CPreWorld *pWorld)
 }
 
 
-static void MakeHulls_R(CNode *pRoot, CPreLeaf *pLeaf)
+// talon: 0x40c4d0, the 2001 version (EH-framed: new CPreLeaf). Through
+// the world's GetNode (0x40c522), the blocker flag read from the surface
+// (0x40c62e), the portals' leaves set with a separate counter (signed,
+// 0x40c99b), the leaf's portals SetSize(0) (0x40c93e) and its index LastI
+// (0x40cac2); the back side by the loop (the shipped back edge stores into
+// both parameters, 0x40cb15).
+//
+// Near (1704 bytes, shipped 1650): the same calls in the same order, under
+// this file's /Ob0. Left: our icl rotates the loop, putting the parameter
+// stores at its top behind a jump in (shipped: at the bottom, 0x40cb15;
+// while, goto and tail recursion tried: ours does not eliminate the tail
+// call, shipped does or loops); it keeps pPortal in edx across the second
+// test (shipped reloads it, 0x40c68a) and increments the counters through
+// a register where shipped has incl on the slot (0x40c913, 0x40c9c2).
+static void MakeHulls_R(NODEREF iRoot, CPreLeaf *pLeaf)
 {
 	static SplitStruct splitStruct;
+	CNode *pRoot;
+	CPrePoly *pNodePoly;
 	CPreLeaf *sides[2];
-	CPrePortal *portalSides[2], *newPartners[2];
-	CPrePortal *pPortal, *pReverse, *pPartner;
-	CPrePoly *pNodePoly, *pPoly;
-	CMoArray<CPrePortal*> *pPartnerPortals;
-	PolySide side;
 	BOOL bBlocker;
+	CPrePortal *pPortal, *pReverse;
 	LPOS pos;
-	uint32 i, k;
-
-	if(pLeaf->m_Portals.GetSize() == 0)
-		return;
+	CPrePoly *pPoly;
+	PolySide side;
+	uint32 i;
+	CPrePortal *pTest;
+	CPrePortal *portalSides[2];
+	CPrePortal *pPartner;
+	CPreLeaf *pPartnerLeaf;
+	uint32 k;
+	CPrePortal *newPartners[2];
+	uint32 j;
 
 	for(;;)
 	{
+		if(pLeaf->m_Portals.GetSize() == 0)
+			return;
+
+		pRoot = g_pHullWorld->GetNode(iRoot);
 		pNodePoly = pRoot->m_pPoly;
 
 		sides[BackSide] = new CPreLeaf;
@@ -142,33 +164,35 @@ static void MakeHulls_R(CNode *pRoot, CPreLeaf *pLeaf)
 		if(g_pHullInfo->m_ProgressFn)
 			g_pHullInfo->m_ProgressFn((float)g_pHullInfo->m_nNodesDone / g_pHullInfo->m_nNodes);
 
-		bBlocker = !!(pRoot->m_pPoly->GetSurfaceFlags() & SURF_VISBLOCKER);
+		if(pRoot->m_pPoly->m_pSurface->m_Flags & SURF_VISBLOCKER)
+			bBlocker = TRUE;
+		else
+			bBlocker = FALSE;
 
 		// The node's portal: its poly's plane, inside this leaf.
 		pPortal = MakeNodePortal(pLeaf, pNodePoly);
 		if(pPortal)
-		{
 			pPortal = ClipPortal(pLeaf, pPortal, pNodePoly);
-			if(pPortal)
+
+		if(pPortal)
+		{
+			pReverse = ClonePortal(pPortal);
+			pReverse->Flip();
+
+			sides[FrontSide]->m_Portals.Append(pPortal);
+			sides[BackSide]->m_Portals.Append(pReverse);
+
+			// You can't see through a vis blocker.
+			pPortal->m_pPartner = bBlocker ? NULL : pReverse;
+			pReverse->m_pPartner = bBlocker ? NULL : pPortal;
+			if(bBlocker)
 			{
-				pReverse = ClonePortal(pPortal);
-				pReverse->Flip();
-
-				sides[FrontSide]->m_Portals.Append(pPortal);
-				sides[BackSide]->m_Portals.Append(pReverse);
-
-				// You can't see through a vis blocker.
-				pPortal->m_pPartner = bBlocker ? NULL : pReverse;
-				pReverse->m_pPartner = bBlocker ? NULL : pPortal;
-				if(bBlocker)
-				{
-					pPortal->m_Flags |= PORTALF_BLOCKER;
-					pReverse->m_Flags |= PORTALF_BLOCKER;
-				}
-
-				pReverse->m_pNode = pRoot;
-				pPortal->m_pNode = pRoot;
+				pPortal->m_Flags |= PORTALF_BLOCKER;
+				pReverse->m_Flags |= PORTALF_BLOCKER;
 			}
+
+			pReverse->m_pNode = pRoot;
+			pPortal->m_pNode = pRoot;
 		}
 
 		// Sort the polies.
@@ -191,60 +215,56 @@ static void MakeHulls_R(CNode *pRoot, CPreLeaf *pLeaf)
 		// Split the portals.
 		for(i=0; i < pLeaf->m_Portals.GetSize(); i++)
 		{
-			pPortal = pLeaf->m_Portals[i];
+			pTest = pLeaf->m_Portals[i];
 
-			side = GetPolySide(pNodePoly->GetPlane(), pPortal, &splitStruct);
+			side = GetPolySide(pNodePoly->GetPlane(), pTest, &splitStruct);
 			if(side != Intersect)
 			{
-				sides[side]->m_Portals.Append(pPortal);
+				sides[side]->m_Portals.Append(pTest);
 				continue;
 			}
 
-			SplitPoly(pNodePoly->GetPlane(), pPortal, portalSides, &splitStruct);
+			SplitPoly(pNodePoly->GetPlane(), pTest, portalSides, &splitStruct);
 			sides[BackSide]->m_Portals.Append(portalSides[BackSide]);
 			sides[FrontSide]->m_Portals.Append(portalSides[FrontSide]);
 
 			// Its partner, in the leaf on its other side, is split the same way.
-			pPartner = pPortal->m_pPartner;
+			pPartner = pTest->m_pPartner;
 			if(pPartner)
 			{
-				pPartnerPortals = &pPartner->m_pLeaf->m_Portals;
+				pPartnerLeaf = pPartner->m_pLeaf;
 				for(k=0; k < 2; k++)
 				{
 					newPartners[k] = ClonePortal(portalSides[k]);
 					newPartners[k]->Flip();
-					pPartnerPortals->Append(newPartners[k]);
+					pPartnerLeaf->m_Portals.Append(newPartners[k]);
 
 					newPartners[k]->m_pLeaf = pPartner->m_pLeaf;
 					newPartners[k]->m_pPartner = portalSides[k];
 					portalSides[k]->m_pPartner = newPartners[k];
 				}
 
-				pPartnerPortals->Remove(pPartnerPortals->FindElement(pPartner));
+				pPartnerLeaf->m_Portals.Remove(pPartnerLeaf->m_Portals.FindElement(pPartner));
 				DeletePoly(pPartner);
-				pPortal->m_pPartner = NULL;
+				pTest->m_pPartner = NULL;
 			}
 
-			DeletePoly(pPortal);
+			DeletePoly(pTest);
 		}
 
-		pLeaf->m_Portals.Term();
+		pLeaf->m_Portals.SetSize(0);
 		delete pLeaf;
 
-		sides[FrontSide]->m_Polies.AddTail(pNodePoly);
+		sides[FrontSide]->m_Polies.AddTail(pRoot->m_pPoly);
 
-		for(k=0; k < 2; k++)
+		for(i=0; i < 2; i++)
 		{
-			for(i=0; (int)i < (int)sides[k]->m_Portals.GetSize(); i++)
-				sides[k]->m_Portals[i]->m_pLeaf = sides[k];
+			for(j=0; (int)j < (int)sides[i]->m_Portals.GetSize(); j++)
+				sides[i]->m_Portals[j]->m_pLeaf = sides[i];
 		}
 
 		// The front side.
-		if(IsHullNode(g_pHullWorld, pRoot->m_Sides[FrontSide]))
-		{
-			MakeHulls_R(pRoot->m_Sides[FrontSide], sides[FrontSide]);
-		}
-		else
+		if(!IsHullNode(g_pHullWorld, pRoot->m_Sides[FrontSide]))
 		{
 			// It's a leaf.
 			if(pRoot->m_Unknown_1a & 1)
@@ -258,7 +278,11 @@ static void MakeHulls_R(CNode *pRoot, CPreLeaf *pLeaf)
 			pRoot->m_pLeaf = sides[FrontSide];
 			sides[FrontSide]->m_pNode = pRoot;
 			g_pHullWorld->m_Leaves.Append(sides[FrontSide]);
-			sides[FrontSide]->m_Index = (uint16)(g_pHullWorld->m_Leaves.GetSize() - 1);
+			sides[FrontSide]->m_Index = (uint16)g_pHullWorld->m_Leaves.LastI();
+		}
+		else
+		{
+			MakeHulls_R(pRoot->m_Sides[FrontSide], sides[FrontSide]);
 		}
 
 		// The back side.
@@ -268,10 +292,8 @@ static void MakeHulls_R(CNode *pRoot, CPreLeaf *pLeaf)
 			return;
 		}
 
-		pRoot = pRoot->m_Sides[BackSide];
+		iRoot = pRoot->m_Sides[BackSide];
 		pLeaf = sides[BackSide];
-		if(pLeaf->m_Portals.GetSize() == 0)
-			return;
 	}
 }
 
@@ -288,8 +310,10 @@ static BOOL IsHullNode(CPreWorld *pWorld, CNode *pNode)
 
 static void AddNodePoly(CPreWorld *pWorld, CNode *pNode, CLinkedList<CPrePoly*> &polies)
 {
-	if(IsValidNode(pNode))
-		polies.AddTail(pNode->m_pPoly);
+	if(!IsValidNode(pNode))
+		return;
+
+	polies.AddTail(pNode->m_pPoly);
 }
 
 
