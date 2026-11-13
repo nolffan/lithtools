@@ -1352,7 +1352,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 	uint32					iSurface, iPlane, iPoly, iFront, iBack, iRoot, nSubBsps, value, nPolyRefs;
 	uint16					nLeafLists, word, listSize, iTexture, iLeaf, nSkip, skip1, skip2, index;
 	uint8					nVerts, nExtraVerts, byteVal, r, g, b;
-	PVector					vec, vMin, vMax, vO, vP, vQ;
+	PVector					vec, vMin, vMax;
 	PReal					dist;
 	char					textureName[256], effectName[256], *pChar;
 	GPOS					pos;
@@ -1361,7 +1361,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 	CPreLeaf				*pLeaf;
 	CPreLeafList			*pList;
 	CPrePlane				*pPlane;
-	CPreSurface				*pSurface, *pSrcSurface;
+	CPreSurface				*pSurface;
 	PreSurfaceUser		*pUser;
 	CPreSubBsp				*pNullBsp;
 
@@ -1495,7 +1495,9 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		m_Planes.AddTail(pPlane);
 	}
 
-	// Surfaces.
+	// Surfaces. talon: NOLF's (0x445142..0x445412), as SaveFile writes them:
+	// each surface has its plane, and the polies only name their surface;
+	// the points (each with a normal) follow the surface users.
 	surfaces.SetSize(nSurfaces);
 	for(i=0; i < nSurfaces; i++)
 	{
@@ -1521,9 +1523,22 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 			return 2;
 
 		pSurface->m_pTextureName = m_TextureNames[iTexture];
-		pSurface->m_pPlane = NULL;
 
+		file >> iPlane;
+		if(iPlane >= m_Planes.GetSize())
+			return 2;
+
+		pSurface->m_pPlane = planes[iPlane];
 		file >> pSurface->m_Flags;
+
+		GetLMPlaneVectors(FindLMPlane(pSurface->m_pPlane->m_Normal),
+			pSurface->m_pPlane->m_Normal, pSurface->P, pSurface->Q);
+
+		pSurface->m_InverseTextureP = pSurface->m_TextureP.Inverse();
+		pSurface->m_InverseTextureQ = pSurface->m_TextureQ.Inverse();
+		pSurface->InverseP = pSurface->P.Inverse();
+		pSurface->InverseQ = pSurface->Q.Inverse();
+
 		file >> byteVal;
 		pSurface->m_bDetail = byteVal;
 		file >> pSurface->m_Ambient[0];
@@ -1544,17 +1559,7 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		m_Surfaces.AddTail(pSurface);
 	}
 
-	// Points.
-	m_Points.SetSize(nPoints);
-	for(i=0; i < m_Points.GetSize(); i++)
-	{
-		file >> vec.x;
-		file >> vec.y;
-		file >> vec.z;
-		m_Points[i].Init(vec.x, vec.y, vec.z);
-	}
-
-	// Each poly's own surface and vertices.
+	// Each poly's own data and its surface.
 	polies.SetSize(m_Polies.GetSize());
 	i = 0;
 	for(pos=m_Polies; pos; )
@@ -1575,24 +1580,10 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		}
 
 		file >> iSurface;
-		if(iSurface >= surfaces.GetSize())
+		if(iSurface >= m_Surfaces.GetSize())
 			return 2;
 
-		file >> iPlane;
-		if(iPlane >= m_Planes.GetSize())
-			return 2;
-
-		pSrcSurface = surfaces[iSurface];
-
-		file >> vO.x;
-		file >> vO.y;
-		file >> vO.z;
-		file >> vP.x;
-		file >> vP.y;
-		file >> vP.z;
-		file >> vQ.x;
-		file >> vQ.y;
-		file >> vQ.z;
+		pPoly->m_pSurface = surfaces[iSurface];
 
 		for(j=0; j < pPoly->NumVerts(); j++)
 		{
@@ -1617,34 +1608,6 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 			pPoly->m_Unknown_0c[j].m_Color.y = (float)g;
 			pPoly->m_Unknown_0c[j].m_Color.z = (float)b;
 		}
-
-		pSurface = new CPreSurface;
-		pPoly->m_pSurface = pSurface;
-
-		pSurface->m_TextureO = vO;
-		pSurface->m_TextureP = vP;
-		pSurface->m_TextureQ = vQ;
-		pSurface->m_pTextureName = pSrcSurface->m_pTextureName;
-		pSurface->m_Flags = pSrcSurface->m_Flags;
-		pSurface->m_pPlane = planes[iPlane];
-
-		GetLMPlaneVectors(FindLMPlane(pSurface->m_pPlane->m_Normal),
-			pSurface->m_pPlane->m_Normal, pSurface->P, pSurface->Q);
-
-		pSurface->m_InverseTextureP = pSurface->m_TextureP.Inverse();
-		pSurface->m_InverseTextureQ = pSurface->m_TextureQ.Inverse();
-		pSurface->InverseP = pSurface->P.Inverse();
-		pSurface->InverseQ = pSurface->Q.Inverse();
-
-		pSurface->m_bDetail = pSrcSurface->m_bDetail;
-		pSurface->m_Ambient[0] = pSrcSurface->m_Ambient[0];
-		pSurface->m_Ambient[1] = pSrcSurface->m_Ambient[1];
-		pSurface->m_Ambient[2] = pSrcSurface->m_Ambient[2];
-		pSurface->m_Unknown_a0 = pSrcSurface->m_Unknown_a0;
-		pSurface->m_Unknown_a4 = pSrcSurface->m_Unknown_a4;
-		pSurface->m_TextureFlags = pSrcSurface->m_TextureFlags;
-
-		m_Surfaces.Append(pSurface);
 	}
 
 	// Link up the nodes.
@@ -1676,16 +1639,11 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		pUser->m_pName = m_StringHolder.AddString(effectName, TRUE);
 
 		file >> dummy;
-		file >> iPoly;
-		if(iPoly >= m_Polies.GetSize())
-			return 2;
-
-		pUser->m_pSurface = polies[iPoly]->m_pSurface;
-
 		file >> word;
 		if(word >= m_Surfaces.GetSize())
 			return 2;
 
+		pUser->m_pSurface = surfaces[word];
 		pUser->m_pSurface->m_Unknown_80 = (uint32)pUser;
 
 		file >> vec.x;
@@ -1696,6 +1654,20 @@ uint32 CPreWorld::LoadFile(CAbstractIO &file)
 		file >> vec.z;
 
 		m_Unknown_04.Append(pUser);
+	}
+
+	// The points, each with its normal (not kept).
+	m_Points.SetSize(nPoints);
+	for(i=0; i < m_Points.GetSize(); i++)
+	{
+		file >> vec.x;
+		file >> vec.y;
+		file >> vec.z;
+		m_Points[i].Init(vec.x, vec.y, vec.z);
+
+		file >> vec.x;
+		file >> vec.y;
+		file >> vec.z;
 	}
 
 	if(!LoadPBlockTable(file, &m_PBlocks))
