@@ -47,18 +47,33 @@ TInfo* FindTInfo(CGLinkedList<TInfo*> &theList, const char *pTextureName)
 // both), and cl 8447. MakePBlockNodes_R (0x425b10) differs the same way;
 // MakeZones and FindSurfaceUsers (WorldApprox.cpp) match with the
 // shipped load order from the same inlined Append.
+//
+// talon: Processor.exe (NOLF)'s is 0x41f540 (751 bytes, its EH funclets
+// 0x41f82f). It stores bMore = TRUE before a while loop (0x41f586), not a
+// do-while, and keeps a second copy of the parse position, set with
+// pCurPos from pDefs and to pCurPos before each cp_Parse and never read
+// (-0x1eb4, 0x41f596 and 0x41f5ab; pLinePos is our name for it). Its
+// slots go by first use: pCurPos, pLinePos, bMore (0x41f590). Built /Ob0
+// the instructions then follow the shipped ones but in an unaligned
+// frame: the shipped one is a $$1 (0x41f54e), as ours is only when the
+// file inlines (TLightDef's constructor and Append, which the shipped
+// code calls, 0x41fbe0, 0x41fb30), and with ebx the frame's the shipped
+// code stores and pushes constants as immediates (0x41f5ee, 0x41f5f0)
+// where ours loads them into a free register.
 static void ParseLightDefs(TInfo *pInfo, char *pDefs)
 {
-	char		*pCurPos;
+	char		*pCurPos, *pLinePos;
 	char		*args[PARSE_MAXARGS];
 	char		argBuffer[PARSE_MAXARGS*PARSE_MAXARGLEN];
 	int			nArgs, iArg;
 	int			bMore;
 	TLightDef	*pDef;
 
-	pCurPos = pDefs;
-	do
+	pLinePos = pCurPos = pDefs;
+	bMore = TRUE;
+	while(bMore)
 	{
+		pLinePos = pCurPos;
 		bMore = cp_Parse(pCurPos, &pCurPos, argBuffer, args, &nArgs);
 		if(nArgs >= 4)
 		{
@@ -110,7 +125,6 @@ static void ParseLightDefs(TInfo *pInfo, char *pDefs)
 			pInfo->m_LightDefs.Append(pDef);
 		}
 	}
-	while(bMore);
 }
 
 
