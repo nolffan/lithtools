@@ -44,30 +44,14 @@ uint32 MakePVS(PVSInfo *pInfo);
 // Finds the vis BSP's leaves (0x40c640).
 BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP);
 
-// talon: the template code this module emits for m_Unknown_04
-// (0x441d30..0x442e10) expands less than LightMapMaker's
-// CMoArray< CMoArray<CPrePoly*> > (0x41fb50..), whose code ours otherwise
-// is. GenAppend (0x441ea0) leaves DefaultCache's GetCacheSize and
-// SetCacheSize (0x4420b0, 0x4420c0) out of line in its deepest inline: an
-// inline depth of 7 instead of 8 reproduces it and the two accessors
-// exactly (the stand-in at the end of this file). InternalNiceSetSize
-// (0x442a80), _DeleteAndDestroyArray (0x442c20), BaseDelete (0x442ce0)
-// and the element's ??_G (0x442e10) call the element's destructor
-// (0x4429a0) where ours expands it (still near). Measured, none of which
-// moves it: an element class derived from CMoArray<X*> reproduces those
-// three modulo relocations, but then its constructor is a call in
-// FixWorldTJunctions and BaseNew, and the vtables (0x47575c is stored by
-// m_Unknown_18's constructor and destructor, by BaseNew's and by 0x4429a0)
-// say there is no derived class; the element type (a pointer, a 4-byte
-// struct) and where the class is declared; explicit instantiations of
-// either array early or late; FixWorldTJunctions moved to the top or the
-// bottom; inline constructor or destructor on CTJunctionFixer;
-// m_Unknown_18 of another type (that moves the inner array's code after
-// CMoArray<CWorldModelDef*>'s, as shipped, but changes nothing in it);
-// ~CMoArray defined outside the class; up to 2000 extra declarations;
-// #pragma auto_inline, inline_recursion, other inline depths; cl 8447.
-// LightMapMaker has the same thing: its BaseDelete for CMoArray<uint32>
-// (0x423880, called at 0x418e4c) calls the destructor 0x41e0d0 too.
+// talon: the template code this module emits for CTJunctionFixer's
+// CMoArray< CMoArray<CTJUnknown*> > (vtable 0x48a250, its default
+// constructor 0x4525f0): the shipped GenAppend (0x4515c0, 1015 bytes) and
+// GenRemoveAt (0x451250, 880) inline the element's operator= and its
+// CopyArray2 loop four times over, where ours (292 bytes) calls
+// operator= out of line. AvP2's Processor (cl) had a `#pragma
+// inline_depth(7)` stand-in here; under icl it changes no byte of this
+// object, so NOLF's file has none.
 
 // The problem brush module: a world model's BSP (0x40b540; bPhysicsBSP
 // for the physics BSP) and the vis BSP (0x40cbd0).
@@ -1517,13 +1501,3 @@ BOOL MergeBrushes(
 	EndProgressStage(PROGRESS_MERGEBRUSHES, FALSE);
 	return TRUE;
 }
-
-
-// talon: stand-in: the shipped CMoArray< CMoArray<CTJUnknown*> >::GenAppend
-// (0x441ea0) leaves the deepest level of its inlined element copy,
-// DefaultCache's GetCacheSize and SetCacheSize, out of line (0x4420b0,
-// 0x4420c0), as if the inline depth were one less than VC6's default; the
-// template code this object emits is compiled after everything above, so
-// this pragma changes that code only (it changes no behaviour). No source
-// form was found that does it: see the note on m_Unknown_04 at the top.
-#pragma inline_depth(7)
