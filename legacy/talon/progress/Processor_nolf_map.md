@@ -118,6 +118,71 @@ cvtres 1735, and 82 objects without `@comp.id`.
   our STLport 4.0 (SGI 3.x: the deque's map first, 42-element buffers,
   the node allocator's `(n+7)>>3`): not yet a tree of ours.
 
+## What the second round learned (2026-11-13)
+
+Nine agents, one per group of modules, 1,344 -> 1,374 identical.
+
+- **The inlining limit is not most of the gap.** Built three ways (as
+  the project is, every icl file /Ob0, every one inlining) and the best
+  taken per function, the image matches only 51 more functions (5 KB)
+  than as built: the rest of the 196 KB of nears is ordinary source
+  work. A file-wide /Ob0 was measured on every icl file this round; it
+  wins only where Processor.dsp already has it (streamsim, ProcessorApp,
+  EditObjects, create_world_tree, BuildHulls), and in each of those both
+  ways lose recorded matches.
+- **Its refinements:** an out-of-line copy of an inline (emitted because
+  an EH-framed caller calls it) has nothing inlined into it either
+  (GetPolySide 0x40b880, CalcExtents 0x45a520); calls to empty inlines
+  are still dropped in EH-framed functions where our /Ob0 calls them
+  (CRect() in OnPaint 0x441a30); icl inlines ordinary functions of the
+  same file, not only `inline` ones (DrawStatusText into ShowStatusText
+  0x44ef30), but never one defined later in the file than its caller.
+  `#pragma inline_depth(0)` and `auto_inline(off)` don't stop it; only
+  `#pragma optimize("", off)` does.
+- **The whole object's register allocation moves with any edit in it:**
+  CMoArray<CPrePolyRef>::Insert2 (0x42e660, emitted after LightMapMaker's
+  own functions) matched or not as unrelated LightMapMaker edits came and
+  went. Score the whole object after a change, not just the function.
+- **Source shapes that show in the bytes:** if arms are laid out as
+  written and icl doesn't normalise a negated condition (0x432847); sums
+  are added in source order (0x4570fc); runs of `x = 0;` come out in
+  reverse (0x42a1b1); stack slots follow declaration order (0x42a14d); a
+  load through a pointer written twice is loaded twice (0x42a207);
+  `VEC_DISTSQR` gives the z, y, x order `(v - w).MagSqr()` doesn't
+  (0x42332e); a test through an inline helper changes block layout
+  (0x45bbe0, 0x44f270); `if(...) ret = K; else if ...` on an int groups
+  the compares (0x44284a); a recursive function's tail calls become a
+  loop (0x422f45).
+- **What no source form tried reaches:** where the frame's `add $N,%esp`
+  falls among the last instructions (about a dozen GenFindElement copies,
+  0x4027a0, 0x4546e0); a pointer the shipped code keeps in a register
+  across a loop's back edge (0x42a401); some early returns placed after
+  the function's `ret` (0x40ba3f, 0x40a755); floating-point operand order
+  in places (quat_Slerp 0x42fe2e). They look like differences between
+  our icl 4.0 build and Monolith's.
+- **PreWorld (cl 8447):** `p[i]` gives a strength-reduced pointer where
+  `*p++` doesn't (0x447960); a chained `file << r << g << b` keeps a slot
+  per byte (0x446688); struct assignment uses `movs` only with esi and
+  edi free, so member copies give 0x4451d7. NOLF's CPreLightFrame is 0x14
+  bytes, m_PolyMaps alone (BaseNew 0x44ca8b, the destructor 0x44302f):
+  ours still has AvP2's m_Unknown_14.
+- **Open at the link:**
+  - NOLF has a source file AvP2 doesn't, EditPlane.cpp (GetPolySide
+    0x418540, SplitPoly 0x418690, the two-array SplitPoly 0x418e10, in
+    EditObjects' range). It's written but not in Processor.dsp: in file
+    order it matches GetPolySide, but the link then keeps PrePoly.obj's
+    copy of the folded `_AllocateTArray<CEditVert>` and one more function
+    is unplaced.
+  - The image keeps functions nothing references (0x414a40, 0x414bf0,
+    0x415130, 0x414670, 0x413610: no call, no address anywhere), which
+    our link drops, so ours of them are "unlinked". Either the icl
+    objects weren't all COMDATs or the link didn't /OPT:REF them.
+  - `_MSC_VER` was above 1100 in the shipped build (probably icl's
+    /Qvc6, ours is the default /Qvc5): CreatePoly's unwind funclet
+    (0x405180) is the empty placement `operator delete`, which
+    object_bank.h declares only then. /Qvc6 on one file made it worse;
+    the whole project with it is untried.
+
 ## Layout (libscan.py)
 
 | Range | What | Source |
@@ -205,6 +270,31 @@ pairings at 0x456dc0..0x457010), PreBrush (0x43c280 is SplitPoly's "Bad
 poly" template code). 0x431c00 (136 bytes, "Brush | BrushType |
 FrictionCoefficient", in node_ops' range) is NOLF's own: nothing of AvP2's
 uses those strings.
+
+Corrected by the second round (the table's ranges and counts are the
+first link's):
+
+- dtxmgr ends at 0x412770; 0x412770..0x4137b0 is EditBrush's (MakeCap
+  0x412770, a brush splitter 0x412e90, another 0x413350, the constructor
+  0x4134f0, the destructor 0x4136f0; LoadTBW is 0x413890).
+- 0x402760..0x403300 is BasePoly's template code, not bdefs' (bdefs has
+  two empty functions the linker folded).
+- gettextureflags starts at 0x41f130 (ApplyTextureFlagsToWorld), inside
+  geomroutines' range; gettextureinfo at 0x41f4f0 (FindTInfo).
+- lightmap_compress ends at 0x422270; lightmap_planes runs to the end of
+  g_LMPlanes' static initializer (0x4223d0); LightMapMaker starts after
+  it (0x422720 and 0x422b90 are LightMapMaker's).
+- PhysicsBlocks starts at 0x4327e0 (MakePBlockNodes_R); 0x4325e0..
+  0x4327e0 is parse_world_info's.
+- 0x456dc0..0x4574f0 (AreSurfacesSame_RS, GetSurfaceHash_RS 0x457010,
+  MergeSurfaces_RS 0x4572a0) is RaySelecter.cpp's, not streamsim's.
+- VisLeaves and WorldApprox are one object: 0x45b6b0, 0x45c470, 0x45ccb0,
+  0x45ced0 and 0x45d100, in VisLeaves' range, are WorldApprox's.
+- Rows the function table splits: CBspGen::SplitPoly's tail is 0x40a4e9;
+  MakeWorldModelBSP and SplitPolyList are cut likewise; ClipPortalToPlane
+  is 0x41fd40 with 0x420140 its tail; mathlt_impl's 0x430a8c starts mid-
+  instruction in RotateAroundAxis (0x430a60). Six more that start mid-
+  instruction are in Processor-nolf-screen-exclude.csv.
 
 ## What AvP2 added later, and what NOLF has that AvP2 doesn't
 
