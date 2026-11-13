@@ -188,10 +188,25 @@ OBJECTS :=
 DEPSPEC :=
 TOOLS :=
 
+# NOLF's Processor.exe: each icl object is compiled a second time with
+# /Ob0, into ob0/ beside it, and build/ehsplit.py gives the object the
+# /Ob0 compile's code for every EH-framed function. A stand-in: Monolith's
+# icl 4.0 never inlined into an EH-framed function and inlined elsewhere,
+# which ours does only one way or the other for a whole file
+# (progress/Processor_nolf_map.md). PreWorld.cpp is VC6's and isn't
+# split. ehsplit lists the functions it took in ob0/<stem>.ehsplit.txt.
+EHSPLIT_DIR := src/LT2/built/Release/tools/ProcessorNOLF
+ehsplit_obj = $(filter-out $(EHSPLIT_DIR)/PreWorld.obj,$(filter $(EHSPLIT_DIR)/%.obj,$(1)))
+ehsplit_fo = $(subst ProcessorNOLF\' '/c',ProcessorNOLF\ob0\' '/c' '/Ob0',$(1))
+ehsplit = $(if $(call ehsplit_obj,$(1)), && mkdir -p $(ROOT)/$(EHSPLIT_DIR)/ob0 \
+    && ( cd $(ROOT) && $(call ehsplit_fo,$(2)) ) \
+    && python3 $(ROOT)/build/ehsplit.py $(ROOT)/$(1) $(ROOT)/$(EHSPLIT_DIR)/ob0/$(notdir $(1)) \
+       --list $(ROOT)/$(EHSPLIT_DIR)/ob0/$(basename $(notdir $(1))).ehsplit.txt)
+
 # $(call compile,<object>,<working dir>,<source as spelled>,<env>,<exe>,<flags>,<prefix>)
 define compile
 OBJECTS += $(1)
-cmd_$(1) := cd $(2) && $(4) $(WINE) $(5) $(call q,$(6) $(3) $(TALON_CFLAGS))
+cmd_$(1) := cd $(2) && $(4) $(WINE) $(5) $(call q,$(6) $(3) $(TALON_CFLAGS))$(call ehsplit,$(1),cd $(2) && $(4) $(WINE) $(5) $(call q,$(6) $(3) $(TALON_CFLAGS)))
 DEPSPEC += $(subst $(space),|,$(1)$(tab)$(2)$(tab)$(3)$(tab)$(strip $(6)))
 $(1): $$(call cmd_changed,$(1)) | $(7)
 endef

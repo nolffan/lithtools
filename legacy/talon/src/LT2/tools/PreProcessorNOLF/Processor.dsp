@@ -107,14 +107,8 @@ SOURCE=.\BspGen.cpp
 # Begin Source File
 
 SOURCE=.\BuildHulls.cpp
-# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
-
-!IF  "$(CFG)" == "Processor - Win32 Release"
-
-# ADD CPP /Ob0
-
-!ENDIF 
-
+# talon: no /Ob0 stand-in any more: build/ehsplit.py gives this file's
+# EH-framed functions /Ob0's code (build.mk).
 # End Source File
 # Begin Source File
 
@@ -127,7 +121,11 @@ SOURCE=..\sharedNOLF\engine\conparse.cpp
 # Begin Source File
 
 SOURCE=.\create_world_tree.cpp
-# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
+# talon: /Ob0 for the whole file, a stand-in, on top of build/ehsplit.py's
+# split (build.mk): this file's /Ob0 copies of CMoArray templates are the
+# ones the image has (0x418200, 0x451a40, 0x451b60, 0x45a490). Measured
+# 2026-11-13 against the split alone: four more identical, 1.5 KB fewer
+# identical bytes, 25 more of ours unplaced.
 
 !IF  "$(CFG)" == "Processor - Win32 Release"
 
@@ -151,14 +149,8 @@ SOURCE=..\sharedNOLF\world\EditBrush.cpp
 # Begin Source File
 
 SOURCE=..\sharedNOLF\world\EditObjects.cpp
-# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
-
-!IF  "$(CFG)" == "Processor - Win32 Release"
-
-# ADD CPP /Ob0
-
-!ENDIF 
-
+# talon: no /Ob0 stand-in any more: build/ehsplit.py gives this file's
+# EH-framed functions /Ob0's code (build.mk).
 # End Source File
 # Begin Source File
 
@@ -271,14 +263,8 @@ SOURCE=.\PrePoly.cpp
 # Begin Source File
 
 SOURCE=.\ProcessorApp.cpp
-# talon: /Ob0, a stand-in as streamsim.cpp's: more matches with it than without
-
-!IF  "$(CFG)" == "Processor - Win32 Release"
-
-# ADD CPP /Ob0
-
-!ENDIF 
-
+# talon: no /Ob0 stand-in any more: build/ehsplit.py gives this file's
+# EH-framed functions /Ob0's code (build.mk).
 # End Source File
 # Begin Source File
 
@@ -313,19 +299,8 @@ SOURCE=.\RaySelecter.cpp
 # Begin Source File
 
 SOURCE=..\sharedNOLF\engine\streamsim.cpp
-# talon: a stand-in. The shipped icl inlines nothing into a function with an
-# EH frame (ILTStream's 13-byte constructor is called out of line, 0x456ab0)
-# and inlines as usual elsewhere; ours (4.0, build 99100) inlines into both.
-# /Ob0 here gives the EH-framed constructors, destructors and streamsim_*
-# (14 rows) and loses four that inline (SSMemStream::SeekTo, ::Write, ::GetLen,
-# SSBufStream::Write).
-
-!IF  "$(CFG)" == "Processor - Win32 Release"
-
-# ADD CPP /Ob0
-
-!ENDIF 
-
+# talon: no /Ob0 stand-in any more: build/ehsplit.py gives this file's
+# EH-framed functions /Ob0's code (build.mk).
 # End Source File
 # Begin Source File
 
