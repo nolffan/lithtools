@@ -1696,6 +1696,12 @@ BOOL CLightMapMaker::SetupFrameLights(PreLightAnimFrameInfo *pFrame)
 }
 
 
+// talon: near (NOLF's 0x426e40, 170 bytes, ours 164): written with
+// `if(VISBSP) return FALSE;` as its own statement the branches are the
+// shipped ones (167 bytes) but this, pWorld and i are allocated otherwise
+// (shipped keeps pWorld in edi and spills this), and that form changes the
+// object's later COMDAT code: CMoArray<CPrePolyRef>::Insert2 (0x42e660)
+// stops matching. Kept as it was.
 BOOL CLightMapMaker::ShouldBlockLight(CPreWorld *pWorld)
 {
 	CBaseEditObj *pObj;
@@ -1705,18 +1711,18 @@ BOOL CLightMapMaker::ShouldBlockLight(CPreWorld *pWorld)
 	if(pWorld->m_WorldInfoFlags & WIF_PHYSICSBSP)
 		return TRUE;
 
-	if(pWorld->m_WorldInfoFlags & WIF_VISBSP)
-		return FALSE;
-
-	for(i=0; i < m_pWorld->m_Objects; i++)
+	if(!(pWorld->m_WorldInfoFlags & WIF_VISBSP))
 	{
-		pObj = m_pWorld->m_Objects[i];
-
-		if(stricmp(pObj->GetName(), pWorld->m_WorldName) == 0)
+		for(i=0; i < m_pWorld->m_Objects; i++)
 		{
-			pProp = (CBoolProp*)pObj->m_PropList.GetMatchingProp("BlockLight", PT_BOOL);
-			if(pProp && pProp->m_Value)
-				return TRUE;
+			pObj = m_pWorld->m_Objects[i];
+
+			if(stricmp(pObj->GetName(), pWorld->m_WorldName) == 0)
+			{
+				pProp = (CBoolProp*)pObj->m_PropList.GetMatchingProp("BlockLight", PT_BOOL);
+				if(pProp && pProp->m_Value)
+					return TRUE;
+			}
 		}
 	}
 
