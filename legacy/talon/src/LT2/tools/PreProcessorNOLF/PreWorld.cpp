@@ -1937,14 +1937,11 @@ struct EdgeHashEntry
 };
 
 
-// 0x439050. Near (575 bytes against 589), registers only: the calls are
-// the shipped ones (edgeHash's constructor calls Clear, 0x420650, and
-// expands Init around Term's SetSize2, _InitArray 0x422440 and SetSize's
-// SetSize2), but the shipped code keeps pPolyEdges in memory and ours in
-// ebp. The next index is Index((i+1) % NumVerts()), not NextIndex(i):
-// with NextIndex's extra inline levels the inline budget runs out before
-// edgeHash's constructor and ours expanded Clear and called Init (551
-// bytes).
+// NOLF's at 0x4478a8. The next index is Index((i+1) % NumVerts()), not
+// NextIndex(i) (the inline budget). NOLF's indexes the poly's edges
+// (pPolyEdges[i], strength-reduced after the vertex pointer, 0x4479ec) and
+// frees each hash chain with a while that keeps the entry to delete in a
+// second variable (0x447a1a).
 uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 {
 	CMoArray<EdgeHashEntry*> edgeHash;
@@ -1973,8 +1970,8 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 			iPt1 = pPoly->Index(i);
 			iPt2 = pPoly->Index((i+1) % pPoly->NumVerts());
 
-			*pPolyEdges = FindEdge(edgeHash, iPt1, iPt2);
-			if(*pPolyEdges == 0xFFFF)
+			pPolyEdges[i] = FindEdge(edgeHash, iPt1, iPt2);
+			if(pPolyEdges[i] == 0xFFFF)
 			{
 				pEntry = new EdgeHashEntry;
 				pEntry->m_iPt1 = LTMIN(iPt1, iPt2);
@@ -1983,11 +1980,9 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 				pEntry->m_pNext = edgeHash[pEntry->m_iPt1];
 				edgeHash[pEntry->m_iPt1] = pEntry;
 
-				*pPolyEdges = (uint16)nEdges;
+				pPolyEdges[i] = (uint16)nEdges;
 				nEdges++;
 			}
-
-			pPolyEdges++;
 		}
 
 		iPoly++;
@@ -1995,10 +1990,12 @@ uint32 CPreWorld::MakePolyEdges(PolyEdges &edges)
 
 	for(i=0; i < edgeHash; i++)
 	{
-		for(pEntry=edgeHash[i]; pEntry; pEntry=pNext)
+		pEntry = edgeHash[i];
+		while(pEntry)
 		{
-			pNext = pEntry->m_pNext;
-			delete pEntry;
+			pNext = pEntry;
+			pEntry = pEntry->m_pNext;
+			delete pNext;
 		}
 	}
 
