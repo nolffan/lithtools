@@ -317,25 +317,27 @@ BOOL AreSurfacesSame_RS(CPreSurface *pSurface1, CPreSurface *pSurface2)
 }
 
 
-// 0x445b80: gives the polies of surfaces that are the same one surface.
-// The polies are hashed by surface into 512 lists (each with a cache of
-// twice the polies over 512, 0x445bd9); then each list's poly at i is
-// taken out (0x445c67), and every poly left in the list with a surface the
-// same as its surface gets it and is taken out too. (Taking i out and then
-// going on to i+1 skips a poly each time: retail.)
+// 0x4572a0 (AvP2's 0x445b80): gives the polies of surfaces that are the
+// same one surface. The polies are hashed by surface into 512 lists (each
+// with a cache of twice the polies over 512); then each list's poly at j
+// is taken out, and every poly left in the list with a surface the same as
+// its surface gets it and is taken out too. (Taking j out and then going
+// on to j+1 skips a poly each time: retail.)
 //
-// Near: 649 bytes shipped, 661 ours, the same instructions but for
-// registers: the shipped code keeps j in ebp across the inlined Remove2
-// (its copy loop needs one register, 0x445d08) and ours gives j a stack
-// home (its copy loop takes two). Declaration order, nested ifs, an int j,
-// no pTest, GetAt, Remove2(j, &g_DefAlloc) and a pointer loop over the
-// lists don't move it; Remove(j--) is further off.
+// talon: NOLF's names the test poly's surface (0x457418: kept at -0x18 and
+// passed from there) and uses the first loop's variable for the lists, so
+// its stack slots come in that order of first use (0x4572a0: i at -0x38,
+// j -0x28, k -0x20). Near: EH-framed, so the shipped code calls every
+// CMoArray helper out of line where ours inlines them. Built /Ob0 it is
+// 572 bytes to the shipped 568, the same instructions but for the merge's
+// block, which the shipped code places before the unwind funclet (0x45749f)
+// and ours after it, and the array destructor's register (edx shipped).
 void MergeSurfaces_RS(CPreWorld *pWorld)
 {
 	CMoArray<CPrePoly*>	hash[NUM_SURFACE_HASH_BUCKETS];
 	CMoArray<CPrePoly*>	*pList;
 	CPrePoly			*pPoly, *pTest;
-	CPreSurface			*pSurface;
+	CPreSurface			*pSurface, *pTestSurface;
 	GPOS				pos;
 	uint32				i, j, k;
 
@@ -348,24 +350,25 @@ void MergeSurfaces_RS(CPreWorld *pWorld)
 		hash[GetSurfaceHash_RS(pPoly->m_pSurface)].Append(pPoly);
 	}
 
-	for(k=0; k < NUM_SURFACE_HASH_BUCKETS; k++)
+	for(i=0; i < NUM_SURFACE_HASH_BUCKETS; i++)
 	{
-		pList = &hash[k];
+		pList = &hash[i];
 
-		for(i=0; i < pList->GetSize(); i++)
+		for(j=0; j < pList->GetSize(); j++)
 		{
-			pPoly = (*pList)[i];
+			pPoly = (*pList)[j];
 			pSurface = pPoly->m_pSurface;
-			pList->Remove(i);
+			pList->Remove(j);
 
-			for(j=0; j < pList->GetSize(); j++)
+			for(k=0; k < pList->GetSize(); k++)
 			{
-				pTest = (*pList)[j];
-				if(pTest->m_pSurface != pSurface && AreSurfacesSame_RS(pSurface, pTest->m_pSurface))
+				pTest = (*pList)[k];
+				pTestSurface = pTest->m_pSurface;
+				if(pTestSurface != pSurface && AreSurfacesSame_RS(pSurface, pTestSurface))
 				{
 					pTest->m_pSurface = pSurface;
-					pList->Remove(j);
-					j--;
+					pList->Remove(k);
+					k--;
 				}
 			}
 		}
