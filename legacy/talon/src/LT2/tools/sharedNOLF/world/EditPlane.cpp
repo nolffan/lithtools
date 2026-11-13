@@ -15,6 +15,18 @@
 //
 //------------------------------------------------------------------
 
+// talon: in NOLF's processor (AvP2's has none of it): 0x418540
+// GetPolySide, 0x418690 SplitPoly, 0x418e10 the two-array SplitPoly, between
+// EditObjects' template code and EditPoly's, as the file order puts them.
+// g_EditPointDots is 0x48d3a0, g_EditPointSides 0x48d530, the three
+// counts 0x48d6c0..0x48d6c8 (g_nEditFront first). The
+// 2001 CEditVert has no colour, and the two-array SplitPoly interpolates
+// none (0x418e10).
+// talon: not in Processor.dsp yet. Linked where the file order puts it,
+// GetPolySide matches, but the link then keeps PrePoly.obj's copy of the
+// folded CMoArray<CEditVert>/<CPolyVert>::_AllocateTArray instead of
+// BasePoly.obj's, which make progress counts as one more unplaced function.
+
 // Includes....
 #include "bdefs.h"
 #include "editplane.h"
@@ -169,11 +181,6 @@ void CEditPlane::SplitPoly( CBasePoly *pToSplit, CBasePoly *sides[2], CEditVertA
 		ASSERT( t >= 0 && t <= 1 );
 
 		newPt = A + ( (B - A) * t );
-
-		newPt.m_nA = (uint8)((float)A.m_nA + ((B.m_nA - A.m_nA) * t));
-		newPt.m_nR = (uint8)((float)A.m_nR + ((B.m_nA - A.m_nR) * t));
-		newPt.m_nG = (uint8)((float)A.m_nG + ((B.m_nA - A.m_nG) * t));
-		newPt.m_nB = (uint8)((float)A.m_nB + ((B.m_nA - A.m_nB) * t));
 
 		vertSides[0]->Append( newPt );
 		vertSides[1]->Append( newPt );
