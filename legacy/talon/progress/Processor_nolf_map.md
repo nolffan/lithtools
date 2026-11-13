@@ -256,6 +256,34 @@ Eight agents, 1,374 -> 1,443 identical, the function table corrected
   funclets (0x44dcd0); out-of-class members defined earlier in the file
   aren't inlined, unlike free functions (PortalBuffer::Cur).
 
+## The EH split (2026-11-13): a stand-in
+
+Monolith's icl 4.0 behaved as if every EH-framed function were compiled
+/Ob0 and everything else not, inside one file; ours can only do one or
+the other per file. So each icl object is compiled twice, as the project
+says and with /Ob0 (into ob0/ beside it), and build/ehsplit.py rewrites
+the object so that every function EH-framed in the /Ob0 compile (its
+section has a relocation to `__except_list`) carries the /Ob0 code
+(build.mk, `ehsplit`). The sources aren't touched; ob0/<stem>.ehsplit.txt
+lists what each object took (134 functions in 53 objects at the start).
+
+- Measured: 1,444 -> 1,599 identical, unwritten 123 -> 34. It replaced
+  the whole-file /Ob0 stand-ins of BuildHulls, EditObjects, ProcessorApp
+  and streamsim; create_world_tree keeps its /Ob0 on top (its /Ob0
+  copies of CMoArray templates are the image's). Taking the /Ob0
+  compile's out-of-line inline copies as well is much worse (1,455, 298
+  unplaced): the image's copies are the inlining compile's in most
+  objects.
+- What it means for source work: an EH-framed function is now matched
+  against code with nothing inlined into it, so its source is judged as
+  the shipped compiler saw it. A near EH-framed function is a source
+  difference now, not the limit, unless it inlines an EH-framed callee
+  (CreatePoly and the allocation helpers, the other half, which the
+  split doesn't reach: ours still inlines those into non-EH callers).
+- What it isn't: Monolith's build. The image's code for these functions
+  came from one compile; ours from two. It goes when a compiler build
+  that does what Monolith's did turns up.
+
 ## What the fourth round learned (2026-11-13)
 
 Six agents: five by address range over the near pairs, closest first,
