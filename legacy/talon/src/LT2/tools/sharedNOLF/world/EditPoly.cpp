@@ -97,6 +97,11 @@ CEditPoly::~CEditPoly()
 }
 
 
+// talon: NOLF's is 0x419d40 (203 bytes, a todo row), without an EH frame:
+// DeleteAndClearArray and SetSize(0) inline, the triangles' ~CBasePoly
+// (0x416c50) called out of line. Ours inlines ~CBasePoly too, which gives
+// Term an EH frame (848 bytes): the limit's other half, a function with a
+// frame inlined. The destructor (0x419ca0) calls Term out of line.
 // CEditPoly::Term (0x40faa0).
 void CEditPoly::Term()
 {

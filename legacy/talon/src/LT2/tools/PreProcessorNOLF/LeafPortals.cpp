@@ -28,6 +28,16 @@ void CopyPortal(CPrePortal *pSrc, CPrePortal *pDest)
 }
 
 
+// talon: near, 1460 of 1472 bytes (0x41fd40, its tail 0x420140; the
+// function table's row is 1024): the same instructions but for the exits.
+// The shipped code jumps from both FALSE tests (0x41fe39, 0x41fe4b) to one
+// return FALSE placed last (0x420286), copies the epilogue into the
+// FrontSide return TRUE (0x41fe55), and reloads Cur() for the split
+// (0x41fe63); ours puts return FALSE first, jumps the TRUE into it and
+// keeps Cur() in ebp (a slot at 0x360). Tried (round 4), all giving these
+// same bytes: the tests folded with && around the split, nested ifs, and
+// `side == BackSide || ...` as one early return. The map's "early returns
+// placed after the ret" class.
 BOOL ClipPortalToPlane(CPrePlane *pPlane, PortalBuffer *pBuf)
 {
 	SplitStruct	split;
@@ -64,6 +74,13 @@ BOOL ClipPortalToPlane(CPrePlane *pPlane, PortalBuffer *pBuf)
 // template (a plain function left the seventh expanded too, 968 bytes).
 template<class P> void PortalGenerateNormal(P *pPoly);
 
+// talon: NOLF's is 0x420300 (1636 bytes, a todo row; the addresses above
+// are AvP2's): no EH frame, SetSize's allocation, every SetVert and
+// PortalGenerateNormal inline (one sqrt call, 0x4208b6), and CreatePoly
+// called out of line six times (0x420405, CPreBasePolyInitializer<
+// CPrePortal>::CreatePoly, 0x40cfb0, EH-framed). Ours inlines CreatePoly
+// (unplaced, 4212 bytes): the inlining limit's CreatePoly case (map,
+// third round).
 BOOL MakeBoxPortals(CMoArray<CPrePortal*> &portals, PVector &vMin, PVector &vMax)
 {
 	PVector	pts[8];

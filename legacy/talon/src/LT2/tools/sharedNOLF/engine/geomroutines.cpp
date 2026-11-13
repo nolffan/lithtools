@@ -230,6 +230,12 @@ void gr_SetupRotationAroundVector(LTMatrix *pMat, LTVector v, float angle)
 }
 
 
+// talon: near (0x41e340), 2844 of 3039 bytes, 643 of 652 instructions:
+// both inline the two MatMuls and Mat_InverseTransformation (one call,
+// quat_ConvertToMatrix). The shipped frame is 0x2d8 bytes to our 0x2b0 and
+// spills 42 values as doubles to our 37, from the first product's sums on
+// (0x41e4ad): x87 scheduling, the FP operand-order class. AvP2's image has
+// this source at 0x412c80 (718 bytes, matching).
 void gr_SetupWMTransform(
 	LTVector *pWorldTranslation,
 	LTVector *pPos,			// Position and rotation.

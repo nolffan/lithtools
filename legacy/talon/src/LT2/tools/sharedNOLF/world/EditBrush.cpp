@@ -190,6 +190,10 @@ void CEditBrush::CopyEditBrush( CEditBrush *pOther, CStringHolder *pStringHolder
 }
 
 
+// talon: NOLF's 0x4157c0, near, 172 of 163 bytes: the shipped code keeps
+// the result's pointer in ebp and this in ebx (a 4-byte frame), ours the
+// pointer in ebx and this in a slot. m_Points.GetSize() <= 0 or == 0, and
+// i declared first, give the same bytes (round 4).
 // 0x40df80; Build 69's.
 CVector CEditBrush::GetUpperLeftCornerPos()
 {

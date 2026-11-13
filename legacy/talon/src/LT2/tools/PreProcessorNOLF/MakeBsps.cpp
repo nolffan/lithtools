@@ -145,6 +145,11 @@ void GetBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBrush
 // also loses the polies no leaf sees. Brushes the brush checks found
 // problems in stop it with SelectProblemBrushes or
 // SelectOutOfBoundsBrushes (after saving the ED file with them selected).
+// talon: NOLF's is 0x40fcf0..0x4101b0, 1216 bytes (the rows 0x40fcfe and,
+// its "#%d : %0.1f" arm, 0x410133). It calls out of line what ours inlines
+// (unplaced, 2722 bytes): CLinkedList's constructor (0x410280) and
+// destructor (0x410200, at each return), GetSize (0x435b30) and
+// operator[] (0x421bf0) of the problem-brush array: the inlining limit.
 BOOL MakeWorldModelBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld, BOOL bPhysicsBSP)
 {
 	// talon: an initialized static (0x489420, TRUE, read only here), passed
@@ -251,6 +256,13 @@ void GetVisBspBrushes(GenList<CEditBrush*> &brushes, GenList<CEditBrush*> &bspBr
 // talon, retail bug: SplitPoly's result is not looked at (its "Bad poly"
 // path, 0x410991, goes on to the appends at 0x410bbc), so a poly it gave
 // up on (more than two edge splits) still goes on in pieces.
+// talon: near (0x410600, a $$1 pair: the stub and 1894 bytes from
+// 0x41060e; --nears pairs this with 0x40fcfe and AddTerrainBlockers with
+// 0x41060e). GetPolySide and SplitPoly inline as here, but SplitPoly's two
+// CreatePoly calls go out of line (0x405180, EH-framed) and the frame is
+// 0x3d8 bytes and realigned where ours is 0x3b8 and not: the CreatePoly
+// case of the inlining limit, as in every SplitPoly copy of the image
+// (0x403730, 0x407970, 0x41118e, 0x43c280, 0x4589e0).
 void SplitPolyList(CPrePlane *pPlane, GenList<CPrePoly*> &polies, GenList<CPrePoly*> &newPolies, GenList<CPrePoly*> *sideLists[2])
 {
 	SplitStruct		splitStruct;
@@ -386,6 +398,8 @@ void ClearLeafPolies(CPreWorld *pWorld)
 // talon, retail bug: when SplitPoly gives up (more than two pieces' worth
 // of edge splits, 0x411717) it returns without freeing the two pieces
 // SplitPoly made.
+// talon: near, 1942 of 1891 bytes: the inlined SplitPoly's CreatePoly
+// calls are out of line in the shipped code (0x405180), as SplitPolyList's.
 void FilterPolyIntoLeaves_R(CPrePoly *pPoly, CPrePoly *pOriginal, NODEREF pNode)
 {
 	static SplitStruct	splitStruct;		// 0x48cf20 (.bss)
@@ -468,6 +482,11 @@ BOOL SetupVisBSPLeaves(CPreWorld *pVisBSP)
 // their polies. NOLF's: no hulls before the leak file, which is made last,
 // under the -LeakFile name itself (AvP2's adds "_Vis.lek" and is made
 // before the unseen geometry goes).
+// talon: this is right: built /Ob0 it is 0x411ae0 byte for byte (580
+// bytes, with its handler thunk 0x411abf), as FilterTerrainPolies_R is
+// 0x410d80; as the file is built it inlines what the shipped code calls
+// (the inlining limit). /Ob0 for the file loses (round 4: 42 shipped
+// addresses matched against 53).
 BOOL MakeVisBSP(CEditRegion *pRegion, CWorldModelDef *pDef, CPreWorld *pWorld)
 {
 	// talon: as MakeWorldModelBSP's (0x4894a0, TRUE).
