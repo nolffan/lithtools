@@ -434,7 +434,11 @@ inline void WriteBit(CMoArray<uint8> &bits, uint32 &iBit, BOOL bSet)
 }
 
 // Down the visible nodes: a bit for each one's leaf, and for each side
-// whether it's visible (0x44bc10).
+// whether it's visible (0x44bc10). talon: NOLF's (0x45b6b0) passes the
+// flag masked, not shifted down (and $2, then setne in WriteBit). Near,
+// size-exact: the three inlined Appends' second copy loop has the SIB's
+// base and index the other way round (0x45b800: 0x1(%edx,%esi,1)), a
+// register choice the image's GenAppend<uint8> makes too (0x406444).
 static void WriteTreeBits_R(CNode *pNode, CMoArray<uint8> &bits, uint32 &iBit)
 {
 	CNode *pFront, *pBack;
@@ -443,18 +447,18 @@ static void WriteTreeBits_R(CNode *pNode, CMoArray<uint8> &bits, uint32 &iBit)
 		return;
 
 	if(pNode->m_pLeaf)
-		WriteBit(bits, iBit, (pNode->m_pLeaf->m_Flags >> 1) & 1);
+		WriteBit(bits, iBit, pNode->m_pLeaf->m_Flags & LEAFF_VISITED);
 
 	pFront = pNode->m_Sides[0];
 	pBack = pNode->m_Sides[1];
 
 	if(IsValidNode(pFront))
-		WriteBit(bits, iBit, (pFront->m_Unknown_1a >> 1) & 1);
+		WriteBit(bits, iBit, pFront->m_Unknown_1a & NODEF_PVSVISIBLE);
 
 	WriteTreeBits_R(pFront, bits, iBit);
 
 	if(IsValidNode(pBack))
-		WriteBit(bits, iBit, (pBack->m_Unknown_1a >> 1) & 1);
+		WriteBit(bits, iBit, pBack->m_Unknown_1a & NODEF_PVSVISIBLE);
 
 	WriteTreeBits_R(pBack, bits, iBit);
 }
@@ -567,7 +571,12 @@ static CPreLeaf* FindSameLists(CPreWorld *pWorld, CMoArray<CPreLeafList*> &lists
 
 // Makes each portal's leaf set (CPrePortal::m_Unknown_48), less the
 // leaves of the zones its leaf's Zone has a FALSE bool property for
-// (0x44c140).
+// (0x44c140). talon: NOLF's (0x45ced0) skips the property with a
+// continue (the clearing falls through, 0x45d002), reads the leaf's index
+// once into a signed local (sar) and clears it through the array's
+// operator[] (the SIB's base the byte index, 0x45d058). Near by one
+// instruction: the k loop's back edge jumps past the reload of the
+// zone's object (0x45cff5, mov %edx,%eax), as MakePVS's does.
 static void MakePortalsVis()
 {
 	CPreWorld *pWorld;
@@ -576,6 +585,7 @@ static void MakePortalsVis()
 	PVSZone *pZone, *pOther;
 	CBaseProp *pProp;
 	uint32 i, j, k, iLeaf;
+	int iIndex;
 
 	pWorld = g_pPVSInfo->m_pWorld;
 	g_pPVSInfo->m_PortalVis.SetSize(g_pPVSInfo->m_nPortalBytes);
@@ -597,13 +607,16 @@ static void MakePortalsVis()
 			{
 				pProp = pZone->m_pObj->m_PropList.m_Props[k];
 
-				if(pProp->m_Type == PT_BOOL && !((CBoolProp*)pProp)->m_Value)
+				if(pProp->m_Type != PT_BOOL || ((CBoolProp*)pProp)->m_Value)
+					continue;
+
+				pOther = VisFindZone(g_pPVSInfo, pProp->m_Name);
+				if(pOther)
 				{
-					pOther = VisFindZone(g_pPVSInfo, pProp->m_Name);
-					if(pOther)
+					for(iLeaf=0; iLeaf < pOther->m_Leaves; iLeaf++)
 					{
-						for(iLeaf=0; iLeaf < pOther->m_Leaves; iLeaf++)
-							WA_CLEARBIT(pPortal->m_Unknown_48.GetArray(), pOther->m_Leaves[iLeaf]->m_Index);
+						iIndex = pOther->m_Leaves[iLeaf]->m_Index;
+						WA_CLEARBIT(pPortal->m_Unknown_48, iIndex);
 					}
 				}
 			}
