@@ -190,8 +190,9 @@ PVector CLightMapMaker::CalcSunLightSample(PVector dir)
 // sinks the return block to the end of the function, where the shipped code
 // has it straight after the last test (0x4162c0, 0x416cc8). The names are
 // ours. talon: NOLF's has no vertices-only test: its out-of-line copy
-// (0x42f710, called by ThreadLightPoly) and the one expanded in
-// InitPolyLightmapFill (0x42440e) test the three flags alone.
+// (0x42f710, called from 0x4257dd and ThreadLightPoly's 0x429024) and the
+// one expanded in InitPolyLightmapFill (0x42440e) test the three surface
+// flags alone; Process doesn't light the lightmaps in that mode.
 static inline BOOL ShouldLightmap(CPrePoly *pPoly)
 {
 	return (pPoly->GetSurfaceFlags() & SURF_LIGHTMAP) &&
@@ -2274,22 +2275,25 @@ void CLightMapMaker::UnloadClassModule()
 
 
 // Drops, from the current light animation, the polies whose lightmaps are
-// black in every frame (0x41cf50..0x41d32a).
+// black in every frame (AvP2's 0x41cf50..0x41d32a).
 //
-// talon: near (inline budget). Shipped calls CMoArray<uint32>'s
-// destructor for delete pValues (0x41d09c -> 0x41e0d0) where ours expands
-// it (and calls _DeleteAndDestroyArray); the Remove2 of m_PolyMaps is called
-// (0x447110) and the other two expanded in both. Shipped saves this before
-// the pushes and keeps iPoly*4 only in its slot (0x14): a 0x14 frame, ours
-// 0x18. Tried without effect: pMap a local or two operator[]s,
-// GetArray()[i] for (*pValues)[i].
+// talon: NOLF's (0x428bb0) is simpler than AvP2's: no second per-poly
+// array in the frames to test and free, so a poly is dropped when its
+// lightmap is black in every frame: from the animation's polies first
+// (0x428c50), then each frame's lightmap deleted and removed (0x428cff).
+// The lightmap is not tested for NULL before AllBlack (0x428c1f), and no
+// NULL is stored before the Remove.
+//
+// Near (903 bytes against 902): at both frame loops' heads the shipped code
+// keeps m_pCurAnim from the back edge's test in %eax (0x428be5, 0x428cff)
+// where ours loads it again from this; the iPoly++ copy into %ecx
+// (0x428c32) goes with it. A goto for the flag, GetSize() for the
+// conversion, the declarations in another order: no change.
 BOOL CLightMapMaker::RemoveExcessPolies()
 {
-	uint32 iFrame, iPoly, i;
-	BOOL bAllBlack, bNoValues;
+	uint32 iFrame, iPoly;
+	BOOL bAllBlack;
 	CPreLightFrame *pFrame;
-	CMoArray<uint32> *pValues;
-	CPreLightMap *pMap;
 
 	if(!m_pCurAnim)
 		return FALSE;
@@ -2305,64 +2309,26 @@ BOOL CLightMapMaker::RemoveExcessPolies()
 			if(pFrame->m_PolyMaps.GetSize() != m_pCurAnim->m_Polies.GetSize())
 				return FALSE;
 
-			pMap = pFrame->m_PolyMaps[iPoly];
-			if(pMap && !pMap->AllBlack())
+			if(!pFrame->m_PolyMaps[iPoly]->AllBlack())
 			{
 				bAllBlack = FALSE;
 				break;
 			}
 		}
 
-		bNoValues = TRUE;
-		for(iFrame=0; iFrame < m_pCurAnim->m_Frames; iFrame++)
-		{
-			pFrame = m_pCurAnim->m_Frames[iFrame];
-
-			if(pFrame->m_Unknown_14.GetSize() != m_pCurAnim->m_Polies.GetSize())
-				return FALSE;
-
-			pValues = pFrame->m_Unknown_14[iPoly];
-			if(pValues)
-			{
-				for(i=0; i < pValues->GetSize(); i++)
-				{
-					if(pValues->GetArray()[i])
-					{
-						bNoValues = FALSE;
-						goto Done;
-					}
-				}
-			}
-		}
-
-	Done:;
 		if(bAllBlack)
 		{
+			m_pCurAnim->m_Polies.Remove(iPoly);
+
 			for(iFrame=0; iFrame < m_pCurAnim->m_Frames; iFrame++)
 			{
 				pFrame = m_pCurAnim->m_Frames[iFrame];
 
 				delete pFrame->m_PolyMaps[iPoly];
-				pFrame->m_PolyMaps[iPoly] = NULL;
-
-				if(bNoValues)
-				{
-					delete pFrame->m_Unknown_14[iPoly];
-					pFrame->m_Unknown_14[iPoly] = NULL;
-				}
-
-				if(bNoValues)
-				{
-					pFrame->m_PolyMaps.Remove(iPoly);
-					pFrame->m_Unknown_14.Remove(iPoly);
-				}
+				pFrame->m_PolyMaps.Remove(iPoly);
 			}
 
-			if(bNoValues)
-			{
-				m_pCurAnim->m_Polies.Remove(iPoly);
-				--iPoly;
-			}
+			--iPoly;
 		}
 	}
 
