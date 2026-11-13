@@ -1094,17 +1094,19 @@ void CPreWorld::InitPolyVertexIndices()
 		testElement = theQueue.top();
 		
 		bAddToStack = true;
-		iStack = theStack.begin();
-		while(iStack != theStack.end())
+		for(iStack=theStack.begin(); iStack != theStack.end(); iStack++)
 		{
 			pStackEl = *iStack;
 
 			if(testElement.m_Mag - pStackEl->m_Mag > POINT_TOLERANCE)
 			{
 				// We've passed out of range of this stack element.. add it to the world.
+				// talon: NOLF's steps back from the erased node (0x444a6b
+				// reads its _M_prev after erase freed it: RETAIL_BUGS.md).
 				pStackEl->AddToWorld(this);
-				iStack = theStack.erase(iStack);
+				theStack.erase(iStack);
 				delete pStackEl;
+				iStack--;
 			}
 			else
 			{
@@ -1117,8 +1119,6 @@ void CPreWorld::InitPolyVertexIndices()
 					bAddToStack = false;
 					break;
 				}
-
-				++iStack;
 			}
 		}
 
