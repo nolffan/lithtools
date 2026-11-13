@@ -128,6 +128,22 @@ TARGETS = [
                        "src/LT2/lithshared/built/ReleaseNOLF/Lib_StdLith/Lib_StdLith.lib",
                        "src/LT2/lithshared/built/ReleaseNOLF/Lib_ZLib/Lib_ZLib.lib",
                        "src/LT2/lithshared/built/ReleaseNOLF/RegMgr/regmgr.lib"],
+         # Functions of ours too big to pair by size (the inlining limit:
+         # built /Ob0 each comes out at its row's size) whose shipped rows
+         # are otherwise unpaired, named by the calls that reach them:
+         # MakePVS's calls name MakeZones; MakeBoxPortals, FindWorldModels
+         # and RecurseAndAddWorldModels are their callers' and have one row
+         # each in their objects; the Navigator LoadTBWs are Navigator.cpp's
+         # two (round 4's unplaced work). Only a preference: the bytes
+         # still decide.
+         own_symbols={
+             "?MakeZones@@YAXPAUPVSInfo@@@Z": 0x45d920,
+             "?MakeBoxPortals@@YAHAAV?$CMoArray@PAVCPrePortal@@VDefaultCache@@@@AAV?$_CVector@M@@1@Z": 0x420300,
+             "?RecurseAndAddWorldModels@@YAXPAVCEditRegion@@PAVCWorldNode@@AAV?$CMoArray@PAVCWorldModelDef@@VDefaultCache@@@@@Z": 0x41cc70,
+             "?FindWorldModels@@YAXPAVCEditRegion@@AAV?$CMoArray@PAVCWorldModelDef@@VDefaultCache@@@@@Z": 0x41cf20,
+             "?LoadTBW@CNavigatorPosItem@@QAEHAAVCAbstractIO@@@Z": 0x431620,
+             "?LoadTBW@CNavigatorPosArray@@QAEHAAVCAbstractIO@@@Z": 0x4318d0,
+         },
          app=[(0x00401000, 0x00469000)]),
     # ---- the resource packer ---------------------------------------------
     # LithRez 1.00 (Nov-6-1998), shipped unchanged in AvP2 Tools v1.0 and
