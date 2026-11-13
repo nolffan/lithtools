@@ -58,10 +58,12 @@ class CPreLightMap;
 // Functions in this module.
 void SetNodeIndices(CNodeList &theList);
 
+// talon: no constructor of its own, as Build 69's: the implicit one only
+// constructs m_PolyMaps (0x42e8c0, called from AddAnimFrame 0x4258c1, and
+// expanded in BaseNew 0x44ca8b), without AvP2's SetCacheSize(1024).
 class CPreLightFrame
 {
 public:
-							CPreLightFrame();
 							~CPreLightFrame();
 	
 	// One lightmap for each poly..
