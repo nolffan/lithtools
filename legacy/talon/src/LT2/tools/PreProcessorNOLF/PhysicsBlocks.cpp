@@ -56,18 +56,16 @@ struct PBNodeBox
 CMoArray<uint8> *g_pPBNodeFlags;
 
 
-// talon: 0x425b10. Appends the subtree under pNode to nodes, leaves first,
-// and returns the index of its top (0xFFFF for a leaf, or when the subtree
-// is all leaves; IN and OUT come back alike). A node whose flag is clear
-// is dropped when one of its sides is a leaf: the other side stands for
-// it. A leaf side is saved by position: IN behind (m_Sides[BackSide], 0)
-// and OUT in front (0x425b9d..0x425bb5).
-//
-// Near: size-exact, but for the operand order of the add in the inline
-// Insert2's GetNumAllocatedElements (0x425c7f: shipped loads m_nElements
-// then the cache size, ours the other way round) -- the declaration-count
-// kind PLAN.md records for ParseLightDefs. Include order, the function's
-// position in the file and every Append spelling leave it.
+// talon: 0x4327e0 (AvP2's 0x425b10). Appends the subtree under pNode to
+// nodes, leaves first, and returns the index of its top (0xFFFF for a
+// leaf, or when the subtree is all leaves; IN and OUT come back alike). A
+// node whose flag is clear is dropped when one of its sides is a leaf: the
+// other side stands for it. A leaf side is saved by position: IN behind
+// (m_Sides[BackSide], 0) and OUT in front. The node is kept in the if's
+// first arm and dropped in the else (0x432847..0x432862: the flag's jne and
+// the two side tests fall through into the kept node, the dropping returns
+// out of line at 0x43289e); the negated test puts the whole of it out of
+// line.
 uint16 MakePBlockNodes_R(CNode *pNode, CMoArray<SaveNode> &nodes)
 {
 	SaveNode node;
@@ -78,30 +76,27 @@ uint16 MakePBlockNodes_R(CNode *pNode, CMoArray<SaveNode> &nodes)
 	node.m_Sides[0] = MakePBlockNodes_R(pNode->m_Sides[0], nodes);
 	node.m_Sides[1] = MakePBlockNodes_R(pNode->m_Sides[1], nodes);
 
-	if(!(*g_pPBNodeFlags)[pNode->m_Index])
+	if((*g_pPBNodeFlags)[pNode->m_Index] || (node.m_Sides[0] != 0xFFFF && node.m_Sides[1] != 0xFFFF))
+	{
+		node.m_iPlane = pNode->m_Index;
+		if(node.m_Sides[0] == 0xFFFF)
+			node.m_Sides[0] = SAVENODE_IN;
+		if(node.m_Sides[1] == 0xFFFF)
+			node.m_Sides[1] = SAVENODE_OUT;
+
+		nodes.Append(node);
+		return (uint16)(nodes.GetSize() - 1);
+	}
+	else
 	{
 		if(node.m_Sides[0] != 0xFFFF)
-		{
-			if(node.m_Sides[1] == 0xFFFF)
-				return node.m_Sides[0];
-		}
-		else
-		{
-			if(node.m_Sides[1] == 0xFFFF)
-				return 0xFFFF;
+			return node.m_Sides[0];
 
+		if(node.m_Sides[1] != 0xFFFF)
 			return node.m_Sides[1];
-		}
+
+		return 0xFFFF;
 	}
-
-	node.m_iPlane = pNode->m_Index;
-	if(node.m_Sides[0] == 0xFFFF)
-		node.m_Sides[0] = SAVENODE_IN;
-	if(node.m_Sides[1] == 0xFFFF)
-		node.m_Sides[1] = SAVENODE_OUT;
-
-	nodes.Append(node);
-	return (uint16)(nodes.GetSize() - 1);
 }
 
 
